@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"net/http"
+	"context"
 	"strings"
 	"time"
 
@@ -9,6 +9,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 
+	"restaurant-management/internal/platform/guest"
 	"restaurant-management/internal/platform/httpx"
 	"restaurant-management/internal/platform/tenant"
 	"restaurant-management/internal/shared/apperr"
@@ -26,6 +27,16 @@ type Claims struct {
 	RestaurantID string `json:"restaurant_id"`
 	Role         string `json:"role"`
 	jwt.RegisteredClaims
+}
+
+type SessionAuth struct {
+	RestaurantID uuid.UUID
+	SessionID    uuid.UUID
+	TableID      uuid.UUID
+}
+
+type SessionValidator interface {
+	ValidateSessionToken(ctx context.Context, token string) (SessionAuth, error)
 }
 
 func Issue(secret string, claims Claims, ttl time.Duration) (string, error) {
@@ -84,8 +95,23 @@ func RBAC(roles ...string) gin.HandlerFunc {
 		c.Next()
 	}
 }
-func QRSessionToken() gin.HandlerFunc {
+func QRSessionToken(v SessionValidator) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.AbortWithStatusJSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
+		token := strings.TrimSpace(c.GetHeader("X-Session-Token"))
+		if token == "" {
+			httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "missing session token"))
+			c.Abort()
+			return
+		}
+		session, err := v.ValidateSessionToken(c.Request.Context(), token)
+		if err != nil {
+			httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "invalid session token"))
+			c.Abort()
+			return
+		}
+		ctx := tenant.WithRestaurantID(c.Request.Context(), session.RestaurantID)
+		ctx = guest.WithSession(ctx, guest.Session{SessionID: session.SessionID, TableID: session.TableID})
+		c.Request = c.Request.WithContext(ctx)
+		c.Next()
 	}
 }

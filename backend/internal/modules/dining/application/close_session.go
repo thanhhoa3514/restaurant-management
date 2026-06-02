@@ -3,9 +3,20 @@ package application
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	"restaurant-management/internal/modules/dining/domain"
 	"restaurant-management/internal/shared/apperr"
 )
+
+type CloseSessionRequest struct {
+	SessionID uuid.UUID `json:"session_id"`
+}
+
+type CloseSessionResponse struct {
+	ID     uuid.UUID `json:"id"`
+	Status string    `json:"status"`
+}
 
 type CloseSession struct {
 	tx     TxRunner
@@ -16,11 +27,10 @@ type CloseSession struct {
 func NewCloseSession(tx TxRunner, repo domain.DiningRepository, outbox domain.OutboxWriter) *CloseSession {
 	return &CloseSession{tx: tx, repo: repo, outbox: outbox}
 }
-func (s *CloseSession) Handle(ctx context.Context, in Input) (Output, error) {
+func (s *CloseSession) Handle(ctx context.Context, in CloseSessionRequest) (CloseSessionResponse, error) {
 	_ = in
-	var out Output
+	var out CloseSessionResponse
 	err := s.tx.Run(ctx, func(ctx context.Context) error {
-		// TODO: orchestrate domain changes, repository calls, and outbox write in this transaction.
 		_ = s.repo
 		_ = s.outbox
 		return apperr.ErrNotImplemented

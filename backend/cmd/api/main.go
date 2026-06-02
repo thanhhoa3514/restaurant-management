@@ -27,6 +27,7 @@ import (
 	orderingapp "restaurant-management/internal/modules/ordering/application"
 	orderingrepo "restaurant-management/internal/modules/ordering/infrastructure/postgres"
 	orderinghttp "restaurant-management/internal/modules/ordering/interfaces/http"
+	"restaurant-management/internal/platform/auth"
 	"restaurant-management/internal/platform/config"
 	"restaurant-management/internal/platform/httpx"
 	"restaurant-management/internal/platform/logger"
@@ -114,8 +115,9 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 	catalogHandler.RegisterRoutes(api, secret)
 
 	diningRepo := diningrepo.NewRepository(pool)
-	diningHandler := dininghttp.NewHandler(diningapp.NewJoinSession(tx, diningRepo, outboxWriter), diningapp.NewCloseSession(tx, diningRepo, outboxWriter), diningapp.NewManageTableQR(tx, diningRepo, outboxWriter))
+	diningHandler := dininghttp.NewHandler(diningapp.NewOpenSession(tx, diningRepo, outboxWriter), diningapp.NewJoinSession(tx, diningRepo, outboxWriter), diningapp.NewCloseSession(tx, diningRepo, outboxWriter), diningapp.NewManageTableQR(tx, diningRepo, outboxWriter))
 	diningHandler.RegisterRoutes(api, secret)
+	_ = api.Group("/guest", auth.QRSessionToken(diningRepo)) // B2 mounts guest menu routes here.
 
 	orderingRepo := orderingrepo.NewRepository(pool)
 	orderingHandler := orderinghttp.NewHandler(orderingapp.NewPlaceOrder(tx, orderingRepo, outboxWriter), orderingapp.NewCancelOrEditItem(tx, orderingRepo, outboxWriter), orderingapp.NewUpdateItemStatus(tx, orderingRepo, outboxWriter), orderingapp.NewReviewCancelRequest(tx, orderingRepo, outboxWriter))
