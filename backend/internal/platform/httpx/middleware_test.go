@@ -3,9 +3,11 @@ package httpx
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -122,6 +124,76 @@ func TestLoggerInjectsContextLogger(t *testing.T) {
 	})
 	do(r, http.MethodGet, "/x", nil)
 	require.True(t, gotSame, "handler should see request-scoped logger from context")
+}
+
+// readBody registers a POST handler that drains the body and reports 200 when
+// the read succeeds or 413 when MaxBytesReader trips.
+func readBodyRouter(limit int64) *gin.Engine {
+	r := gin.New()
+	r.Use(MaxBodyBytes(limit))
+	r.POST("/x", func(c *gin.Context) {
+		if _, err := io.ReadAll(c.Request.Body); err != nil {
+			c.Status(http.StatusRequestEntityTooLarge)
+			return
+		}
+		c.Status(http.StatusOK)
+	})
+	return r
+}
+
+func postBody(r *gin.Engine, body string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodPost, "/x", strings.NewReader(body))
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func TestMaxBodyBytesAllowsUnderLimit(t *testing.T) {
+	r := readBodyRouter(16)
+	w := postBody(r, "small")
+	require.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestMaxBodyBytesRejectsOverLimit(t *testing.T) {
+	r := readBodyRouter(8)
+	w := postBody(r, strings.Repeat("x", 64))
+	require.Equal(t, http.StatusRequestEntityTooLarge, w.Code)
+}
+
+func corsRouter(allowed []string) *gin.Engine {
+	r := gin.New()
+	r.Use(CORS(allowed))
+	r.GET("/x", func(c *gin.Context) { c.Status(http.StatusOK) })
+	return r
+}
+
+func TestCORSEmptyListWildcards(t *testing.T) {
+	r := corsRouter(nil)
+	h := http.Header{"Origin": []string{"https://anything.example"}}
+	w := do(r, http.MethodGet, "/x", h)
+	require.Equal(t, "*", w.Header().Get("Access-Control-Allow-Origin"))
+}
+
+func TestCORSEchoesAllowedOrigin(t *testing.T) {
+	r := corsRouter([]string{"https://staff.example"})
+	h := http.Header{"Origin": []string{"https://staff.example"}}
+	w := do(r, http.MethodGet, "/x", h)
+	require.Equal(t, "https://staff.example", w.Header().Get("Access-Control-Allow-Origin"))
+	require.Equal(t, "Origin", w.Header().Get("Vary"))
+}
+
+func TestCORSRejectsUnknownOrigin(t *testing.T) {
+	r := corsRouter([]string{"https://staff.example"})
+	h := http.Header{"Origin": []string{"https://evil.example"}}
+	w := do(r, http.MethodGet, "/x", h)
+	require.Empty(t, w.Header().Get("Access-Control-Allow-Origin"))
+}
+
+func TestCORSPreflightShortCircuits(t *testing.T) {
+	r := corsRouter([]string{"https://staff.example"})
+	h := http.Header{"Origin": []string{"https://staff.example"}}
+	w := do(r, http.MethodOptions, "/x", h)
+	require.Equal(t, http.StatusNoContent, w.Code)
 }
 
 func TestRecoverLogsPanicAndReturns500(t *testing.T) {

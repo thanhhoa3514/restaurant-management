@@ -3,6 +3,7 @@ package auth
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -25,6 +26,15 @@ type Claims struct {
 	RestaurantID string `json:"restaurant_id"`
 	Role         string `json:"role"`
 	jwt.RegisteredClaims
+}
+
+func Issue(secret string, claims Claims, ttl time.Duration) (string, error) {
+	now := time.Now()
+	claims.RegisteredClaims = jwt.RegisteredClaims{
+		IssuedAt:  jwt.NewNumericDate(now),
+		ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
+	}
+	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(secret))
 }
 
 func JWT(secret string) gin.HandlerFunc {

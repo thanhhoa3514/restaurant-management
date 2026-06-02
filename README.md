@@ -23,6 +23,7 @@ cd backend
 make build
 make test
 make migrate
+make seed
 ```
 
 ## Frontend

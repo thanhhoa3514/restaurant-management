@@ -17,11 +17,24 @@ const (
 	RoleManager Role = "MANAGER"
 )
 
+type UserStatus string
+
+const (
+	UserStatusActive   UserStatus = "ACTIVE"
+	UserStatusInactive UserStatus = "INACTIVE"
+	UserStatusLocked   UserStatus = "LOCKED"
+)
+
 type User struct {
 	ID           uuid.UUID
 	RestaurantID uuid.UUID
-	Email        string
-	Role         Role
+	Username     string
+	PasswordHash string
+	FullName     string
+	Status       UserStatus
+	RoleID       uuid.UUID
+	RoleName     string
+	LockedUntil  *time.Time
 	Version      int
 	DeletedAt    *time.Time
 }
@@ -35,8 +48,10 @@ type Event struct {
 }
 
 type UserRepository interface {
-	Save(ctx context.Context, aggregate *User) error
-	Get(ctx context.Context, restaurantID uuid.UUID, id uuid.UUID) (*User, error)
+	FindByUsername(ctx context.Context, restaurantID uuid.UUID, username string) (*User, error)
+	ResolveRestaurantIDByCode(ctx context.Context, code string) (uuid.UUID, error)
+	RecordLoginSuccess(ctx context.Context, restaurantID, userID uuid.UUID) error
+	RecordLoginFailure(ctx context.Context, restaurantID, userID uuid.UUID) error
 }
 
 type OutboxWriter interface {

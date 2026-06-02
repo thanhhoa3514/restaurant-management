@@ -68,9 +68,33 @@ func Recover() gin.HandlerFunc {
 	})
 }
 
-func CORS() gin.HandlerFunc {
+// MaxBodyBytes caps request body size to guard against memory-exhaustion DoS.
+// Bodyless requests (GET, the /ws upgrade) are unaffected.
+func MaxBodyBytes(limit int64) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, limit)
+		c.Next()
+	}
+}
+
+// CORS sets cross-origin headers. allowedOrigins is an explicit allowlist; when
+// empty (env unset) it falls back to "*" for dev convenience. A non-empty list
+// echoes the request Origin only if it matches, otherwise sends no
+// Allow-Origin header.
+func CORS(allowedOrigins []string) gin.HandlerFunc {
+	allowed := make(map[string]struct{}, len(allowedOrigins))
+	for _, o := range allowedOrigins {
+		allowed[o] = struct{}{}
+	}
+	return func(c *gin.Context) {
+		if len(allowed) == 0 {
+			c.Header("Access-Control-Allow-Origin", "*")
+		} else if origin := c.GetHeader("Origin"); origin != "" {
+			if _, ok := allowed[origin]; ok {
+				c.Header("Access-Control-Allow-Origin", origin)
+				c.Header("Vary", "Origin")
+			}
+		}
 		c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Request-ID")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		if c.Request.Method == http.MethodOptions {

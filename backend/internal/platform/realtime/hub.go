@@ -33,8 +33,22 @@ type Hub struct {
 	upgrader websocket.Upgrader
 }
 
-func NewHub() *Hub {
-	return &Hub{clients: map[*subscription]struct{}{}, upgrader: websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}}
+// NewHub builds the realtime hub. allowedOrigins gates the websocket upgrade
+// against cross-site hijacking; when empty (env unset) any origin is accepted
+// for dev convenience. Supply the staff and QR-guest frontend origins in prod.
+func NewHub(allowedOrigins []string) *Hub {
+	allowed := make(map[string]struct{}, len(allowedOrigins))
+	for _, o := range allowedOrigins {
+		allowed[o] = struct{}{}
+	}
+	checkOrigin := func(r *http.Request) bool {
+		if len(allowed) == 0 {
+			return true
+		}
+		_, ok := allowed[r.Header.Get("Origin")]
+		return ok
+	}
+	return &Hub{clients: map[*subscription]struct{}{}, upgrader: websocket.Upgrader{CheckOrigin: checkOrigin}}
 }
 func (h *Hub) Run(ctx context.Context) {
 	<-ctx.Done()

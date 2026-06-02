@@ -105,3 +105,31 @@ func TestRBAC(t *testing.T) {
 	require.Equal(t, http.StatusForbidden, run("SERVER", "MANAGER"))
 	require.Equal(t, http.StatusForbidden, run("", "MANAGER"))
 }
+
+func TestIssueRoundTripsThroughJWT(t *testing.T) {
+	rid := uuid.New()
+	uid := uuid.New()
+	tok, err := Issue(testSecret, Claims{UserID: uid.String(), RestaurantID: rid.String(), Role: "MANAGER"}, time.Hour)
+	require.NoError(t, err)
+
+	var gotRole, gotUser string
+	var gotTenant uuid.UUID
+	w := runJWT(testSecret, "Bearer "+tok, func(c *gin.Context) {
+		gotRole = c.GetString(CtxRole)
+		gotUser = c.GetString(CtxUserID)
+		gotTenant, _ = tenant.RestaurantID(c.Request.Context())
+		c.Status(http.StatusOK)
+	})
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Equal(t, "MANAGER", gotRole)
+	require.Equal(t, uid.String(), gotUser)
+	require.Equal(t, rid, gotTenant)
+}
+
+func TestIssueExpiredTokenRejected(t *testing.T) {
+	tok, err := Issue(testSecret, Claims{UserID: uuid.NewString(), RestaurantID: uuid.NewString(), Role: "MANAGER"}, -time.Hour)
+	require.NoError(t, err)
+	w := runJWT(testSecret, "Bearer "+tok, ok)
+	require.Equal(t, http.StatusUnauthorized, w.Code)
+}

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -44,7 +45,7 @@ func main() {
 		log.Error("invalid config", slog.Any("error", err))
 		return
 	}
-	pool, err := postgres.Connect(ctx, cfg.DatabaseURL)
+	pool, err := postgres.Connect(ctx, cfg.DatabaseURL, cfg.DBMaxConns)
 	if err != nil {
 		log.Error("postgres init failed", slog.Any("error", err))
 		return
@@ -52,20 +53,43 @@ func main() {
 	defer pool.Close()
 
 	tx := postgres.NewTxManager(pool)
-	hub := realtime.NewHub()
+	hub := realtime.NewHub(cfg.AllowedOrigins)
 	dispatcher := outbox.NewDispatcher(pool, hub, log)
 	go hub.Run(ctx)
 	go dispatcher.Start(ctx)
 
+	if cfg.AppEnv == "production" {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	router := gin.New()
-	router.Use(httpx.RequestID(), httpx.Logger(log), httpx.Recover(), httpx.CORS())
+	router.Use(httpx.RequestID(), httpx.Logger(log), httpx.Recover(), httpx.CORS(cfg.AllowedOrigins), httpx.MaxBodyBytes(1<<20))
+	// Liveness: process is up. Must NOT touch the DB — a DB blip should not
+	// trigger a pod restart.
 	router.GET("/health", func(c *gin.Context) { httpx.Respond(c, http.StatusOK, gin.H{"status": "ok"}, nil) })
+	// Readiness: can serve traffic. Pings the DB with a short timeout.
+	router.GET("/health/ready", func(c *gin.Context) {
+		pingCtx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
+		defer cancel()
+		if err := pool.Ping(pingCtx); err != nil {
+			httpx.Respond(c, http.StatusServiceUnavailable, gin.H{"status": "unavailable"}, nil)
+			return
+		}
+		httpx.Respond(c, http.StatusOK, gin.H{"status": "ready"}, nil)
+	})
 	router.GET("/ws", hub.ServeGin)
 
 	api := router.Group("/api/v1")
-	wireRoutes(api, tx, dispatcher, pool, cfg.JWTSecret)
+	wireRoutes(api, tx, dispatcher, pool, cfg.JWTSecret, cfg.JWTTTL)
 
-	server := &http.Server{Addr: cfg.HTTPAddr, Handler: router}
+	// ReadHeaderTimeout defends against Slowloris; IdleTimeout reaps idle
+	// keep-alives. ReadTimeout/WriteTimeout are intentionally omitted — they
+	// would tear down the long-lived /ws websocket connection.
+	server := &http.Server{
+		Addr:              cfg.HTTPAddr,
+		Handler:           router,
+		ReadHeaderTimeout: 10 * time.Second,
+		IdleTimeout:       120 * time.Second,
+	}
 	go func() {
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error("http server failed", slog.Any("error", err))
@@ -80,9 +104,9 @@ func main() {
 	}
 }
 
-func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outbox.Dispatcher, pool *pgxpool.Pool, secret string) {
+func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outbox.Dispatcher, pool *pgxpool.Pool, secret string, jwtTTL time.Duration) {
 	identityRepo := identityrepo.NewRepository(pool)
-	identityHandler := identityhttp.NewHandler(identityapp.NewAuthenticate(tx, identityRepo, outboxWriter), identityapp.NewManageUsers(tx, identityRepo, outboxWriter))
+	identityHandler := identityhttp.NewHandler(identityapp.NewAuthenticate(tx, identityRepo, outboxWriter, secret, jwtTTL), identityapp.NewManageUsers(tx, identityRepo, outboxWriter))
 	identityHandler.RegisterRoutes(api, secret)
 
 	catalogRepo := catalogrepo.NewRepository(pool)

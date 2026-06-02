@@ -1,4 +1,4 @@
-.PHONY: backend-build backend-test backend-vet backend-run backend-migrate frontend-dev frontend-build frontend-lint verify
+.PHONY: backend-build backend-test backend-vet backend-run backend-migrate backend-seed frontend-dev frontend-build frontend-lint verify
 
 backend-build:
 	$(MAKE) -C backend build
@@ -14,6 +14,9 @@ backend-run:
 
 backend-migrate:
 	$(MAKE) -C backend migrate
+
+backend-seed:
+	$(MAKE) -C backend seed
 
 frontend-dev:
 	cd frontend && npm run dev
