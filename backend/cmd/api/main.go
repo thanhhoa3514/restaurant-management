@@ -111,13 +111,14 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 	identityHandler.RegisterRoutes(api, secret)
 
 	catalogRepo := catalogrepo.NewRepository(pool)
-	catalogHandler := cataloghttp.NewHandler(catalogapp.NewCreateMenuItem(tx, catalogRepo, outboxWriter), catalogapp.NewUpdateMenuItem(tx, catalogRepo, outboxWriter), catalogapp.NewDeleteMenuItem(tx, catalogRepo, outboxWriter), catalogapp.NewToggleAvailability(tx, catalogRepo, outboxWriter))
+	catalogHandler := cataloghttp.NewHandler(catalogapp.NewCreateMenuItem(tx, catalogRepo, outboxWriter), catalogapp.NewUpdateMenuItem(tx, catalogRepo, outboxWriter), catalogapp.NewDeleteMenuItem(tx, catalogRepo, outboxWriter), catalogapp.NewToggleAvailability(tx, catalogRepo, outboxWriter), catalogapp.NewListCategories(catalogRepo), catalogapp.NewListMenuItems(catalogRepo), catalogapp.NewGetMenuItem(catalogRepo))
 	catalogHandler.RegisterRoutes(api, secret)
 
 	diningRepo := diningrepo.NewRepository(pool)
 	diningHandler := dininghttp.NewHandler(diningapp.NewOpenSession(tx, diningRepo, outboxWriter), diningapp.NewJoinSession(tx, diningRepo, outboxWriter), diningapp.NewCloseSession(tx, diningRepo, outboxWriter), diningapp.NewManageTableQR(tx, diningRepo, outboxWriter))
 	diningHandler.RegisterRoutes(api, secret)
-	_ = api.Group("/guest", auth.QRSessionToken(diningRepo)) // B2 mounts guest menu routes here.
+	guestGroup := api.Group("/guest", auth.QRSessionToken(diningRepo))
+	catalogHandler.RegisterGuestRoutes(guestGroup)
 
 	orderingRepo := orderingrepo.NewRepository(pool)
 	orderingHandler := orderinghttp.NewHandler(orderingapp.NewPlaceOrder(tx, orderingRepo, outboxWriter), orderingapp.NewCancelOrEditItem(tx, orderingRepo, outboxWriter), orderingapp.NewUpdateItemStatus(tx, orderingRepo, outboxWriter), orderingapp.NewReviewCancelRequest(tx, orderingRepo, outboxWriter))
