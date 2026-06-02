@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Waiter Floor View — Quán Cơm Tấm Sài Gòn</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+        },
+        animation: {
+          'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
+          'fade-in': 'fadeIn 200ms ease-out',
+          'fade-up': 'fadeUp 280ms ease-out',
+          'pop': 'pop 400ms ease-out',
+          'slide-in-right': 'slideInRight 280ms cubic-bezier(0.16, 1, 0.3, 1)',
+        },
+        keyframes: {
+          pulseSoft: {
+            '0%, 100%': { opacity: 1, transform: 'scale(1)' },
+            '50%': { opacity: 0.7, transform: 'scale(1.025)' },
+          },
+          fadeIn: { '0%': { opacity: 0 }, '100%': { opacity: 1 } },
+          fadeUp: {
+            '0%': { opacity: 0, transform: 'translateY(8px)' },
+            '100%': { opacity: 1, transform: 'translateY(0)' },
+          },
+          pop: {
+            '0%': { transform: 'scale(1)' },
+            '50%': { transform: 'scale(1.08)' },
+            '100%': { transform: 'scale(1)' },
+          },
+          slideInRight: {
+            '0%': { transform: 'translateX(100%)' },
+            '100%': { transform: 'translateX(0)' },
+          },
+        },
+      },
+    },
+  };
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  html, body { height: 100%; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #fafaf9;
+    color: #1c1917;
+    -webkit-font-smoothing: antialiased;
+    font-size: 17px;
+  }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+  .wf-bg {
+    background:
+      radial-gradient(circle at 10% 0%, rgba(251, 191, 36, 0.05) 0%, transparent 40%),
+      radial-gradient(circle at 100% 100%, rgba(56, 189, 248, 0.04) 0%, transparent 40%),
+      #fafaf9;
+    min-height: 100dvh;
+  }
+  .small-screen-gate { display: none; }
+  @media (max-width: 1023px) {
+    .small-screen-gate { display: flex; }
+    .wf-app { display: none !important; }
+  }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body class="wf-bg">
+<!-- Small-screen gate -->
+<div class="small-screen-gate min-h-screen items-center justify-center px-6 text-center">
+  <div class="max-w-md">
+    <div class="mx-auto w-16 h-16 rounded-2xl bg-stone-900 text-white inline-flex items-center justify-center text-lg font-bold tracking-tight">
+      WF
+    </div>
+    <h1 class="mt-5 text-xl font-bold text-stone-900">
+      Màn hình này dành cho máy tính bảng
+    </h1>
+    <p class="mt-2 text-sm text-stone-500 leading-relaxed">
+      Vui lòng dùng thiết bị lớn hơn (≥1024px) để xem Phòng phục vụ.
+    </p>
+    <p class="mt-3 text-xs text-stone-400 font-mono">
+      This view is designed for tablets — please use a larger screen.
+    </p>
+    <div class="mt-4 text-xs text-stone-400 font-mono">Viewport: <span id="vp-size"></span></div>
+  </div>
+</div>
+
+<div id="root" class="wf-app"></div>
+
+<script>
+  const vp = document.getElementById('vp-size');
+  const update = () => { if (vp) vp.textContent = window.innerWidth + ' × ' + window.innerHeight; };
+  update();
+  window.addEventListener('resize', update);
+</script>
+
+<script type="text/babel" src="wf-data.jsx"></script>
+<script type="text/babel" src="wf-ui.jsx"></script>
+<script type="text/babel" src="wf-views.jsx"></script>
+<script type="text/babel" src="wf-app.jsx"></script>
+</body>
+</html>

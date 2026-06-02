@@ -1,0 +1,213 @@
+import { type FC } from 'react'
+import { useOrdering } from '../hooks/use-ordering'
+import { DICT } from '../data/i18n'
+import { getMenuItem } from '../data/menu'
+import { formatVND, summarizeOptions, cartTotal, totalItems } from '../helpers'
+import type { CartLine, Lang, Order } from '../types'
+import { Button } from '../../../components/ui/button'
+import { Separator } from '../../../components/ui/separator'
+
+interface CartSheetProps {
+  open: boolean
+  lang: Lang
+  onClose: () => void
+}
+
+export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
+  const { state, dispatch } = useOrdering()
+  const t = DICT[lang]
+
+  const subtotal = cartTotal(state.cart)
+  const vat = subtotal * 0.1
+  const total = subtotal + vat
+
+  const handlePlaceOrder = () => {
+    if (state.cart.length === 0) return
+    dispatch({ type: 'PLACE_ORDER' })
+    const order: Order = {
+      placedAt: new Date(),
+      items: state.cart.map((line) => ({ ...line, status: 'pending' })),
+    }
+    dispatch({ type: 'ORDER_PLACED', payload: order })
+    dispatch({ type: 'SET_SCREEN', payload: 'order' })
+  }
+
+  const handleRemove = (index: number) => {
+    dispatch({ type: 'REMOVE_CART_LINE', payload: index })
+  }
+
+  const handleQtyChange = (index: number, delta: number) => {
+    const line = state.cart[index]
+    if (!line) return
+    const newQty = line.qty + delta
+    if (newQty <= 0) {
+      handleRemove(index)
+      return
+    }
+    dispatch({
+      type: 'UPDATE_CART_LINE',
+      payload: { index, line: { ...line, qty: newQty } },
+    })
+  }
+
+  return (
+    <>
+      {open && (
+        <div
+          className="fixed inset-0 bg-black/40 z-overlay animate-fade-in"
+          onClick={onClose}
+        />
+      )}
+
+      <div
+        className={`fixed bottom-0 left-0 right-0 max-w-lg mx-auto z-overlay flex flex-col bg-background rounded-t-2xl max-h-[85dvh] transition-transform duration-300 ease-out ${
+          open ? 'translate-y-0' : 'translate-y-full'
+        }`}
+        data-visible={open || undefined}
+      >
+        <div className="flex items-center justify-center pt-3 pb-1">
+          <div className="size-10 rounded-full bg-surface-grouped flex items-center justify-center">
+            <div className="w-8 h-1 rounded-full bg-tertiary/40" />
+          </div>
+        </div>
+
+        <div className="px-4 pb-3 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-primary">{t.your_cart}</h2>
+          <span className="text-sm text-tertiary">
+            {lang === 'vi' ? `${totalItems(state.cart)} món` : `${totalItems(state.cart)} item${totalItems(state.cart) === 1 ? '' : 's'}`}
+          </span>
+        </div>
+
+        <Separator />
+
+        <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-3">
+          {state.cart.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-2">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-quaternary">
+                <circle cx="9" cy="21" r="1" />
+                <circle cx="20" cy="21" r="1" />
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+              </svg>
+              <p className="text-sm text-tertiary">{t.empty_cart}</p>
+              <p className="text-xs text-quaternary">{t.empty_cart_hint}</p>
+            </div>
+          ) : (
+            state.cart.map((line, i) => <CartLineRow key={`${line.itemId}-${i}`} line={line} index={i} lang={lang} onRemove={handleRemove} onQtyChange={handleQtyChange} />)
+          )}
+        </div>
+
+        {state.cart.length > 0 && (
+          <>
+            <Separator />
+
+            <div className="px-4 py-3 flex flex-col gap-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-tertiary">{t.subtotal}</span>
+                <span className="text-primary font-medium tabular-nums">
+                  {formatVND(subtotal)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-tertiary">{t.vat}</span>
+                <span className="text-primary font-medium tabular-nums">
+                  {formatVND(vat)}
+                </span>
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <span className="text-primary font-semibold">{t.total}</span>
+                <span className="text-lg font-semibold text-system-blue tabular-nums">
+                  {formatVND(total)}
+                </span>
+              </div>
+            </div>
+
+            <div className="px-4 py-3">
+              <Button
+                className="w-full rounded-xl h-14 text-base font-semibold"
+                size="lg"
+                disabled={state.placing}
+                onClick={handlePlaceOrder}
+              >
+                {state.placing ? t.placing_order : t.place_order}
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+    </>
+  )
+}
+
+interface CartLineRowProps {
+  line: CartLine
+  index: number
+  lang: Lang
+  onRemove: (index: number) => void
+  onQtyChange: (index: number, delta: number) => void
+}
+
+const CartLineRow: FC<CartLineRowProps> = ({ line, index, lang, onRemove, onQtyChange }) => {
+  const item = getMenuItem(line.itemId)
+  if (!item) return null
+
+  const name = lang === 'vi' ? item.name.vi : item.name.en
+  const summary = summarizeOptions(line.itemId, line.selections, lang)
+
+  return (
+    <div className="flex gap-3 items-start py-2">
+      <div className="size-14 rounded-xl bg-surface-grouped overflow-hidden shrink-0">
+        <img src={item.image} alt={name} className="size-full object-cover" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-primary truncate">{name}</p>
+            {summary && (
+              <p className="text-[11px] text-tertiary truncate mt-0.5">{summary}</p>
+            )}
+            {line.notes && (
+              <p className="text-[11px] text-quaternary italic truncate mt-0.5">
+                {line.notes}
+              </p>
+            )}
+          </div>
+          <button
+            className="size-7 rounded-full bg-surface-grouped flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+            onClick={() => onRemove(index)}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-tertiary">
+              <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+            </svg>
+          </button>
+        </div>
+        <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center gap-2">
+            <button
+              className="size-7 rounded-full bg-surface-grouped flex items-center justify-center text-primary active:scale-90 transition-transform"
+              onClick={() => onQtyChange(index, -1)}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M5 12h14" />
+              </svg>
+            </button>
+            <span className="text-sm font-semibold text-primary min-w-5 text-center tabular-nums">
+              {line.qty}
+            </span>
+            <button
+              className="size-7 rounded-full bg-surface-grouped flex items-center justify-center text-primary active:scale-90 transition-transform"
+              onClick={() => onQtyChange(index, 1)}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </button>
+          </div>
+          <span className="text-sm font-semibold text-primary tabular-nums">
+            {formatVND(line.unitPrice * line.qty)}
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}

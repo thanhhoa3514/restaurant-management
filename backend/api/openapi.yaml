@@ -1,0 +1,33 @@
+openapi: 3.0.3
+info:
+  title: Restaurant QR Ordering API
+  version: 0.1.0
+paths:
+  /health:
+    get:
+      responses:
+        '200':
+          description: Health status
+  /api/v1/ordering/place-order:
+    post:
+      responses:
+        '501':
+          description: Scaffold stub
+  /api/v1/billing/payments/webhook:
+    post:
+      responses:
+        '501':
+          description: Idempotent payment webhook stub
+components:
+  schemas:
+    Envelope:
+      type: object
+      properties:
+        data: {}
+        meta: {}
+        error:
+          nullable: true
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }

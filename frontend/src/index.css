@@ -1,0 +1,313 @@
+@import 'tailwindcss';
+
+/* ==========================================================================
+   Apple Glass — Soft-Futurism Design System
+   See DESIGN.md for complete reference
+   ========================================================================== */
+
+/* ---- Dark mode variant ---- */
+@custom-variant dark (&:is(.dark *));
+
+/* ---- Font face for SF Pro (device-native) ---- */
+@font-face {
+  font-family: 'SF Pro Display';
+  src: local('SF Pro Display'), local('SFProDisplay-Regular');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Pro Text';
+  src: local('SF Pro Text'), local('SFProText-Regular');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SF Mono';
+  src: local('SF Mono'), local('SFMono-Regular');
+  font-display: swap;
+}
+
+/* ---- Theme tokens mapped to CSS variables ---- */
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-card: var(--bg-elevated);
+  --color-card-foreground: var(--text);
+  --color-popover: var(--bg-elevated);
+  --color-popover-foreground: var(--text);
+  --color-primary: var(--system-blue);
+  --color-primary-foreground: #ffffff;
+  --color-secondary: var(--surface-grouped);
+  --color-secondary-foreground: var(--text);
+  --color-muted: var(--surface-grouped);
+  --color-muted-foreground: var(--text-secondary);
+  --color-accent: var(--system-blue);
+  --color-accent-foreground: #ffffff;
+  --color-destructive: var(--system-red);
+  --color-destructive-foreground: #ffffff;
+  --color-border: var(--separator);
+  --color-input: var(--surface-grouped);
+  --color-ring: var(--system-blue);
+  --color-chart-1: var(--system-blue);
+  --color-chart-2: var(--system-green);
+  --color-chart-3: var(--system-orange);
+  --color-chart-4: var(--system-purple);
+  --color-chart-5: var(--system-pink);
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1rem;
+  --radius: 0.75rem;
+  --font-sans:
+    'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono: 'SF Mono', Menlo, Monaco, Consolas, monospace;
+}
+
+/* ==========================================================================
+   Light theme
+   ========================================================================== */
+:root {
+  --bg: #ffffff;
+  --bg-elevated: #ffffff;
+  --surface-grouped: #f2f2f7;
+  --separator: rgba(60, 60, 67, 0.18);
+
+  --text: #1d1d1f;
+  --text-secondary: rgba(60, 60, 67, 0.78);
+  --text-tertiary: rgba(60, 60, 67, 0.55);
+
+  --system-blue: #007aff;
+  --system-green: #34c759;
+  --system-red: #ff3b30;
+  --system-orange: #ff9500;
+  --system-purple: #af52de;
+  --system-pink: #ff2d55;
+  --system-yellow: #ffcc00;
+
+  --material-thin: rgba(255, 255, 255, 0.6);
+  --material-regular: rgba(255, 255, 255, 0.78);
+  --material-thick: rgba(255, 255, 255, 0.92);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
+  --dur-long: 420ms;
+
+  --z-base: 1;
+  --z-raised: 10;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-modal: 400;
+  --z-toast: 500;
+  --z-tooltip: 600;
+}
+
+/* ==========================================================================
+   Dark theme
+   ========================================================================== */
+.dark {
+  --bg: #000000;
+  --bg-elevated: #1c1c1e;
+  --surface-grouped: #2c2c2e;
+  --separator: rgba(84, 84, 88, 0.65);
+
+  --text: #f5f5f7;
+  --text-secondary: rgba(235, 235, 245, 0.78);
+  --text-tertiary: rgba(235, 235, 245, 0.55);
+
+  --material-thin: rgba(0, 0, 0, 0.6);
+  --material-regular: rgba(0, 0, 0, 0.78);
+  --material-thick: rgba(0, 0, 0, 0.92);
+}
+
+/* ==========================================================================
+   Base layer
+   ========================================================================== */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    border-color: var(--separator);
+  }
+
+  html,
+  body {
+    overflow-x: clip;
+    font-optical-sizing: auto;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family:
+      'SF Pro Text',
+      -apple-system,
+      BlinkMacSystemFont,
+      system-ui,
+      sans-serif;
+    font-size: 17px;
+    line-height: 1.47059;
+    font-weight: 400;
+    letter-spacing: -0.022em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family:
+      'SF Pro Display',
+      -apple-system,
+      BlinkMacSystemFont,
+      system-ui,
+      sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+  }
+
+  .text-display {
+    font-family:
+      'SF Pro Display',
+      -apple-system,
+      BlinkMacSystemFont,
+      system-ui,
+      sans-serif;
+  }
+}
+
+/* ==========================================================================
+   Reduced motion
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 150ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================================================
+   Scrollbar (platform-like)
+   ========================================================================== */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--separator);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* ==========================================================================
+   Utilities
+   ========================================================================== */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-left {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+.safe-right {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+  }
+  html {
+    @apply font-sans;
+  }
+}
