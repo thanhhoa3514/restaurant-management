@@ -121,8 +121,19 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 	catalogHandler.RegisterGuestRoutes(guestGroup)
 
 	orderingRepo := orderingrepo.NewRepository(pool)
-	orderingHandler := orderinghttp.NewHandler(orderingapp.NewPlaceOrder(tx, orderingRepo, outboxWriter), orderingapp.NewCancelOrEditItem(tx, orderingRepo, outboxWriter), orderingapp.NewUpdateItemStatus(tx, orderingRepo, outboxWriter), orderingapp.NewReviewCancelRequest(tx, orderingRepo, outboxWriter))
+	orderingHandler := orderinghttp.NewHandler(
+		orderingapp.NewPlaceOrder(tx, orderingRepo, outboxWriter),
+		orderingapp.NewCancelOrEditItem(tx, orderingRepo, outboxWriter),
+		orderingapp.NewUpdateItemStatus(tx, orderingRepo, outboxWriter),
+		orderingapp.NewReviewCancelRequest(tx, orderingRepo, outboxWriter),
+		orderingapp.NewGuestPlaceOrder(tx, orderingRepo, outboxWriter),
+		orderingapp.NewGuestViewOrders(orderingRepo),
+		orderingapp.NewGuestEditOrder(tx, orderingRepo, outboxWriter),
+		orderingapp.NewGuestCancelOrder(tx, orderingRepo, outboxWriter),
+		orderingapp.NewGuestRequestCancel(tx, orderingRepo, outboxWriter),
+	)
 	orderingHandler.RegisterRoutes(api, secret)
+	orderingHandler.RegisterGuestRoutes(guestGroup)
 	orderingHandler.RegisterKitchenRoutes(api, secret)
 
 	billingRepo := billingrepo.NewRepository(pool)
