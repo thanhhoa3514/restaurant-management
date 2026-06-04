@@ -5,6 +5,7 @@ import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
 import { getMenuItem } from '../data/menu'
 import { formatVND } from '../helpers'
+import type { Session } from '../types'
 import { Button } from '../../../components/ui/button'
 import { Card } from '../../../components/ui/card'
 import { Separator } from '../../../components/ui/separator'
@@ -112,6 +113,19 @@ const pdfStyles = StyleSheet.create({
     paddingTop: 10,
   },
 });
+
+const createInvoiceNumber = (session: Session | null) => {
+  const seed = session
+    ? `${session.token}-${session.table}-${session.startedAt.getTime()}`
+    : 'guest-invoice'
+  let hash = 0
+
+  for (const char of seed) {
+    hash = (hash * 31 + char.charCodeAt(0)) % 900000
+  }
+
+  return 100000 + hash
+}
 
 interface GuestPDFProps {
   restaurantName: string;
@@ -241,7 +255,7 @@ export const GuestInvoiceScreen: FC = () => {
   }
 
   const currentDateString = useMemo(() => fmtDateTime(new Date()), [])
-  const invoiceNumber = useMemo(() => Math.floor(100000 + Math.random() * 900000), [])
+  const invoiceNumber = useMemo(() => createInvoiceNumber(state.session), [state.session])
 
   return (
     <div className="flex min-h-dvh flex-col bg-[var(--material-thick)]/30">
