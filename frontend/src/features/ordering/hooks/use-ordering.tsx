@@ -1,10 +1,9 @@
 import { createContext, useContext, useReducer, type ReactNode } from 'react'
-import type { CartLine, Order, Screen, Session, Lang } from '../types'
+import type { CartLine, Screen, Session, Lang } from '../types'
 
 interface OrderingState {
   session: Session | null
   cart: CartLine[]
-  orders: Order[]
   screen: Screen
   lang: Lang
   cartOpen: boolean
@@ -17,7 +16,8 @@ type Action =
   | { type: 'UPDATE_CART_LINE'; payload: { index: number; line: CartLine } }
   | { type: 'REMOVE_CART_LINE'; payload: number }
   | { type: 'PLACE_ORDER' }
-  | { type: 'ORDER_PLACED'; payload: Order }
+  | { type: 'ORDER_PLACED' }
+  | { type: 'PLACE_FAILED' }
   | { type: 'SET_SCREEN'; payload: Screen }
   | { type: 'SET_LANG'; payload: Lang }
   | { type: 'TOGGLE_CART' }
@@ -48,14 +48,13 @@ function orderingReducer(state: OrderingState, action: Action): OrderingState {
     case 'PLACE_ORDER':
       return { ...state, placing: true }
 
+    // Server is the source of truth for placed orders; on success we just clear
+    // the local cart and let the order screens refetch.
     case 'ORDER_PLACED':
-      return {
-        ...state,
-        orders: [...state.orders, action.payload],
-        cart: [],
-        placing: false,
-        cartOpen: false,
-      }
+      return { ...state, cart: [], placing: false, cartOpen: false }
+
+    case 'PLACE_FAILED':
+      return { ...state, placing: false }
 
     case 'SET_SCREEN':
       return { ...state, screen: action.payload }
@@ -92,7 +91,6 @@ export function OrderingProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(orderingReducer, {
     session: null,
     cart: [],
-    orders: [],
     screen: 'qr',
     lang: (localStorage.getItem('rest_lang_customer') as Lang) || 'vi',
     cartOpen: false,

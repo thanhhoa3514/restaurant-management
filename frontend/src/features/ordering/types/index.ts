@@ -1,61 +1,9 @@
-export interface Option {
-  id: string
-  name_vi: string
-  name_en: string
-  price_modifier: number
-}
+// Domain types for the guest ordering flow. Menu/order shapes live in ../api
+// (backend DTOs); this file holds the client-only session + cart model.
 
-export type OptionGroupType = 'single' | 'multi'
+export type Lang = 'vi' | 'en'
 
-export interface OptionGroup {
-  id: string
-  name_vi: string
-  name_en: string
-  type: OptionGroupType
-  required: boolean
-  options: Option[]
-}
-
-export interface MenuItem {
-  id: string
-  category: string
-  name: { vi: string; en: string }
-  description: { vi: string; en: string }
-  price: number
-  image: string
-  is_available: boolean
-  is_bestseller: boolean
-  option_groups: OptionGroup[]
-  sub_images?: string[]
-}
-
-export interface Category {
-  id: string
-  name_vi: string
-  name_en: string
-}
-
-export interface CartLine {
-  itemId: string
-  qty: number
-  selections: Record<string, string | string[]>
-  notes: string
-  unitPrice: number
-}
-
-export type ItemStatus = 'pending' | 'preparing' | 'ready' | 'served'
-
-export interface OrderItem extends CartLine {
-  status: ItemStatus
-}
-
-export interface Order {
-  placedAt: Date
-  items: OrderItem[]
-  _orderIdx?: number
-  _itemIdx?: number
-  _placedAt?: Date
-}
+export type Screen = 'qr' | 'menu' | 'order' | 'summary' | 'invoice'
 
 export interface Session {
   token: string
@@ -67,6 +15,28 @@ export interface Session {
   status?: string
 }
 
-export type Screen = 'qr' | 'menu' | 'order' | 'summary' | 'invoice'
+// A chosen option inside a cart line. priceDeltaVnd/nameSnapshot are kept for
+// local display + estimate only — the server reprices authoritatively on place.
+export interface CartOption {
+  optionId: string
+  groupId: string
+  nameSnapshot: string
+  priceDeltaVnd: number
+  quantity: number
+}
 
-export type Lang = 'vi' | 'en'
+// A line in the local cart, modelled to match the place-order payload so no
+// re-mapping is needed at submit time (variant is distinct from options).
+export interface CartLine {
+  menuItemId: string
+  variantId?: string
+  variantNameSnapshot?: string
+  quantity: number
+  note: string
+  // Display snapshot for cart rendering (server has authoritative pricing).
+  nameSnapshot: string
+  imageUrl: string
+  // base/variant price + summed option deltas, for the pre-submit estimate.
+  estUnitPriceVnd: number
+  options: CartOption[]
+}

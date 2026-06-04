@@ -37,75 +37,75 @@ type ItemOption struct {
 }
 
 type CategoryRead struct {
-	ID           uuid.UUID
-	Name         string
-	Slug         string
-	Description  string
-	ImageURL     string
-	Icon         string
-	DisplayOrder int
+	ID           uuid.UUID `json:"id"`
+	Name         string    `json:"name"`
+	Slug         string    `json:"slug"`
+	Description  string    `json:"description"`
+	ImageURL     string    `json:"image_url"`
+	Icon         string    `json:"icon"`
+	DisplayOrder int       `json:"display_order"`
 }
 
 type MenuItemSummary struct {
-	ID                 uuid.UUID
-	CategoryID         uuid.UUID
-	Name               string
-	Slug               string
-	ShortDescription   string
-	ImageURL           string
-	BasePriceVND       int64
-	AvailabilityStatus string
-	IsAvailable        bool
-	HasVariants        bool
-	PriceFromVND       *int64
+	ID                 uuid.UUID `json:"id"`
+	CategoryID         uuid.UUID `json:"category_id"`
+	Name               string    `json:"name"`
+	Slug               string    `json:"slug"`
+	ShortDescription   string    `json:"short_description"`
+	ImageURL           string    `json:"image_url"`
+	BasePriceVND       int64     `json:"base_price_vnd"`
+	AvailabilityStatus string    `json:"availability_status"`
+	IsAvailable        bool      `json:"is_available"`
+	HasVariants        bool      `json:"has_variants"`
+	PriceFromVND       *int64    `json:"price_from_vnd"`
 }
 
 type MenuItemDetail struct {
-	ID                 uuid.UUID
-	CategoryID         uuid.UUID
-	Name               string
-	Slug               string
-	Description        string
-	ShortDescription   string
-	ImageURL           string
-	Images             []string
-	BasePriceVND       int64
-	AvailabilityStatus string
-	IsAvailable        bool
-	IsSpicy            bool
-	Variants           []VariantRead
-	OptionGroups       []OptionGroupRead
+	ID                 uuid.UUID         `json:"id"`
+	CategoryID         uuid.UUID         `json:"category_id"`
+	Name               string            `json:"name"`
+	Slug               string            `json:"slug"`
+	Description        string            `json:"description"`
+	ShortDescription   string            `json:"short_description"`
+	ImageURL           string            `json:"image_url"`
+	Images             []string          `json:"images"`
+	BasePriceVND       int64             `json:"base_price_vnd"`
+	AvailabilityStatus string            `json:"availability_status"`
+	IsAvailable        bool              `json:"is_available"`
+	IsSpicy            bool              `json:"is_spicy"`
+	Variants           []VariantRead     `json:"variants"`
+	OptionGroups       []OptionGroupRead `json:"option_groups"`
 }
 
 type VariantRead struct {
-	ID           uuid.UUID
-	Name         string
-	Unit         string
-	PriceVND     int64
-	IsDefault    bool
-	IsAvailable  bool
-	DisplayOrder int
+	ID           uuid.UUID `json:"id"`
+	Name         string    `json:"name"`
+	Unit         string    `json:"unit"`
+	PriceVND     int64     `json:"price_vnd"`
+	IsDefault    bool      `json:"is_default"`
+	IsAvailable  bool      `json:"is_available"`
+	DisplayOrder int       `json:"display_order"`
 }
 
 type OptionGroupRead struct {
-	ID            uuid.UUID
-	Name          string
-	Description   string
-	SelectionType string
-	IsRequired    bool
-	MinSelections int
-	MaxSelections *int
-	DisplayOrder  int
-	Options       []OptionRead
+	ID            uuid.UUID    `json:"id"`
+	Name          string       `json:"name"`
+	Description   string       `json:"description"`
+	SelectionType string       `json:"selection_type"`
+	IsRequired    bool         `json:"is_required"`
+	MinSelections int          `json:"min_selections"`
+	MaxSelections *int         `json:"max_selections"`
+	DisplayOrder  int          `json:"display_order"`
+	Options       []OptionRead `json:"options"`
 }
 
 type OptionRead struct {
-	ID            uuid.UUID
-	Name          string
-	PriceDeltaVND int64
-	IsDefault     bool
-	IsAvailable   bool
-	DisplayOrder  int
+	ID            uuid.UUID `json:"id"`
+	Name          string    `json:"name"`
+	PriceDeltaVND int64     `json:"price_delta_vnd"`
+	IsDefault     bool      `json:"is_default"`
+	IsAvailable   bool      `json:"is_available"`
+	DisplayOrder  int       `json:"display_order"`
 }
 
 type Event struct {

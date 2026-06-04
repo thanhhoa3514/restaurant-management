@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"golang.org/x/crypto/bcrypt"
 
 	"restaurant-management/internal/platform/config"
@@ -105,12 +106,34 @@ func main() {
 		os.Exit(1)
 	}
 
-	if _, err := tx.Exec(ctx, `
+	var qrCodeID uuid.UUID
+	if err := tx.QueryRow(ctx, `
 		INSERT INTO qr_codes (restaurant_id, table_id, token, is_active)
 		VALUES ($1, $2, 'DEMO-T01', TRUE)
-		ON CONFLICT (token) DO NOTHING
-	`, restaurantID, tableID); err != nil {
+		ON CONFLICT (token) DO UPDATE SET is_active = TRUE
+		RETURNING id
+	`, restaurantID, tableID).Scan(&qrCodeID); err != nil {
 		log.Error("seed qr failed", slog.Any("error", err))
+		os.Exit(1)
+	}
+
+	if err := seedMenu(ctx, tx, restaurantID); err != nil {
+		log.Error("seed menu failed", slog.Any("error", err))
+		os.Exit(1)
+	}
+
+	// Open a dining session bound to a fixed guest session token so the guest
+	// menu/order endpoints (behind X-Session-Token) can be exercised without
+	// wiring real staff auth. Demo only.
+	if _, err := tx.Exec(ctx, `DELETE FROM dining_sessions WHERE restaurant_id = $1 AND table_id = $2`, restaurantID, tableID); err != nil {
+		log.Error("clear demo session failed", slog.Any("error", err))
+		os.Exit(1)
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO dining_sessions (restaurant_id, table_id, qr_code_id, session_code, status, opened_via, session_token)
+		VALUES ($1, $2, $3, 'DEMO-SESS-01', 'ACTIVE', 'QR_SCAN', $4)
+	`, restaurantID, tableID, qrCodeID, demoSessionToken); err != nil {
+		log.Error("seed dining session failed", slog.Any("error", err))
 		os.Exit(1)
 	}
 
@@ -121,10 +144,84 @@ func main() {
 
 	fmt.Println("Seed complete")
 	fmt.Printf("restaurant_code: %s\n", demoRestaurantCode)
+	fmt.Printf("qr_token: %s  (guest entry: /order?t=DEMO-T01)\n", "DEMO-T01")
+	fmt.Printf("session_token: %s  (X-Session-Token for /api/v1/guest/*)\n", demoSessionToken)
 	fmt.Println("usernames:")
 	for _, u := range demoUsers {
 		fmt.Printf("- %s\n", u.username)
 	}
+}
+
+const demoSessionToken = "DEMO-SESSION-T01"
+
+// seedMenu replaces the demo restaurant's menu (categories, items, one variant
+// set, one option group) idempotently so re-running the seed is safe.
+func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
+	for _, q := range []string{
+		`DELETE FROM menu_item_option_groups WHERE restaurant_id = $1`,
+		`DELETE FROM options WHERE restaurant_id = $1`,
+		`DELETE FROM option_groups WHERE restaurant_id = $1`,
+		`DELETE FROM menu_item_variants WHERE restaurant_id = $1`,
+		`DELETE FROM menu_items WHERE restaurant_id = $1`,
+		`DELETE FROM categories WHERE restaurant_id = $1`,
+	} {
+		if _, err := tx.Exec(ctx, q, restaurantID); err != nil {
+			return err
+		}
+	}
+
+	catRice, catDrink := uuid.New(), uuid.New()
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO categories (id, restaurant_id, name, slug, description, icon, display_order, is_active) VALUES
+		($1, $3, 'Cơm', 'com', 'Món cơm', '🍚', 1, TRUE),
+		($2, $3, 'Đồ uống', 'do-uong', 'Thức uống', '🥤', 2, TRUE)
+	`, catRice, catDrink, restaurantID); err != nil {
+		return err
+	}
+
+	itemSuon, itemTra, itemCafe := uuid.New(), uuid.New(), uuid.New()
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO menu_items (id, restaurant_id, category_id, code, name, slug, short_description, base_price_vnd, is_available, availability_status, station, status, display_order) VALUES
+		($1, $4, $5, 'COM-SUON', 'Cơm tấm sườn nướng', 'com-tam-suon-nuong', 'Sườn nướng than hoa, cơm tấm dẻo', 55000, TRUE, 'AVAILABLE', 'GENERAL', 'PUBLISHED', 1),
+		($2, $4, $6, 'TRA-DA',   'Trà đá',             'tra-da',              'Trà đá mát lạnh',                  5000,  TRUE, 'AVAILABLE', 'DRINK',   'PUBLISHED', 1),
+		($3, $4, $6, 'CF-SUA',   'Cà phê sữa',         'ca-phe-sua',          'Cà phê phin truyền thống',         25000, TRUE, 'AVAILABLE', 'DRINK',   'PUBLISHED', 2)
+	`, itemSuon, itemTra, itemCafe, restaurantID, catRice, catDrink); err != nil {
+		return err
+	}
+
+	// Variants on the rice dish (default = Regular).
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO menu_item_variants (restaurant_id, menu_item_id, name, sku, unit, price_vnd, is_default, is_available, display_order) VALUES
+		($1, $2, 'Thường',     'COM-SUON-REG', 'phần', 55000, TRUE,  TRUE, 1),
+		($1, $2, 'Đặc biệt',   'COM-SUON-SP',  'phần', 75000, FALSE, TRUE, 2)
+	`, restaurantID, itemSuon); err != nil {
+		return err
+	}
+
+	// One required single-select option group (sugar level) on the coffee.
+	sugarGroup := uuid.New()
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO option_groups (id, restaurant_id, name, selection_type, is_required, min_selections, max_selections, display_order)
+		VALUES ($1, $2, 'Mức đường', 'SINGLE', TRUE, 1, 1, 1)
+	`, sugarGroup, restaurantID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO options (restaurant_id, option_group_id, name, price_delta_vnd, is_default, is_available, display_order) VALUES
+		($1, $2, 'Bình thường', 0, TRUE,  TRUE, 1),
+		($1, $2, 'Ít đường',    0, FALSE, TRUE, 2),
+		($1, $2, 'Nhiều đường', 0, FALSE, TRUE, 3)
+	`, restaurantID, sugarGroup); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO menu_item_option_groups (restaurant_id, menu_item_id, option_group_id, display_order)
+		VALUES ($1, $2, $3, 1)
+	`, restaurantID, itemCafe, sugarGroup); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func demoPassword() string {

@@ -1,9 +1,11 @@
-import { type FC } from 'react'
+import { useState, type FC } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
-import { getMenuItem } from '../data/menu'
-import { formatVND, summarizeOptions, cartTotal, totalItems } from '../helpers'
-import type { CartLine, Lang, Order } from '../types'
+import { formatVND, summarizeCartLine, cartTotal, totalItems } from '../helpers'
+import { placeGuestOrder, type PlaceOrderInput } from '../api'
+import { ApiError } from '@/lib/api'
+import type { CartLine, Lang } from '../types'
 import { Button } from '../../../components/ui/button'
 import { Separator } from '../../../components/ui/separator'
 
@@ -15,21 +17,45 @@ interface CartSheetProps {
 
 export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
   const { state, dispatch } = useOrdering()
+  const queryClient = useQueryClient()
   const t = DICT[lang]
+  const [error, setError] = useState('')
 
+  // Pre-submit estimate only — the server computes the authoritative total.
   const subtotal = cartTotal(state.cart)
-  const vat = subtotal * 0.1
-  const total = subtotal + vat
 
-  const handlePlaceOrder = () => {
-    if (state.cart.length === 0) return
+  const handlePlaceOrder = async () => {
+    const sessionToken = state.session?.token
+    if (state.cart.length === 0 || !sessionToken) return
+    setError('')
     dispatch({ type: 'PLACE_ORDER' })
-    const order: Order = {
-      placedAt: new Date(),
-      items: state.cart.map((line) => ({ ...line, status: 'pending' })),
+
+    const input: PlaceOrderInput = {
+      note: '',
+      items: state.cart.map((line) => ({
+        menu_item_id: line.menuItemId,
+        variant_id: line.variantId,
+        quantity: line.quantity,
+        note: line.note,
+        options: line.options.map((o) => ({ option_id: o.optionId, quantity: o.quantity })),
+      })),
     }
-    dispatch({ type: 'ORDER_PLACED', payload: order })
-    dispatch({ type: 'SET_SCREEN', payload: 'order' })
+
+    try {
+      await placeGuestOrder(sessionToken, input)
+      await queryClient.invalidateQueries({ queryKey: ['guest-orders', sessionToken] })
+      dispatch({ type: 'ORDER_PLACED' })
+      dispatch({ type: 'SET_SCREEN', payload: 'order' })
+    } catch (err) {
+      dispatch({ type: 'PLACE_FAILED' })
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : lang === 'vi'
+            ? 'Không thể gửi đơn. Vui lòng thử lại.'
+            : 'Could not place the order. Please retry.',
+      )
+    }
   }
 
   const handleRemove = (index: number) => {
@@ -39,14 +65,14 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
   const handleQtyChange = (index: number, delta: number) => {
     const line = state.cart[index]
     if (!line) return
-    const newQty = line.qty + delta
+    const newQty = line.quantity + delta
     if (newQty <= 0) {
       handleRemove(index)
       return
     }
     dispatch({
       type: 'UPDATE_CART_LINE',
-      payload: { index, line: { ...line, qty: newQty } },
+      payload: { index, line: { ...line, quantity: newQty } },
     })
   }
 
@@ -92,7 +118,9 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
               <p className="text-xs text-quaternary">{t.empty_cart_hint}</p>
             </div>
           ) : (
-            state.cart.map((line, i) => <CartLineRow key={`${line.itemId}-${i}`} line={line} index={i} lang={lang} onRemove={handleRemove} onQtyChange={handleQtyChange} />)
+            state.cart.map((line, i) => (
+              <CartLineRow key={i} line={line} index={i} onRemove={handleRemove} onQtyChange={handleQtyChange} />
+            ))
           )}
         </div>
 
@@ -101,26 +129,22 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
             <Separator />
 
             <div className="px-4 py-3 flex flex-col gap-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-tertiary">{t.subtotal}</span>
-                <span className="text-primary font-medium tabular-nums">
+              <div className="flex items-center justify-between">
+                <span className="text-primary font-semibold">{t.subtotal}</span>
+                <span className="text-lg font-semibold text-system-blue tabular-nums">
                   {formatVND(subtotal)}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-tertiary">{t.vat}</span>
-                <span className="text-primary font-medium tabular-nums">
-                  {formatVND(vat)}
-                </span>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <span className="text-primary font-semibold">{t.total}</span>
-                <span className="text-lg font-semibold text-system-blue tabular-nums">
-                  {formatVND(total)}
-                </span>
-              </div>
+              <p className="text-[11px] text-quaternary">
+                {lang === 'vi'
+                  ? 'Tạm tính, thuế và phí dịch vụ tính khi thanh toán.'
+                  : 'Estimate. Tax and service charge are applied at checkout.'}
+              </p>
             </div>
+
+            {error && (
+              <p className="px-4 pb-2 text-sm text-system-red">{error}</p>
+            )}
 
             <div className="px-4 py-3">
               <Button
@@ -142,34 +166,27 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
 interface CartLineRowProps {
   line: CartLine
   index: number
-  lang: Lang
   onRemove: (index: number) => void
   onQtyChange: (index: number, delta: number) => void
 }
 
-const CartLineRow: FC<CartLineRowProps> = ({ line, index, lang, onRemove, onQtyChange }) => {
-  const item = getMenuItem(line.itemId)
-  if (!item) return null
-
-  const name = lang === 'vi' ? item.name.vi : item.name.en
-  const summary = summarizeOptions(line.itemId, line.selections, lang)
+const CartLineRow: FC<CartLineRowProps> = ({ line, index, onRemove, onQtyChange }) => {
+  const summary = summarizeCartLine(line)
 
   return (
     <div className="flex gap-3 items-start py-2">
       <div className="size-14 rounded-xl bg-surface-grouped overflow-hidden shrink-0">
-        <img src={item.image} alt={name} className="size-full object-cover" />
+        {line.imageUrl && <img src={line.imageUrl} alt={line.nameSnapshot} className="size-full object-cover" />}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-sm font-medium text-primary truncate">{name}</p>
+            <p className="text-sm font-medium text-primary truncate">{line.nameSnapshot}</p>
             {summary && (
               <p className="text-[11px] text-tertiary truncate mt-0.5">{summary}</p>
             )}
-            {line.notes && (
-              <p className="text-[11px] text-quaternary italic truncate mt-0.5">
-                {line.notes}
-              </p>
+            {line.note && (
+              <p className="text-[11px] text-quaternary italic truncate mt-0.5">{line.note}</p>
             )}
           </div>
           <button
@@ -192,7 +209,7 @@ const CartLineRow: FC<CartLineRowProps> = ({ line, index, lang, onRemove, onQtyC
               </svg>
             </button>
             <span className="text-sm font-semibold text-primary min-w-5 text-center tabular-nums">
-              {line.qty}
+              {line.quantity}
             </span>
             <button
               className="size-7 rounded-full bg-surface-grouped flex items-center justify-center text-primary active:scale-90 transition-transform"
@@ -204,7 +221,7 @@ const CartLineRow: FC<CartLineRowProps> = ({ line, index, lang, onRemove, onQtyC
             </button>
           </div>
           <span className="text-sm font-semibold text-primary tabular-nums">
-            {formatVND(line.unitPrice * line.qty)}
+            {formatVND(line.estUnitPriceVnd * line.quantity)}
           </span>
         </div>
       </div>

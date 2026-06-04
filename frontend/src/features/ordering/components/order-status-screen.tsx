@@ -1,45 +1,61 @@
 import { type FC } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
-import { getMenuItem } from '../data/menu'
 import { formatVND, formatTime } from '../helpers'
-import type { Lang, ItemStatus } from '../types'
+import { fetchGuestOrders, type OrderItemDTO } from '../api'
+import type { Lang } from '../types'
 import { Button } from '../../../components/ui/button'
 import { Badge } from '../../../components/ui/badge'
+import { Skeleton } from '../../../components/ui/skeleton'
+
+// Maps backend order-item status to a display label + colour. Unknown statuses
+// fall back to a neutral chip showing the raw value.
+const STATUS_LABELS: Record<Lang, Record<string, string>> = {
+  vi: { PENDING: 'Chờ xác nhận', CONFIRMED: 'Đã xác nhận', PREPARING: 'Đang chuẩn bị', READY: 'Sẵn sàng', SERVED: 'Đã phục vụ', CANCELLED: 'Đã huỷ' },
+  en: { PENDING: 'Pending', CONFIRMED: 'Confirmed', PREPARING: 'Preparing', READY: 'Ready', SERVED: 'Served', CANCELLED: 'Cancelled' },
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  PENDING: 'bg-system-orange/15 text-system-orange',
+  CONFIRMED: 'bg-system-blue/15 text-system-blue',
+  PREPARING: 'bg-system-blue/15 text-system-blue',
+  READY: 'bg-system-green/15 text-system-green',
+  SERVED: 'bg-tertiary/20 text-tertiary',
+  CANCELLED: 'bg-system-red/15 text-system-red',
+}
 
 export const OrderStatusScreen: FC = () => {
   const { state, dispatch } = useOrdering()
   const t = DICT[state.lang]
-  const lastOrder = state.orders[state.orders.length - 1]
+  const sessionToken = state.session?.token
 
-  const handleOrderMore = () => {
-    dispatch({ type: 'SET_SCREEN', payload: 'menu' })
-  }
+  const ordersQuery = useQuery({
+    queryKey: ['guest-orders', sessionToken],
+    queryFn: () => fetchGuestOrders(sessionToken!),
+    enabled: !!sessionToken,
+  })
 
-  const handleGoSummary = () => {
-    dispatch({ type: 'SET_SCREEN', payload: 'summary' })
-  }
+  const orders = ordersQuery.data?.orders ?? []
 
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-sticky bg-background/80 backdrop-blur-xl border-b border-separator px-4 pt-4 pb-3">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold text-primary">{t.your_order}</h1>
-            {lastOrder && (
-              <p className="text-xs text-tertiary mt-0.5">
-                {t.submitted_at} {formatTime(lastOrder.placedAt)}
-              </p>
-            )}
-          </div>
+          <h1 className="text-lg font-semibold text-primary">{t.your_order}</h1>
           <Badge className="rounded-full bg-system-green/15 text-system-green text-xs font-medium">
-            {state.orders.length} {t.orders_history.toLowerCase()}
+            {orders.length} {t.orders_history.toLowerCase()}
           </Badge>
         </div>
       </header>
 
       <div className="flex-1 px-4 py-4 flex flex-col gap-4">
-        {state.orders.length === 0 ? (
+        {ordersQuery.isLoading ? (
+          <>
+            <Skeleton className="h-24 rounded-xl" />
+            <Skeleton className="h-24 rounded-xl" />
+          </>
+        ) : orders.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-2">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-quaternary">
               <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0" />
@@ -47,18 +63,16 @@ export const OrderStatusScreen: FC = () => {
             <p className="text-sm text-tertiary">{t.empty_cart}</p>
           </div>
         ) : (
-          state.orders.toReversed().map((order, oi) => (
-            <div key={oi} className="rounded-xl bg-elevated p-4 flex flex-col gap-3">
+          orders.map((order) => (
+            <div key={order.id} className="rounded-xl bg-elevated p-4 flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-tertiary">
-                  {t.submitted_at} {formatTime(order.placedAt)}
+                  {t.submitted_at} {formatTime(new Date(order.submitted_at))}
                 </span>
-                <span className="text-xs text-tertiary">
-                  #{state.orders.length - oi}
-                </span>
+                <span className="text-xs text-tertiary">#{order.order_number}</span>
               </div>
-              {order.items.map((item, ii) => (
-                <OrderItemRow key={ii} itemId={item.itemId} status={item.status} qty={item.qty} unitPrice={item.unitPrice} lang={state.lang} />
+              {order.items.map((item) => (
+                <OrderItemRow key={item.order_item_id} item={item} lang={state.lang} />
               ))}
             </div>
           ))
@@ -69,15 +83,15 @@ export const OrderStatusScreen: FC = () => {
         <Button
           className="w-full rounded-xl h-14 text-base font-semibold"
           size="lg"
-          onClick={handleOrderMore}
+          onClick={() => dispatch({ type: 'SET_SCREEN', payload: 'menu' })}
         >
           {t.order_more}
         </Button>
-        {state.orders.length > 0 && (
+        {orders.length > 0 && (
           <Button
             variant="secondary"
             className="w-full rounded-xl h-12 text-sm font-medium"
-            onClick={handleGoSummary}
+            onClick={() => dispatch({ type: 'SET_SCREEN', payload: 'summary' })}
           >
             {t.request_bill}
           </Button>
@@ -87,51 +101,26 @@ export const OrderStatusScreen: FC = () => {
   )
 }
 
-interface OrderItemRowProps {
-  itemId: string
-  status: ItemStatus
-  qty: number
-  unitPrice: number
-  lang: Lang
-}
-
-const STATUS_LABELS: Record<Lang, Record<ItemStatus, string>> = {
-  vi: { pending: 'Chờ xác nhận', preparing: 'Đang chuẩn bị', ready: 'Sẵn sàng', served: 'Đã phục vụ' },
-  en: { pending: 'Pending', preparing: 'Preparing', ready: 'Ready', served: 'Served' },
-}
-
-const STATUS_COLORS: Record<ItemStatus, string> = {
-  pending: 'bg-system-orange/15 text-system-orange',
-  preparing: 'bg-system-blue/15 text-system-blue',
-  ready: 'bg-system-green/15 text-system-green',
-  served: 'bg-tertiary/20 text-tertiary',
-}
-
-const OrderItemRow: FC<OrderItemRowProps> = ({ itemId, status, qty, unitPrice, lang }) => {
-  const item = getMenuItem(itemId)
-  if (!item) return null
-  const name = lang === 'vi' ? item.name.vi : item.name.en
-  const statusLabel = STATUS_LABELS[lang][status]
-  const statusColor = STATUS_COLORS[status]
+const OrderItemRow: FC<{ item: OrderItemDTO; lang: Lang }> = ({ item, lang }) => {
+  const statusLabel = STATUS_LABELS[lang][item.status] ?? item.status
+  const statusColor = STATUS_COLORS[item.status] ?? 'bg-tertiary/20 text-tertiary'
+  const name = item.variant_name_snapshot
+    ? `${item.name_snapshot} · ${item.variant_name_snapshot}`
+    : item.name_snapshot
 
   return (
     <div className="flex items-center gap-3">
-      <div className="size-10 rounded-lg bg-surface-grouped overflow-hidden shrink-0">
-        <img src={item.image} alt={name} className="size-full object-cover" />
-      </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-medium text-primary truncate">{name}</p>
-          <span className="text-xs text-tertiary whitespace-nowrap tabular-nums">
-            x{qty}
-          </span>
+          <span className="text-xs text-tertiary whitespace-nowrap tabular-nums">x{item.quantity}</span>
         </div>
         <div className="flex items-center justify-between mt-0.5">
           <Badge className={`rounded-full text-[10px] px-2 py-0 h-5 font-medium ${statusColor}`}>
             {statusLabel}
           </Badge>
           <span className="text-xs font-medium text-primary tabular-nums">
-            {formatVND(unitPrice * qty)}
+            {formatVND(item.total_amount_vnd)}
           </span>
         </div>
       </div>
