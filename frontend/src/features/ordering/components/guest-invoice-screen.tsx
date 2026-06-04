@@ -1,10 +1,11 @@
 import { type FC, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { PDFDownloadLink, Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer'
 
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
-import { getMenuItem } from '../data/menu'
 import { formatVND } from '../helpers'
+import { fetchGuestOrders } from '../api'
 import type { Session } from '../types'
 import { Button } from '../../../components/ui/button'
 import { Card } from '../../../components/ui/card'
@@ -220,33 +221,41 @@ const GuestInvoicePDF = ({
 export const GuestInvoiceScreen: FC = () => {
   const { state, dispatch } = useOrdering()
   const t = DICT[state.lang]
+  const sessionToken = state.session?.token
+
+  const ordersQuery = useQuery({
+    queryKey: ['guest-orders', sessionToken],
+    queryFn: () => fetchGuestOrders(sessionToken!),
+    enabled: !!sessionToken,
+  })
 
   const { total, vat, grandTotal, invoiceItems } = useMemo(() => {
-    let subtotal = 0
     const itemsList: Array<{ name: string; qty: number; price: number }> = []
+    let subtotal = 0
 
-    state.orders.forEach((order) => {
-      order.items.forEach((item) => {
-        const menuItem = getMenuItem(item.itemId)
-        if (menuItem) {
-          const name = state.lang === 'vi' ? menuItem.name.vi : menuItem.name.en
-          subtotal += item.unitPrice * item.qty
-          itemsList.push({
-            name,
-            qty: item.qty,
-            price: item.unitPrice,
-          })
-        }
-      })
-    })
+    for (const order of ordersQuery.data?.orders ?? []) {
+      for (const item of order.items) {
+        const name = item.variant_name_snapshot
+          ? `${item.name_snapshot} (${item.variant_name_snapshot})`
+          : item.name_snapshot
+        subtotal += item.total_amount_vnd
+        itemsList.push({
+          name,
+          qty: item.quantity,
+          // Effective unit price (line total / qty); server prices authoritatively.
+          price: item.quantity > 0 ? Math.round(item.total_amount_vnd / item.quantity) : item.total_amount_vnd,
+        })
+      }
+    }
 
+    const grand = ordersQuery.data?.session_total_vnd ?? subtotal
     return {
       total: subtotal,
-      vat: subtotal * 0.1,
-      grandTotal: subtotal * 1.1,
+      vat: grand - subtotal,
+      grandTotal: grand,
       invoiceItems: itemsList,
     }
-  }, [state.orders, state.lang])
+  }, [ordersQuery.data])
 
   const handleFinish = () => {
     // Clear cart and session, then redirect to landing page

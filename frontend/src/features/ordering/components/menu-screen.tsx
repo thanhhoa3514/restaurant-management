@@ -1,13 +1,14 @@
-import { useState, type FC } from 'react'
+import { useMemo, useState, type FC } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
-import { MENU } from '../data/menu'
-import { CATEGORIES } from '../types/categories'
-import { totalItems } from '../helpers'
-import type { CartLine, MenuItem, Lang } from '../types'
+import { formatVND, totalItems } from '../helpers'
+import { fetchCategories, fetchMenuItems, type ApiMenuItemSummary } from '../api'
+import type { Lang } from '../types'
 import { Button } from '../../../components/ui/button'
 import { Badge } from '../../../components/ui/badge'
 import { Card } from '../../../components/ui/card'
+import { Skeleton } from '../../../components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '../../../components/ui/tabs'
 import { Input } from '../../../components/ui/input'
 import { LanguageLoader } from '../../../components/ui/language-loader'
@@ -19,35 +20,37 @@ import { CartSheet } from './cart-sheet'
 export const MenuScreen: FC = () => {
   const { state, dispatch } = useOrdering()
   const t = DICT[state.lang]
+  const sessionToken = state.session?.token
   const [activeCategory, setActiveCategory] = useState('all')
   const [search, setSearch] = useState('')
-  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null)
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [changingLang, setChangingLang] = useState<'vi' | 'en' | null>(null)
 
-  const filtered = MENU.filter((item) => {
-    if (!item.is_available) return false
-    if (activeCategory !== 'all' && item.category !== activeCategory) return false
-    if (search) {
-      const q = search.toLowerCase()
-      const name = state.lang === 'vi' ? item.name.vi : item.name.en
-      if (!name.toLowerCase().includes(q)) return false
-    }
-    return true
+  const categoriesQuery = useQuery({
+    queryKey: ['guest-categories', sessionToken],
+    queryFn: () => fetchCategories(sessionToken!),
+    enabled: !!sessionToken,
   })
 
+  const itemsQuery = useQuery({
+    queryKey: ['guest-items', sessionToken],
+    queryFn: () => fetchMenuItems(sessionToken!),
+    enabled: !!sessionToken,
+  })
+
+  const items = itemsQuery.data ?? []
+  const filtered = useMemo(
+    () =>
+      items.filter((item) => {
+        if (!item.is_available) return false
+        if (activeCategory !== 'all' && item.category_id !== activeCategory) return false
+        if (search && !item.name.toLowerCase().includes(search.toLowerCase())) return false
+        return true
+      }),
+    [items, activeCategory, search],
+  )
+
   const cartCount = totalItems(state.cart)
-
-  const handleAddToCart = (line: CartLine) => {
-    dispatch({ type: 'ADD_TO_CART', payload: line })
-  }
-
-  const handleOpenCart = () => {
-    dispatch({ type: 'OPEN_CART' })
-  }
-
-  const handleCloseCart = () => {
-    dispatch({ type: 'CLOSE_CART' })
-  }
 
   return (
     <div className="flex min-h-dvh flex-col pb-24">
@@ -101,9 +104,12 @@ export const MenuScreen: FC = () => {
           className="w-max min-w-full"
         >
           <TabsList className="w-full">
-            {CATEGORIES.map((cat) => (
+            <TabsTrigger value="all" className="text-sm whitespace-nowrap">
+              {state.lang === 'vi' ? 'Tất cả' : 'All'}
+            </TabsTrigger>
+            {(categoriesQuery.data ?? []).map((cat) => (
               <TabsTrigger key={cat.id} value={cat.id} className="text-sm whitespace-nowrap">
-                {state.lang === 'vi' ? cat.name_vi : cat.name_en}
+                {cat.name}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -111,7 +117,22 @@ export const MenuScreen: FC = () => {
       </div>
 
       <div className="flex-1 px-4">
-        {filtered.length === 0 ? (
+        {itemsQuery.isLoading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="aspect-[4/3] rounded-xl" />
+            ))}
+          </div>
+        ) : itemsQuery.isError ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <p className="text-sm text-tertiary">
+              {state.lang === 'vi' ? 'Không tải được thực đơn.' : 'Could not load the menu.'}
+            </p>
+            <Button variant="secondary" size="sm" onClick={() => itemsQuery.refetch()}>
+              {state.lang === 'vi' ? 'Thử lại' : 'Retry'}
+            </Button>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-2">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-quaternary">
               <circle cx="11" cy="11" r="8" />
@@ -126,7 +147,7 @@ export const MenuScreen: FC = () => {
                 key={item.id}
                 item={item}
                 lang={state.lang}
-                onSelect={() => setSelectedItem(item)}
+                onSelect={() => setSelectedItemId(item.id)}
               />
             ))}
           </div>
@@ -138,7 +159,7 @@ export const MenuScreen: FC = () => {
           <Button
             className="rounded-full h-14 px-8 gap-3 shadow-lg text-base font-semibold"
             size="lg"
-            onClick={handleOpenCart}
+            onClick={() => dispatch({ type: 'OPEN_CART' })}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="9" cy="21" r="1" />
@@ -150,20 +171,18 @@ export const MenuScreen: FC = () => {
         </div>
       )}
 
-      {selectedItem && (
+      {selectedItemId && (
         <ItemDetail
-          item={selectedItem}
+          itemId={selectedItemId}
           lang={state.lang}
-          onAdd={handleAddToCart}
-          onClose={() => setSelectedItem(null)}
-          onSelectItem={setSelectedItem}
+          onClose={() => setSelectedItemId(null)}
         />
       )}
 
       <CartSheet
         open={state.cartOpen}
         lang={state.lang}
-        onClose={handleCloseCart}
+        onClose={() => dispatch({ type: 'CLOSE_CART' })}
       />
 
       <LanguageLoader
@@ -175,14 +194,13 @@ export const MenuScreen: FC = () => {
 }
 
 interface MenuItemCardProps {
-  item: MenuItem
+  item: ApiMenuItemSummary
   lang: Lang
   onSelect: () => void
 }
 
 const MenuItemCard: FC<MenuItemCardProps> = ({ item, lang, onSelect }) => {
-  const name = lang === 'vi' ? item.name.vi : item.name.en
-  const desc = lang === 'vi' ? item.description.vi : item.description.en
+  const price = item.has_variants && item.price_from_vnd != null ? item.price_from_vnd : item.base_price_vnd
 
   return (
     <Card
@@ -190,27 +208,25 @@ const MenuItemCard: FC<MenuItemCardProps> = ({ item, lang, onSelect }) => {
       onClick={onSelect}
     >
       <div className="aspect-[4/3] bg-surface-grouped overflow-hidden">
-        <img
-          src={item.image}
-          alt={name}
-          className="size-full object-cover"
-          loading="lazy"
-        />
+        {item.image_url ? (
+          <img src={item.image_url} alt={item.name} className="size-full object-cover" loading="lazy" />
+        ) : (
+          <div className="size-full bg-surface-grouped" />
+        )}
       </div>
       <div className="p-3 flex flex-col gap-1">
         <h3 className="text-sm font-medium text-primary leading-tight line-clamp-2">
-          {name}
+          {item.name}
         </h3>
-        <p className="text-[11px] text-tertiary line-clamp-1">{desc}</p>
+        {item.short_description && (
+          <p className="text-[11px] text-tertiary line-clamp-1">{item.short_description}</p>
+        )}
         <div className="flex items-center justify-between mt-1">
           <span className="text-sm font-semibold text-system-blue">
-            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.price)}
+            {item.has_variants && item.price_from_vnd != null
+              ? `${lang === 'vi' ? 'từ ' : 'from '}${formatVND(price)}`
+              : formatVND(price)}
           </span>
-          {item.is_bestseller && (
-            <Badge variant="secondary" className="rounded-full text-[10px] px-2 py-0 h-5 font-medium">
-              Bestseller
-            </Badge>
-          )}
         </div>
       </div>
     </Card>

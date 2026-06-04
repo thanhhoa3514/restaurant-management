@@ -30,19 +30,29 @@ interface RequestOptions {
   method?: string
   body?: unknown
   signal?: AbortSignal
+  // QR-guest session token. When set, the request authenticates as a dining
+  // guest via the X-Session-Token header (backend auth.QRSessionToken) instead
+  // of the staff JWT. Used for /api/v1/guest/* endpoints.
+  sessionToken?: string
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, signal } = options
+  const { method = 'GET', body, signal, sessionToken } = options
 
   const headers: Record<string, string> = { Accept: 'application/json' }
   if (body !== undefined) headers['Content-Type'] = 'application/json'
 
-  // Attach the staff JWT. Note: demo logins store a mock token, which the
-  // backend's auth.JWT middleware rejects (401) — a real signed token is
-  // required end-to-end.
-  const session = getStaffSession()
-  if (session?.token) headers.Authorization = `Bearer ${session.token}`
+  if (sessionToken) {
+    // Guest path: authenticate with the dining session token. Do not send the
+    // staff Authorization header — these endpoints expect X-Session-Token only.
+    headers['X-Session-Token'] = sessionToken
+  } else {
+    // Attach the staff JWT. Note: demo logins store a mock token, which the
+    // backend's auth.JWT middleware rejects (401) — a real signed token is
+    // required end-to-end.
+    const session = getStaffSession()
+    if (session?.token) headers.Authorization = `Bearer ${session.token}`
+  }
 
   let res: Response
   try {
