@@ -116,6 +116,13 @@ Nhân viên: JWT (Phục vụ/Bếp/Thu ngân/Quản lý). Khách: **không đă
 - JSON **snake_case**; tiền **VND là số nguyên** (int64, không thập phân); thời gian **ISO 8601 / TIMESTAMPTZ**.
 - UUID làm PK; **soft delete** (`deleted_at`); **optimistic locking** qua cột `version`.
 
+### 5.6 Hành động ảnh hưởng hệ thống (high-impact)
+Một số hành động có thể ảnh hưởng toàn hệ thống — ví dụ: `catalog.ToggleAvailability` (ẩn/hiện món trên toàn bộ thực đơn), `billing` void/điều chỉnh hóa đơn, `dining.CloseSession`, `identity` quản lý người dùng. Với các hành động này:
+
+1. **Truyền trạng thái đích tường minh, không "blind toggle".** Client gửi giá trị muốn đặt (vd `{ "item_id", "available": false }`), không gửi lệnh "đảo trạng thái". Tránh hai người sửa đồng thời triệt tiêu lẫn nhau và giúp truy vết.
+2. **Bắt buộc ghi audit log.** Trong cùng transaction với thay đổi domain, ghi một bản ghi audit/outbox: **ai · hành động gì · trên tài nguyên nào · khi nào · giá trị trước→sau**. Không cho hành động high-impact diễn ra "âm thầm".
+3. **UI có bước xác nhận** (phía frontend): dialog confirm trước khi commit; hiển thị trạng thái thật từ server, không tự đảo lạc quan. Đây là yêu cầu của chủ dự án — coi mỗi bước high-impact như một mối đe dọa, ưu tiên khả năng đảo ngược + truy vết hơn là tiện lợi.
+
 ## 6. Vài snippet minh họa (tham khảo, không phải code đầy đủ)
 
 Value object tiền VND:
@@ -205,3 +212,4 @@ func (s *PlaceOrder) Handle(ctx context.Context, in PlaceOrderInput) (PlaceOrder
 3. Mọi truy vấn scope theo `restaurant_id`.
 4. Cập nhật có version → kiểm tra optimistic lock.
 5. Xóa = soft delete; dữ liệu snapshot không đổi khi nguồn thay đổi.
+6. Hành động ảnh hưởng hệ thống (high-impact, xem §5.6) → nhận trạng thái đích tường minh **và** ghi audit log trong cùng transaction.

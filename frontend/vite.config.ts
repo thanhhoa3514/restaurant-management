@@ -18,4 +18,20 @@ export default defineConfig({
       '~features': path.resolve(__dirname, './src/features'),
     },
   },
+  // Dev-only: proxy API + websocket to the Go backend (default :8080) so the
+  // browser talks same-origin and we avoid CORS. Override the backend target
+  // with VITE_BACKEND_URL. In production, set VITE_API_URL instead (see src/lib/api.ts).
+  server: {
+    proxy: {
+      '/api': {
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/ws': {
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:8080',
+        changeOrigin: true,
+        ws: true,
+      },
+    },
+  },
 })
