@@ -186,7 +186,8 @@ export const RouteComponent = () => {
                         <Icon size={20} className={`mb-1 transition-transform group-hover:scale-110 duration-200 ${isSelected ? 'scale-105' : ''}`} />
                         <span className="text-[11px] font-bold">{meta.label}</span>
                       </button>
-                    ))}
+                    )
+                  })}
                 </div>
                 <p className="text-center text-xs text-zinc-400 pt-1 font-medium italic">
                   &middot; {roleMeta[role].desc} &middot;

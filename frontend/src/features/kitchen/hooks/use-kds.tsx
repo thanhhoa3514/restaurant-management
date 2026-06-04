@@ -55,7 +55,7 @@ export interface UseKdsValue {
   setPaused: Dispatch<SetStateAction<boolean>>
   setTimeMultiplier: Dispatch<SetStateAction<number>>
   setSoundOn: Dispatch<SetStateAction<boolean>>
-  setLang: Dispatch<SetStateAction<Lang>>
+  setLang: (lang: Lang) => void
   setManageOrderId: Dispatch<SetStateAction<string | null>>
   setDemoOpen: Dispatch<SetStateAction<boolean>>
 }

@@ -11,8 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WaiterRouteImport } from './routes/waiter'
 import { Route as OrderRouteImport } from './routes/order'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as KitchenRouteImport } from './routes/kitchen'
 import { Route as CashierRouteImport } from './routes/cashier'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 
 const WaiterRoute = WaiterRouteImport.update({
@@ -25,6 +27,11 @@ const OrderRoute = OrderRouteImport.update({
   path: '/order',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const KitchenRoute = KitchenRouteImport.update({
   id: '/kitchen',
   path: '/kitchen',
@@ -35,6 +42,11 @@ const CashierRoute = CashierRouteImport.update({
   path: '/cashier',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -43,38 +55,61 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/cashier': typeof CashierRoute
   '/kitchen': typeof KitchenRoute
+  '/login': typeof LoginRoute
   '/order': typeof OrderRoute
   '/waiter': typeof WaiterRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/cashier': typeof CashierRoute
   '/kitchen': typeof KitchenRoute
+  '/login': typeof LoginRoute
   '/order': typeof OrderRoute
   '/waiter': typeof WaiterRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/cashier': typeof CashierRoute
   '/kitchen': typeof KitchenRoute
+  '/login': typeof LoginRoute
   '/order': typeof OrderRoute
   '/waiter': typeof WaiterRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/cashier' | '/kitchen' | '/order' | '/waiter'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/cashier'
+    | '/kitchen'
+    | '/login'
+    | '/order'
+    | '/waiter'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/cashier' | '/kitchen' | '/order' | '/waiter'
-  id: '__root__' | '/' | '/cashier' | '/kitchen' | '/order' | '/waiter'
+  to: '/' | '/admin' | '/cashier' | '/kitchen' | '/login' | '/order' | '/waiter'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/cashier'
+    | '/kitchen'
+    | '/login'
+    | '/order'
+    | '/waiter'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
   CashierRoute: typeof CashierRoute
   KitchenRoute: typeof KitchenRoute
+  LoginRoute: typeof LoginRoute
   OrderRoute: typeof OrderRoute
   WaiterRoute: typeof WaiterRoute
 }
@@ -95,6 +130,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrderRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/kitchen': {
       id: '/kitchen'
       path: '/kitchen'
@@ -109,6 +151,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CashierRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -121,8 +170,10 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
   CashierRoute: CashierRoute,
   KitchenRoute: KitchenRoute,
+  LoginRoute: LoginRoute,
   OrderRoute: OrderRoute,
   WaiterRoute: WaiterRoute,
 }

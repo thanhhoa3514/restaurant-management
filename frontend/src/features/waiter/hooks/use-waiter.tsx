@@ -98,7 +98,7 @@ export interface WaiterActions {
   injectNewSession: () => void
   setAutoOn: Dispatch<SetStateAction<boolean>>
   setTimeMultiplier: Dispatch<SetStateAction<number>>
-  setLang: Dispatch<SetStateAction<Lang>>
+  setLang: (lang: Lang) => void
   setSoundOn: Dispatch<SetStateAction<boolean>>
   setView: Dispatch<SetStateAction<WaiterView>>
   setDemoOpen: Dispatch<SetStateAction<boolean>>
