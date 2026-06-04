@@ -111,7 +111,15 @@ func (d *Dispatcher) Write(ctx context.Context, event any) error {
 		INSERT INTO event_outbox (restaurant_id, aggregate_type, aggregate_id, event_type, event_version, payload, metadata, priority)
 		VALUES ($1, $2, $3, $4, '1.0', $5, $6, $7)
 	`, e.RestaurantID, e.AggregateType, e.AggregateID, e.EventType, payload, metadata, priority)
-	return err
+	if err != nil {
+		return err
+	}
+	if d.hub != nil {
+		if err := d.hub.Broadcast(realtime.Topic{RestaurantID: e.RestaurantID}, realtime.Event{Type: e.EventType, Payload: e.Payload}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func withDedupeMetadata(metadata any, dedupeKey string) any {

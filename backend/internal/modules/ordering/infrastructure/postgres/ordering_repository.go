@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	orderingapp "restaurant-management/internal/modules/ordering/application"
 	"restaurant-management/internal/modules/ordering/domain"
 	pg "restaurant-management/internal/platform/postgres"
 	"restaurant-management/internal/shared/apperr"
@@ -562,6 +563,345 @@ func (r *Repository) CreateCancelRequest(ctx context.Context, restaurantID uuid.
 		VALUES ($1, $2, 'GUEST', $3, 'PENDING')
 		RETURNING id
 	`, restaurantID, req.OrderItemID, nullString(req.Reason)).Scan(&req.ID)
+}
+
+func (r *Repository) ListStaffTables(ctx context.Context, restaurantID uuid.UUID) ([]orderingapp.StaffTableDTO, error) {
+	rows, err := r.q(ctx).Query(ctx, `
+		SELECT t.id, t.code, t.name, t.capacity, t.status, COALESCE(a.name, ''),
+		       ds.id, ds.session_code, ds.status, COALESCE(ds.customer_count, 0), ds.opened_at, ds.updated_at
+		FROM tables t
+		LEFT JOIN areas a ON a.id = t.area_id AND a.restaurant_id = t.restaurant_id AND a.deleted_at IS NULL
+		LEFT JOIN dining_sessions ds
+		  ON ds.restaurant_id = t.restaurant_id
+		 AND ds.table_id = t.id
+		 AND ds.status IN ('ACTIVE', 'AWAITING_PAYMENT')
+		 AND ds.deleted_at IS NULL
+		WHERE t.restaurant_id = $1 AND t.deleted_at IS NULL
+		ORDER BY t.code
+	`, restaurantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := []orderingapp.StaffTableDTO{}
+	for rows.Next() {
+		var table orderingapp.StaffTableDTO
+		var sessionID pgtype.UUID
+		var sessionCode, sessionStatus pgtype.Text
+		var customerCount pgtype.Int4
+		var openedAt, updatedAt pgtype.Timestamptz
+		if err := rows.Scan(&table.ID, &table.Code, &table.Name, &table.Capacity, &table.Status, &table.AreaName, &sessionID, &sessionCode, &sessionStatus, &customerCount, &openedAt, &updatedAt); err != nil {
+			return nil, err
+		}
+		if sessionID.Valid {
+			sid := uuid.UUID(sessionID.Bytes)
+			status := sessionStatus.String
+			session := &orderingapp.StaffSessionDTO{
+				ID:            sid,
+				SessionCode:   sessionCode.String,
+				Status:        status,
+				CustomerCount: int(customerCount.Int32),
+				OpenedAt:      openedAt.Time,
+				Orders:        []orderingapp.StaffOrderDTO{},
+			}
+			if status == "AWAITING_PAYMENT" && updatedAt.Valid {
+				t := updatedAt.Time
+				session.BillRequestedAt = &t
+			}
+			view, err := r.ViewSessionOrders(ctx, restaurantID, sid)
+			if err != nil {
+				return nil, err
+			}
+			session.Orders = toStaffOrders(view.Orders)
+			session.TotalVND = view.SessionTotalVND
+			table.Session = session
+			table.Status = "OCCUPIED"
+		}
+		out = append(out, table)
+	}
+	return out, rows.Err()
+}
+
+func (r *Repository) ListKitchenQueue(ctx context.Context, restaurantID uuid.UUID) ([]orderingapp.KitchenTicketDTO, error) {
+	rows, err := r.q(ctx).Query(ctx, `
+		SELECT kt.id, kt.order_id, kt.dining_session_id, kt.table_id, t.code, t.name,
+		       kt.ticket_number, kt.station, kt.priority, kt.status, o.submitted_at
+		FROM kitchen_tickets kt
+		JOIN orders o ON o.id = kt.order_id AND o.restaurant_id = kt.restaurant_id AND o.deleted_at IS NULL AND o.status <> 'CANCELLED'
+		JOIN tables t ON t.id = kt.table_id AND t.restaurant_id = kt.restaurant_id AND t.deleted_at IS NULL
+		WHERE kt.restaurant_id = $1 AND kt.deleted_at IS NULL AND kt.status <> 'CANCELLED'
+		  AND EXISTS (
+		    SELECT 1
+		    FROM kitchen_ticket_items kti
+		    JOIN order_items oi ON oi.id = kti.order_item_id AND oi.restaurant_id = kti.restaurant_id AND oi.deleted_at IS NULL
+		    WHERE kti.restaurant_id = kt.restaurant_id
+		      AND kti.kitchen_ticket_id = kt.id
+		      AND oi.status <> 'SERVED'
+		      AND kti.status <> 'CANCELLED'
+		  )
+		ORDER BY o.submitted_at, kt.created_at
+	`, restaurantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	tickets := []orderingapp.KitchenTicketDTO{}
+	ticketIDs := []uuid.UUID{}
+	idx := map[uuid.UUID]int{}
+	for rows.Next() {
+		var ticket orderingapp.KitchenTicketDTO
+		if err := rows.Scan(&ticket.ID, &ticket.OrderID, &ticket.SessionID, &ticket.TableID, &ticket.TableCode, &ticket.TableName, &ticket.Number, &ticket.Station, &ticket.Priority, &ticket.Status, &ticket.SubmittedAt); err != nil {
+			return nil, err
+		}
+		ticket.Items = []orderingapp.KitchenTicketItemDTO{}
+		idx[ticket.ID] = len(tickets)
+		ticketIDs = append(ticketIDs, ticket.ID)
+		tickets = append(tickets, ticket)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(ticketIDs) == 0 {
+		return tickets, nil
+	}
+
+	items, itemIDs, err := r.fetchKitchenTicketItems(ctx, restaurantID, ticketIDs)
+	if err != nil {
+		return nil, err
+	}
+	options, err := r.fetchStaffOptions(ctx, restaurantID, itemIDs)
+	if err != nil {
+		return nil, err
+	}
+	history, err := r.fetchStaffHistory(ctx, restaurantID, itemIDs)
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range items {
+		item := row.item
+		item.Options = options[item.OrderItemID]
+		item.StatusHistory = history[item.OrderItemID]
+		if len(item.StatusHistory) == 0 {
+			item.StatusHistory = []orderingapp.StaffStatusDTO{{Status: item.Status, Timestamp: tickets[idx[row.ticketID]].SubmittedAt}}
+		}
+		tickets[idx[row.ticketID]].Items = append(tickets[idx[row.ticketID]].Items, item)
+	}
+	return tickets, nil
+}
+
+type kitchenItemRow struct {
+	ticketID uuid.UUID
+	item     orderingapp.KitchenTicketItemDTO
+}
+
+func (r *Repository) fetchKitchenTicketItems(ctx context.Context, restaurantID uuid.UUID, ticketIDs []uuid.UUID) ([]kitchenItemRow, []uuid.UUID, error) {
+	rows, err := r.q(ctx).Query(ctx, `
+		SELECT kti.kitchen_ticket_id, kti.id, kti.order_item_id, oi.menu_item_id, oi.item_name_snapshot,
+		       oi.variant_name_snapshot, oi.quantity, oi.status, COALESCE(oi.note, '')
+		FROM kitchen_ticket_items kti
+		JOIN order_items oi ON oi.id = kti.order_item_id AND oi.restaurant_id = kti.restaurant_id AND oi.deleted_at IS NULL
+		WHERE kti.restaurant_id = $1 AND kti.kitchen_ticket_id = ANY($2) AND kti.status <> 'CANCELLED'
+		ORDER BY kti.created_at, kti.id
+	`, restaurantID, ticketIDs)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+	out := []kitchenItemRow{}
+	itemIDs := []uuid.UUID{}
+	for rows.Next() {
+		var row kitchenItemRow
+		var variant pgtype.Text
+		if err := rows.Scan(&row.ticketID, &row.item.ID, &row.item.OrderItemID, &row.item.MenuItemID, &row.item.NameSnapshot, &variant, &row.item.Quantity, &row.item.Status, &row.item.Note); err != nil {
+			return nil, nil, err
+		}
+		if variant.Valid {
+			v := variant.String
+			row.item.VariantNameSnapshot = &v
+		}
+		itemIDs = append(itemIDs, row.item.OrderItemID)
+		out = append(out, row)
+	}
+	return out, itemIDs, rows.Err()
+}
+
+func (r *Repository) RequestBill(ctx context.Context, restaurantID, sessionID uuid.UUID) (orderingapp.RequestBillResponse, error) {
+	var out orderingapp.RequestBillResponse
+	var requested pgtype.Timestamptz
+	err := r.q(ctx).QueryRow(ctx, `
+		UPDATE dining_sessions
+		SET status = 'AWAITING_PAYMENT', version = version + 1, updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND status = 'ACTIVE' AND deleted_at IS NULL
+		RETURNING id, status, updated_at
+	`, restaurantID, sessionID).Scan(&out.SessionID, &out.Status, &requested)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return out, apperr.New(apperr.CodeConflict, "session is not active")
+	}
+	if requested.Valid {
+		t := requested.Time
+		out.Requested = &t
+	}
+	return out, err
+}
+
+func (r *Repository) UpdateOrderItemStatus(ctx context.Context, restaurantID, itemID uuid.UUID, status string, actorID *uuid.UUID, actorRole string) (orderingapp.UpdateItemStatusResponse, error) {
+	var current string
+	var orderID uuid.UUID
+	err := r.q(ctx).QueryRow(ctx, `
+		SELECT order_id, status
+		FROM order_items
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+		FOR UPDATE
+	`, restaurantID, itemID).Scan(&orderID, &current)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return orderingapp.UpdateItemStatusResponse{}, apperr.New(apperr.CodeNotFound, "order item not found")
+	}
+	if err != nil {
+		return orderingapp.UpdateItemStatusResponse{}, err
+	}
+	if current == status {
+		return orderingapp.UpdateItemStatusResponse{ID: itemID, Status: status}, nil
+	}
+	if !canMoveStatus(current, status) {
+		return orderingapp.UpdateItemStatusResponse{}, apperr.New(apperr.CodeConflict, "invalid item status transition")
+	}
+
+	_, err = r.q(ctx).Exec(ctx, `
+		UPDATE order_items
+		SET status = $3,
+		    served_at = CASE WHEN $3 = 'SERVED' THEN NOW() ELSE served_at END,
+		    served_by = CASE WHEN $3 = 'SERVED' THEN $4 ELSE served_by END,
+		    version = version + 1,
+		    updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2
+	`, restaurantID, itemID, status, actorID)
+	if err != nil {
+		return orderingapp.UpdateItemStatusResponse{}, err
+	}
+	_, err = r.q(ctx).Exec(ctx, `
+		INSERT INTO order_item_status_history (restaurant_id, order_item_id, from_status, to_status, changed_by, changed_by_role)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`, restaurantID, itemID, current, status, actorID, nullString(actorRole))
+	if err != nil {
+		return orderingapp.UpdateItemStatusResponse{}, err
+	}
+	if err := r.syncKitchenStatus(ctx, restaurantID, orderID, itemID, status, actorID); err != nil {
+		return orderingapp.UpdateItemStatusResponse{}, err
+	}
+	return orderingapp.UpdateItemStatusResponse{ID: itemID, Status: status}, nil
+}
+
+func canMoveStatus(current, next string) bool {
+	if current == "PENDING" && next == "ACKNOWLEDGED" {
+		return true
+	}
+	if current == "ACKNOWLEDGED" && next == "PREPARING" {
+		return true
+	}
+	if current == "PREPARING" && next == "READY" {
+		return true
+	}
+	if current == "READY" && next == "SERVED" {
+		return true
+	}
+	return false
+}
+
+func (r *Repository) syncKitchenStatus(ctx context.Context, restaurantID, orderID, itemID uuid.UUID, status string, actorID *uuid.UUID) error {
+	switch status {
+	case "ACKNOWLEDGED":
+		if _, err := r.q(ctx).Exec(ctx, `
+			UPDATE kitchen_tickets kt
+			SET status = CASE WHEN status = 'PENDING' THEN 'ACKNOWLEDGED' ELSE status END,
+			    acknowledged_at = COALESCE(acknowledged_at, NOW()), acknowledged_by = COALESCE(acknowledged_by, $3), updated_at = NOW()
+			WHERE kt.restaurant_id = $1 AND kt.order_id = $2 AND kt.deleted_at IS NULL
+		`, restaurantID, orderID, actorID); err != nil {
+			return err
+		}
+	case "PREPARING":
+		if _, err := r.q(ctx).Exec(ctx, `UPDATE kitchen_ticket_items SET status = 'PREPARING', started_at = COALESCE(started_at, NOW()), prepared_by = COALESCE(prepared_by, $3), updated_at = NOW() WHERE restaurant_id = $1 AND order_item_id = $2`, restaurantID, itemID, actorID); err != nil {
+			return err
+		}
+		if _, err := r.q(ctx).Exec(ctx, `UPDATE kitchen_tickets kt SET status = 'PREPARING', started_at = COALESCE(started_at, NOW()), updated_at = NOW() WHERE kt.restaurant_id = $1 AND kt.order_id = $2 AND kt.deleted_at IS NULL`, restaurantID, orderID); err != nil {
+			return err
+		}
+	case "READY":
+		if _, err := r.q(ctx).Exec(ctx, `UPDATE kitchen_ticket_items SET status = 'READY', ready_at = COALESCE(ready_at, NOW()), updated_at = NOW() WHERE restaurant_id = $1 AND order_item_id = $2`, restaurantID, itemID); err != nil {
+			return err
+		}
+		if _, err := r.q(ctx).Exec(ctx, `
+			UPDATE kitchen_tickets kt
+			SET status = 'READY', completed_at = COALESCE(completed_at, NOW()), updated_at = NOW()
+			WHERE kt.restaurant_id = $1 AND kt.order_id = $2 AND kt.deleted_at IS NULL
+			  AND NOT EXISTS (
+				SELECT 1 FROM kitchen_ticket_items kti
+				WHERE kti.restaurant_id = kt.restaurant_id AND kti.kitchen_ticket_id = kt.id AND kti.status NOT IN ('READY', 'CANCELLED')
+			  )
+		`, restaurantID, orderID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func toStaffOrders(orders []domain.OrderRead) []orderingapp.StaffOrderDTO {
+	out := make([]orderingapp.StaffOrderDTO, 0, len(orders))
+	for _, order := range orders {
+		items := make([]orderingapp.StaffOrderItemDTO, 0, len(order.Items))
+		for _, item := range order.Items {
+			options := make([]orderingapp.StaffOptionDTO, 0, len(item.Options))
+			for _, opt := range item.Options {
+				options = append(options, orderingapp.StaffOptionDTO{NameSnapshot: opt.NameSnapshot, OptionGroupNameSnapshot: opt.OptionGroupNameSnapshot, PriceDeltaSnapshotVND: opt.PriceDeltaSnapshotVND, Quantity: opt.Quantity})
+			}
+			items = append(items, orderingapp.StaffOrderItemDTO{ID: item.ID, OrderID: item.OrderID, MenuItemID: item.MenuItemID, NameSnapshot: item.NameSnapshot, VariantNameSnapshot: item.VariantNameSnapshot, Quantity: item.Quantity, UnitPriceVND: item.UnitPriceVND, OptionsTotalVND: item.OptionsTotalVND, SubtotalVND: item.SubtotalVND, TotalAmountVND: item.TotalAmountVND, Status: item.Status, Station: item.Station, Note: item.Note, Options: options, StatusHistory: []orderingapp.StaffStatusDTO{{Status: item.Status, Timestamp: order.SubmittedAt}}})
+		}
+		out = append(out, orderingapp.StaffOrderDTO{ID: order.ID, OrderNumber: order.OrderNumber, OrderType: order.OrderType, Status: order.Status, SubmittedAt: order.SubmittedAt, Note: order.Note, Items: items})
+	}
+	return out
+}
+
+func (r *Repository) fetchStaffOptions(ctx context.Context, restaurantID uuid.UUID, itemIDs []uuid.UUID) (map[uuid.UUID][]orderingapp.StaffOptionDTO, error) {
+	out := map[uuid.UUID][]orderingapp.StaffOptionDTO{}
+	if len(itemIDs) == 0 {
+		return out, nil
+	}
+	rows, err := r.q(ctx).Query(ctx, `SELECT order_item_id, option_name_snapshot, option_group_name_snapshot, price_delta_snapshot_vnd, quantity FROM order_item_options WHERE restaurant_id = $1 AND order_item_id = ANY($2) ORDER BY created_at`, restaurantID, itemIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var itemID uuid.UUID
+		var row orderingapp.StaffOptionDTO
+		if err := rows.Scan(&itemID, &row.NameSnapshot, &row.OptionGroupNameSnapshot, &row.PriceDeltaSnapshotVND, &row.Quantity); err != nil {
+			return nil, err
+		}
+		out[itemID] = append(out[itemID], row)
+	}
+	return out, rows.Err()
+}
+
+func (r *Repository) fetchStaffHistory(ctx context.Context, restaurantID uuid.UUID, itemIDs []uuid.UUID) (map[uuid.UUID][]orderingapp.StaffStatusDTO, error) {
+	out := map[uuid.UUID][]orderingapp.StaffStatusDTO{}
+	if len(itemIDs) == 0 {
+		return out, nil
+	}
+	rows, err := r.q(ctx).Query(ctx, `SELECT order_item_id, to_status, changed_at FROM order_item_status_history WHERE restaurant_id = $1 AND order_item_id = ANY($2) ORDER BY changed_at`, restaurantID, itemIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var itemID uuid.UUID
+		var row orderingapp.StaffStatusDTO
+		if err := rows.Scan(&itemID, &row.Status, &row.Timestamp); err != nil {
+			return nil, err
+		}
+		out[itemID] = append(out[itemID], row)
+	}
+	return out, rows.Err()
 }
 
 func nullString(v string) any {

@@ -64,7 +64,7 @@ export const RouteComponent = () => {
         <div className="flex items-center gap-3 rounded-full bg-[var(--surface-grouped)]/70 px-4 py-2 text-sm text-[var(--text-secondary)]">
           <span className="font-mono font-semibold tabular-nums text-[var(--text)]">{fmtTime}</span>
           <span className="h-4 w-px bg-[var(--separator)]" />
-          <span className="font-semibold">Local mock adapter · không đổi API backend</span>
+          <span className="font-semibold">Backend API adapter · JWT staff auth</span>
         </div>
       }
       contentClassName="bg-[var(--surface-grouped)]/45"
@@ -111,7 +111,7 @@ export const RouteComponent = () => {
                     Ca trực nhân viên
                   </CardTitle>
                   <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                    Dữ liệu demo nội bộ, không nhập auth/template giả.
+                    Phiên đăng nhập dùng JWT thật từ backend API.
                   </p>
                 </div>
                 <Badge variant="success" className="px-3 py-1.5">

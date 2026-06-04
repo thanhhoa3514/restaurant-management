@@ -1,9 +1,10 @@
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react'
 
 import { CS_DICT } from '@/features/cashier/data/i18n'
-import { buildInitialSessions } from '@/features/cashier/data/seed'
 import { calcInvoice, makeTxnId } from '@/features/cashier/helpers'
+import { fetchStaffTables } from '@/features/staff/api'
+import { toCashierSessions } from '@/features/staff/mappers'
 import type {
   CashierSession,
   DiscountRecord,
@@ -23,6 +24,7 @@ export interface CashierState {
 }
 
 export type CashierAction =
+  | { type: 'replaceSessions'; sessions: CashierSession[] }
   | { type: 'selectSession'; sessionId: string | null }
   | { type: 'injectBill'; sessionId?: string; at?: Date }
   | { type: 'resetAll'; now?: Date }
@@ -66,12 +68,13 @@ interface CashierContextValue {
 }
 
 const CASHIER_QUERY_KEY = ['cashier', 'sessions'] as const
+const STAFF_TABLES_QUERY_KEY = ['staff', 'tables'] as const
 
 const initialNow = new Date()
 
 function createInitialState(now: Date = initialNow): CashierState {
   return {
-    sessions: buildInitialSessions(now),
+    sessions: [],
     selectedSessionId: null,
     now,
     timeMultiplier: 1,
@@ -80,10 +83,17 @@ function createInitialState(now: Date = initialNow): CashierState {
   }
 }
 
-function withInvoiceTotals(session: CashierSession, discount: DiscountRecord | null): CashierSession {
+function withInvoiceTotals(
+  session: CashierSession,
+  discount: DiscountRecord | null,
+): CashierSession {
   const totals = calcInvoice(session.invoice.orders, discount)
   const items = session.invoice.orders.flatMap((order) =>
-    order.items.map((item) => ({ ...item, _order_id: order.id, _order_submitted_at: order.submitted_at })),
+    order.items.map((item) => ({
+      ...item,
+      _order_id: order.id,
+      _order_submitted_at: order.submitted_at,
+    })),
   )
 
   return {
@@ -113,7 +123,8 @@ function paymentRecordFromAction(
 ): PaymentRecord {
   const now = action.at ?? new Date()
   const method = action.method ?? session.payment?.method ?? 'cash'
-  const fallbackSubMethod: SubMethod = method === 'cash' ? 'cash' : method === 'card' ? 'card' : 'momo'
+  const fallbackSubMethod: SubMethod =
+    method === 'cash' ? 'cash' : method === 'card' ? 'card' : 'momo'
   const subMethod = action.subMethod ?? session.payment?.sub_method ?? fallbackSubMethod
   const amountTendered = action.amountTendered ?? session.payment?.amount_tendered ?? null
 
@@ -133,12 +144,22 @@ function paymentRecordFromAction(
 
 function cashierReducer(state: CashierState, action: CashierAction): CashierState {
   switch (action.type) {
+    case 'replaceSessions':
+      return {
+        ...state,
+        sessions: action.sessions,
+        selectedSessionId: action.sessions.some((session) => session.id === state.selectedSessionId)
+          ? state.selectedSessionId
+          : (action.sessions[0]?.id ?? null),
+      }
+
     case 'selectSession':
       return { ...state, selectedSessionId: action.sessionId }
 
     case 'injectBill': {
       const candidates = state.sessions.filter(
-        (session) => session.status === 'dining' && (!action.sessionId || session.id === action.sessionId),
+        (session) =>
+          session.status === 'dining' && (!action.sessionId || session.id === action.sessionId),
       )
       const picked = candidates[Math.floor(Math.random() * candidates.length)]
       if (!picked) return state
@@ -258,7 +279,8 @@ function cashierReducer(state: CashierState, action: CashierAction): CashierStat
     case 'closeSession':
       return {
         ...state,
-        selectedSessionId: state.selectedSessionId === action.sessionId ? null : state.selectedSessionId,
+        selectedSessionId:
+          state.selectedSessionId === action.sessionId ? null : state.selectedSessionId,
         sessions: updateSession(state.sessions, action.sessionId, (session) => ({
           ...session,
           status: 'closed',
@@ -288,6 +310,20 @@ const CashierContext = createContext<CashierContextValue | null>(null)
 export function CashierProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const [state, dispatch] = useReducer(cashierReducer, undefined, () => createInitialState())
+  const staffTablesQuery = useQuery({
+    queryKey: STAFF_TABLES_QUERY_KEY,
+    queryFn: fetchStaffTables,
+    refetchInterval: 8_000,
+  })
+
+  useEffect(() => {
+    if (staffTablesQuery.data) {
+      dispatch({
+        type: 'replaceSessions',
+        sessions: toCashierSessions(staffTablesQuery.data.tables),
+      })
+    }
+  }, [staffTablesQuery.data])
 
   useEffect(() => {
     queryClient.setQueryData(CASHIER_QUERY_KEY, state.sessions)

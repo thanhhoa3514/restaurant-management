@@ -47,9 +47,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     // staff Authorization header — these endpoints expect X-Session-Token only.
     headers['X-Session-Token'] = sessionToken
   } else {
-    // Attach the staff JWT. Note: demo logins store a mock token, which the
-    // backend's auth.JWT middleware rejects (401) — a real signed token is
-    // required end-to-end.
+    // Attach the staff JWT issued by /api/v1/identity/authenticate.
     const session = getStaffSession()
     if (session?.token) headers.Authorization = `Bearer ${session.token}`
   }

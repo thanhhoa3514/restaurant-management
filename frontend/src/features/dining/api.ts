@@ -28,3 +28,18 @@ export function buildQROrderURL(token: string): string {
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
   return `${origin}/order?t=${encodeURIComponent(token)}`
 }
+
+export interface OpenSessionResult {
+  session_id: string
+  session_code: string
+  table_id: string
+  status: string
+  session_token: string
+}
+
+export function openDiningSession(tableId: string): Promise<OpenSessionResult> {
+  return apiRequest<OpenSessionResult>('/api/v1/dining/open-session', {
+    method: 'POST',
+    body: { table_id: tableId },
+  })
+}

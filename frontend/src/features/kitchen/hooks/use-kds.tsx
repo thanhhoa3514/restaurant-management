@@ -7,17 +7,19 @@ import {
   type Dispatch,
   type SetStateAction,
 } from 'react'
+import { useQuery } from '@tanstack/react-query'
 
 import { KDS_DICT } from '@/features/kitchen/data/i18n'
-import { buildInitialTickets, buildRandomNewTicket } from '@/features/kitchen/data/seed'
 import { minStatus, nextStatus, urgencyFor } from '@/features/kitchen/helpers'
 import type { ItemStatus, KDSStats, Lang, Ticket, Urgency } from '@/features/kitchen/types'
+import { fetchKitchenQueue, updateKitchenOrderItemStatus } from '@/features/staff/api'
+import { toKdsTickets } from '@/features/staff/mappers'
 
 type KdsDictKey = keyof (typeof KDS_DICT)['vi']
 type KdsDictFunction = (...args: Array<number | string>) => string
 
-const AUTO_COLLAPSE_MS = 10_000
 const FADE_OUT_MS = 1_500
+const KITCHEN_QUEUE_QUERY_KEY = ['kitchen', 'queue'] as const
 
 function statusToastKey(status: ItemStatus): KdsDictKey | null {
   switch (status) {
@@ -61,30 +63,29 @@ export interface UseKdsValue {
 }
 
 export function useKds(): UseKdsValue {
-  const [tickets, setTickets] = useState<Ticket[]>(() => buildInitialTickets(new Date()))
   const [now, setNow] = useState(() => new Date())
   const [timeMultiplier, setTimeMultiplier] = useState(1)
   const [paused, setPaused] = useState(false)
   const [soundOn, setSoundOn] = useState(true)
-  const [lang, setLangState] = useState<Lang>(() => (localStorage.getItem('rest_lang_kds') as Lang) || 'vi')
-  const setLang = useCallback((newLang: Lang) => {
-    localStorage.setItem('rest_lang_kds', newLang)
-    setLangState(newLang)
-  }, [])
+  const [lang, setLangState] = useState<Lang>(
+    () => (localStorage.getItem('rest_lang_kds') as Lang) || 'vi',
+  )
   const [fadingIds, setFadingIds] = useState<Set<string>>(() => new Set())
   const [manageOrderId, setManageOrderId] = useState<string | null>(null)
-  const [demoOpen, setDemoOpen] = useState(true)
+  const [demoOpen, setDemoOpen] = useState(false)
   const [lastMessage, setLastMessage] = useState<string | null>(null)
 
-  const nowRef = useRef(now)
+  const queueQuery = useQuery({
+    queryKey: KITCHEN_QUEUE_QUERY_KEY,
+    queryFn: fetchKitchenQueue,
+    refetchInterval: paused ? false : 5_000,
+  })
+
+  const tickets = useMemo(() => toKdsTickets(queueQuery.data?.tickets ?? []), [queueQuery.data])
+
   const langRef = useRef(lang)
   const soundOnRef = useRef(soundOn)
   const prevUrgencyRef = useRef<Record<string, Urgency>>({})
-  const fadingTimersRef = useRef<Set<string>>(new Set())
-
-  useEffect(() => {
-    nowRef.current = now
-  }, [now])
 
   useEffect(() => {
     langRef.current = lang
@@ -93,6 +94,11 @@ export function useKds(): UseKdsValue {
   useEffect(() => {
     soundOnRef.current = soundOn
   }, [soundOn])
+
+  const setLang = useCallback((newLang: Lang) => {
+    localStorage.setItem('rest_lang_kds', newLang)
+    setLangState(newLang)
+  }, [])
 
   const t = useCallback((key: KdsDictKey, ...args: Array<number | string>) => {
     const value = KDS_DICT[langRef.current][key]
@@ -104,10 +110,9 @@ export function useKds(): UseKdsValue {
     setLastMessage(message)
   }, [])
 
-  useEffect(() => {
-    const timerId = window.setTimeout(() => setDemoOpen(false), AUTO_COLLAPSE_MS)
-    return () => window.clearTimeout(timerId)
-  }, [])
+  const refetchQueue = useCallback(() => {
+    void queueQuery.refetch()
+  }, [queueQuery])
 
   useEffect(() => {
     const timerId = window.setInterval(() => {
@@ -115,31 +120,6 @@ export function useKds(): UseKdsValue {
     }, 1_000)
     return () => window.clearInterval(timerId)
   }, [timeMultiplier])
-
-  const injectNewTicket = useCallback(() => {
-    const stamp = new Date(nowRef.current.getTime())
-    const ticket = buildRandomNewTicket(stamp)
-    setTickets((prev) => [...prev, ticket])
-    notify(t('toast_new_order', ticket.table_number))
-  }, [notify, t])
-
-  useEffect(() => {
-    if (paused) return undefined
-
-    let timerId: number | undefined
-    const schedule = () => {
-      const delayMs = 20_000 + Math.random() * 10_000
-      timerId = window.setTimeout(() => {
-        injectNewTicket()
-        schedule()
-      }, delayMs)
-    }
-
-    schedule()
-    return () => {
-      if (timerId !== undefined) window.clearTimeout(timerId)
-    }
-  }, [injectNewTicket, paused])
 
   useEffect(() => {
     const nextUrgency: Record<string, Urgency> = {}
@@ -171,88 +151,60 @@ export function useKds(): UseKdsValue {
 
   const advanceAll = useCallback(
     (orderId: string) => {
-      setTickets((prev) =>
-        prev.map((ticket) => {
-          if (ticket.order_id !== orderId) return ticket
-
-          const liveItems = ticket.items.filter((item) => item.status !== 'served')
-          if (liveItems.length === 0) return ticket
-
-          const lowestStatus = minStatus(liveItems)
-          const nextItems = ticket.items.map((item) => {
-            if (item.status !== lowestStatus) return item
-            const advanced = nextStatus(item.status)
-            return {
-              ...item,
-              status: advanced,
-              status_history: [
-                ...item.status_history,
-                { status: advanced, timestamp: new Date(nowRef.current) },
-              ],
-            }
-          })
-
-          const toastKey = statusToastKey(lowestStatus)
-          if (toastKey) notify(t(toastKey, ticket.table_number))
-
-          return { ...ticket, items: nextItems }
-        }),
-      )
+      const ticket = tickets.find((item) => item.order_id === orderId)
+      if (!ticket) return
+      const liveItems = ticket.items.filter((item) => item.status !== 'served')
+      if (liveItems.length === 0) return
+      const lowestStatus = minStatus(liveItems)
+      const target = nextStatus(lowestStatus).toUpperCase()
+      const toastKey = statusToastKey(lowestStatus)
+      void Promise.all(
+        ticket.items
+          .filter((item) => item.status === lowestStatus)
+          .map((item) => updateKitchenOrderItemStatus(item.id, target)),
+      ).then(() => {
+        if (toastKey) notify(t(toastKey, ticket.table_number))
+        refetchQueue()
+      })
     },
-    [notify, t],
+    [notify, refetchQueue, t, tickets],
   )
 
   const advanceItem = useCallback(
-    (orderId: string, itemId: string) => {
-      setTickets((prev) =>
-        prev.map((ticket) => {
-          if (ticket.order_id !== orderId) return ticket
-
-          let advancedName = ''
-          const nextItems = ticket.items.map((item) => {
-            if (item.id !== itemId || item.status === 'served') return item
-            const advanced = nextStatus(item.status)
-            advancedName = langRef.current === 'vi' ? item.name_vi : item.name_en
-            return {
-              ...item,
-              status: advanced,
-              status_history: [
-                ...item.status_history,
-                { status: advanced, timestamp: new Date(nowRef.current) },
-              ],
-            }
-          })
-
-          if (advancedName) notify(t('toast_item_advanced', advancedName))
-          return { ...ticket, items: nextItems }
-        }),
-      )
+    (_orderId: string, itemId: string) => {
+      const item = tickets
+        .flatMap((ticket) => ticket.items)
+        .find((candidate) => candidate.id === itemId)
+      if (!item || item.status === 'served') return
+      const target = nextStatus(item.status).toUpperCase()
+      const advancedName = langRef.current === 'vi' ? item.name_vi : item.name_en
+      void updateKitchenOrderItemStatus(item.id, target).then(() => {
+        notify(t('toast_item_advanced', advancedName))
+        refetchQueue()
+      })
     },
-    [notify, t],
+    [notify, refetchQueue, t, tickets],
   )
 
   useEffect(() => {
     for (const ticket of tickets) {
       if (fadingIds.has(ticket.order_id)) continue
-      if (fadingTimersRef.current.has(ticket.order_id)) continue
       if (ticket.items.length === 0) continue
       if (!ticket.items.every((item) => item.status === 'served')) continue
 
-      fadingTimersRef.current.add(ticket.order_id)
       window.setTimeout(() => {
         setFadingIds((current) => new Set(current).add(ticket.order_id))
         window.setTimeout(() => {
-          setTickets((prev) => prev.filter((item) => item.order_id !== ticket.order_id))
           setFadingIds((current) => {
             const next = new Set(current)
             next.delete(ticket.order_id)
             return next
           })
-          fadingTimersRef.current.delete(ticket.order_id)
+          refetchQueue()
         }, FADE_OUT_MS)
       }, 0)
     }
-  }, [fadingIds, tickets])
+  }, [fadingIds, refetchQueue, tickets])
 
   const stats = useMemo<KDSStats>(() => {
     return tickets.reduce(
@@ -295,7 +247,7 @@ export function useKds(): UseKdsValue {
     t,
     advanceAll,
     advanceItem,
-    injectNewTicket,
+    injectNewTicket: refetchQueue,
     setPaused,
     setTimeMultiplier,
     setSoundOn,

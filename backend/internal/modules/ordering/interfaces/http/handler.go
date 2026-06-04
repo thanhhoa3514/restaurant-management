@@ -24,9 +24,13 @@ type Handler struct {
 	GuestEditOrder      *application.GuestEditOrder
 	GuestCancelOrder    *application.GuestCancelOrder
 	GuestRequestCancel  *application.GuestRequestCancel
+	StaffTables         *application.StaffTables
+	StaffRequestBill    *application.StaffRequestBill
+	StaffUpdateStatus   *application.StaffUpdateItemStatus
+	KitchenQueue        *application.KitchenQueue
 }
 
-func NewHandler(placeOrder *application.PlaceOrder, cancelOrEditItem *application.CancelOrEditItem, updateItemStatus *application.UpdateItemStatus, reviewCancelRequest *application.ReviewCancelRequest, guestPlaceOrder *application.GuestPlaceOrder, guestViewOrders *application.GuestViewOrders, guestEditOrder *application.GuestEditOrder, guestCancelOrder *application.GuestCancelOrder, guestRequestCancel *application.GuestRequestCancel) *Handler {
+func NewHandler(placeOrder *application.PlaceOrder, cancelOrEditItem *application.CancelOrEditItem, updateItemStatus *application.UpdateItemStatus, reviewCancelRequest *application.ReviewCancelRequest, guestPlaceOrder *application.GuestPlaceOrder, guestViewOrders *application.GuestViewOrders, guestEditOrder *application.GuestEditOrder, guestCancelOrder *application.GuestCancelOrder, guestRequestCancel *application.GuestRequestCancel, staffTables *application.StaffTables, staffRequestBill *application.StaffRequestBill, staffUpdateStatus *application.StaffUpdateItemStatus, kitchenQueue *application.KitchenQueue) *Handler {
 	return &Handler{
 		PlaceOrder:          placeOrder,
 		CancelOrEditItem:    cancelOrEditItem,
@@ -37,6 +41,10 @@ func NewHandler(placeOrder *application.PlaceOrder, cancelOrEditItem *applicatio
 		GuestEditOrder:      guestEditOrder,
 		GuestCancelOrder:    guestCancelOrder,
 		GuestRequestCancel:  guestRequestCancel,
+		StaffTables:         staffTables,
+		StaffRequestBill:    staffRequestBill,
+		StaffUpdateStatus:   staffUpdateStatus,
+		KitchenQueue:        kitchenQueue,
 	}
 }
 
@@ -46,6 +54,13 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string) {
 	g.POST("/cancel-or-edit-item", h.handle(h.CancelOrEditItem))
 	g.POST("/update-item-status", h.handle(h.UpdateItemStatus))
 	g.POST("/review-cancel-request", h.handle(h.ReviewCancelRequest))
+}
+
+func (h *Handler) RegisterStaffRoutes(r *gin.RouterGroup, secret string) {
+	g := r.Group("/staff", auth.JWT(secret), auth.RBAC("SERVER", "KITCHEN", "CASHIER", "MANAGER"))
+	g.GET("/tables", h.staffTables)
+	g.POST("/sessions/:sessionId/request-bill", h.staffRequestBill)
+	g.PATCH("/order-items/:itemId/status", h.staffUpdateItemStatus)
 }
 
 func (h *Handler) RegisterGuestRoutes(g *gin.RouterGroup) {
@@ -171,6 +186,52 @@ func uuidFromParam(c *gin.Context, name string) (uuid.UUID, error) {
 
 func respondLineErrors(c *gin.Context, status int, ae *apperr.Error, lineErrors []application.LineError) {
 	c.JSON(status, gin.H{"data": nil, "error": gin.H{"code": string(ae.Code), "message": ae.Message}, "line_errors": lineErrors})
+}
+
+func (h *Handler) staffTables(c *gin.Context) {
+	out, err := h.StaffTables.Handle(c.Request.Context())
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) staffRequestBill(c *gin.Context) {
+	sessionID, err := uuidFromParam(c, "sessionId")
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	out, err := h.StaffRequestBill.Handle(c.Request.Context(), sessionID)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) staffUpdateItemStatus(c *gin.Context) {
+	itemID, err := uuidFromParam(c, "itemId")
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	var req application.UpdateItemStatusRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
+		return
+	}
+	var actorID *uuid.UUID
+	if id, err := uuid.Parse(c.GetString(auth.CtxUserID)); err == nil && id != uuid.Nil {
+		actorID = &id
+	}
+	out, err := h.StaffUpdateStatus.Handle(c.Request.Context(), itemID, req.Status, actorID, c.GetString(auth.CtxRole))
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
 }
 
 func statusForLineCode(code apperr.Code) int {

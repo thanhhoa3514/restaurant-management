@@ -131,8 +131,13 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 		orderingapp.NewGuestEditOrder(tx, orderingRepo, outboxWriter),
 		orderingapp.NewGuestCancelOrder(tx, orderingRepo, outboxWriter),
 		orderingapp.NewGuestRequestCancel(tx, orderingRepo, outboxWriter),
+		orderingapp.NewStaffTables(orderingRepo),
+		orderingapp.NewStaffRequestBill(tx, orderingRepo, outboxWriter),
+		orderingapp.NewStaffUpdateItemStatus(tx, orderingRepo, outboxWriter),
+		orderingapp.NewKitchenQueue(orderingRepo),
 	)
 	orderingHandler.RegisterRoutes(api, secret)
+	orderingHandler.RegisterStaffRoutes(api, secret)
 	orderingHandler.RegisterGuestRoutes(guestGroup)
 	orderingHandler.RegisterKitchenRoutes(api, secret)
 
