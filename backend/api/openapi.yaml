@@ -2,23 +2,401 @@ openapi: 3.0.3
 info:
   title: Restaurant QR Ordering API
   version: 0.1.0
+  description: >
+    HTTP API for QR-based restaurant ordering. Most staff endpoints require a JWT
+    bearer token (RBAC-gated by role). Guest endpoints under /api/v1/guest require an
+    X-Session-Token issued by /api/v1/dining/join-session. Public endpoints require
+    neither.
+servers:
+  - url: /
+tags:
+  - name: ops
+    description: Liveness, readiness, realtime transport
+  - name: identity
+    description: Authentication and user management
+  - name: catalog
+    description: Menu item management (staff) and menu browsing (guest)
+  - name: dining
+    description: Table sessions and QR management
+  - name: ordering
+    description: Staff order operations
+  - name: kitchen
+    description: Kitchen display queue
+  - name: guest-ordering
+    description: Guest order lifecycle (QR session)
+  - name: billing
+    description: Invoicing and payments
 paths:
   /health:
     get:
+      tags: [ops]
+      summary: Liveness probe (does not touch DB)
+      security: []
       responses:
         '200':
-          description: Health status
+          description: Process is up
+  /health/ready:
+    get:
+      tags: [ops]
+      summary: Readiness probe (pings DB)
+      security: []
+      responses:
+        '200':
+          description: Ready to serve traffic
+        '503':
+          description: Dependencies unavailable
+  /ws:
+    get:
+      tags: [ops]
+      summary: WebSocket upgrade for realtime events
+      security: []
+      responses:
+        '101':
+          description: Switching protocols
+
+  /api/v1/identity/authenticate:
+    post:
+      tags: [identity]
+      summary: Login, returns JWT
+      security: []
+      responses:
+        '200':
+          description: Authenticated
+        '401':
+          description: Invalid credentials
+  /api/v1/identity/manage-users:
+    post:
+      tags: [identity]
+      summary: Create or update users
+      security:
+        - bearerAuth: []
+      description: 'RBAC: MANAGER'
+      responses:
+        '200':
+          description: User mutation result
+        '403':
+          description: Forbidden
+
+  /api/v1/catalog/create-menu-item:
+    post:
+      tags: [catalog]
+      summary: Create menu item
+      security:
+        - bearerAuth: []
+      description: 'RBAC: MANAGER'
+      responses:
+        '200':
+          description: Created
+  /api/v1/catalog/update-menu-item:
+    post:
+      tags: [catalog]
+      summary: Update menu item
+      security:
+        - bearerAuth: []
+      description: 'RBAC: MANAGER'
+      responses:
+        '200':
+          description: Updated
+  /api/v1/catalog/delete-menu-item:
+    post:
+      tags: [catalog]
+      summary: Delete menu item
+      security:
+        - bearerAuth: []
+      description: 'RBAC: MANAGER'
+      responses:
+        '200':
+          description: Deleted
+  /api/v1/catalog/toggle-availability:
+    post:
+      tags: [catalog]
+      summary: Set menu item availability
+      security:
+        - bearerAuth: []
+      description: >
+        RBAC: MANAGER. High-impact: hides/shows an item across the whole system.
+        Takes the explicit target state (not a blind flip) so concurrent edits
+        don't net-cancel and the action is auditable.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [item_id, available]
+              properties:
+                item_id:
+                  type: string
+                  format: uuid
+                available:
+                  type: boolean
+                  description: Desired availability state to set
+      responses:
+        '200':
+          description: Availability set
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  status: { type: string }
+        '403':
+          description: Forbidden (not MANAGER)
+
+  /api/v1/dining/join-session:
+    post:
+      tags: [dining]
+      summary: QR guest entry; issues session token
+      security: []
+      responses:
+        '200':
+          description: Session joined
+  /api/v1/dining/open-session:
+    post:
+      tags: [dining]
+      summary: Open a table session
+      security:
+        - bearerAuth: []
+      description: 'RBAC: SERVER, MANAGER'
+      responses:
+        '200':
+          description: Session opened
+  /api/v1/dining/close-session:
+    post:
+      tags: [dining]
+      summary: Close a table session
+      security:
+        - bearerAuth: []
+      description: 'RBAC: SERVER, MANAGER'
+      responses:
+        '200':
+          description: Session closed
+  /api/v1/dining/manage-table-qr:
+    post:
+      tags: [dining]
+      summary: Manage table QR codes
+      security:
+        - bearerAuth: []
+      description: 'RBAC: SERVER, MANAGER'
+      responses:
+        '200':
+          description: QR managed
+
+  /api/v1/guest/menu/categories:
+    get:
+      tags: [catalog]
+      summary: List menu categories (guest)
+      security:
+        - sessionToken: []
+      responses:
+        '200':
+          description: Category list
+  /api/v1/guest/menu/items:
+    get:
+      tags: [catalog]
+      summary: List menu items (guest)
+      security:
+        - sessionToken: []
+      responses:
+        '200':
+          description: Item list
+  /api/v1/guest/menu/items/{id}:
+    get:
+      tags: [catalog]
+      summary: Get menu item detail (guest)
+      security:
+        - sessionToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Item detail
+
+  /api/v1/guest/orders:
+    post:
+      tags: [guest-ordering]
+      summary: Place a guest order
+      security:
+        - sessionToken: []
+      responses:
+        '200':
+          description: Order placed
+        '400':
+          description: Cart validation failed (line_errors)
+    get:
+      tags: [guest-ordering]
+      summary: View this session's orders
+      security:
+        - sessionToken: []
+      responses:
+        '200':
+          description: Order list
+  /api/v1/guest/orders/{orderId}/items:
+    put:
+      tags: [guest-ordering]
+      summary: Edit items on a guest order
+      security:
+        - sessionToken: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Order updated
+        '400':
+          description: Line operation failed (line_errors)
+        '409':
+          description: Conflict (line_errors)
+  /api/v1/guest/orders/{orderId}:
+    delete:
+      tags: [guest-ordering]
+      summary: Cancel a guest order
+      security:
+        - sessionToken: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Order cancelled
+  /api/v1/guest/orders/{orderId}/cancel-requests:
+    post:
+      tags: [guest-ordering]
+      summary: Request cancellation of a guest order
+      security:
+        - sessionToken: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Cancel request created
+
   /api/v1/ordering/place-order:
     post:
+      tags: [ordering]
+      summary: Place an order (staff)
+      security:
+        - bearerAuth: []
+      description: 'RBAC: SERVER, KITCHEN, MANAGER'
+      responses:
+        '200':
+          description: Order placed
+  /api/v1/ordering/cancel-or-edit-item:
+    post:
+      tags: [ordering]
+      summary: Cancel or edit an order item (staff)
+      security:
+        - bearerAuth: []
+      description: 'RBAC: SERVER, KITCHEN, MANAGER'
+      responses:
+        '200':
+          description: Item updated
+  /api/v1/ordering/update-item-status:
+    post:
+      tags: [ordering]
+      summary: Update an order item's status (staff)
+      security:
+        - bearerAuth: []
+      description: 'RBAC: SERVER, KITCHEN, MANAGER'
+      responses:
+        '200':
+          description: Status updated
+  /api/v1/ordering/review-cancel-request:
+    post:
+      tags: [ordering]
+      summary: Approve or reject a guest cancel request (staff)
+      security:
+        - bearerAuth: []
+      description: 'RBAC: SERVER, KITCHEN, MANAGER'
+      responses:
+        '200':
+          description: Request reviewed
+
+  /api/v1/kitchen/queue:
+    get:
+      tags: [kitchen]
+      summary: Kitchen display queue
+      security:
+        - bearerAuth: []
+      description: 'RBAC: KITCHEN, MANAGER'
       responses:
         '501':
           description: Scaffold stub
-  /api/v1/billing/payments/webhook:
-    post:
+  /api/v1/kitchen/items/{id}/status:
+    patch:
+      tags: [kitchen]
+      summary: Update kitchen item status
+      security:
+        - bearerAuth: []
+      description: 'RBAC: KITCHEN, MANAGER'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         '501':
-          description: Idempotent payment webhook stub
+          description: Scaffold stub
+
+  /api/v1/billing/build-invoice:
+    post:
+      tags: [billing]
+      summary: Build an invoice
+      security:
+        - bearerAuth: []
+      description: 'RBAC: CASHIER, MANAGER'
+      responses:
+        '200':
+          description: Invoice built
+  /api/v1/billing/adjust-invoice:
+    post:
+      tags: [billing]
+      summary: Adjust an invoice
+      security:
+        - bearerAuth: []
+      description: 'RBAC: CASHIER, MANAGER'
+      responses:
+        '200':
+          description: Invoice adjusted
+  /api/v1/billing/process-payment:
+    post:
+      tags: [billing]
+      summary: Process a payment
+      security:
+        - bearerAuth: []
+      description: 'RBAC: CASHIER, MANAGER'
+      responses:
+        '200':
+          description: Payment processed
+  /api/v1/billing/payments/webhook:
+    post:
+      tags: [billing]
+      summary: Idempotent payment webhook
+      security: []
+      responses:
+        '501':
+          description: Scaffold stub
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    sessionToken:
+      type: apiKey
+      in: header
+      name: X-Session-Token
   schemas:
     Envelope:
       type: object
