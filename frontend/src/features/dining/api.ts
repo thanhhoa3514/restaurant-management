@@ -1,0 +1,30 @@
+import { apiRequest } from '@/lib/api'
+import type { ManageTableQRResult, TableQR } from '@/features/dining/types'
+
+export function listTableQRs(): Promise<TableQR[]> {
+  return apiRequest<TableQR[]>('/api/v1/dining/table-qrs')
+}
+
+export interface ManageTableQRArgs {
+  tableId: string
+  // Rotate deactivates the current token (invalidating printed codes). Omit /
+  // false for an idempotent "ensure a QR exists" call.
+  rotate?: boolean
+}
+
+export function manageTableQR({
+  tableId,
+  rotate = false,
+}: ManageTableQRArgs): Promise<ManageTableQRResult> {
+  return apiRequest<ManageTableQRResult>('/api/v1/dining/manage-table-qr', {
+    method: 'POST',
+    body: { table_id: tableId, rotate },
+  })
+}
+
+// QR codes encode the guest order URL with the opaque token, never the table
+// id, so a leaked/printed code can be revoked by rotating the token.
+export function buildQROrderURL(token: string): string {
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  return `${origin}/order?t=${encodeURIComponent(token)}`
+}

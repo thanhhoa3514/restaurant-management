@@ -3,12 +3,14 @@ UPDATE restaurants
 SET code = UPPER(TRIM(code))
 WHERE code <> UPPER(TRIM(code));
 
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION normalize_restaurant_code() RETURNS TRIGGER AS $$
 BEGIN
     NEW.code = UPPER(TRIM(NEW.code));
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 CREATE TRIGGER trg_restaurants_normalize_code
 BEFORE INSERT OR UPDATE OF code ON restaurants

@@ -16,6 +16,7 @@ import { Route as KitchenRouteImport } from './routes/kitchen'
 import { Route as CashierRouteImport } from './routes/cashier'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminTableQrsRouteImport } from './routes/admin.table-qrs'
 
 const WaiterRoute = WaiterRouteImport.update({
   id: '/waiter',
@@ -52,34 +53,42 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminTableQrsRoute = AdminTableQrsRouteImport.update({
+  id: '/table-qrs',
+  path: '/table-qrs',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/cashier': typeof CashierRoute
   '/kitchen': typeof KitchenRoute
   '/login': typeof LoginRoute
   '/order': typeof OrderRoute
   '/waiter': typeof WaiterRoute
+  '/admin/table-qrs': typeof AdminTableQrsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/cashier': typeof CashierRoute
   '/kitchen': typeof KitchenRoute
   '/login': typeof LoginRoute
   '/order': typeof OrderRoute
   '/waiter': typeof WaiterRoute
+  '/admin/table-qrs': typeof AdminTableQrsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/cashier': typeof CashierRoute
   '/kitchen': typeof KitchenRoute
   '/login': typeof LoginRoute
   '/order': typeof OrderRoute
   '/waiter': typeof WaiterRoute
+  '/admin/table-qrs': typeof AdminTableQrsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -91,8 +100,17 @@ export interface FileRouteTypes {
     | '/login'
     | '/order'
     | '/waiter'
+    | '/admin/table-qrs'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/cashier' | '/kitchen' | '/login' | '/order' | '/waiter'
+  to:
+    | '/'
+    | '/admin'
+    | '/cashier'
+    | '/kitchen'
+    | '/login'
+    | '/order'
+    | '/waiter'
+    | '/admin/table-qrs'
   id:
     | '__root__'
     | '/'
@@ -102,11 +120,12 @@ export interface FileRouteTypes {
     | '/login'
     | '/order'
     | '/waiter'
+    | '/admin/table-qrs'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
+  AdminRoute: typeof AdminRouteWithChildren
   CashierRoute: typeof CashierRoute
   KitchenRoute: typeof KitchenRoute
   LoginRoute: typeof LoginRoute
@@ -165,12 +184,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/table-qrs': {
+      id: '/admin/table-qrs'
+      path: '/table-qrs'
+      fullPath: '/admin/table-qrs'
+      preLoaderRoute: typeof AdminTableQrsRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
+interface AdminRouteChildren {
+  AdminTableQrsRoute: typeof AdminTableQrsRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminTableQrsRoute: AdminTableQrsRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
+  AdminRoute: AdminRouteWithChildren,
   CashierRoute: CashierRoute,
   KitchenRoute: KitchenRoute,
   LoginRoute: LoginRoute,

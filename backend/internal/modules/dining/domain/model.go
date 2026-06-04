@@ -44,6 +44,18 @@ type QRCode struct {
 	TableID      uuid.UUID
 	Token        string
 	IsActive     bool
+	CreatedBy    *uuid.UUID
+}
+
+// TableWithQR is a read projection joining a table to its current active QR
+// code (if any). QR fields are nil when the table has no active QR.
+type TableWithQR struct {
+	TableID   uuid.UUID
+	TableCode string
+	TableName string
+	Status    string
+	QRCodeID  *uuid.UUID
+	QRToken   *string
 }
 
 type DiningSession struct {
@@ -74,8 +86,11 @@ type DiningRepository interface {
 	FindTable(ctx context.Context, restaurantID, tableID uuid.UUID) (*Table, error)
 	ActiveQRForTable(ctx context.Context, restaurantID, tableID uuid.UUID) (*QRCode, error)
 	CreateSession(ctx context.Context, session *DiningSession) error
-	ResolveQRToken(ctx context.Context, qrToken string) (restaurantID, tableID uuid.UUID, err error)
+	FindQRByToken(ctx context.Context, qrToken string) (*QRCode, error)
 	FindActiveSessionByTable(ctx context.Context, restaurantID, tableID uuid.UUID) (*DiningSession, error)
+	ListTablesWithActiveQR(ctx context.Context, restaurantID uuid.UUID) ([]TableWithQR, error)
+	DeactivateActiveQR(ctx context.Context, restaurantID, tableID uuid.UUID, deactivatedBy *uuid.UUID, reason string) error
+	CreateQR(ctx context.Context, qr *QRCode) error
 }
 
 type OutboxWriter interface {

@@ -59,8 +59,12 @@ export interface Order {
 
 export interface Session {
   token: string
-  table: number
+  table: string
   startedAt: Date
+  sessionId?: string
+  tableId?: string
+  restaurantId?: string
+  status?: string
 }
 
 export type Screen = 'qr' | 'menu' | 'order' | 'summary' | 'invoice'

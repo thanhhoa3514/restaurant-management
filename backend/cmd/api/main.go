@@ -115,7 +115,7 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 	catalogHandler.RegisterRoutes(api, secret)
 
 	diningRepo := diningrepo.NewRepository(pool)
-	diningHandler := dininghttp.NewHandler(diningapp.NewOpenSession(tx, diningRepo, outboxWriter), diningapp.NewJoinSession(tx, diningRepo, outboxWriter), diningapp.NewCloseSession(tx, diningRepo, outboxWriter), diningapp.NewManageTableQR(tx, diningRepo, outboxWriter))
+	diningHandler := dininghttp.NewHandler(diningapp.NewOpenSession(tx, diningRepo, outboxWriter), diningapp.NewJoinSession(tx, diningRepo, outboxWriter), diningapp.NewCloseSession(tx, diningRepo, outboxWriter), diningapp.NewManageTableQR(tx, diningRepo, outboxWriter), diningapp.NewListTableQRs(diningRepo))
 	diningHandler.RegisterRoutes(api, secret)
 	guestGroup := api.Group("/guest", auth.QRSessionToken(diningRepo))
 	catalogHandler.RegisterGuestRoutes(guestGroup)

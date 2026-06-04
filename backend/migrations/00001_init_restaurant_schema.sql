@@ -663,12 +663,14 @@ CREATE TABLE event_processing_log (
     CONSTRAINT chk_event_processing_log_status CHECK (status IN ('SUCCESS', 'FAILED', 'SKIPPED'))
 );
 
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION notify_event_outbox() RETURNS TRIGGER AS $$
 BEGIN
     PERFORM pg_notify('event_outbox', NEW.id::text);
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 CREATE TRIGGER trg_event_outbox_notify
 AFTER INSERT ON event_outbox

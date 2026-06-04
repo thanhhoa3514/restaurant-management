@@ -7,6 +7,9 @@ import { SessionSummary } from '../features/ordering/components/session-summary'
 import { GuestInvoiceScreen } from '../features/ordering/components/guest-invoice-screen'
 
 export const Route = createFileRoute('/order')({
+  validateSearch: (search: Record<string, unknown>) => ({
+    t: typeof search.t === 'string' ? search.t : undefined,
+  }),
   component: OrderRoute,
 })
 
@@ -20,10 +23,11 @@ function OrderRoute() {
 
 function OrderFlow() {
   const { state } = useOrdering()
+  const { t: qrToken } = Route.useSearch()
 
   switch (state.screen) {
     case 'qr':
-      return <QRLanding />
+      return <QRLanding qrToken={qrToken} />
     case 'menu':
       return <MenuScreen />
     case 'order':
@@ -33,6 +37,6 @@ function OrderFlow() {
     case 'invoice':
       return <GuestInvoiceScreen />
     default:
-      return <QRLanding />
+      return <QRLanding qrToken={qrToken} />
   }
 }

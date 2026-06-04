@@ -3,15 +3,22 @@ package application
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
 	"restaurant-management/internal/modules/dining/domain"
+	"restaurant-management/internal/platform/outbox"
 	"restaurant-management/internal/shared/apperr"
 )
 
 type JoinSessionRequest struct {
 	QRToken string `json:"qr_token"`
+	// Server-observed request metadata. The HTTP handler populates these
+	// fields; they are never trusted from JSON.
+	IPHash    string `json:"-"`
+	UserAgent string `json:"-"`
+	TraceID   string `json:"-"`
 }
 
 type JoinSessionResponse struct {
@@ -33,21 +40,32 @@ func NewJoinSession(tx TxRunner, repo domain.DiningRepository, outbox domain.Out
 }
 func (s *JoinSession) Handle(ctx context.Context, req JoinSessionRequest) (JoinSessionResponse, error) {
 	var out JoinSessionResponse
-	if strings.TrimSpace(req.QRToken) == "" {
+	qrToken := strings.TrimSpace(req.QRToken)
+	if qrToken == "" {
 		return out, apperr.New(apperr.CodeInvalid, "qr_token is required")
 	}
 	err := s.tx.Run(ctx, func(ctx context.Context) error {
-		restaurantID, tableID, err := s.repo.ResolveQRToken(ctx, strings.TrimSpace(req.QRToken))
+		qr, err := s.repo.FindQRByToken(ctx, qrToken)
 		if err != nil {
 			if apperr.Is(err, apperr.CodeNotFound) {
 				return apperr.New(apperr.CodeUnauthorized, "invalid qr token")
 			}
 			return err
 		}
-		session, err := s.repo.FindActiveSessionByTable(ctx, restaurantID, tableID)
+		if !qr.IsActive {
+			if err := s.writeQRScanEvent(ctx, qr, nil, "invalid_or_revoked", req); err != nil {
+				return err
+			}
+			return apperr.New(apperr.CodeUnauthorized, "invalid qr token")
+		}
+
+		session, err := s.repo.FindActiveSessionByTable(ctx, qr.RestaurantID, qr.TableID)
 		if err != nil {
 			if apperr.Is(err, apperr.CodeNotFound) {
 				out = JoinSessionResponse{Status: "not_opened"}
+				if err := s.writeQRScanEvent(ctx, qr, nil, "not_opened", req); err != nil {
+					return err
+				}
 				return nil
 			}
 			return err
@@ -59,8 +77,56 @@ func (s *JoinSession) Handle(ctx context.Context, req JoinSessionRequest) (JoinS
 			TableID:      &session.TableID,
 			RestaurantID: &session.RestaurantID,
 		}
-		_ = s.outbox
-		return nil
+		return s.writeQRScanEvent(ctx, qr, session, scanOutcome(session.Status), req)
 	})
 	return out, err
+}
+
+func scanOutcome(status domain.SessionStatus) string {
+	switch status {
+	case domain.SessionActive:
+		return "joined_active"
+	case domain.SessionAwaitingPayment:
+		return "awaiting_payment"
+	default:
+		return strings.ToLower(string(status))
+	}
+}
+
+func (s *JoinSession) writeQRScanEvent(ctx context.Context, qr *domain.QRCode, session *domain.DiningSession, outcome string, req JoinSessionRequest) error {
+	if s.outbox == nil || qr == nil {
+		return nil
+	}
+
+	payload := map[string]any{
+		"qr_code_id": qr.ID,
+		"table_id":   qr.TableID,
+		"outcome":    outcome,
+	}
+	dedupeKey := "qr_scan:" + qr.ID.String() + ":" + outcome + ":" + req.IPHash
+	window := 5 * time.Minute
+	if session != nil {
+		payload["session_id"] = session.ID
+		payload["session_status"] = string(session.Status)
+		dedupeKey = "qr_scan:" + qr.ID.String() + ":" + session.ID.String()
+		window = 30 * time.Minute
+	}
+
+	return s.outbox.Write(ctx, outbox.WriteEvent{
+		RestaurantID:  qr.RestaurantID,
+		AggregateType: "qr_code",
+		AggregateID:   qr.ID,
+		EventType:     "dining.qr_scanned",
+		Payload:       payload,
+		Metadata: map[string]any{
+			"actor_type": "GUEST",
+			"action":     "qr.scanned",
+			"ip_hash":    req.IPHash,
+			"user_agent": req.UserAgent,
+			"trace_id":   req.TraceID,
+		},
+		Priority:     4,
+		DedupeKey:    dedupeKey,
+		DedupeWindow: window,
+	})
 }

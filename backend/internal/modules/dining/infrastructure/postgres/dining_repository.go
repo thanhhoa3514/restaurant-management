@@ -68,20 +68,20 @@ func (r *Repository) CreateSession(ctx context.Context, s *domain.DiningSession)
 	return err
 }
 
-func (r *Repository) ResolveQRToken(ctx context.Context, qrToken string) (uuid.UUID, uuid.UUID, error) {
-	var restaurantID, tableID uuid.UUID
+func (r *Repository) FindQRByToken(ctx context.Context, qrToken string) (*domain.QRCode, error) {
+	qr := &domain.QRCode{}
 	err := r.q(ctx).QueryRow(ctx, `
-		SELECT restaurant_id, table_id
+		SELECT id, restaurant_id, table_id, token, is_active
 		FROM qr_codes
-		WHERE token = $1 AND is_active = TRUE AND deleted_at IS NULL
-	`, strings.TrimSpace(qrToken)).Scan(&restaurantID, &tableID)
+		WHERE token = $1 AND deleted_at IS NULL
+	`, strings.TrimSpace(qrToken)).Scan(&qr.ID, &qr.RestaurantID, &qr.TableID, &qr.Token, &qr.IsActive)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return uuid.Nil, uuid.Nil, apperr.New(apperr.CodeNotFound, "qr token not found")
+		return nil, apperr.New(apperr.CodeNotFound, "qr token not found")
 	}
 	if err != nil {
-		return uuid.Nil, uuid.Nil, err
+		return nil, err
 	}
-	return restaurantID, tableID, nil
+	return qr, nil
 }
 
 func (r *Repository) FindActiveSessionByTable(ctx context.Context, restaurantID, tableID uuid.UUID) (*domain.DiningSession, error) {
@@ -123,6 +123,65 @@ func (r *Repository) ValidateSessionToken(ctx context.Context, token string) (au
 		return auth.SessionAuth{}, err
 	}
 	return out, nil
+}
+
+func (r *Repository) ListTablesWithActiveQR(ctx context.Context, restaurantID uuid.UUID) ([]domain.TableWithQR, error) {
+	rows, err := r.q(ctx).Query(ctx, `
+		SELECT t.id, t.code, t.name, t.status, q.id, q.token
+		FROM tables t
+		LEFT JOIN qr_codes q
+		  ON q.restaurant_id = t.restaurant_id
+		 AND q.table_id = t.id
+		 AND q.is_active = TRUE
+		 AND q.deleted_at IS NULL
+		WHERE t.restaurant_id = $1 AND t.deleted_at IS NULL
+		ORDER BY t.code
+	`, restaurantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]domain.TableWithQR, 0)
+	for rows.Next() {
+		var row domain.TableWithQR
+		var qrID pgtype.UUID
+		var token pgtype.Text
+		if err := rows.Scan(&row.TableID, &row.TableCode, &row.TableName, &row.Status, &qrID, &token); err != nil {
+			return nil, err
+		}
+		if qrID.Valid {
+			id := uuid.UUID(qrID.Bytes)
+			row.QRCodeID = &id
+		}
+		if token.Valid {
+			t := token.String
+			row.QRToken = &t
+		}
+		out = append(out, row)
+	}
+	return out, rows.Err()
+}
+
+func (r *Repository) DeactivateActiveQR(ctx context.Context, restaurantID, tableID uuid.UUID, deactivatedBy *uuid.UUID, reason string) error {
+	_, err := r.q(ctx).Exec(ctx, `
+		UPDATE qr_codes
+		SET is_active = FALSE, deactivated_at = NOW(), deactivated_by = $3, deactivated_reason = $4
+		WHERE restaurant_id = $1 AND table_id = $2 AND is_active = TRUE AND deleted_at IS NULL
+	`, restaurantID, tableID, deactivatedBy, reason)
+	return err
+}
+
+func (r *Repository) CreateQR(ctx context.Context, qr *domain.QRCode) error {
+	err := r.q(ctx).QueryRow(ctx, `
+		INSERT INTO qr_codes (restaurant_id, table_id, token, is_active, created_by)
+		VALUES ($1, $2, $3, TRUE, $4)
+		RETURNING id
+	`, qr.RestaurantID, qr.TableID, qr.Token, qr.CreatedBy).Scan(&qr.ID)
+	if pg.IsUniqueViolation(err) {
+		return apperr.New(apperr.CodeConflict, "active qr already exists for table")
+	}
+	return err
 }
 
 func activeSessionSelect(where string) string {

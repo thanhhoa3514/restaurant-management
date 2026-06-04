@@ -27,6 +27,7 @@ export const Route = createFileRoute('/')({
           {/* Guest Ordering */}
           <Link
             to="/order"
+            search={{ t: undefined }}
             className="flex items-center justify-between rounded-3xl border border-blue-500/20 bg-blue-500/5 p-5 text-left transition active:scale-[0.98] hover:bg-blue-500/10 cursor-pointer shadow-lg"
           >
             <div className="flex items-center gap-4">
@@ -52,7 +53,9 @@ export const Route = createFileRoute('/')({
               </div>
               <div>
                 <h3 className="text-base font-bold text-white">Cổng Nhân viên & Admin</h3>
-                <p className="text-xs text-zinc-400 mt-0.5">Thu ngân, Phục vụ, Nhà bếp, Quản trị viên</p>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Thu ngân, Phục vụ, Nhà bếp, Quản trị viên
+                </p>
               </div>
             </div>
             <ArrowRight size={18} className="text-purple-400" />
