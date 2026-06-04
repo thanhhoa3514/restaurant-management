@@ -3,10 +3,9 @@ import { type FC, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { LanguageLoader } from '@/components/ui/language-loader'
-import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { StaffShell } from '@/components/staff-shell'
 import { LanguageSwitcher } from '@/components/ui/language-switcher'
 import { fmtClock } from '@/features/kitchen/helpers'
 import { useKds } from '@/features/kitchen/hooks/use-kds'
@@ -21,52 +20,43 @@ export const KdsLayout: FC = () => {
   const [changingLang, setChangingLang] = useState<Lang | null>(null)
 
   return (
-    <div className="min-h-dvh bg-[var(--bg)] text-[var(--text)]">
-      <header className="sticky top-0 z-[300] border-b border-[var(--separator)] bg-[var(--bg)]/78 backdrop-blur-2xl">
-        <div className="mx-auto flex max-w-[1800px] flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex size-12 items-center justify-center rounded-[16px] bg-[var(--text)] text-[var(--bg)] text-2xl">
-              ♨
-            </div>
-            <div>
-              <h1 className="text-lg font-bold leading-tight">{kds.t('restaurant')}</h1>
-              <p className="text-sm font-medium text-[var(--text-secondary)]">
-                {kds.t('kitchen_display')}
-              </p>
-            </div>
-          </div>
-
-          <div className="rounded-[18px] bg-[var(--surface-grouped)] px-5 py-2 font-mono text-3xl font-bold tracking-tight tabular-nums">
-            {fmtClock(kds.now)}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <StatPill label={kds.t('pending_count')} value={kds.stats.pending} tone="orange" />
-            <StatPill label={kds.t('preparing_count')} value={kds.stats.preparing} tone="blue" />
-            <StatPill label={kds.t('ready_count')} value={kds.stats.ready} tone="green" />
-            <Separator className="hidden h-8 w-px sm:block" />
-            <ThemeToggle />
-            <LanguageSwitcher
-              currentLang={kds.lang}
-              onLangChange={(newLang) => {
-                setChangingLang(newLang)
-                setTimeout(() => {
-                  kds.setLang(newLang)
-                  setChangingLang(null)
-                }, 750)
-              }}
-            />
-            <Button
-              size="sm"
-              variant={kds.soundOn ? 'default' : 'secondary'}
-              onClick={() => kds.setSoundOn((current) => !current)}
-            >
-              {kds.soundOn ? 'Sound on' : 'Muted'}
-            </Button>
-          </div>
+    <StaffShell
+      role="kitchen"
+      brandName={kds.t('restaurant')}
+      title={kds.t('kitchen_display')}
+      subtitle={kds.t('restaurant')}
+      sidebar={false}
+      headerCenter={
+        <div className="rounded-[18px] bg-[var(--surface-grouped)] px-5 py-2 font-mono text-3xl font-bold tracking-tight tabular-nums">
+          {fmtClock(kds.now)}
         </div>
-      </header>
-
+      }
+      headerActions={
+        <>
+          <StatPill label={kds.t('pending_count')} value={kds.stats.pending} tone="orange" />
+          <StatPill label={kds.t('preparing_count')} value={kds.stats.preparing} tone="blue" />
+          <StatPill label={kds.t('ready_count')} value={kds.stats.ready} tone="green" />
+          <LanguageSwitcher
+            currentLang={kds.lang}
+            onLangChange={(newLang) => {
+              setChangingLang(newLang)
+              setTimeout(() => {
+                kds.setLang(newLang)
+                setChangingLang(null)
+              }, 750)
+            }}
+          />
+          <Button
+            size="sm"
+            variant={kds.soundOn ? 'default' : 'secondary'}
+            onClick={() => kds.setSoundOn((current) => !current)}
+          >
+            {kds.soundOn ? 'Sound on' : 'Muted'}
+          </Button>
+        </>
+      }
+      contentClassName="p-0"
+    >
       {kds.lastMessage && (
         <div className="pointer-events-none fixed left-1/2 top-24 z-[360] -translate-x-1/2 rounded-full bg-[var(--text)] px-4 py-2 text-sm font-semibold text-[var(--bg)] shadow-2xl">
           {kds.lastMessage}
@@ -105,10 +95,7 @@ export const KdsLayout: FC = () => {
         onInject={kds.injectNewTicket}
       />
 
-      <LanguageLoader
-        open={changingLang !== null}
-        targetLang={changingLang || kds.lang}
-      />
+      <LanguageLoader open={changingLang !== null} targetLang={changingLang || kds.lang} />
 
       <ManageItemsDialog
         lang={kds.lang}
@@ -120,7 +107,7 @@ export const KdsLayout: FC = () => {
         }}
         onClose={() => kds.setManageOrderId(null)}
       />
-    </div>
+    </StaffShell>
   )
 }
 
@@ -143,8 +130,6 @@ const StatPill: FC<{ label: string; value: number; tone: 'orange' | 'blue' | 'gr
     </Badge>
   )
 }
-
-
 
 const EmptyState: FC<{ title: string; hint: string }> = ({ title, hint }) => (
   <Card className="mx-auto mt-16 flex max-w-xl flex-col items-center justify-center border border-[var(--separator)] bg-[var(--bg-elevated)]/65 px-8 py-16 text-center backdrop-blur-xl">
