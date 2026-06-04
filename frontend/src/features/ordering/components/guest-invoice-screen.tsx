@@ -4,9 +4,9 @@ import { PDFDownloadLink, Document, Page, Text, View, StyleSheet, Font } from '@
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
 import { getMenuItem } from '../data/menu'
-import { formatVND, formatTime, summarizeOptions } from '../helpers'
+import { formatVND } from '../helpers'
 import { Button } from '../../../components/ui/button'
-import { Card, CardContent } from '../../../components/ui/card'
+import { Card } from '../../../components/ui/card'
 import { Separator } from '../../../components/ui/separator'
 
 // Register Roboto fonts for Vietnamese A5 PDF rendering
@@ -122,6 +122,7 @@ interface GuestPDFProps {
   vat: number;
   grandTotal: number;
   lang: 'vi' | 'en';
+  invoiceNumber: number;
 }
 
 const GuestInvoicePDF = ({
@@ -133,6 +134,7 @@ const GuestInvoicePDF = ({
   vat,
   grandTotal,
   lang,
+  invoiceNumber,
 }: GuestPDFProps) => {
   return (
     <Document>
@@ -144,7 +146,7 @@ const GuestInvoicePDF = ({
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={pdfStyles.invoiceTitle}>{lang === 'vi' ? 'HÓA ĐƠN ĐIỆN TỬ' : 'E-INVOICE'}</Text>
-            <Text style={{ fontSize: 7, color: '#6b7280', marginTop: 2 }}>#{Math.floor(100000 + Math.random() * 900000)}</Text>
+            <Text style={{ fontSize: 7, color: '#6b7280', marginTop: 2 }}>#{invoiceNumber}</Text>
           </View>
         </View>
 
@@ -238,7 +240,8 @@ export const GuestInvoiceScreen: FC = () => {
     dispatch({ type: 'SET_SCREEN', payload: 'qr' })
   }
 
-  const currentDateString = fmtDateTime(new Date())
+  const currentDateString = useMemo(() => fmtDateTime(new Date()), [])
+  const invoiceNumber = useMemo(() => Math.floor(100000 + Math.random() * 900000), [])
 
   return (
     <div className="flex min-h-dvh flex-col bg-[var(--material-thick)]/30">
@@ -299,6 +302,7 @@ export const GuestInvoiceScreen: FC = () => {
               vat={vat}
               grandTotal={grandTotal}
               lang={state.lang}
+              invoiceNumber={invoiceNumber}
             />
           }
           fileName={`Hoa_Don_Dien_Tu_Ban_${state.session?.table}.pdf`}

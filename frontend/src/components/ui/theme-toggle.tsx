@@ -4,11 +4,10 @@ import { Button } from './button'
 
 export const ThemeToggle: FC = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    if (typeof window !== 'undefined') {
-      const isDark = document.documentElement.classList.contains('dark')
-      return isDark ? 'dark' : 'light'
-    }
-    return 'light'
+    if (typeof window === 'undefined') return 'light'
+    const saved = localStorage.getItem('rest_theme')
+    if (saved === 'dark' || saved === 'light') return saved
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
   })
 
   useEffect(() => {
@@ -21,17 +20,6 @@ export const ThemeToggle: FC = () => {
       localStorage.setItem('rest_theme', 'light')
     }
   }, [theme])
-
-  // System preference detection on initial load
-  useEffect(() => {
-    const saved = localStorage.getItem('rest_theme')
-    if (saved === 'dark' || saved === 'light') {
-      setTheme(saved)
-    } else {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-      setTheme(prefersDark ? 'dark' : 'light')
-    }
-  }, [])
 
   return (
     <Button
