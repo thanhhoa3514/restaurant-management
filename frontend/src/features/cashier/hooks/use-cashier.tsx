@@ -110,7 +110,10 @@ function subMethodFromCode(code: string): SubMethod {
   return (['cash', 'card', 'momo', 'zalopay', 'vnpay'].includes(code) ? code : 'momo') as SubMethod
 }
 
-function paymentFromDTO(payment: BillingPaymentDTO | null, previous: PaymentRecord | null): PaymentRecord | null {
+function paymentFromDTO(
+  payment: BillingPaymentDTO | null,
+  previous: PaymentRecord | null,
+): PaymentRecord | null {
   if (!payment) return previous?.status === 'pending' ? previous : null
   const method: PaymentMethod =
     payment.method_code === 'cash' ? 'cash' : payment.method_code === 'card' ? 'card' : 'ewallet'
@@ -119,7 +122,9 @@ function paymentFromDTO(payment: BillingPaymentDTO | null, previous: PaymentReco
     sub_method: subMethodFromCode(payment.method_code),
     status: payment.status.toLowerCase() as PaymentRecord['status'],
     transaction_id: payment.reference_code || payment.payment_number,
-    initiated_at: previous?.initiated_at ?? (payment.processed_at ? new Date(payment.processed_at) : new Date()),
+    initiated_at:
+      previous?.initiated_at ??
+      (payment.processed_at ? new Date(payment.processed_at) : new Date()),
     completed_at: payment.processed_at ? new Date(payment.processed_at) : null,
     amount_tendered: payment.received_amount_vnd,
     change: payment.change_amount_vnd,
@@ -153,7 +158,12 @@ function applyInvoiceDTO(
   const payment = paymentFromDTO(invoice.payment, session.payment)
   return {
     ...session,
-    status: invoice.status === 'PAID' ? 'paid' : session.status === 'closed' ? 'closed' : 'bill_requested',
+    status:
+      invoice.status === 'PAID'
+        ? 'paid'
+        : session.status === 'closed'
+          ? 'closed'
+          : 'bill_requested',
     payment,
     invoice: {
       ...session.invoice,
@@ -182,7 +192,12 @@ function cashierReducer(state: CashierState, action: CashierAction): CashierStat
         sessions: action.sessions.map((incoming) => {
           const existing = state.sessions.find((session) => session.id === incoming.id)
           return existing?.invoice.id
-            ? { ...incoming, invoice: existing.invoice, payment: existing.payment, status: existing.status }
+            ? {
+                ...incoming,
+                invoice: existing.invoice,
+                payment: existing.payment,
+                status: existing.status,
+              }
             : incoming
         }),
         selectedSessionId: action.sessions.some((session) => session.id === state.selectedSessionId)
@@ -377,14 +392,21 @@ export function CashierProvider({ children }: { children: ReactNode }) {
               ? { id: currentSession.invoice.id }
               : await createInvoice(currentSession.id).then((response) => response.invoice)
             const methodCode = action.subMethod ?? currentSession.payment?.sub_method ?? 'cash'
-            const received = action.amountTendered ?? currentSession.payment?.amount_tendered ?? currentSession.invoice.total
+            const received =
+              action.amountTendered ??
+              currentSession.payment?.amount_tendered ??
+              currentSession.invoice.total
             const response = await processPayment({
               invoiceId: invoice.id,
               paymentMethodCode: methodCode,
               receivedAmountVND: received,
               referenceCode: action.transactionId ?? currentSession.payment?.transaction_id,
             })
-            baseDispatch({ type: 'replaceInvoice', sessionId: currentSession.id, invoice: response.invoice })
+            baseDispatch({
+              type: 'replaceInvoice',
+              sessionId: currentSession.id,
+              invoice: response.invoice,
+            })
             void queryClient.invalidateQueries({ queryKey: STAFF_TABLES_QUERY_KEY })
             break
           }
@@ -401,17 +423,21 @@ export function CashierProvider({ children }: { children: ReactNode }) {
       }
       void run().catch((error) => {
         console.error('cashier action failed', error)
-        if (action.type === 'completePayment') baseDispatch({ type: 'failPayment', sessionId: action.sessionId })
+        if (action.type === 'completePayment')
+          baseDispatch({ type: 'failPayment', sessionId: action.sessionId })
       })
     },
     [queryClient, state.sessions],
   )
 
   useEffect(() => {
-    if (!selectedSession || selectedSession.invoice.id || selectedSession.status === 'closed') return
+    if (!selectedSession || selectedSession.invoice.id || selectedSession.status === 'closed')
+      return
     const id = selectedSession.id
     void createInvoice(id)
-      .then((response) => baseDispatch({ type: 'replaceInvoice', sessionId: id, invoice: response.invoice }))
+      .then((response) =>
+        baseDispatch({ type: 'replaceInvoice', sessionId: id, invoice: response.invoice }),
+      )
       .catch((error) => console.error('invoice load failed', error))
   }, [selectedSession])
 
