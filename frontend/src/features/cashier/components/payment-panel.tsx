@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState, type FC } from 'react'
+import { useMemo, useState, type FC } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
+import { mockCompletePayment } from '@/features/billing/api'
 import { fmtDateTime, fmtHMS, fmtVND, makeTxnId, providerName } from '@/features/cashier/helpers'
 import type { CashierAction } from '@/features/cashier/hooks/use-cashier'
 import type { CashierSession, Lang, PaymentMethod, Provider } from '@/features/cashier/types'
@@ -24,11 +25,14 @@ interface CardForm {
   bank: string
 }
 
-const providers: Provider[] = [
+const baseProviders: Provider[] = [
   { id: 'momo', name: 'Momo', accent: 'border-pink-300 bg-pink-500/10 text-pink-700', dot: 'bg-pink-500' },
   { id: 'zalopay', name: 'ZaloPay', accent: 'border-sky-300 bg-sky-500/10 text-sky-700', dot: 'bg-sky-500' },
   { id: 'vnpay', name: 'VNPay', accent: 'border-red-300 bg-red-500/10 text-red-700', dot: 'bg-red-500' },
 ]
+const providers: Provider[] = import.meta.env.DEV
+  ? [...baseProviders, { id: 'mock', name: 'Mock Wallet', accent: 'border-violet-300 bg-violet-500/10 text-violet-700', dot: 'bg-violet-500' }]
+  : baseProviders
 
 export const PaymentPanel: FC<PaymentPanelProps> = ({ session, now, lang, t, dispatch, onReceipt }) => {
   const [modeState, setModeState] = useState<{ sessionId: string | null; mode: PaymentMethod | 'select' }>({
@@ -52,7 +56,7 @@ export const PaymentPanel: FC<PaymentPanelProps> = ({ session, now, lang, t, dis
   const mode = modeState.sessionId === session.id ? modeState.mode : 'select'
   const setMode = (nextMode: PaymentMethod | 'select') => setModeState({ sessionId: session.id, mode: nextMode })
   const paid = session.status === 'paid' && payment?.status === 'completed'
-  const pending = payment?.status === 'pending'
+  const pending = payment?.status === 'pending' || payment?.status === 'processing'
   const failed = payment?.status === 'failed'
 
   return (
@@ -260,11 +264,21 @@ function EWalletPayment({
           variant="secondary"
           className={`h-auto w-full justify-start rounded-[var(--radius-xl)] border p-4 ${provider.accent}`}
           onClick={() => {
+            const transactionId = makeTxnId()
             dispatch({
               type: 'startPayment',
               sessionId: session.id,
               method: 'ewallet',
               subMethod: provider.id,
+              transactionId,
+            })
+            dispatch({
+              type: 'completePayment',
+              sessionId: session.id,
+              method: 'ewallet',
+              subMethod: provider.id,
+              transactionId,
+              amountTendered: null,
             })
           }}
         >
@@ -290,17 +304,11 @@ function EWalletPending({
 }) {
   const payment = session.payment
   const provider = providers.find((item) => item.id === payment?.sub_method)
-
-  useEffect(() => {
-    if (!payment || payment.status !== 'pending') return undefined
-    const id = window.setTimeout(() => {
-      dispatch({ type: 'completePayment', sessionId: session.id })
-    }, 6000)
-    return () => window.clearTimeout(id)
-  }, [dispatch, payment, session.id])
+  const [busy, setBusy] = useState(false)
 
   if (!payment) return null
   const elapsed = Math.max(0, Math.floor((now.getTime() - payment.initiated_at.getTime()) / 1000))
+  const checkoutURL = payment.deeplink || payment.pay_url || payment.qr_code_url
 
   return (
     <div className="space-y-4">
@@ -314,12 +322,53 @@ function EWalletPending({
         </div>
         <div className="mt-4 text-3xl font-bold tabular-nums text-[var(--text)]">{fmtVND(session.invoice.total)}</div>
         <div className="mt-1 text-xs font-mono text-[var(--text-tertiary)]">{payment.transaction_id}</div>
+        {checkoutURL ? (
+          <a
+            href={checkoutURL}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 inline-flex text-xs font-semibold text-[var(--system-blue)] underline"
+          >
+            {t('ewallet_open_link')}
+          </a>
+        ) : null}
       </Card>
       <Card className="border border-[var(--system-orange)]/30 bg-[var(--system-orange)]/10 p-4">
         <div className="font-bold text-[var(--system-orange)]">{t('ewallet_awaiting')}</div>
         <div className="text-xs font-mono tabular-nums text-[var(--text-tertiary)]">{fmtHMS(elapsed)}</div>
       </Card>
       <p className="text-xs leading-relaxed text-[var(--text-tertiary)]">{t('ewallet_pending_hint')}</p>
+      {payment.sub_method === 'mock' ? (
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            disabled={busy}
+            onClick={() => {
+              setBusy(true)
+              void mockCompletePayment({ paymentNumber: payment.transaction_id, result: 'success' })
+                .then((response) =>
+                  dispatch({ type: 'replaceInvoice', sessionId: session.id, invoice: response.invoice }),
+                )
+                .finally(() => setBusy(false))
+            }}
+          >
+            {t('ewallet_simulate_paid')}
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={busy}
+            onClick={() => {
+              setBusy(true)
+              void mockCompletePayment({ paymentNumber: payment.transaction_id, result: 'failed' })
+                .then((response) =>
+                  dispatch({ type: 'replaceInvoice', sessionId: session.id, invoice: response.invoice }),
+                )
+                .finally(() => setBusy(false))
+            }}
+          >
+            {t('ewallet_simulate_failed')}
+          </Button>
+        </div>
+      ) : null}
       <div className="grid grid-cols-2 gap-2">
         <Button variant="secondary" onClick={() => dispatch({ type: 'failPayment', sessionId: session.id })}>{t('ewallet_cancel')}</Button>
         <Button variant="destructive" onClick={() => dispatch({ type: 'failPayment', sessionId: session.id })}>{t('retry')}</Button>

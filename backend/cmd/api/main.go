@@ -13,6 +13,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	billingapp "restaurant-management/internal/modules/billing/application"
+	billingdomain "restaurant-management/internal/modules/billing/domain"
+	billinggateway "restaurant-management/internal/modules/billing/infrastructure/gateway"
 	billingrepo "restaurant-management/internal/modules/billing/infrastructure/postgres"
 	billinghttp "restaurant-management/internal/modules/billing/interfaces/http"
 	catalogapp "restaurant-management/internal/modules/catalog/application"
@@ -80,7 +82,7 @@ func main() {
 	router.GET("/ws", hub.ServeGin)
 
 	api := router.Group("/api/v1")
-	wireRoutes(api, tx, dispatcher, pool, cfg.JWTSecret, cfg.JWTTTL)
+	wireRoutes(api, tx, dispatcher, pool, cfg)
 
 	// ReadHeaderTimeout defends against Slowloris; IdleTimeout reaps idle
 	// keep-alives. ReadTimeout/WriteTimeout are intentionally omitted — they
@@ -105,9 +107,10 @@ func main() {
 	}
 }
 
-func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outbox.Dispatcher, pool *pgxpool.Pool, secret string, jwtTTL time.Duration) {
+func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outbox.Dispatcher, pool *pgxpool.Pool, cfg config.Config) {
+	secret := cfg.JWTSecret
 	identityRepo := identityrepo.NewRepository(pool)
-	identityHandler := identityhttp.NewHandler(identityapp.NewAuthenticate(tx, identityRepo, outboxWriter, secret, jwtTTL), identityapp.NewManageUsers(tx, identityRepo, outboxWriter))
+	identityHandler := identityhttp.NewHandler(identityapp.NewAuthenticate(tx, identityRepo, outboxWriter, secret, cfg.JWTTTL), identityapp.NewManageUsers(tx, identityRepo, outboxWriter))
 	identityHandler.RegisterRoutes(api, secret)
 
 	catalogRepo := catalogrepo.NewRepository(pool)
@@ -142,7 +145,44 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 	orderingHandler.RegisterKitchenRoutes(api, secret)
 
 	billingRepo := billingrepo.NewRepository(pool)
-	billingHandler := billinghttp.NewHandler(billingapp.NewBuildInvoice(tx, billingRepo, outboxWriter), billingapp.NewAdjustInvoice(tx, billingRepo, outboxWriter), billingapp.NewProcessPayment(tx, billingRepo, outboxWriter))
+	gateways := buildGatewayRegistry(cfg)
+	billingHandler := billinghttp.NewHandler(
+		billingapp.NewBuildInvoice(tx, billingRepo, outboxWriter),
+		billingapp.NewAdjustInvoice(tx, billingRepo, outboxWriter),
+		billingapp.NewProcessPayment(tx, billingRepo, outboxWriter, gateways, cfg.PublicBaseURL),
+		billingapp.NewHandleWebhook(tx, billingRepo, outboxWriter, gateways, cfg.MockWebhookSecret),
+		cfg.AppEnv,
+	)
 	billingHandler.RegisterRoutes(api, secret)
 	billingHandler.RegisterWebhookRoutes(api)
+}
+
+func buildGatewayRegistry(cfg config.Config) *billingdomain.GatewayRegistry {
+	registry := billingdomain.NewGatewayRegistry()
+	httpClient := &http.Client{Timeout: 10 * time.Second}
+	if cfg.AppEnv != "production" {
+		registry.Register(billinggateway.NewMock(billinggateway.MockConfig{
+			PublicBaseURL: cfg.PublicBaseURL,
+			Secret:        cfg.MockWebhookSecret,
+		}))
+	}
+	if cfg.MoMoEndpoint != "" && cfg.MoMoPartnerCode != "" && cfg.MoMoAccessKey != "" && cfg.MoMoSecretKey != "" {
+		registry.Register(billinggateway.NewMoMo(billinggateway.MoMoConfig{
+			Endpoint:    cfg.MoMoEndpoint,
+			PartnerCode: cfg.MoMoPartnerCode,
+			AccessKey:   cfg.MoMoAccessKey,
+			SecretKey:   cfg.MoMoSecretKey,
+			HTTPClient:  httpClient,
+		}))
+	}
+	if cfg.ZaloPayEndpoint != "" && cfg.ZaloPayAppID != "" && cfg.ZaloPayKey1 != "" && cfg.ZaloPayKey2 != "" {
+		registry.Register(billinggateway.NewZaloPay(billinggateway.ZaloPayConfig{
+			Endpoint:   cfg.ZaloPayEndpoint,
+			AppID:      cfg.ZaloPayAppID,
+			Key1:       cfg.ZaloPayKey1,
+			Key2:       cfg.ZaloPayKey2,
+			HTTPClient: httpClient,
+		}))
+	}
+	return registry
 }

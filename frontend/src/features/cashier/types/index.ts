@@ -7,7 +7,7 @@ export type SessionStatus =
   | 'voided'
 
 export type PaymentMethod = 'cash' | 'card' | 'ewallet'
-export type SubMethod = 'cash' | 'card' | 'momo' | 'zalopay' | 'vnpay'
+export type SubMethod = 'cash' | 'card' | 'momo' | 'zalopay' | 'vnpay' | 'mock'
 export type PaymentRecordStatus = 'pending' | 'processing' | 'completed' | 'failed'
 
 export interface LineItem {
@@ -68,6 +68,9 @@ export interface PaymentRecord {
   change: number | null
   last4: string | null
   bank: string | null
+  pay_url?: string
+  deeplink?: string
+  qr_code_url?: string
 }
 
 export interface CashierSession {

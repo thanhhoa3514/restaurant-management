@@ -20,19 +20,51 @@ type Config struct {
 	LogLevel       string
 	DBMaxConns     int
 	AllowedOrigins []string
+	PublicBaseURL  string
+
+	MoMoEndpoint    string
+	MoMoPartnerCode string
+	MoMoAccessKey   string
+	MoMoSecretKey   string
+
+	ZaloPayEndpoint string
+	ZaloPayAppID    string
+	ZaloPayKey1     string
+	ZaloPayKey2     string
+
+	MockWebhookSecret string
 }
 
 func Load() Config {
+	appEnv := env("APP_ENV", "development")
+	jwtSecret := env("JWT_SECRET", defaultJWTSecret)
+	mockSecret := env("MOCK_WEBHOOK_SECRET", "")
+	if mockSecret == "" && appEnv != "production" {
+		mockSecret = jwtSecret
+	}
 	return Config{
 		HTTPAddr:       env("HTTP_ADDR", ":8080"),
 		DatabaseURL:    env("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/restaurant?sslmode=disable"),
-		JWTSecret:      env("JWT_SECRET", defaultJWTSecret),
+		JWTSecret:      jwtSecret,
 		JWTTTL:         durationEnv("JWT_TTL", 12*time.Hour),
 		ShutdownPeriod: durationEnv("SHUTDOWN_SECONDS", 10*time.Second),
-		AppEnv:         env("APP_ENV", "development"),
+		AppEnv:         appEnv,
 		LogLevel:       env("LOG_LEVEL", "info"),
 		DBMaxConns:     intEnv("DB_MAX_CONNS", 0),
 		AllowedOrigins: csvEnv("CORS_ALLOWED_ORIGINS"),
+		PublicBaseURL:  strings.TrimRight(env("PUBLIC_BASE_URL", ""), "/"),
+
+		MoMoEndpoint:    strings.TrimRight(env("MOMO_ENDPOINT", ""), "/"),
+		MoMoPartnerCode: env("MOMO_PARTNER_CODE", ""),
+		MoMoAccessKey:   env("MOMO_ACCESS_KEY", ""),
+		MoMoSecretKey:   env("MOMO_SECRET_KEY", ""),
+
+		ZaloPayEndpoint: strings.TrimRight(env("ZALOPAY_ENDPOINT", ""), "/"),
+		ZaloPayAppID:    env("ZALOPAY_APP_ID", ""),
+		ZaloPayKey1:     env("ZALOPAY_KEY1", ""),
+		ZaloPayKey2:     env("ZALOPAY_KEY2", ""),
+
+		MockWebhookSecret: mockSecret,
 	}
 }
 

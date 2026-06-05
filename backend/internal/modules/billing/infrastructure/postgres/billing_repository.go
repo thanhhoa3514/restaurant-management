@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -174,60 +175,39 @@ func (r *Repository) AdjustInvoice(ctx context.Context, restaurantID, invoiceID 
 	return r.LoadInvoice(ctx, restaurantID, invoiceID)
 }
 
-func (r *Repository) ProcessPayment(ctx context.Context, restaurantID uuid.UUID, input domain.PaymentInput) (*domain.Invoice, error) {
-	var diningSessionID uuid.UUID
-	var invoiceStatus string
-	var totalAmount int64
+func (r *Repository) FindPaymentMethod(ctx context.Context, restaurantID uuid.UUID, code string) (*domain.PaymentMethod, error) {
+	method := &domain.PaymentMethod{}
 	err := r.q(ctx).QueryRow(ctx, `
-		SELECT dining_session_id, status, total_amount_vnd
-		FROM invoices
-		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
-		FOR UPDATE
-	`, restaurantID, input.InvoiceID).Scan(&diningSessionID, &invoiceStatus, &totalAmount)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, apperr.New(apperr.CodeNotFound, "invoice not found")
-	}
-	if err != nil {
-		return nil, err
-	}
-	if invoiceStatus == "PAID" {
-		return nil, apperr.New(apperr.CodeConflict, "invoice already paid")
-	}
-	if invoiceStatus == "VOID" || invoiceStatus == "REFUNDED" {
-		return nil, apperr.New(apperr.CodeConflict, "invoice is not payable")
-	}
-	if input.ReceivedAmountVND < totalAmount {
-		return nil, apperr.New(apperr.CodeInvalid, "received_amount_vnd is less than invoice total")
-	}
-	var hasCompleted bool
-	if err := r.q(ctx).QueryRow(ctx, `
-		SELECT EXISTS (
-			SELECT 1 FROM payments
-			WHERE restaurant_id = $1 AND invoice_id = $2 AND status = 'COMPLETED' AND deleted_at IS NULL
-		)
-	`, restaurantID, input.InvoiceID).Scan(&hasCompleted); err != nil {
-		return nil, err
-	}
-	if hasCompleted {
-		return nil, apperr.New(apperr.CodeConflict, "invoice already has a completed payment")
-	}
-
-	var methodID uuid.UUID
-	var methodCode, methodType string
-	var requiresRef bool
-	err = r.q(ctx).QueryRow(ctx, `
 		SELECT id, code, type, requires_reference
 		FROM payment_methods
 		WHERE restaurant_id = $1 AND LOWER(code) = $2 AND is_active = TRUE AND deleted_at IS NULL
-	`, restaurantID, input.PaymentMethodCode).Scan(&methodID, &methodCode, &methodType, &requiresRef)
+	`, restaurantID, strings.ToLower(strings.TrimSpace(code))).Scan(&method.ID, &method.Code, &method.Type, &method.RequiresReference)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, apperr.New(apperr.CodeNotFound, "payment method not found")
 	}
 	if err != nil {
 		return nil, err
 	}
-	if requiresRef && strings.TrimSpace(input.ReferenceCode) == "" {
+	return method, nil
+}
+
+func (r *Repository) ProcessPayment(ctx context.Context, restaurantID uuid.UUID, input domain.PaymentInput) (*domain.Invoice, error) {
+	diningSessionID, totalAmount, err := r.lockPayableInvoice(ctx, restaurantID, input.InvoiceID)
+	if err != nil {
+		return nil, err
+	}
+	if input.ReceivedAmountVND < totalAmount {
+		return nil, apperr.New(apperr.CodeInvalid, "received_amount_vnd is less than invoice total")
+	}
+	method, err := r.FindPaymentMethod(ctx, restaurantID, input.PaymentMethodCode)
+	if err != nil {
+		return nil, err
+	}
+	if method.RequiresReference && strings.TrimSpace(input.ReferenceCode) == "" {
 		return nil, apperr.New(apperr.CodeInvalid, "reference_code is required")
+	}
+	if err := r.ensureNoPaymentConflict(ctx, restaurantID, input.InvoiceID, uuid.Nil); err != nil {
+		return nil, err
 	}
 
 	paymentNumber, err := randomCode("PAY", 12)
@@ -248,7 +228,7 @@ func (r *Repository) ProcessPayment(ctx context.Context, restaurantID uuid.UUID,
 		)
 		VALUES ($1, $2, $3, $4, $5, $6, 'COMPLETED', $7, $8, $9, NOW(), $10)
 		RETURNING id
-	`, restaurantID, input.InvoiceID, diningSessionID, paymentNumber, methodID, totalAmount, reference, input.ReceivedAmountVND, change, input.ProcessedBy).Scan(&paymentID)
+	`, restaurantID, input.InvoiceID, diningSessionID, paymentNumber, method.ID, totalAmount, reference, input.ReceivedAmountVND, change, input.ProcessedBy).Scan(&paymentID)
 	if pg.IsUniqueViolation(err) {
 		return nil, apperr.New(apperr.CodeConflict, "payment number already exists")
 	}
@@ -271,39 +251,215 @@ func (r *Repository) ProcessPayment(ctx context.Context, restaurantID uuid.UUID,
 	if err != nil {
 		return nil, err
 	}
+	if err := r.closeSessionAndFreeTable(ctx, restaurantID, diningSessionID, input.ProcessedBy); err != nil {
+		return nil, err
+	}
+	_ = paymentID
+	return r.LoadInvoice(ctx, restaurantID, input.InvoiceID)
+}
 
-	var tableID uuid.UUID
+func (r *Repository) PrepareAsyncPayment(ctx context.Context, restaurantID uuid.UUID, input domain.AsyncPaymentInput) (*domain.AsyncPaymentPreparation, error) {
+	diningSessionID, totalAmount, err := r.lockPayableInvoice(ctx, restaurantID, input.InvoiceID)
+	if err != nil {
+		return nil, err
+	}
+	method, err := r.FindPaymentMethod(ctx, restaurantID, input.PaymentMethodCode)
+	if err != nil {
+		return nil, err
+	}
+	if existing, err := r.findProcessingPayment(ctx, restaurantID, input.InvoiceID, method.ID); err != nil {
+		return nil, err
+	} else if existing != nil {
+		invoice, err := r.LoadInvoice(ctx, restaurantID, input.InvoiceID)
+		return &domain.AsyncPaymentPreparation{Invoice: invoice, Payment: existing, Created: false}, err
+	}
+	if err := r.ensureNoPaymentConflict(ctx, restaurantID, input.InvoiceID, method.ID); err != nil {
+		return nil, err
+	}
+
+	paymentNumber, err := randomCode("PAY", 12)
+	if err != nil {
+		return nil, err
+	}
+	var paymentID uuid.UUID
 	err = r.q(ctx).QueryRow(ctx, `
-		SELECT table_id
-		FROM dining_sessions
-		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
-		FOR UPDATE
-	`, restaurantID, diningSessionID).Scan(&tableID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, apperr.New(apperr.CodeNotFound, "dining session not found")
+		INSERT INTO payments (
+			restaurant_id, invoice_id, dining_session_id, payment_number, payment_method_id,
+			amount_vnd, status, received_amount_vnd, change_amount_vnd, processed_by
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, 'PROCESSING', NULL, 0, $7)
+		RETURNING id
+	`, restaurantID, input.InvoiceID, diningSessionID, paymentNumber, method.ID, totalAmount, input.ProcessedBy).Scan(&paymentID)
+	if pg.IsUniqueViolation(err) {
+		return nil, apperr.New(apperr.CodeConflict, "payment number already exists")
 	}
 	if err != nil {
 		return nil, err
 	}
-	if _, err := r.q(ctx).Exec(ctx, `
-		UPDATE dining_sessions
-		SET status = 'CLOSED', closed_at = COALESCE(closed_at, NOW()), closed_by = COALESCE(closed_by, $3), version = version + 1, updated_at = NOW()
-		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
-	`, restaurantID, diningSessionID, input.ProcessedBy); err != nil {
+	invoice, err := r.LoadInvoice(ctx, restaurantID, input.InvoiceID)
+	if err != nil {
 		return nil, err
 	}
-	if _, err := r.q(ctx).Exec(ctx, `
-		UPDATE tables
-		SET status = 'AVAILABLE', version = version + 1, updated_at = NOW()
-		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
-	`, restaurantID, tableID); err != nil {
-		return nil, err
-	}
+	return &domain.AsyncPaymentPreparation{Invoice: invoice, Payment: invoice.Payment, Created: true}, nil
+}
 
-	_ = methodCode
-	_ = methodType
-	_ = paymentID
-	return r.LoadInvoice(ctx, restaurantID, input.InvoiceID)
+func (r *Repository) AttachGatewayResult(ctx context.Context, restaurantID, paymentID uuid.UUID, result domain.InitiateResult) (*domain.Invoice, error) {
+	raw := result.Raw
+	if raw == nil {
+		raw = map[string]any{}
+	}
+	if result.PayURL != "" {
+		raw["pay_url"] = result.PayURL
+	}
+	if result.Deeplink != "" {
+		raw["deeplink"] = result.Deeplink
+	}
+	if result.QRCodeURL != "" {
+		raw["qr_code_url"] = result.QRCodeURL
+	}
+	payload, err := json.Marshal(raw)
+	if err != nil {
+		return nil, err
+	}
+	var invoiceID uuid.UUID
+	err = r.q(ctx).QueryRow(ctx, `
+		UPDATE payments
+		SET gateway_transaction_id = $3,
+		    transaction_data = $4,
+		    version = version + 1,
+		    updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND status = 'PROCESSING' AND deleted_at IS NULL
+		RETURNING invoice_id
+	`, restaurantID, paymentID, result.GatewayTransactionID, payload).Scan(&invoiceID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperr.New(apperr.CodeNotFound, "processing payment not found")
+	}
+	if err != nil {
+		return nil, err
+	}
+	return r.LoadInvoice(ctx, restaurantID, invoiceID)
+}
+
+func (r *Repository) FindWebhookPayment(ctx context.Context, gatewayTransactionID, orderRef string) (*domain.WebhookPayment, error) {
+	payment := &domain.WebhookPayment{}
+	err := r.q(ctx).QueryRow(ctx, `
+		SELECT id, restaurant_id, invoice_id, dining_session_id, payment_number, amount_vnd, status
+		FROM payments
+		WHERE deleted_at IS NULL
+		  AND (($1 <> '' AND gateway_transaction_id = $1) OR ($2 <> '' AND payment_number = $2))
+		ORDER BY created_at DESC
+		LIMIT 1
+	`, strings.TrimSpace(gatewayTransactionID), strings.TrimSpace(orderRef)).Scan(&payment.ID, &payment.RestaurantID, &payment.InvoiceID, &payment.DiningSessionID, &payment.PaymentNumber, &payment.AmountVND, &payment.Status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return payment, nil
+}
+
+func (r *Repository) InsertWebhookEvent(ctx context.Context, restaurantID uuid.UUID, provider, eventID string, paymentID uuid.UUID, payload any) (uuid.UUID, bool, error) {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return uuid.Nil, false, err
+	}
+	var id uuid.UUID
+	err = r.q(ctx).QueryRow(ctx, `
+		INSERT INTO payment_webhook_events (restaurant_id, provider, event_id, payment_id, payload)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id
+	`, restaurantID, provider, eventID, paymentID, data).Scan(&id)
+	if pg.IsUniqueViolation(err) {
+		return uuid.Nil, false, nil
+	}
+	if err != nil {
+		return uuid.Nil, false, err
+	}
+	return id, true, nil
+}
+
+func (r *Repository) CompleteWebhookPayment(ctx context.Context, restaurantID, paymentID uuid.UUID, event domain.WebhookEvent) (*domain.Invoice, error) {
+	payment, err := r.lockPayment(ctx, restaurantID, paymentID)
+	if err != nil {
+		return nil, err
+	}
+	if payment.Status == domain.PaymentCompleted || payment.Status == domain.PaymentFailed {
+		return r.LoadInvoice(ctx, restaurantID, payment.InvoiceID)
+	}
+	payload, err := json.Marshal(event.Raw)
+	if err != nil {
+		return nil, err
+	}
+	_, err = r.q(ctx).Exec(ctx, `
+		UPDATE payments
+		SET status = 'COMPLETED',
+		    received_amount_vnd = amount_vnd,
+		    change_amount_vnd = 0,
+		    processed_at = NOW(),
+		    transaction_data = COALESCE(transaction_data, '{}'::jsonb) || $3::jsonb,
+		    version = version + 1,
+		    updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, restaurantID, paymentID, payload)
+	if err != nil {
+		return nil, err
+	}
+	_, err = r.q(ctx).Exec(ctx, `
+		UPDATE invoices
+		SET status = 'PAID',
+		    paid_amount_vnd = total_amount_vnd,
+		    change_amount_vnd = 0,
+		    issued_at = COALESCE(issued_at, NOW()),
+		    paid_at = NOW(),
+		    version = version + 1,
+		    updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, restaurantID, payment.InvoiceID)
+	if err != nil {
+		return nil, err
+	}
+	if err := r.closeSessionAndFreeTable(ctx, restaurantID, payment.DiningSessionID, uuid.Nil); err != nil {
+		return nil, err
+	}
+	return r.LoadInvoice(ctx, restaurantID, payment.InvoiceID)
+}
+
+func (r *Repository) FailWebhookPayment(ctx context.Context, restaurantID, paymentID uuid.UUID, event domain.WebhookEvent) (*domain.Invoice, error) {
+	payment, err := r.lockPayment(ctx, restaurantID, paymentID)
+	if err != nil {
+		return nil, err
+	}
+	if payment.Status == domain.PaymentCompleted || payment.Status == domain.PaymentFailed {
+		return r.LoadInvoice(ctx, restaurantID, payment.InvoiceID)
+	}
+	payload, err := json.Marshal(event.Raw)
+	if err != nil {
+		return nil, err
+	}
+	_, err = r.q(ctx).Exec(ctx, `
+		UPDATE payments
+		SET status = 'FAILED',
+		    processed_at = NOW(),
+		    transaction_data = COALESCE(transaction_data, '{}'::jsonb) || $3::jsonb,
+		    version = version + 1,
+		    updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, restaurantID, paymentID, payload)
+	if err != nil {
+		return nil, err
+	}
+	return r.LoadInvoice(ctx, restaurantID, payment.InvoiceID)
+}
+
+func (r *Repository) MarkWebhookProcessed(ctx context.Context, eventRowID uuid.UUID) error {
+	_, err := r.q(ctx).Exec(ctx, `UPDATE payment_webhook_events SET processed_at = NOW() WHERE id = $1`, eventRowID)
+	return err
+}
+
+func (r *Repository) MarkWebhookError(ctx context.Context, eventRowID uuid.UUID, message string) error {
+	_, err := r.q(ctx).Exec(ctx, `UPDATE payment_webhook_events SET processing_error = $2 WHERE id = $1`, eventRowID, message)
+	return err
 }
 
 func (r *Repository) LoadInvoice(ctx context.Context, restaurantID, invoiceID uuid.UUID) (*domain.Invoice, error) {
@@ -348,12 +504,144 @@ func (r *Repository) LoadInvoice(ctx context.Context, restaurantID, invoiceID uu
 		return nil, err
 	}
 	inv.Items = items
-	payment, err := r.loadCompletedPayment(ctx, restaurantID, invoiceID)
+	payment, err := r.loadLatestPayment(ctx, restaurantID, invoiceID)
 	if err != nil {
 		return nil, err
 	}
 	inv.Payment = payment
 	return inv, nil
+}
+
+func (r *Repository) lockPayableInvoice(ctx context.Context, restaurantID, invoiceID uuid.UUID) (uuid.UUID, int64, error) {
+	var diningSessionID uuid.UUID
+	var invoiceStatus string
+	var totalAmount int64
+	err := r.q(ctx).QueryRow(ctx, `
+		SELECT dining_session_id, status, total_amount_vnd
+		FROM invoices
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+		FOR UPDATE
+	`, restaurantID, invoiceID).Scan(&diningSessionID, &invoiceStatus, &totalAmount)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return uuid.Nil, 0, apperr.New(apperr.CodeNotFound, "invoice not found")
+	}
+	if err != nil {
+		return uuid.Nil, 0, err
+	}
+	if invoiceStatus == "PAID" {
+		return uuid.Nil, 0, apperr.New(apperr.CodeConflict, "invoice already paid")
+	}
+	if invoiceStatus == "VOID" || invoiceStatus == "REFUNDED" {
+		return uuid.Nil, 0, apperr.New(apperr.CodeConflict, "invoice is not payable")
+	}
+	return diningSessionID, totalAmount, nil
+}
+
+func (r *Repository) ensureNoPaymentConflict(ctx context.Context, restaurantID, invoiceID, allowedProcessingMethodID uuid.UUID) error {
+	var completed, processing bool
+	if err := r.q(ctx).QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM payments WHERE restaurant_id = $1 AND invoice_id = $2 AND status = 'COMPLETED' AND deleted_at IS NULL)
+	`, restaurantID, invoiceID).Scan(&completed); err != nil {
+		return err
+	}
+	if completed {
+		return apperr.New(apperr.CodeConflict, "invoice already has a completed payment")
+	}
+	args := []any{restaurantID, invoiceID}
+	query := `SELECT EXISTS (SELECT 1 FROM payments WHERE restaurant_id = $1 AND invoice_id = $2 AND status = 'PROCESSING' AND deleted_at IS NULL`
+	if allowedProcessingMethodID != uuid.Nil {
+		query += ` AND payment_method_id <> $3`
+		args = append(args, allowedProcessingMethodID)
+	}
+	query += `)`
+	if err := r.q(ctx).QueryRow(ctx, query, args...).Scan(&processing); err != nil {
+		return err
+	}
+	if processing {
+		return apperr.New(apperr.CodeConflict, "invoice has a processing payment")
+	}
+	return nil
+}
+
+func (r *Repository) findProcessingPayment(ctx context.Context, restaurantID, invoiceID, methodID uuid.UUID) (*domain.Payment, error) {
+	payment := &domain.Payment{}
+	var ref, gatewayID pgtype.Text
+	var processed pgtype.Timestamptz
+	var raw []byte
+	err := r.q(ctx).QueryRow(ctx, `
+		SELECT p.id, p.invoice_id, p.dining_session_id, p.payment_number,
+		       pm.code, pm.type, p.amount_vnd, COALESCE(p.received_amount_vnd, 0), p.change_amount_vnd,
+		       p.status, p.reference_code, p.gateway_transaction_id, COALESCE(p.transaction_data, '{}'::jsonb), p.processed_at
+		FROM payments p
+		JOIN payment_methods pm ON pm.restaurant_id = p.restaurant_id AND pm.id = p.payment_method_id
+		WHERE p.restaurant_id = $1 AND p.invoice_id = $2 AND p.payment_method_id = $3 AND p.status = 'PROCESSING' AND p.deleted_at IS NULL
+		ORDER BY p.created_at DESC
+		LIMIT 1
+	`, restaurantID, invoiceID, methodID).Scan(
+		&payment.ID, &payment.InvoiceID, &payment.DiningSessionID, &payment.PaymentNumber,
+		&payment.MethodCode, &payment.MethodType, &payment.AmountVND, &payment.ReceivedAmountVND, &payment.ChangeAmountVND,
+		&payment.Status, &ref, &gatewayID, &raw, &processed,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	applyPaymentNulls(payment, ref, gatewayID, raw, processed)
+	return payment, nil
+}
+
+func (r *Repository) lockPayment(ctx context.Context, restaurantID, paymentID uuid.UUID) (*domain.WebhookPayment, error) {
+	payment := &domain.WebhookPayment{}
+	err := r.q(ctx).QueryRow(ctx, `
+		SELECT id, restaurant_id, invoice_id, dining_session_id, payment_number, amount_vnd, status
+		FROM payments
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+		FOR UPDATE
+	`, restaurantID, paymentID).Scan(&payment.ID, &payment.RestaurantID, &payment.InvoiceID, &payment.DiningSessionID, &payment.PaymentNumber, &payment.AmountVND, &payment.Status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperr.New(apperr.CodeNotFound, "payment not found")
+	}
+	if err != nil {
+		return nil, err
+	}
+	return payment, nil
+}
+
+func (r *Repository) closeSessionAndFreeTable(ctx context.Context, restaurantID, diningSessionID, actorID uuid.UUID) error {
+	var tableID uuid.UUID
+	err := r.q(ctx).QueryRow(ctx, `
+		SELECT table_id
+		FROM dining_sessions
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+		FOR UPDATE
+	`, restaurantID, diningSessionID).Scan(&tableID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return apperr.New(apperr.CodeNotFound, "dining session not found")
+	}
+	if err != nil {
+		return err
+	}
+	var actor any
+	if actorID != uuid.Nil {
+		actor = actorID
+	}
+	if _, err := r.q(ctx).Exec(ctx, `
+		UPDATE dining_sessions
+		SET status = 'CLOSED', closed_at = COALESCE(closed_at, NOW()), closed_by = COALESCE(closed_by, $3), version = version + 1, updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, restaurantID, diningSessionID, actor); err != nil {
+		return err
+	}
+	if _, err := r.q(ctx).Exec(ctx, `
+		UPDATE tables
+		SET status = 'AVAILABLE', version = version + 1, updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, restaurantID, tableID); err != nil {
+		return err
+	}
+	return nil
 }
 
 type billableItem struct {
@@ -436,23 +724,24 @@ func (r *Repository) loadInvoiceItems(ctx context.Context, restaurantID, invoice
 	return items, rows.Err()
 }
 
-func (r *Repository) loadCompletedPayment(ctx context.Context, restaurantID, invoiceID uuid.UUID) (*domain.Payment, error) {
+func (r *Repository) loadLatestPayment(ctx context.Context, restaurantID, invoiceID uuid.UUID) (*domain.Payment, error) {
 	payment := &domain.Payment{}
-	var ref pgtype.Text
+	var ref, gatewayID pgtype.Text
 	var processed pgtype.Timestamptz
+	var raw []byte
 	err := r.q(ctx).QueryRow(ctx, `
 		SELECT p.id, p.invoice_id, p.dining_session_id, p.payment_number,
 		       pm.code, pm.type, p.amount_vnd, COALESCE(p.received_amount_vnd, 0), p.change_amount_vnd,
-		       p.status, p.reference_code, p.processed_at
+		       p.status, p.reference_code, p.gateway_transaction_id, COALESCE(p.transaction_data, '{}'::jsonb), p.processed_at
 		FROM payments p
 		JOIN payment_methods pm ON pm.restaurant_id = p.restaurant_id AND pm.id = p.payment_method_id
-		WHERE p.restaurant_id = $1 AND p.invoice_id = $2 AND p.status = 'COMPLETED' AND p.deleted_at IS NULL
-		ORDER BY p.created_at DESC
+		WHERE p.restaurant_id = $1 AND p.invoice_id = $2 AND p.status IN ('PROCESSING', 'COMPLETED', 'FAILED') AND p.deleted_at IS NULL
+		ORDER BY CASE p.status WHEN 'PROCESSING' THEN 0 WHEN 'COMPLETED' THEN 1 ELSE 2 END, p.created_at DESC
 		LIMIT 1
 	`, restaurantID, invoiceID).Scan(
 		&payment.ID, &payment.InvoiceID, &payment.DiningSessionID, &payment.PaymentNumber,
 		&payment.MethodCode, &payment.MethodType, &payment.AmountVND, &payment.ReceivedAmountVND, &payment.ChangeAmountVND,
-		&payment.Status, &ref, &processed,
+		&payment.Status, &ref, &gatewayID, &raw, &processed,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
@@ -460,15 +749,37 @@ func (r *Repository) loadCompletedPayment(ctx context.Context, restaurantID, inv
 	if err != nil {
 		return nil, err
 	}
+	applyPaymentNulls(payment, ref, gatewayID, raw, processed)
+	return payment, nil
+}
+
+func applyPaymentNulls(payment *domain.Payment, ref, gatewayID pgtype.Text, raw []byte, processed pgtype.Timestamptz) {
 	if ref.Valid {
 		s := ref.String
 		payment.ReferenceCode = &s
+	}
+	if gatewayID.Valid {
+		s := gatewayID.String
+		payment.GatewayTransactionID = &s
 	}
 	if processed.Valid {
 		t := processed.Time
 		payment.ProcessedAt = &t
 	}
-	return payment, nil
+	if len(raw) > 0 {
+		var data map[string]any
+		if err := json.Unmarshal(raw, &data); err == nil {
+			if v, _ := data["pay_url"].(string); v != "" {
+				payment.PayURL = v
+			}
+			if v, _ := data["deeplink"].(string); v != "" {
+				payment.Deeplink = v
+			}
+			if v, _ := data["qr_code_url"].(string); v != "" {
+				payment.QRCodeURL = v
+			}
+		}
+	}
 }
 
 func roundBPS(amount int64, bps int) int64 {

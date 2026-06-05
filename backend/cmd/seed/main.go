@@ -121,7 +121,7 @@ func main() {
 		log.Error("seed menu failed", slog.Any("error", err))
 		os.Exit(1)
 	}
-	if err := seedPaymentMethods(ctx, tx, restaurantID); err != nil {
+	if err := seedPaymentMethods(ctx, tx, restaurantID, cfg.AppEnv); err != nil {
 		log.Error("seed payment methods failed", slog.Any("error", err))
 		os.Exit(1)
 	}
@@ -238,7 +238,7 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 	return nil
 }
 
-func seedPaymentMethods(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
+func seedPaymentMethods(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID, appEnv string) error {
 	methods := []struct {
 		code         string
 		name         string
@@ -250,6 +250,14 @@ func seedPaymentMethods(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) 
 		{code: "momo", name: "MoMo", methodType: "E_WALLET", displayOrder: 3},
 		{code: "zalopay", name: "ZaloPay", methodType: "E_WALLET", displayOrder: 4},
 		{code: "vnpay", name: "VNPay", methodType: "E_WALLET", displayOrder: 5},
+	}
+	if appEnv != "production" {
+		methods = append(methods, struct {
+			code         string
+			name         string
+			methodType   string
+			displayOrder int
+		}{code: "mock", name: "Mock Wallet", methodType: "E_WALLET", displayOrder: 6})
 	}
 	for _, method := range methods {
 		if _, err := tx.Exec(ctx, `

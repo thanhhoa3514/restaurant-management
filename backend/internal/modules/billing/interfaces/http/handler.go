@@ -16,10 +16,12 @@ type Handler struct {
 	BuildInvoice   *application.BuildInvoice
 	AdjustInvoice  *application.AdjustInvoice
 	ProcessPayment *application.ProcessPayment
+	HandleWebhook  *application.HandleWebhook
+	appEnv         string
 }
 
-func NewHandler(buildInvoice *application.BuildInvoice, adjustInvoice *application.AdjustInvoice, processPayment *application.ProcessPayment) *Handler {
-	return &Handler{BuildInvoice: buildInvoice, AdjustInvoice: adjustInvoice, ProcessPayment: processPayment}
+func NewHandler(buildInvoice *application.BuildInvoice, adjustInvoice *application.AdjustInvoice, processPayment *application.ProcessPayment, handleWebhook *application.HandleWebhook, appEnv string) *Handler {
+	return &Handler{BuildInvoice: buildInvoice, AdjustInvoice: adjustInvoice, ProcessPayment: processPayment, HandleWebhook: handleWebhook, appEnv: appEnv}
 }
 
 func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string) {

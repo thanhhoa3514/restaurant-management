@@ -375,18 +375,41 @@ paths:
       summary: Process a payment
       security:
         - bearerAuth: []
-      description: 'RBAC: CASHIER, MANAGER'
+      description: >
+        RBAC: CASHIER, MANAGER. Cash/card complete synchronously. Configured
+        E_WALLET methods create a PROCESSING payment and return pay_url,
+        deeplink, and qr_code_url for gateway checkout; the invoice is paid only
+        after the provider webhook is reconciled.
       responses:
         '200':
-          description: Payment processed
-  /api/v1/billing/payments/webhook:
+          description: Payment processed or initiated
+  /api/v1/billing/payments/webhook/{provider}:
     post:
       tags: [billing]
-      summary: Idempotent payment webhook
+      summary: Idempotent payment provider webhook
       security: []
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [momo, zalopay, mock]
+      description: Public signature-authenticated callback. Amount must match the stored payment.
       responses:
-        '501':
-          description: Scaffold stub
+        '200':
+          description: Provider-specific acknowledgement
+        '204':
+          description: Provider-specific empty acknowledgement
+  /api/v1/billing/payments/mock/complete:
+    post:
+      tags: [billing]
+      summary: Complete mock e-wallet payment in non-production
+      security: []
+      description: Registered only when APP_ENV is not production; signs and routes through the real mock webhook handler.
+      responses:
+        '200':
+          description: Mock webhook applied
 components:
   securitySchemes:
     bearerAuth:

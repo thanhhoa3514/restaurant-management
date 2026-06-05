@@ -21,6 +21,9 @@ export interface BillingPaymentDTO {
   change_amount_vnd: number
   status: string
   reference_code: string | null
+  pay_url?: string
+  deeplink?: string
+  qr_code_url?: string
   processed_at: string | null
 }
 
@@ -89,5 +92,17 @@ export function processPayment(args: {
   })
 }
 
+export function mockCompletePayment(args: {
+  paymentNumber: string
+  result: 'success' | 'failed'
+}): Promise<BillingInvoiceResponse> {
+  return apiRequest<BillingInvoiceResponse>('/api/v1/billing/payments/mock/complete', {
+    method: 'POST',
+    body: {
+      payment_number: args.paymentNumber,
+      result: args.result,
+    },
+  })
+}
 
 export const createInvoice = buildInvoice

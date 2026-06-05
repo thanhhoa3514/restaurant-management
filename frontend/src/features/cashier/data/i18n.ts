@@ -87,6 +87,9 @@ export const CS_DICT: Record<Lang, Record<string, string | ((...args: never[]) =
     ewallet_provider: 'Nhà cung cấp',
     ewallet_txn: 'Mã giao dịch',
     ewallet_awaiting: 'Đang chờ thanh toán...',
+    ewallet_open_link: 'Mở liên kết thanh toán',
+    ewallet_simulate_paid: 'Mock: đã thanh toán',
+    ewallet_simulate_failed: 'Mock: thất bại',
     ewallet_cancel: 'Huỷ giao dịch',
     ewallet_pending_hint:
       'Bạn có thể chuyển sang phiên khác — giao dịch vẫn chạy nền và sẽ thông báo khi hoàn tất.',
@@ -220,6 +223,9 @@ export const CS_DICT: Record<Lang, Record<string, string | ((...args: never[]) =
     ewallet_provider: 'Provider',
     ewallet_txn: 'Transaction ID',
     ewallet_awaiting: 'Awaiting payment...',
+    ewallet_open_link: 'Open payment link',
+    ewallet_simulate_paid: 'Mock: mark paid',
+    ewallet_simulate_failed: 'Mock: fail',
     ewallet_cancel: 'Cancel transaction',
     ewallet_pending_hint:
       'You can switch to another session — this transaction continues in the background and will notify you when complete.',

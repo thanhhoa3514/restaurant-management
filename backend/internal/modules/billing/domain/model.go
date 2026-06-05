@@ -65,18 +65,29 @@ type InvoiceItem struct {
 }
 
 type Payment struct {
+	ID                   uuid.UUID
+	InvoiceID            uuid.UUID
+	DiningSessionID      uuid.UUID
+	PaymentNumber        string
+	MethodCode           string
+	MethodType           string
+	AmountVND            int64
+	ReceivedAmountVND    int64
+	ChangeAmountVND      int64
+	Status               PaymentStatus
+	ReferenceCode        *string
+	GatewayTransactionID *string
+	PayURL               string
+	Deeplink             string
+	QRCodeURL            string
+	ProcessedAt          *time.Time
+}
+
+type PaymentMethod struct {
 	ID                uuid.UUID
-	InvoiceID         uuid.UUID
-	DiningSessionID   uuid.UUID
-	PaymentNumber     string
-	MethodCode        string
-	MethodType        string
-	AmountVND         int64
-	ReceivedAmountVND int64
-	ChangeAmountVND   int64
-	Status            PaymentStatus
-	ReferenceCode     *string
-	ProcessedAt       *time.Time
+	Code              string
+	Type              string
+	RequiresReference bool
 }
 
 type PaymentInput struct {
@@ -87,10 +98,41 @@ type PaymentInput struct {
 	ProcessedBy       uuid.UUID
 }
 
+type AsyncPaymentInput struct {
+	InvoiceID         uuid.UUID
+	PaymentMethodCode string
+	ProcessedBy       uuid.UUID
+}
+
+type AsyncPaymentPreparation struct {
+	Invoice *Invoice
+	Payment *Payment
+	Created bool
+}
+
+type WebhookPayment struct {
+	ID              uuid.UUID
+	RestaurantID    uuid.UUID
+	InvoiceID       uuid.UUID
+	DiningSessionID uuid.UUID
+	PaymentNumber   string
+	AmountVND       int64
+	Status          PaymentStatus
+}
+
 type InvoiceRepository interface {
 	BuildInvoice(ctx context.Context, restaurantID, diningSessionID uuid.UUID) (*Invoice, bool, error)
 	AdjustInvoice(ctx context.Context, restaurantID, invoiceID uuid.UUID, discountAmountVND int64, discountReason string) (*Invoice, error)
+	FindPaymentMethod(ctx context.Context, restaurantID uuid.UUID, code string) (*PaymentMethod, error)
 	ProcessPayment(ctx context.Context, restaurantID uuid.UUID, input PaymentInput) (*Invoice, error)
+	PrepareAsyncPayment(ctx context.Context, restaurantID uuid.UUID, input AsyncPaymentInput) (*AsyncPaymentPreparation, error)
+	AttachGatewayResult(ctx context.Context, restaurantID, paymentID uuid.UUID, result InitiateResult) (*Invoice, error)
+	FindWebhookPayment(ctx context.Context, gatewayTransactionID, orderRef string) (*WebhookPayment, error)
+	InsertWebhookEvent(ctx context.Context, restaurantID uuid.UUID, provider, eventID string, paymentID uuid.UUID, payload any) (uuid.UUID, bool, error)
+	CompleteWebhookPayment(ctx context.Context, restaurantID, paymentID uuid.UUID, event WebhookEvent) (*Invoice, error)
+	FailWebhookPayment(ctx context.Context, restaurantID, paymentID uuid.UUID, event WebhookEvent) (*Invoice, error)
+	MarkWebhookProcessed(ctx context.Context, eventRowID uuid.UUID) error
+	MarkWebhookError(ctx context.Context, eventRowID uuid.UUID, message string) error
 	LoadInvoice(ctx context.Context, restaurantID, invoiceID uuid.UUID) (*Invoice, error)
 }
 

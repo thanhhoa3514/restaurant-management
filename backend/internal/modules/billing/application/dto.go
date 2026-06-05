@@ -74,6 +74,9 @@ type PaymentDTO struct {
 	Status            string     `json:"status"`
 	ReferenceCode     *string    `json:"reference_code"`
 	ProcessedAt       *time.Time `json:"processed_at"`
+	PayURL            string     `json:"pay_url,omitempty"`
+	Deeplink          string     `json:"deeplink,omitempty"`
+	QRCodeURL         string     `json:"qr_code_url,omitempty"`
 }
 
 func toResponse(inv *domain.Invoice) InvoiceResponse {
@@ -103,6 +106,9 @@ func toResponse(inv *domain.Invoice) InvoiceResponse {
 			Status:            string(inv.Payment.Status),
 			ReferenceCode:     inv.Payment.ReferenceCode,
 			ProcessedAt:       inv.Payment.ProcessedAt,
+			PayURL:            inv.Payment.PayURL,
+			Deeplink:          inv.Payment.Deeplink,
+			QRCodeURL:         inv.Payment.QRCodeURL,
 		}
 	}
 	return InvoiceResponse{Invoice: InvoiceDTO{

@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/google/uuid"
+
 	"restaurant-management/internal/modules/billing/domain"
 	"restaurant-management/internal/platform/outbox"
 	"restaurant-management/internal/platform/tenant"
@@ -11,13 +13,15 @@ import (
 )
 
 type ProcessPayment struct {
-	tx     TxRunner
-	repo   domain.InvoiceRepository
-	outbox domain.OutboxWriter
+	tx            TxRunner
+	repo          domain.InvoiceRepository
+	outbox        domain.OutboxWriter
+	gateways      *domain.GatewayRegistry
+	publicBaseURL string
 }
 
-func NewProcessPayment(tx TxRunner, repo domain.InvoiceRepository, outbox domain.OutboxWriter) *ProcessPayment {
-	return &ProcessPayment{tx: tx, repo: repo, outbox: outbox}
+func NewProcessPayment(tx TxRunner, repo domain.InvoiceRepository, outbox domain.OutboxWriter, gateways *domain.GatewayRegistry, publicBaseURL string) *ProcessPayment {
+	return &ProcessPayment{tx: tx, repo: repo, outbox: outbox, gateways: gateways, publicBaseURL: strings.TrimRight(publicBaseURL, "/")}
 }
 
 func (s *ProcessPayment) Handle(ctx context.Context, in ProcessPaymentRequest) (InvoiceResponse, error) {
@@ -29,9 +33,6 @@ func (s *ProcessPayment) Handle(ctx context.Context, in ProcessPaymentRequest) (
 	if methodCode == "" {
 		return out, apperr.New(apperr.CodeInvalid, "payment_method_code is required")
 	}
-	if in.ReceivedAmountVND <= 0 {
-		return out, apperr.New(apperr.CodeInvalid, "received_amount_vnd must be positive")
-	}
 	if in.ActorID == uuidNil {
 		return out, apperr.New(apperr.CodeUnauthorized, "invalid user claim")
 	}
@@ -40,9 +41,29 @@ func (s *ProcessPayment) Handle(ctx context.Context, in ProcessPaymentRequest) (
 		return out, err
 	}
 	err = s.tx.Run(ctx, func(ctx context.Context) error {
+		method, err := s.repo.FindPaymentMethod(ctx, restaurantID, methodCode)
+		if err != nil {
+			return err
+		}
+		gateway, hasGateway := s.gateways.Get(method.Code)
+		if method.Type == "E_WALLET" && !hasGateway {
+			return apperr.New(apperr.CodeNotImplemented, "payment provider not configured")
+		}
+		if method.Type == "E_WALLET" && hasGateway {
+			invoice, err := s.processAsync(ctx, restaurantID, method.Code, gateway, in)
+			if err != nil {
+				return err
+			}
+			out = toResponse(invoice)
+			return nil
+		}
+
+		if in.ReceivedAmountVND <= 0 {
+			return apperr.New(apperr.CodeInvalid, "received_amount_vnd must be positive")
+		}
 		invoice, err := s.repo.ProcessPayment(ctx, restaurantID, domain.PaymentInput{
 			InvoiceID:         in.InvoiceID,
-			PaymentMethodCode: methodCode,
+			PaymentMethodCode: method.Code,
 			ReceivedAmountVND: in.ReceivedAmountVND,
 			ReferenceCode:     strings.TrimSpace(in.ReferenceCode),
 			ProcessedBy:       in.ActorID,
@@ -50,45 +71,101 @@ func (s *ProcessPayment) Handle(ctx context.Context, in ProcessPaymentRequest) (
 		if err != nil {
 			return err
 		}
-		if s.outbox != nil {
-			if err := s.outbox.Write(ctx, outbox.WriteEvent{
-				RestaurantID:  restaurantID,
-				AggregateType: "invoice",
-				AggregateID:   invoice.ID,
-				EventType:     "billing.payment_completed",
-				Payload: map[string]any{
-					"invoice_id":          invoice.ID,
-					"dining_session_id":   invoice.DiningSessionID,
-					"payment_id":          invoice.Payment.ID,
-					"payment_method_code": invoice.Payment.MethodCode,
-					"amount_vnd":          invoice.Payment.AmountVND,
-					"received_amount_vnd": invoice.Payment.ReceivedAmountVND,
-					"change_amount_vnd":   invoice.Payment.ChangeAmountVND,
-				},
-				Metadata: map[string]any{"actor_type": "STAFF", "action": "payment.completed"},
-				Priority: 3,
-			}); err != nil {
-				return err
-			}
-			if err := s.outbox.Write(ctx, outbox.WriteEvent{
-				RestaurantID:  restaurantID,
-				AggregateType: "dining_session",
-				AggregateID:   invoice.DiningSessionID,
-				EventType:     "dining.session_closed",
-				Payload: map[string]any{
-					"dining_session_id": invoice.DiningSessionID,
-					"invoice_id":        invoice.ID,
-					"closed_by":         in.ActorID,
-					"reason":            "payment_completed",
-				},
-				Metadata: map[string]any{"actor_type": "STAFF", "action": "session.closed"},
-				Priority: 3,
-			}); err != nil {
-				return err
-			}
+		if err := s.writePaymentCompleted(ctx, restaurantID, invoice, in.ActorID); err != nil {
+			return err
 		}
 		out = toResponse(invoice)
 		return nil
 	})
 	return out, err
+}
+
+func (s *ProcessPayment) processAsync(ctx context.Context, restaurantID uuid.UUID, methodCode string, gateway domain.PaymentGateway, in ProcessPaymentRequest) (*domain.Invoice, error) {
+	prep, err := s.repo.PrepareAsyncPayment(ctx, restaurantID, domain.AsyncPaymentInput{InvoiceID: in.InvoiceID, PaymentMethodCode: methodCode, ProcessedBy: in.ActorID})
+	if err != nil {
+		return nil, err
+	}
+	if !prep.Created {
+		return prep.Invoice, nil
+	}
+	if prep.Payment == nil {
+		return nil, apperr.New(apperr.CodeInternal, "processing payment missing")
+	}
+	ipnURL := s.publicBaseURL + "/api/v1/billing/payments/webhook/" + gateway.Provider()
+	if s.publicBaseURL == "" {
+		ipnURL = "/api/v1/billing/payments/webhook/" + gateway.Provider()
+	}
+	result, err := gateway.Initiate(ctx, domain.InitiateInput{
+		PaymentNumber: prep.Payment.PaymentNumber,
+		AmountVND:     prep.Payment.AmountVND,
+		Description:   "Restaurant invoice " + prep.Invoice.InvoiceNumber,
+		ReturnURL:     s.publicBaseURL + "/cashier",
+		IPNURL:        ipnURL,
+	})
+	if err != nil {
+		return nil, err
+	}
+	invoice, err := s.repo.AttachGatewayResult(ctx, restaurantID, prep.Payment.ID, result)
+	if err != nil {
+		return nil, err
+	}
+	if s.outbox != nil {
+		if err := s.outbox.Write(ctx, outbox.WriteEvent{
+			RestaurantID:  restaurantID,
+			AggregateType: "invoice",
+			AggregateID:   invoice.ID,
+			EventType:     "billing.payment_initiated",
+			Payload: map[string]any{
+				"invoice_id":          invoice.ID,
+				"dining_session_id":   invoice.DiningSessionID,
+				"payment_id":          invoice.Payment.ID,
+				"payment_method_code": invoice.Payment.MethodCode,
+				"amount_vnd":          invoice.Payment.AmountVND,
+			},
+			Metadata: map[string]any{"actor_type": "STAFF", "action": "payment.initiated"},
+			Priority: 4,
+		}); err != nil {
+			return nil, err
+		}
+	}
+	return invoice, nil
+}
+
+func (s *ProcessPayment) writePaymentCompleted(ctx context.Context, restaurantID uuid.UUID, invoice *domain.Invoice, actorID uuid.UUID) error {
+	if s.outbox == nil || invoice == nil || invoice.Payment == nil {
+		return nil
+	}
+	if err := s.outbox.Write(ctx, outbox.WriteEvent{
+		RestaurantID:  restaurantID,
+		AggregateType: "invoice",
+		AggregateID:   invoice.ID,
+		EventType:     "billing.payment_completed",
+		Payload: map[string]any{
+			"invoice_id":          invoice.ID,
+			"dining_session_id":   invoice.DiningSessionID,
+			"payment_id":          invoice.Payment.ID,
+			"payment_method_code": invoice.Payment.MethodCode,
+			"amount_vnd":          invoice.Payment.AmountVND,
+			"received_amount_vnd": invoice.Payment.ReceivedAmountVND,
+			"change_amount_vnd":   invoice.Payment.ChangeAmountVND,
+		},
+		Metadata: map[string]any{"actor_type": "STAFF", "action": "payment.completed"},
+		Priority: 3,
+	}); err != nil {
+		return err
+	}
+	return s.outbox.Write(ctx, outbox.WriteEvent{
+		RestaurantID:  restaurantID,
+		AggregateType: "dining_session",
+		AggregateID:   invoice.DiningSessionID,
+		EventType:     "dining.session_closed",
+		Payload: map[string]any{
+			"dining_session_id": invoice.DiningSessionID,
+			"invoice_id":        invoice.ID,
+			"closed_by":         actorID,
+			"reason":            "payment_completed",
+		},
+		Metadata: map[string]any{"actor_type": "STAFF", "action": "session.closed"},
+		Priority: 3,
+	})
 }

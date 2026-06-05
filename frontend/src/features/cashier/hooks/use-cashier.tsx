@@ -107,7 +107,7 @@ function updateSession(
 }
 
 function subMethodFromCode(code: string): SubMethod {
-  return (['cash', 'card', 'momo', 'zalopay', 'vnpay'].includes(code) ? code : 'momo') as SubMethod
+  return (['cash', 'card', 'momo', 'zalopay', 'vnpay', 'mock'].includes(code) ? code : 'momo') as SubMethod
 }
 
 function paymentFromDTO(
@@ -130,6 +130,9 @@ function paymentFromDTO(
     change: payment.change_amount_vnd,
     last4: previous?.last4 ?? null,
     bank: previous?.bank ?? null,
+    pay_url: payment.pay_url,
+    deeplink: payment.deeplink,
+    qr_code_url: payment.qr_code_url,
   }
 }
 
@@ -156,14 +159,17 @@ function applyInvoiceDTO(
     discountHistory.push({ ...priorDiscount, action: 'removed', applied_at: at })
   }
   const payment = paymentFromDTO(invoice.payment, session.payment)
+  const status =
+    invoice.status === 'PAID'
+      ? 'paid'
+      : session.status === 'closed'
+        ? 'closed'
+        : payment?.status === 'processing' || payment?.status === 'pending'
+          ? 'in_payment'
+          : 'bill_requested'
   return {
     ...session,
-    status:
-      invoice.status === 'PAID'
-        ? 'paid'
-        : session.status === 'closed'
-          ? 'closed'
-          : 'bill_requested',
+    status,
     payment,
     invoice: {
       ...session.invoice,
