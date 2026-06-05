@@ -31,7 +31,8 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string) {
 	g.POST("/join-session", h.joinSession) // public: QR guest entry bootstrap
 	staff := g.Group("", auth.JWT(secret), auth.RBAC("SERVER", "MANAGER"))
 	staff.POST("/open-session", h.openSession)
-	staff.POST("/close-session", h.closeSession)
+	cashier := g.Group("", auth.JWT(secret), auth.RBAC("SERVER", "CASHIER", "MANAGER"))
+	cashier.POST("/close-session", h.closeSession)
 
 	// QR codes are tied to printed assets, so generate/rotate/listing is
 	// restricted to MANAGER. Rotation deactivates the prior token.
@@ -86,6 +87,12 @@ func (h *Handler) closeSession(c *gin.Context) {
 		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
 		return
 	}
+	actorID, err := uuid.Parse(c.GetString(auth.CtxUserID))
+	if err != nil || actorID == uuid.Nil {
+		httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "invalid user claim"))
+		return
+	}
+	req.ActorID = actorID
 	out, err := h.CloseSession.Handle(c.Request.Context(), req)
 	if err != nil {
 		httpx.RespondError(c, err)

@@ -121,10 +121,24 @@ func main() {
 		log.Error("seed menu failed", slog.Any("error", err))
 		os.Exit(1)
 	}
+	if err := seedPaymentMethods(ctx, tx, restaurantID); err != nil {
+		log.Error("seed payment methods failed", slog.Any("error", err))
+		os.Exit(1)
+	}
 
 	// Open a dining session bound to a fixed guest session token so the guest
 	// menu/order endpoints (behind X-Session-Token) can be exercised without
 	// wiring real staff auth. Demo only.
+	for _, q := range []string{
+		`DELETE FROM payments WHERE restaurant_id = $1`,
+		`DELETE FROM invoice_items WHERE restaurant_id = $1`,
+		`DELETE FROM invoices WHERE restaurant_id = $1`,
+	} {
+		if _, err := tx.Exec(ctx, q, restaurantID); err != nil {
+			log.Error("clear demo billing failed", slog.Any("error", err))
+			os.Exit(1)
+		}
+	}
 	if _, err := tx.Exec(ctx, `DELETE FROM dining_sessions WHERE restaurant_id = $1 AND table_id = $2`, restaurantID, tableID); err != nil {
 		log.Error("clear demo session failed", slog.Any("error", err))
 		os.Exit(1)
@@ -221,6 +235,36 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 		return err
 	}
 
+	return nil
+}
+
+func seedPaymentMethods(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
+	methods := []struct {
+		code         string
+		name         string
+		methodType   string
+		displayOrder int
+	}{
+		{code: "cash", name: "Cash", methodType: "CASH", displayOrder: 1},
+		{code: "card", name: "Card", methodType: "CARD", displayOrder: 2},
+		{code: "momo", name: "MoMo", methodType: "E_WALLET", displayOrder: 3},
+		{code: "zalopay", name: "ZaloPay", methodType: "E_WALLET", displayOrder: 4},
+		{code: "vnpay", name: "VNPay", methodType: "E_WALLET", displayOrder: 5},
+	}
+	for _, method := range methods {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO payment_methods (restaurant_id, code, name, type, is_active, display_order)
+			VALUES ($1, $2, $3, $4, TRUE, $5)
+			ON CONFLICT (restaurant_id, code) DO UPDATE
+			SET name = EXCLUDED.name,
+			    type = EXCLUDED.type,
+			    is_active = TRUE,
+			    display_order = EXCLUDED.display_order,
+			    updated_at = NOW()
+		`, restaurantID, method.code, method.name, method.methodType, method.displayOrder); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

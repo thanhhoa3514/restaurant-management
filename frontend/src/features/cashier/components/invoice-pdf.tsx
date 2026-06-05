@@ -200,6 +200,13 @@ export const InvoicePDF = ({ session, t, lang }: InvoicePDFProps) => {
             </View>
           ) : null}
 
+          {invoice.service_charge_amount > 0 ? (
+            <View style={styles.totalRow}>
+              <Text style={{ color: '#4b5563' }}>{t('service_charge')}:</Text>
+              <Text style={{ fontFamily: 'Roboto-Bold' }}>{fmtVND(invoice.service_charge_amount)}</Text>
+            </View>
+          ) : null}
+
           {invoice.vat_amount > 0 ? (
             <View style={styles.totalRow}>
               <Text style={{ color: '#4b5563' }}>{t('vat')}:</Text>

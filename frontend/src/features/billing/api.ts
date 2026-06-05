@@ -1,0 +1,93 @@
+import { apiRequest } from '@/lib/api'
+
+export interface BillingInvoiceItemDTO {
+  id: string
+  order_item_id: string | null
+  name_snapshot: string
+  unit_price_vnd: number
+  quantity: number
+  subtotal_vnd: number
+  discount_amount_vnd: number
+  total_amount_vnd: number
+}
+
+export interface BillingPaymentDTO {
+  id: string
+  payment_number: string
+  method_code: string
+  method_type: string
+  amount_vnd: number
+  received_amount_vnd: number
+  change_amount_vnd: number
+  status: string
+  reference_code: string | null
+  processed_at: string | null
+}
+
+export interface BillingInvoiceDTO {
+  id: string
+  invoice_number: string
+  dining_session_id: string
+  status: string
+  subtotal_vnd: number
+  discount_amount_vnd: number
+  discount_reason: string | null
+  service_charge_basis_points: number
+  service_charge_amount_vnd: number
+  vat_basis_points: number
+  vat_amount_vnd: number
+  total_amount_vnd: number
+  paid_amount_vnd: number
+  change_amount_vnd: number
+  issued_at: string | null
+  paid_at: string | null
+  version: number
+  items: BillingInvoiceItemDTO[]
+  payment: BillingPaymentDTO | null
+}
+
+export interface BillingInvoiceResponse {
+  invoice: BillingInvoiceDTO
+}
+
+export function buildInvoice(diningSessionId: string): Promise<BillingInvoiceResponse> {
+  return apiRequest<BillingInvoiceResponse>('/api/v1/billing/build-invoice', {
+    method: 'POST',
+    body: { dining_session_id: diningSessionId },
+  })
+}
+
+export function adjustInvoice(
+  invoiceId: string,
+  discountAmountVND: number,
+  discountReason: string,
+): Promise<BillingInvoiceResponse> {
+  return apiRequest<BillingInvoiceResponse>('/api/v1/billing/adjust-invoice', {
+    method: 'POST',
+    body: {
+      invoice_id: invoiceId,
+      discount_amount_vnd: Math.max(0, Math.round(discountAmountVND)),
+      discount_reason: discountReason,
+    },
+  })
+}
+
+export function processPayment(args: {
+  invoiceId: string
+  paymentMethodCode: string
+  receivedAmountVND: number
+  referenceCode?: string
+}): Promise<BillingInvoiceResponse> {
+  return apiRequest<BillingInvoiceResponse>('/api/v1/billing/process-payment', {
+    method: 'POST',
+    body: {
+      invoice_id: args.invoiceId,
+      payment_method_code: args.paymentMethodCode,
+      received_amount_vnd: Math.max(0, Math.round(args.receivedAmountVND)),
+      reference_code: args.referenceCode ?? '',
+    },
+  })
+}
+
+
+export const createInvoice = buildInvoice

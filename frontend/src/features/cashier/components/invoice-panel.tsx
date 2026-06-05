@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import { DiscountDialog } from '@/features/cashier/components/discount-dialog'
 import { VoidDialog } from '@/features/cashier/components/void-dialog'
-import { calcInvoice, fmtClock, fmtVND } from '@/features/cashier/helpers'
+import { fmtClock, fmtVND } from '@/features/cashier/helpers'
 import type { CashierSession, Lang } from '@/features/cashier/types'
 
 interface InvoicePanelProps {
@@ -44,7 +44,6 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
   }
 
   const invoice = session.invoice
-  const totals = calcInvoice(invoice.orders, invoice.discount)
   const terminal = session.status === 'paid' || session.status === 'closed' || session.status === 'voided'
   const elapsedMinutes = Math.max(0, Math.round((now.getTime() - session.started_at.getTime()) / 60000))
 
@@ -105,8 +104,11 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
 
         <Card className="border border-[var(--separator)] bg-[var(--material-regular)] shadow-sm backdrop-blur-2xl">
           <CardContent className="space-y-3 p-5">
-            <PriceRow label={t('subtotal')} value={fmtVND(totals.subtotal)} />
-            <PriceRow label={t('vat')} value={fmtVND(totals.vat_amount)} />
+            <PriceRow label={t('subtotal')} value={fmtVND(invoice.subtotal)} />
+            {invoice.service_charge_amount > 0 ? (
+              <PriceRow label={t('service_charge')} value={fmtVND(invoice.service_charge_amount)} />
+            ) : null}
+            <PriceRow label={t('vat')} value={fmtVND(invoice.vat_amount)} />
             {invoice.discount ? (
               <PriceRow label={`${t('discount')} · ${invoice.discount.reason}`} value={`-${fmtVND(invoice.discount.amount)}`} tone="amber" />
             ) : (
@@ -126,7 +128,7 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
             <Separator />
             <div className="flex items-baseline justify-between">
               <span className="text-lg font-bold text-[var(--text)]">{t('total')}</span>
-              <span className="text-4xl font-bold tabular-nums text-[var(--system-orange)]">{fmtVND(totals.total)}</span>
+              <span className="text-4xl font-bold tabular-nums text-[var(--system-orange)]">{fmtVND(invoice.total)}</span>
             </div>
             <div className="flex gap-2 pt-2">
               <Button variant="secondary" className="flex-1 rounded-[var(--radius-lg)]" disabled={!invoice.discount || terminal} onClick={() => onRemoveDiscount(session.id)}>

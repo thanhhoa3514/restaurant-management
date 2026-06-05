@@ -69,6 +69,16 @@ func (r *fakeRepo) FindActiveSessionByTable(context.Context, uuid.UUID, uuid.UUI
 func (r *fakeRepo) ListTablesWithActiveQR(context.Context, uuid.UUID) ([]domain.TableWithQR, error) {
 	return r.tablesWithQR, nil
 }
+func (r *fakeRepo) CloseSession(context.Context, uuid.UUID, uuid.UUID, *uuid.UUID) (*domain.DiningSession, bool, error) {
+	if r.activeErr != nil {
+		return nil, false, r.activeErr
+	}
+	if r.activeSession == nil {
+		return nil, false, apperr.New(apperr.CodeNotFound, "dining session not found")
+	}
+	r.activeSession.Status = domain.SessionClosed
+	return r.activeSession, true, nil
+}
 func (r *fakeRepo) DeactivateActiveQR(context.Context, uuid.UUID, uuid.UUID, *uuid.UUID, string) error {
 	r.deactivated = true
 	return nil

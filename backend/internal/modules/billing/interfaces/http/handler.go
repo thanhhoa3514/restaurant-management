@@ -1,14 +1,15 @@
 package http
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	"restaurant-management/internal/modules/billing/application"
 	"restaurant-management/internal/platform/auth"
 	"restaurant-management/internal/platform/httpx"
+	"restaurant-management/internal/shared/apperr"
 )
 
 type Handler struct {
@@ -18,34 +19,60 @@ type Handler struct {
 }
 
 func NewHandler(buildInvoice *application.BuildInvoice, adjustInvoice *application.AdjustInvoice, processPayment *application.ProcessPayment) *Handler {
-	return &Handler{
-		BuildInvoice:   buildInvoice,
-		AdjustInvoice:  adjustInvoice,
-		ProcessPayment: processPayment,
-	}
+	return &Handler{BuildInvoice: buildInvoice, AdjustInvoice: adjustInvoice, ProcessPayment: processPayment}
 }
 
 func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string) {
 	g := r.Group("/billing", auth.JWT(secret), auth.RBAC("CASHIER", "MANAGER"))
-	g.POST("/build-invoice", h.handle(h.BuildInvoice))
-	g.POST("/adjust-invoice", h.handle(h.AdjustInvoice))
-	g.POST("/process-payment", h.handle(h.ProcessPayment))
+	g.POST("/build-invoice", h.buildInvoice)
+	g.POST("/adjust-invoice", h.adjustInvoice)
+	g.POST("/process-payment", h.processPayment)
 }
 
-func (h *Handler) handle(fn interface {
-	Handle(context.Context, application.Input) (application.Output, error)
-}) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		var in application.Input
-		if err := c.ShouldBindJSON(&in); err != nil {
-			httpx.RespondError(c, err)
-			return
-		}
-		out, err := fn.Handle(c.Request.Context(), in)
-		if err != nil {
-			httpx.RespondError(c, err)
-			return
-		}
-		httpx.Respond(c, http.StatusOK, out, nil)
+func (h *Handler) buildInvoice(c *gin.Context) {
+	var req application.BuildInvoiceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
+		return
 	}
+	out, err := h.BuildInvoice.Handle(c.Request.Context(), req)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) adjustInvoice(c *gin.Context) {
+	var req application.AdjustInvoiceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
+		return
+	}
+	out, err := h.AdjustInvoice.Handle(c.Request.Context(), req)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) processPayment(c *gin.Context) {
+	var req application.ProcessPaymentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
+		return
+	}
+	actorID, err := uuid.Parse(c.GetString(auth.CtxUserID))
+	if err != nil || actorID == uuid.Nil {
+		httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "invalid user claim"))
+		return
+	}
+	req.ActorID = actorID
+	out, err := h.ProcessPayment.Handle(c.Request.Context(), req)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
 }

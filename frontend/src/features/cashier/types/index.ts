@@ -39,14 +39,21 @@ export interface DiscountRecord {
 }
 
 export interface Invoice {
+  id?: string
   number: string
   created_at: Date
   items: LineItem[]
   orders: Order[]
+  status?: string
   subtotal: number
+  service_charge_amount: number
+  service_charge_basis_points: number
   vat_amount: number
+  vat_basis_points: number
   discount: DiscountRecord | null
   total: number
+  paid_amount: number
+  change_amount: number
   discount_history: DiscountRecord[]
 }
 

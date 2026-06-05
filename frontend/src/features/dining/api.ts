@@ -43,3 +43,15 @@ export function openDiningSession(tableId: string): Promise<OpenSessionResult> {
     body: { table_id: tableId },
   })
 }
+
+export interface CloseSessionResult {
+  id: string
+  status: string
+}
+
+export function closeDiningSession(sessionId: string): Promise<CloseSessionResult> {
+  return apiRequest<CloseSessionResult>('/api/v1/dining/close-session', {
+    method: 'POST',
+    body: { session_id: sessionId },
+  })
+}

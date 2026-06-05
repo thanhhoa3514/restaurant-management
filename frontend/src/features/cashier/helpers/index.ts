@@ -76,6 +76,5 @@ export function itemsCount(session: CashierSession): number {
 }
 
 export function sessionTotal(session: CashierSession): number {
-  const b = calcInvoice(session.invoice.orders, session.invoice.discount)
-  return b.total
+  return session.invoice.total
 }

@@ -64,6 +64,9 @@ export const ReceiptDialog: FC<ReceiptDialogProps> = ({ open, session, t, lang, 
             ))}
             <Dashed />
             <ReceiptRow label={t('subtotal')} value={fmtVND(invoice.subtotal)} />
+            {invoice.service_charge_amount > 0 ? (
+              <ReceiptRow label={t('service_charge')} value={fmtVND(invoice.service_charge_amount)} />
+            ) : null}
             <ReceiptRow label={t('vat')} value={fmtVND(invoice.vat_amount)} />
             {invoice.discount ? <ReceiptRow label={t('discount')} value={`-${fmtVND(invoice.discount.amount)}`} /> : null}
             <Dashed />

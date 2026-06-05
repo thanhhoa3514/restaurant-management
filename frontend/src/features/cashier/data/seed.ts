@@ -64,10 +64,16 @@ function csMakeInvoice(orders: Order[], createdAt: Date): Invoice {
       o.items.map((it) => ({ ...it, _order_id: o.id, _order_submitted_at: o.submitted_at }))
     ),
     orders,
+    status: 'LOCAL_DRAFT',
     subtotal: calc.subtotal,
+    service_charge_amount: 0,
+    service_charge_basis_points: 0,
     vat_amount: calc.vat_amount,
+    vat_basis_points: 1000,
     discount: null,
     total: calc.total,
+    paid_amount: 0,
+    change_amount: 0,
     discount_history: [],
   }
 }

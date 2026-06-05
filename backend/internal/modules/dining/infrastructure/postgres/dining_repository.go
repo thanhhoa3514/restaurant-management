@@ -184,6 +184,79 @@ func (r *Repository) CreateQR(ctx context.Context, qr *domain.QRCode) error {
 	return err
 }
 
+func (r *Repository) CloseSession(ctx context.Context, restaurantID, sessionID uuid.UUID, closedBy *uuid.UUID) (*domain.DiningSession, bool, error) {
+	s := &domain.DiningSession{}
+	var qrCodeID, openedBy pgtype.UUID
+	err := r.q(ctx).QueryRow(ctx, `
+		SELECT id, restaurant_id, table_id, qr_code_id, session_code, COALESCE(session_token, ''), status, opened_via, opened_by, version, closed_at
+		FROM dining_sessions
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+		FOR UPDATE
+	`, restaurantID, sessionID).Scan(
+		&s.ID, &s.RestaurantID, &s.TableID, &qrCodeID, &s.SessionCode, &s.SessionToken, &s.Status, &s.OpenedVia, &openedBy, &s.Version, &s.ClosedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, false, apperr.New(apperr.CodeNotFound, "dining session not found")
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	if qrCodeID.Valid {
+		id := uuid.UUID(qrCodeID.Bytes)
+		s.QRCodeID = &id
+	}
+	if openedBy.Valid {
+		id := uuid.UUID(openedBy.Bytes)
+		s.OpenedBy = &id
+	}
+	if s.Status == domain.SessionClosed {
+		return s, false, nil
+	}
+	if s.Status != domain.SessionActive && s.Status != domain.SessionAwaitingPayment {
+		return nil, false, apperr.New(apperr.CodeConflict, "dining session is not closable")
+	}
+
+	var hasUnpaidInvoice bool
+	if err := r.q(ctx).QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			FROM invoices
+			WHERE restaurant_id = $1
+			  AND dining_session_id = $2
+			  AND status <> 'VOID'
+			  AND status <> 'PAID'
+			  AND deleted_at IS NULL
+		)
+	`, restaurantID, sessionID).Scan(&hasUnpaidInvoice); err != nil {
+		return nil, false, err
+	}
+	if hasUnpaidInvoice {
+		return nil, false, apperr.New(apperr.CodeConflict, "session has unpaid invoice")
+	}
+
+	err = r.q(ctx).QueryRow(ctx, `
+		UPDATE dining_sessions
+		SET status = 'CLOSED',
+		    closed_at = COALESCE(closed_at, NOW()),
+		    closed_by = COALESCE(closed_by, $3),
+		    version = version + 1,
+		    updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+		RETURNING status, version, closed_at
+	`, restaurantID, sessionID, closedBy).Scan(&s.Status, &s.Version, &s.ClosedAt)
+	if err != nil {
+		return nil, false, err
+	}
+	if _, err := r.q(ctx).Exec(ctx, `
+		UPDATE tables
+		SET status = 'AVAILABLE', version = version + 1, updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, restaurantID, s.TableID); err != nil {
+		return nil, false, err
+	}
+	return s, true, nil
+}
+
 func activeSessionSelect(where string) string {
 	return `
 		SELECT id, restaurant_id, table_id, qr_code_id, session_code, session_token, status, opened_via, opened_by, version, closed_at

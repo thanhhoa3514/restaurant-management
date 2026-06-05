@@ -89,6 +89,7 @@ type DiningRepository interface {
 	FindQRByToken(ctx context.Context, qrToken string) (*QRCode, error)
 	FindActiveSessionByTable(ctx context.Context, restaurantID, tableID uuid.UUID) (*DiningSession, error)
 	ListTablesWithActiveQR(ctx context.Context, restaurantID uuid.UUID) ([]TableWithQR, error)
+	CloseSession(ctx context.Context, restaurantID, sessionID uuid.UUID, closedBy *uuid.UUID) (*DiningSession, bool, error)
 	DeactivateActiveQR(ctx context.Context, restaurantID, tableID uuid.UUID, deactivatedBy *uuid.UUID, reason string) error
 	CreateQR(ctx context.Context, qr *QRCode) error
 }
