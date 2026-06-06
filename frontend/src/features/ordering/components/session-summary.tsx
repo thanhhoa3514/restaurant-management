@@ -1,5 +1,5 @@
 import { type FC, useState } from 'react'
-import { Spinner } from '@/components/ui/spinner'
+import { Loader2 } from 'lucide-react'
 import { Phone, ShoppingBag } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useOrdering } from '../hooks/use-ordering'
@@ -144,7 +144,7 @@ export const SessionSummary: FC = () => {
       {simulatingPayment && (
         <div className="fixed inset-0 z-[600] flex flex-col items-center justify-center bg-black/60 backdrop-blur-xl text-center text-white animate-in fade-in duration-300">
           <div className="flex flex-col items-center gap-4">
-            <Spinner className="h-10 w-10 text-system-blue" />
+            <Loader2 className="animate-spin h-10 w-10 text-system-blue" />
             <div className="font-bold text-lg">{state.lang === 'vi' ? 'Đang xử lý thanh toán...' : 'Processing payment...'}</div>
             <p className="text-sm text-zinc-300 max-w-xs px-6 leading-relaxed">
               {state.lang === 'vi'

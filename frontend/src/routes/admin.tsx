@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, redirect, useNavigate, Outlet, useLocation } from '@tanstack/react-router'
 import { z } from 'zod'
 import {
   ArrowUpRight,
@@ -12,12 +12,13 @@ import {
   TrendingUp,
   UserCheck,
   UtensilsCrossed,
+  Loader2,
   type LucideIcon,
 } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { StaffShell } from '@/components/staff-shell'
+import { StaffShell, ShellProvider, useShellConfig } from '@/components/staff-shell'
 import { makeAdminT } from '@/features/admin/data/i18n'
 import { CashierLayout } from '@/features/cashier/components/cashier-layout'
 import { KdsLayout } from '@/features/kitchen/components/kds-layout'
@@ -43,6 +44,16 @@ export const Route = createFileRoute('/admin')({
       })
     }
   },
+  pendingComponent: () => (
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-5 bg-[var(--bg)]">
+      <div className="relative flex size-16 items-center justify-center rounded-[20px] bg-[var(--surface-grouped)] shadow-2xl">
+        <Loader2 className="size-8 animate-spin text-[var(--system-purple)]" />
+      </div>
+      <p className="animate-pulse text-sm font-semibold tracking-wide text-[var(--text-secondary)]">
+        Đang chuẩn bị giao diện...
+      </p>
+    </div>
+  ),
 })
 
 export const RouteComponent = () => {
@@ -61,12 +72,21 @@ export const RouteComponent = () => {
 
   if (!view && loading) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-[var(--bg)] text-sm text-[var(--text-secondary)]">
-        Đang tải quyền truy cập...
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-5 bg-[var(--bg)]">
+        <div className="relative flex size-16 items-center justify-center rounded-[20px] bg-[var(--surface-grouped)] shadow-2xl">
+          <Loader2 className="size-8 animate-spin text-[var(--system-purple)]" />
+        </div>
+        <p className="animate-pulse text-sm font-semibold tracking-wide text-[var(--text-secondary)]">
+          Đang tải không gian làm việc...
+        </p>
       </div>
     )
   }
-  if (!view) {
+  const location = useLocation()
+  const isExactAdmin = location.pathname === '/admin'
+
+  // If we are exactly on /admin but have no view (and not loading), show error
+  if (isExactAdmin && !view) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-[var(--bg)] text-sm text-[var(--system-red)]">
         Tài khoản chưa được cấp quyền sử dụng hệ thống.
@@ -74,15 +94,34 @@ export const RouteComponent = () => {
     )
   }
 
-  if (view === 'cashier') return <CashierLayout />
-  if (view === 'waiter') return <WaiterLayout />
-  if (view === 'kitchen') return <KdsLayout />
-  return <AdminDashboard />
+  const session = getStaffSession()
+
+  // Determine active view for the sidebar
+  let currentActiveView = view
+  if (location.pathname === '/admin/table-qrs') currentActiveView = 'table-qrs' as any
+  if (location.pathname === '/admin/floor-plan') currentActiveView = 'dashboard' as any
+
+  return (
+    <ShellProvider>
+      <StaffShell role={session?.role ?? 'admin'} activeView={currentActiveView}>
+        {isExactAdmin ? (
+          <>
+            {view === 'cashier' && <CashierLayout />}
+            {view === 'waiter' && <WaiterLayout />}
+            {view === 'kitchen' && <KdsLayout />}
+            {view === 'dashboard' && <AdminDashboard />}
+          </>
+        ) : (
+          <Outlet />
+        )}
+      </StaffShell>
+    </ShellProvider>
+  )
 }
 
 const AdminDashboard = () => {
   const session = getStaffSession()
-  const { lang, setLang } = useLang()
+  const { lang } = useLang()
   const t = makeAdminT(lang)
   const [now, setNow] = useState(() => new Date())
 
@@ -106,21 +145,19 @@ const AdminDashboard = () => {
 
   const navigate = useNavigate()
 
+  useShellConfig({
+    title: t('dashboard_title'),
+    subtitle: `${session?.name ?? 'Administrator'} · ${fmtDate}`,
+    headerCenter: (
+      <div className="flex items-center gap-3 rounded-full bg-[var(--surface-grouped)]/70 px-4 py-2 text-sm text-[var(--text-secondary)]">
+        <span className="font-mono font-semibold tabular-nums text-[var(--text)]">{fmtTime}</span>
+      </div>
+    ),
+    contentClassName: "bg-[var(--surface-grouped)]/45"
+  })
+
   return (
-    <StaffShell
-      role="admin"
-      title={t('dashboard_title')}
-      subtitle={`${session?.name ?? 'Administrator'} · ${fmtDate}`}
-      lang={lang}
-      setLang={setLang}
-      headerCenter={
-        <div className="flex items-center gap-3 rounded-full bg-[var(--surface-grouped)]/70 px-4 py-2 text-sm text-[var(--text-secondary)]">
-          <span className="font-mono font-semibold tabular-nums text-[var(--text)]">{fmtTime}</span>
-        </div>
-      }
-      contentClassName="bg-[var(--surface-grouped)]/45"
-    >
-      <div className="mx-auto max-w-7xl space-y-6">
+    <div className="mx-auto max-w-7xl space-y-6">
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard
             title={t('metric_revenue')}
@@ -191,7 +228,6 @@ const AdminDashboard = () => {
           </Card>
         </div>
       </div>
-    </StaffShell>
   )
 }
 

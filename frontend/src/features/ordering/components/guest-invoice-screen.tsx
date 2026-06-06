@@ -1,5 +1,5 @@
 import { type FC, useMemo, lazy, Suspense } from 'react'
-import { Spinner } from '@/components/ui/spinner'
+import { Loader2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
@@ -125,7 +125,7 @@ export const GuestInvoiceScreen: FC = () => {
         <Suspense fallback={
           <Button className="w-full h-14 rounded-xl font-bold flex items-center justify-center cursor-pointer shadow-lg" disabled>
             <span className="flex items-center justify-center">
-              <Spinner className="mr-2 h-5 w-5 text-current" />
+              <Loader2 className="animate-spin mr-2 h-5 w-5 text-current" />
               {state.lang === 'vi' ? 'Đang chuẩn bị PDF...' : 'Preparing PDF...'}
             </span>
           </Button>

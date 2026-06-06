@@ -1,6 +1,6 @@
 import { PDFDownloadLink } from '@react-pdf/renderer'
 import { Button } from '@/components/ui/button'
-import { Spinner } from '@/components/ui/spinner'
+import { Loader2 } from 'lucide-react'
 import type { CashierSession } from '@/features/cashier/types'
 import { InvoicePDF } from './invoice-pdf'
 
@@ -22,7 +22,7 @@ export default function LazyPDFLink({ session, t, lang }: LazyPDFLinkProps) {
         <Button className="w-full rounded-[var(--radius-lg)] cursor-pointer" disabled={loading}>
           {loading ? (
             <span className="flex items-center justify-center">
-              <Spinner className="mr-2 h-4 w-4 text-current" />
+              <Loader2 className="animate-spin mr-2 h-4 w-4 text-current" />
               {t('loading_pdf', 'Đang tải...')}
             </span>
           ) : (

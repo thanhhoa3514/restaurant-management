@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Spinner } from '@/components/ui/spinner'
+import { Loader2 } from 'lucide-react'
 import { createFileRoute, useNavigate, useSearch } from '@tanstack/react-router'
 import { z } from 'zod'
 import {
@@ -308,7 +308,7 @@ export const RouteComponent = () => {
               >
                 {loading ? (
                   <div className="flex items-center gap-2">
-                    <Spinner className="size-[18px] text-zinc-950" />
+                    <Loader2 className="animate-spin size-[18px] text-zinc-950" />
                     <span>Đang kiểm tra...</span>
                   </div>
                 ) : (

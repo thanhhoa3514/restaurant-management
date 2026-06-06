@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { LanguageLoader } from '@/components/ui/language-loader'
-import { StaffShell } from '@/components/staff-shell'
+import { useShellConfig } from '@/components/staff-shell'
 import { LanguageSwitcher } from '@/components/ui/language-switcher'
 import { wfFmtClock } from '@/features/waiter/helpers'
 import { useWaiter, type WaiterView } from '@/features/waiter/hooks/use-waiter'
@@ -19,58 +19,57 @@ export const WaiterLayout: FC = () => {
   const { state, actions, counts, selectedTable, t } = useWaiter()
   const [changingLang, setChangingLang] = useState<'vi' | 'en' | null>(null)
 
-  return (
-    <StaffShell
-      role="waiter"
-      activeView="waiter"
-      brandName={t('restaurant')}
-      title={t('floor_view')}
-      subtitle={`${t('restaurant')} · ${t('shift')}`}
-      headerCenter={
-        <div className="flex items-center justify-center gap-4">
-          <div className="font-mono text-2xl font-bold tabular-nums tracking-tight text-[var(--text)]">
-            {wfFmtClock(state.now)}
-          </div>
-          <Separator orientation="vertical" className="h-7" />
-          <div className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--text-tertiary)]">
-            {t('shift')}
-          </div>
+  useShellConfig({
+    title: t('floor_view'),
+    subtitle: `${t('restaurant')} · ${t('shift')}`,
+    headerCenter: (
+      <div className="flex items-center justify-center gap-4">
+        <div className="font-mono text-2xl font-bold tabular-nums tracking-tight text-[var(--text)]">
+          {wfFmtClock(state.now)}
         </div>
-      }
-      headerActions={
-        <>
-          <CounterPill tone="red" label={t('calls')} value={counts.calls} />
-          <CounterPill tone="emerald" label={t('ready')} value={counts.ready} />
-          <CounterPill tone="blue" label={t('bills')} value={counts.bills} />
-          <LanguageSwitcher
-            currentLang={state.lang}
-            onLangChange={(newLang) => {
-              setChangingLang(newLang)
-              setTimeout(() => {
-                actions.setLang(newLang)
-                setChangingLang(null)
-              }, 750)
-            }}
-            className="hidden sm:inline-flex"
+        <Separator orientation="vertical" className="h-7" />
+        <div className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--text-tertiary)]">
+          {t('shift')}
+        </div>
+      </div>
+    ),
+    headerActions: (
+      <>
+        <CounterPill tone="red" label={t('calls')} value={counts.calls} />
+        <CounterPill tone="emerald" label={t('ready')} value={counts.ready} />
+        <CounterPill tone="blue" label={t('bills')} value={counts.bills} />
+        <LanguageSwitcher
+          currentLang={state.lang}
+          onLangChange={(newLang) => {
+            setChangingLang(newLang)
+            setTimeout(() => {
+              actions.setLang(newLang)
+              setChangingLang(null)
+            }, 750)
+          }}
+          className="hidden sm:inline-flex"
+        />
+        <Button
+          variant={state.soundOn ? 'default' : 'secondary'}
+          size="sm"
+          className="hidden rounded-full text-xs uppercase tracking-[0.12em] lg:inline-flex"
+          onClick={() => actions.setSoundOn((value) => !value)}
+        >
+          <span
+            className={cn(
+              'size-2 rounded-full',
+              state.soundOn ? 'bg-emerald-300' : 'bg-[var(--text-tertiary)]',
+            )}
           />
-          <Button
-            variant={state.soundOn ? 'default' : 'secondary'}
-            size="sm"
-            className="hidden rounded-full text-xs uppercase tracking-[0.12em] lg:inline-flex"
-            onClick={() => actions.setSoundOn((value) => !value)}
-          >
-            <span
-              className={cn(
-                'size-2 rounded-full',
-                state.soundOn ? 'bg-emerald-300' : 'bg-[var(--text-tertiary)]',
-              )}
-            />
-            Sound
-          </Button>
-        </>
-      }
-      contentClassName="p-0"
-    >
+          Sound
+        </Button>
+      </>
+    ),
+    contentClassName: "p-0"
+  })
+
+  return (
+    <>
       <div className="sticky top-0 z-[240] border-b border-[var(--separator)] bg-[var(--material-regular)] backdrop-blur-2xl">
         <div className="mx-auto flex h-16 max-w-[1600px] items-center justify-between gap-4 px-5 lg:px-8">
           <Tabs value={state.view} onValueChange={(value) => actions.setView(value as WaiterView)}>
@@ -144,7 +143,7 @@ export const WaiterLayout: FC = () => {
         onInjectBill={actions.injectBill}
         onInjectSession={actions.injectNewSession}
       />
-    </StaffShell>
+    </>
   )
 }
 

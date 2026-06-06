@@ -1,6 +1,6 @@
 import { type FC, useEffect, useState } from 'react'
 
-import { Spinner } from '@/components/ui/spinner'
+import { Loader2 } from 'lucide-react'
 
 interface LanguageLoaderProps {
   open: boolean
@@ -45,7 +45,7 @@ export const LanguageLoader: FC<LanguageLoaderProps> = ({ open, targetLang }) =>
       {/* Super minimal, elegant, and compact card */}
       <div className="flex flex-col items-center justify-center gap-4 rounded-2xl bg-[var(--bg-elevated)] p-6 shadow-xl border border-[var(--separator)] max-w-[180px] w-full text-center backdrop-blur-xl">
         <div className="relative flex size-10 items-center justify-center select-none">
-          <Spinner className="size-full text-[var(--system-blue)]" />
+          <Loader2 className="animate-spin size-full text-[var(--system-blue)]" />
         </div>
 
         {/* Minimalist translation text */}

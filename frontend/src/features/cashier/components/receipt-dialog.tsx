@@ -1,5 +1,5 @@
 import { useMemo, lazy, Suspense, type FC } from 'react'
-import { Spinner } from '@/components/ui/spinner'
+import { Loader2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -97,7 +97,7 @@ export const ReceiptDialog: FC<ReceiptDialogProps> = ({ open, session, t, lang, 
           <Suspense fallback={
             <Button className="flex-1 rounded-[var(--radius-lg)] cursor-pointer" disabled>
               <span className="flex items-center justify-center">
-                <Spinner className="mr-2 h-4 w-4 text-current" />
+                <Loader2 className="animate-spin mr-2 h-4 w-4 text-current" />
                 {t('loading_pdf', 'Đang tải...')}
               </span>
             </Button>

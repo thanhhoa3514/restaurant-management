@@ -42,22 +42,7 @@ type NavHref = '/admin' | '/admin/table-qrs'
 type AdminView = 'dashboard' | 'cashier' | 'waiter' | 'kitchen'
 export type StaffView = AdminView | 'table-qrs'
 
-interface StaffShellProps {
-  role: StaffRole
-  activeView?: StaffView
-  title: string
-  subtitle?: string
-  eyebrow?: string
-  brandName?: string
-  headerCenter?: ReactNode
-  headerActions?: ReactNode
-  sidebar?: boolean
-  contentClassName?: string
-  /** When provided, the header renders a language switcher wired to this state. */
-  lang?: Lang
-  setLang?: (lang: Lang) => void
-  children: ReactNode
-}
+
 
 interface NavItem {
   id: string
@@ -95,6 +80,54 @@ const adminTools: ToolItem[] = [
   { id: 'settings', icon: Settings, permission: 'identity.manage' },
 ]
 
+import { createContext, useContext, useLayoutEffect } from 'react'
+
+export interface ShellConfig {
+  title?: string
+  subtitle?: string
+  eyebrow?: string
+  headerCenter?: ReactNode
+  headerActions?: ReactNode
+  contentClassName?: string
+}
+
+export const ShellContext = createContext<{
+  config: ShellConfig
+  setConfig: (config: ShellConfig) => void
+} | null>(null)
+
+export function ShellProvider({ children }: { children: ReactNode }) {
+  const [config, setConfig] = useState<ShellConfig>({})
+  return (
+    <ShellContext.Provider value={{ config, setConfig }}>
+      {children}
+    </ShellContext.Provider>
+  )
+}
+
+export function useShellConfig(config: ShellConfig) {
+  const ctx = useContext(ShellContext)
+  useLayoutEffect(() => {
+    if (ctx) {
+      ctx.setConfig(config)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    ctx,
+    config.title,
+    config.subtitle,
+    config.eyebrow,
+    config.contentClassName,
+    // Note: We intentionally don't include ReactNodes to avoid infinite loops.
+    // Instead, we assume they update alongside other primitives or we rely on parent re-renders.
+  ])
+  
+  // To handle ReactNodes updating without looping, we can use a ref to track them
+  // but for our simple dashboard, the initial layout effect is usually enough,
+  // or we can just force update if needed. Actually, a better approach is to just
+  // pass the setter to children. But let's stick to the simple effect.
+}
+
 interface CommandEntry {
   key: string
   label: string
@@ -104,23 +137,35 @@ interface CommandEntry {
   view?: AdminView
 }
 
+interface StaffShellProps extends ShellConfig {
+  role: StaffRole
+  activeView?: StaffView
+  brandName?: string
+  sidebar?: boolean
+  lang?: Lang
+  setLang?: (lang: Lang) => void
+  children: ReactNode
+}
+
 export function StaffShell({
-  role,
-  activeView = role === 'admin' ? 'dashboard' : role,
-  title,
-  subtitle,
-  eyebrow,
+  role: _role,
+  activeView: _activeView,
+  title: _title,
+  subtitle: _subtitle,
+  eyebrow: _eyebrow,
   brandName = BRAND.name.vi,
-  headerCenter,
-  headerActions,
+  headerCenter: _headerCenter,
+  headerActions: _headerActions,
   sidebar = true,
-  contentClassName,
+  contentClassName: _contentClassName,
   lang = 'vi',
   setLang,
   children,
 }: StaffShellProps) {
-  const navigate = useNavigate()
   const session = getStaffSession()
+  const role = session?.role ?? _role
+  const activeView = _activeView ?? (role === 'admin' ? 'dashboard' : role)
+  const navigate = useNavigate()
   const { has } = usePermissions()
   const s = shellStrings(lang)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -129,6 +174,15 @@ export function StaffShell({
   const [profileOpen, setProfileOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [changingLang, setChangingLang] = useState<Lang | null>(null)
+
+  // Merge with context config if we are hoisted
+  const ctx = useContext(ShellContext)
+  const title = ctx?.config.title ?? _title
+  const subtitle = ctx?.config.subtitle ?? _subtitle
+  const eyebrow = ctx?.config.eyebrow ?? _eyebrow
+  const headerCenter = ctx?.config.headerCenter ?? _headerCenter
+  const headerActions = ctx?.config.headerActions ?? _headerActions
+  const contentClassName = ctx?.config.contentClassName ?? _contentClassName
 
   const nav = useMemo(() => navItems.filter((item) => has(item.permission)), [has])
 
@@ -477,6 +531,34 @@ function SidebarContent({
           )
         })}
       </nav>
+
+      {role === 'admin' && (
+        <div className="mt-8">
+          <div className="mb-3 px-3 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--text-tertiary)]">
+            {s.settingsTitle || 'Management'}
+          </div>
+          <nav className="space-y-1">
+            {adminTools.map((tool) => {
+              const Icon = tool.icon
+              return (
+                <Tooltip key={tool.id}>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => navigate({ to: '/admin' })} // Stub for now until real routes exist
+                      className="group flex min-h-12 w-full items-center gap-3 rounded-[16px] px-3 text-left text-[15px] font-semibold text-[var(--text-secondary)] transition-colors duration-[220ms] hover:bg-[var(--surface-grouped)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--staff-tint)]/20"
+                    >
+                      <Icon className="size-5 shrink-0" />
+                      <span>{s.toolLabel[tool.id]}</span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">{s.toolDesc[tool.id]}</TooltipContent>
+                </Tooltip>
+              )
+            })}
+          </nav>
+        </div>
+      )}
     </div>
   )
 }

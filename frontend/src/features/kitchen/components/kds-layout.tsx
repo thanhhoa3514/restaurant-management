@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { LanguageLoader } from '@/components/ui/language-loader'
-import { StaffShell } from '@/components/staff-shell'
+import { useShellConfig } from '@/components/staff-shell'
 import { LanguageSwitcher } from '@/components/ui/language-switcher'
 import { fmtClock } from '@/features/kitchen/helpers'
 import { useKds } from '@/features/kitchen/hooks/use-kds'
@@ -19,45 +19,43 @@ export const KdsLayout: FC = () => {
   const kds = useKds()
   const [changingLang, setChangingLang] = useState<Lang | null>(null)
 
+  useShellConfig({
+    title: kds.t('kitchen_display'),
+    subtitle: kds.t('restaurant'),
+    headerCenter: (
+      <div className="rounded-[18px] bg-[var(--surface-grouped)] px-5 py-2 font-mono text-3xl font-bold tracking-tight tabular-nums">
+        {fmtClock(kds.now)}
+      </div>
+    ),
+    headerActions: (
+      <>
+        <StatPill label={kds.t('pending_count')} value={kds.stats.pending} tone="orange" />
+        <StatPill label={kds.t('preparing_count')} value={kds.stats.preparing} tone="blue" />
+        <StatPill label={kds.t('ready_count')} value={kds.stats.ready} tone="green" />
+        <LanguageSwitcher
+          currentLang={kds.lang}
+          onLangChange={(newLang) => {
+            setChangingLang(newLang)
+            setTimeout(() => {
+              kds.setLang(newLang)
+              setChangingLang(null)
+            }, 750)
+          }}
+        />
+        <Button
+          size="sm"
+          variant={kds.soundOn ? 'default' : 'secondary'}
+          onClick={() => kds.setSoundOn((current) => !current)}
+        >
+          {kds.soundOn ? 'Sound on' : 'Muted'}
+        </Button>
+      </>
+    ),
+    contentClassName: "p-0"
+  })
+
   return (
-    <StaffShell
-      role="kitchen"
-      activeView="kitchen"
-      sidebar
-      brandName={kds.t('restaurant')}
-      title={kds.t('kitchen_display')}
-      subtitle={kds.t('restaurant')}
-      headerCenter={
-        <div className="rounded-[18px] bg-[var(--surface-grouped)] px-5 py-2 font-mono text-3xl font-bold tracking-tight tabular-nums">
-          {fmtClock(kds.now)}
-        </div>
-      }
-      headerActions={
-        <>
-          <StatPill label={kds.t('pending_count')} value={kds.stats.pending} tone="orange" />
-          <StatPill label={kds.t('preparing_count')} value={kds.stats.preparing} tone="blue" />
-          <StatPill label={kds.t('ready_count')} value={kds.stats.ready} tone="green" />
-          <LanguageSwitcher
-            currentLang={kds.lang}
-            onLangChange={(newLang) => {
-              setChangingLang(newLang)
-              setTimeout(() => {
-                kds.setLang(newLang)
-                setChangingLang(null)
-              }, 750)
-            }}
-          />
-          <Button
-            size="sm"
-            variant={kds.soundOn ? 'default' : 'secondary'}
-            onClick={() => kds.setSoundOn((current) => !current)}
-          >
-            {kds.soundOn ? 'Sound on' : 'Muted'}
-          </Button>
-        </>
-      }
-      contentClassName="p-0"
-    >
+    <>
       {kds.lastMessage && (
         <div className="pointer-events-none fixed left-1/2 top-24 z-[360] -translate-x-1/2 rounded-full bg-[var(--text)] px-4 py-2 text-sm font-semibold text-[var(--bg)] shadow-2xl">
           {kds.lastMessage}
@@ -108,7 +106,7 @@ export const KdsLayout: FC = () => {
         }}
         onClose={() => kds.setManageOrderId(null)}
       />
-    </StaffShell>
+    </>
   )
 }
 

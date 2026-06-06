@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react'
 
-import { Spinner } from '@/components/ui/spinner'
+import { Loader2 } from 'lucide-react'
 
 interface SuspenseLoaderProps {
   children: React.ReactNode
@@ -9,7 +9,7 @@ interface SuspenseLoaderProps {
 
 const DefaultFallback = () => (
   <div className="flex min-h-[200px] items-center justify-center">
-    <Spinner className="size-5 text-[var(--system-purple)]" />
+    <Loader2 className="animate-spin size-5 text-[var(--system-purple)]" />
   </div>
 )
 

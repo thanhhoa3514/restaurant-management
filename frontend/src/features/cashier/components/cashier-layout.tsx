@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { LanguageLoader } from '@/components/ui/language-loader'
-import { StaffShell } from '@/components/staff-shell'
+import { useShellConfig } from '@/components/staff-shell'
 import { LanguageSwitcher } from '@/components/ui/language-switcher'
 import { InvoicePanel } from '@/features/cashier/components/invoice-panel'
 import { PaymentPanel } from '@/features/cashier/components/payment-panel'
@@ -42,41 +42,40 @@ const CashierWorkspace: FC = () => {
     dispatch({ type: success ? 'completePayment' : 'failPayment', sessionId: pending.id })
   }
 
-  return (
-    <StaffShell
-      role="cashier"
-      activeView="cashier"
-      brandName={t('restaurant')}
-      title={t('cashier')}
-      subtitle={`${t('restaurant')} · ${t('shift')} · ${t('cashier_name')}`}
-      headerCenter={
-        <div className="flex items-center justify-center gap-3">
-          <div className="font-mono text-xl font-bold tabular-nums">{fmtClockSec(state.now)}</div>
-          <div className="h-5 w-px bg-[var(--separator)]" />
-          <div className="text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
-            ×{state.timeMultiplier}
-          </div>
+  useShellConfig({
+    title: t('cashier'),
+    subtitle: `${t('restaurant')} · ${t('shift')} · ${t('cashier_name')}`,
+    headerCenter: (
+      <div className="flex items-center justify-center gap-3">
+        <div className="font-mono text-xl font-bold tabular-nums">{fmtClockSec(state.now)}</div>
+        <div className="h-5 w-px bg-[var(--separator)]" />
+        <div className="text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+          ×{state.timeMultiplier}
         </div>
-      }
-      headerActions={
-        <>
-          <StatPill label={t('pending_label')} value={pendingCount} tone="orange" />
-          <StatPill label={t('closed_today')} value={closedToday} tone="green" />
-          <LanguageSwitcher
-            currentLang={state.lang}
-            onLangChange={(newLang) => {
-              setChangingLang(newLang)
-              setTimeout(() => {
-                dispatch({ type: 'setLang', lang: newLang })
-                setChangingLang(null)
-              }, 750)
-            }}
-          />
-        </>
-      }
-      contentClassName="p-0"
-    >
-      <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[300px_minmax(0,1fr)_400px]">
+      </div>
+    ),
+    headerActions: (
+      <>
+        <StatPill label={t('pending_label')} value={pendingCount} tone="orange" />
+        <StatPill label={t('closed_today')} value={closedToday} tone="green" />
+        <LanguageSwitcher
+          currentLang={state.lang}
+          onLangChange={(newLang) => {
+            setChangingLang(newLang)
+            setTimeout(() => {
+              dispatch({ type: 'setLang', lang: newLang })
+              setChangingLang(null)
+            }, 750)
+          }}
+        />
+      </>
+    ),
+    contentClassName: "p-0"
+  })
+
+  return (
+    <>
+      <div className="grid min-h-0 flex-1 h-[calc(100dvh-64px)] grid-cols-1 overflow-hidden lg:grid-cols-[300px_minmax(0,1fr)_400px]">
         <aside className="min-h-0 overflow-hidden border-r border-[var(--separator)] bg-[var(--material-thin)] backdrop-blur-xl max-lg:hidden">
           <SessionList
             sessions={state.sessions}
@@ -161,7 +160,7 @@ const CashierWorkspace: FC = () => {
         onPauseChange={(paused) => dispatch({ type: 'setPaused', paused })}
         onMultiplierChange={(value) => dispatch({ type: 'setTimeMultiplier', value })}
       />
-    </StaffShell>
+    </>
   )
 }
 

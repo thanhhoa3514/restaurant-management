@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { StaffShell } from '@/components/staff-shell'
+import { useShellConfig } from '@/components/staff-shell'
 import { makeAdminT } from '@/features/admin/data/i18n'
 import { hasStaffPermission, isStaffAuthenticated } from '@/lib/auth'
 import { useLang } from '@/lib/use-lang'
@@ -19,19 +19,18 @@ export const RouteComponent = () => {
   const t = makeAdminT(lang)
 
   return (
-    <StaffShell
-      role="admin"
-      activeView="dashboard"
-      title={t('action_floor')}
-      subtitle={t('action_floor_desc')}
-      lang={lang}
-      setLang={setLang}
-      contentClassName="bg-[var(--surface-grouped)]/45"
-    >
+  useShellConfig({
+    title: t('action_floor'),
+    subtitle: t('action_floor_desc'),
+    contentClassName: "bg-[var(--surface-grouped)]/45"
+  })
+
+  return (
+    <>
       <div className="mx-auto max-w-7xl">
         <FloorBuilder />
       </div>
-    </StaffShell>
+    </>
   )
 }
 

@@ -1,6 +1,6 @@
 import { PDFDownloadLink, Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer'
 import { Button } from '@/components/ui/button'
-import { Spinner } from '@/components/ui/spinner'
+import { Loader2 } from 'lucide-react'
 import { Download } from 'lucide-react'
 import { formatVND } from '../helpers'
 
@@ -208,7 +208,7 @@ export default function GuestLazyPDFLink({ pdfProps }: { pdfProps: GuestPDFProps
         <Button className="w-full h-14 rounded-xl font-bold flex items-center justify-center cursor-pointer shadow-lg" disabled={loading}>
           {loading ? (
             <span className="flex items-center justify-center">
-              <Spinner className="mr-2 h-5 w-5 text-current" />
+              <Loader2 className="animate-spin mr-2 h-5 w-5 text-current" />
               {pdfProps.lang === 'vi' ? 'Đang chuẩn bị PDF...' : 'Preparing PDF...'}
             </span>
           ) : (
