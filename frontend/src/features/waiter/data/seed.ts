@@ -34,7 +34,7 @@ const WF_MENU: MenuItemOption[] = [
     opts_vi: 'Sữa đặc', opts_en: 'Condensed milk', price: 50000 },
 ]
 
-const WF_TABLE_LAYOUT = [
+export const WF_TABLE_LAYOUT = [
   { number: 1, capacity: 2, x: 22, y: 18 },
   { number: 2, capacity: 2, x: 34, y: 18 },
   { number: 3, capacity: 2, x: 64, y: 18 },

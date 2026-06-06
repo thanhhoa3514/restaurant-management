@@ -14,7 +14,6 @@ import {
   Table2,
   UserRound,
   UsersRound,
-  X,
   type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
@@ -24,6 +23,8 @@ import { LanguageLoader } from '@/components/ui/language-loader'
 import { LanguageSwitcher } from '@/components/ui/language-switcher'
 import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command'
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { shellStrings } from '@/components/shell-i18n'
 import {
@@ -277,18 +278,18 @@ export function StaffShell({
                     <SlidersHorizontal />
                   </Button>
                   <div className="relative">
-                    <button
-                      type="button"
-                      className="flex size-10 cursor-pointer items-center justify-center rounded-full bg-[var(--staff-tint)] text-sm font-bold text-white transition-opacity duration-[220ms] hover:opacity-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--staff-tint)]/20"
-                      onClick={() => setProfileOpen((open) => !open)}
-                      aria-label={s.openProfileAria}
-                      aria-expanded={profileOpen}
-                    >
-                      {(session?.name ?? s.roleLabel[role]).slice(0, 1).toUpperCase()}
-                    </button>
-                    {profileOpen && (
-                      <div className="absolute right-0 top-12 z-[var(--z-dropdown)] w-72 overflow-hidden rounded-[18px] border border-[var(--separator)] bg-[var(--material-thick)] p-2 text-[13px] backdrop-blur-2xl">
-                        <div className="px-3 py-3">
+                    <DropdownMenu open={profileOpen} onOpenChange={setProfileOpen}>
+                    <DropdownMenuTrigger>
+                        <button
+                          type="button"
+                          className="flex size-10 cursor-pointer items-center justify-center rounded-full bg-[var(--staff-tint)] text-sm font-bold text-white transition-opacity duration-[220ms] hover:opacity-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--staff-tint)]/20"
+                          aria-label={s.openProfileAria}
+                        >
+                          {(session?.name ?? s.roleLabel[role]).slice(0, 1).toUpperCase()}
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-72 rounded-[18px] border-[var(--separator)] bg-[var(--material-thick)] p-2 text-[13px] backdrop-blur-2xl">
+                        <DropdownMenuLabel className="px-3 py-3">
                           <div className="flex items-center gap-3">
                             <div className="flex size-10 items-center justify-center rounded-full bg-[var(--surface-grouped)] text-[var(--text-secondary)]">
                               <UserRound className="size-5" />
@@ -302,17 +303,17 @@ export function StaffShell({
                               </div>
                             </div>
                           </div>
-                        </div>
-                        <button
-                          type="button"
+                        </DropdownMenuLabel>
+                        <DropdownMenuSeparator className="bg-[var(--separator)]" />
+                        <DropdownMenuItem
                           onClick={handleLogout}
-                          className="flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-[12px] px-3 text-left font-semibold text-[var(--system-red)] transition-colors duration-[220ms] hover:bg-[var(--system-red)]/10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--system-red)]/20"
+                          className="flex min-h-11 cursor-pointer items-center gap-2 rounded-[12px] px-3 font-semibold text-[var(--system-red)] transition-colors duration-[220ms] focus:bg-[var(--system-red)]/10 focus:text-[var(--system-red)]"
                         >
                           <LogOut className="size-4" />
                           {s.logout}
-                        </button>
-                      </div>
-                    )}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </div>
@@ -363,73 +364,41 @@ export function StaffShell({
           </SheetContent>
         </Sheet>
 
-        {searchOpen && (
-          <div
-            className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center bg-black/30 px-4 pt-[12dvh] backdrop-blur-[30px]"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="staff-command-title"
-            onMouseDown={(event) => {
-              if (event.target === event.currentTarget) setSearchOpen(false)
-            }}
-          >
-            <div className="w-full max-w-2xl overflow-hidden rounded-[24px] border border-[var(--separator)] bg-[var(--material-thick)] backdrop-blur-2xl">
-              <div className="flex items-center gap-3 border-b border-[var(--separator)] px-4">
-                <Search className="size-5 text-[var(--text-tertiary)]" />
-                <label className="sr-only" htmlFor="staff-command-search" id="staff-command-title">
-                  {s.searchAria}
-                </label>
-                <input
-                  id="staff-command-search"
-                  autoFocus
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder={s.searchPlaceholder}
-                  className="h-14 min-w-0 flex-1 bg-transparent text-[15px] text-[var(--text)] outline-none placeholder:text-[var(--text-tertiary)]"
-                />
-                <button
-                  type="button"
-                  className="flex size-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-tertiary)] transition-colors duration-[220ms] hover:bg-[var(--surface-grouped)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--staff-tint)]/20"
-                  onClick={() => setSearchOpen(false)}
-                  aria-label={s.closeSearchAria}
-                >
-                  <X className="size-4" />
-                </button>
-              </div>
-              <div className="max-h-[52dvh] overflow-auto p-2">
-                {commandItems.length === 0 ? (
-                  <div className="px-4 py-10 text-center text-sm text-[var(--text-secondary)]">
-                    {s.searchEmpty}
-                  </div>
-                ) : (
-                  commandItems.map((item) => {
-                    const Icon = item.icon
-                    return (
-                      <button
-                        key={item.key}
-                        type="button"
-                        className="flex min-h-14 w-full cursor-pointer items-center gap-3 rounded-[16px] px-3 text-left transition-colors duration-[220ms] hover:bg-[var(--surface-grouped)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--staff-tint)]/20"
-                        onClick={() => handleCommand(item)}
-                      >
-                        <span className="flex size-10 items-center justify-center rounded-[14px] bg-[var(--staff-tint)]/10 text-[var(--staff-tint)]">
-                          <Icon className="size-5" />
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block font-semibold text-[var(--text)]">
-                            {item.label}
-                          </span>
-                          <span className="block truncate text-[12px] text-[var(--text-secondary)]">
-                            {item.description}
-                          </span>
-                        </span>
-                      </button>
-                    )
-                  })
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        <CommandDialog open={searchOpen} onOpenChange={setSearchOpen}>
+          <CommandInput
+            placeholder={s.searchPlaceholder}
+            value={query}
+            onValueChange={setQuery}
+          />
+          <CommandList>
+            <CommandEmpty>{s.searchEmpty}</CommandEmpty>
+            <CommandGroup>
+              {commandItems.map((item) => {
+                const Icon = item.icon
+                return (
+                  <CommandItem
+                    key={item.key}
+                    value={`${item.label} ${item.description}`}
+                    onSelect={() => handleCommand(item)}
+                    className="flex min-h-14 cursor-pointer items-center gap-3 rounded-[16px] px-3"
+                  >
+                    <span className="flex size-10 items-center justify-center rounded-[14px] bg-[var(--staff-tint)]/10 text-[var(--staff-tint)]">
+                      <Icon className="size-5" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block font-semibold text-[var(--text)]">
+                        {item.label}
+                      </span>
+                      <span className="block truncate text-[12px] text-[var(--text-secondary)]">
+                        {item.description}
+                      </span>
+                    </span>
+                  </CommandItem>
+                )
+              })}
+            </CommandGroup>
+          </CommandList>
+        </CommandDialog>
 
         {setLang && (
           <LanguageLoader open={changingLang !== null} targetLang={changingLang ?? lang} />

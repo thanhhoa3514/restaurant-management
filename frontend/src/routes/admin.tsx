@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import {
   ArrowUpRight,
@@ -104,6 +104,8 @@ const AdminDashboard = () => {
     second: '2-digit',
   })
 
+  const navigate = useNavigate()
+
   return (
     <StaffShell
       role="admin"
@@ -146,7 +148,7 @@ const AdminDashboard = () => {
                   <UserCheck className="size-5 text-[var(--system-purple)]" />
                   {t('staff_on_shift')}
                 </CardTitle>
-                <Badge variant="success" className="px-3 py-1.5">
+                <Badge variant="success" className="px-3 py-1.5 cursor-pointer">
                   {t('active_count', 4)}
                 </Badge>
               </div>
@@ -182,9 +184,9 @@ const AdminDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <ActionButton label={t('action_report')} desc={t('action_report_desc')} icon={FileText} />
-              <ActionButton label={t('action_floor')} desc={t('action_floor_desc')} icon={TrendingUp} />
-              <ActionButton label={t('action_menu')} desc={t('action_menu_desc')} icon={UtensilsCrossed} />
+              <ActionButton label={t('action_report')} desc={t('action_report_desc')} icon={FileText} onClick={() => navigate({ to: '/admin' })} />
+              <ActionButton label={t('action_floor')} desc={t('action_floor_desc')} icon={TrendingUp} onClick={() => navigate({ to: '/admin/table-qrs' })} />
+              <ActionButton label={t('action_menu')} desc={t('action_menu_desc')} icon={UtensilsCrossed} onClick={() => navigate({ to: '/admin' })} />
             </CardContent>
           </Card>
         </div>
@@ -214,7 +216,7 @@ function MetricCard({
   }[tone]
 
   return (
-    <Card className="bg-[var(--material-regular)] backdrop-blur-2xl">
+    <Card className="bg-[var(--material-regular)] backdrop-blur-2xl cursor-pointer hover:bg-[var(--surface-grouped)]/50 transition-colors duration-[220ms]">
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3">
           <span className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-tertiary)]">
@@ -284,13 +286,15 @@ function ActionButton({
   label,
   desc,
   icon: Icon,
+  onClick,
 }: {
   label: string
   desc: string
   icon: LucideIcon
+  onClick?: () => void
 }) {
   return (
-    <button className="group flex min-h-16 w-full cursor-pointer items-center justify-between rounded-[18px] bg-[var(--surface-grouped)]/70 p-3 text-left transition-colors duration-[220ms] hover:bg-[var(--system-purple)]/10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--system-purple)]/20">
+    <button onClick={onClick} className="group flex min-h-16 w-full cursor-pointer items-center justify-between rounded-[18px] bg-[var(--surface-grouped)]/70 p-3 text-left transition-colors duration-[220ms] hover:bg-[var(--system-purple)]/10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--system-purple)]/20">
       <span className="flex items-center gap-3">
         <span className="flex size-10 items-center justify-center rounded-[14px] bg-[var(--bg-elevated)] text-[var(--text-secondary)] group-hover:text-[var(--system-purple)]">
           <Icon className="size-5" />

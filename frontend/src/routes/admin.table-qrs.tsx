@@ -99,7 +99,7 @@ function TableCard({ table, t, onOpen }: { table: TableQR; t: AdminT; onOpen: ()
     <button
       type="button"
       onClick={onOpen}
-      className="group flex flex-col gap-3 rounded-[20px] border border-[var(--separator)] bg-[var(--material-regular)] p-5 text-left backdrop-blur-2xl transition-colors duration-[220ms] hover:border-[var(--system-purple)]/40 hover:bg-[var(--system-purple)]/5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--system-purple)]/20"
+      className="group flex flex-col gap-3 rounded-[20px] border border-[var(--separator)] bg-[var(--material-regular)] p-5 text-left cursor-pointer backdrop-blur-2xl transition-colors duration-[220ms] hover:border-[var(--system-purple)]/40 hover:bg-[var(--system-purple)]/5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--system-purple)]/20"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">

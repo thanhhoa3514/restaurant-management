@@ -1,6 +1,5 @@
-import { useMemo, type FC } from 'react'
+import { useMemo, lazy, Suspense, type FC } from 'react'
 import { Spinner } from '@/components/ui/spinner'
-import { PDFDownloadLink } from '@react-pdf/renderer'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -8,7 +7,7 @@ import { Separator } from '@/components/ui/separator'
 import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet'
 import { fmtDateTime, fmtVND, providerName } from '@/features/cashier/helpers'
 import type { CashierSession } from '@/features/cashier/types'
-import { InvoicePDF } from './invoice-pdf'
+const LazyPDFLink = lazy(() => import('./lazy-pdf-link'))
 
 interface ReceiptDialogProps {
   open: boolean
@@ -95,24 +94,16 @@ export const ReceiptDialog: FC<ReceiptDialogProps> = ({ open, session, t, lang, 
           <Button variant="secondary" className="flex-1 rounded-[var(--radius-lg)]" onClick={() => onOpenChange(false)}>
             {t('close')}
           </Button>
-          <PDFDownloadLink
-            document={<InvoicePDF session={session} t={t} lang={lang} />}
-            fileName={`Hoa_Don_${invoice.number}.pdf`}
-            className="flex-1"
-          >
-            {({ loading }) => (
-              <Button className="w-full rounded-[var(--radius-lg)] cursor-pointer" disabled={loading}>
-                {loading ? (
-                  <span className="flex items-center justify-center">
-                    <Spinner className="mr-2 h-4 w-4 text-current" />
-                    {t('loading_pdf', 'Đang tải...')}
-                  </span>
-                ) : (
-                  t('export_pdf', 'Xuất PDF')
-                )}
-              </Button>
-            )}
-          </PDFDownloadLink>
+          <Suspense fallback={
+            <Button className="flex-1 rounded-[var(--radius-lg)] cursor-pointer" disabled>
+              <span className="flex items-center justify-center">
+                <Spinner className="mr-2 h-4 w-4 text-current" />
+                {t('loading_pdf', 'Đang tải...')}
+              </span>
+            </Button>
+          }>
+            <LazyPDFLink session={session} t={t} lang={lang} />
+          </Suspense>
           <Button className="flex-1 rounded-[var(--radius-lg)]" onClick={() => window.print()}>
             {t('print')}
           </Button>

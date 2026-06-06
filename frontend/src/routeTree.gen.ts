@@ -17,6 +17,7 @@ import { Route as CashierRouteImport } from './routes/cashier'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminTableQrsRouteImport } from './routes/admin.table-qrs'
+import { Route as AdminFloorPlanRouteImport } from './routes/admin.floor-plan'
 
 const WaiterRoute = WaiterRouteImport.update({
   id: '/waiter',
@@ -58,6 +59,11 @@ const AdminTableQrsRoute = AdminTableQrsRouteImport.update({
   path: '/table-qrs',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminFloorPlanRoute = AdminFloorPlanRouteImport.update({
+  id: '/floor-plan',
+  path: '/floor-plan',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -67,6 +73,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/order': typeof OrderRoute
   '/waiter': typeof WaiterRoute
+  '/admin/floor-plan': typeof AdminFloorPlanRoute
   '/admin/table-qrs': typeof AdminTableQrsRoute
 }
 export interface FileRoutesByTo {
@@ -77,6 +84,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/order': typeof OrderRoute
   '/waiter': typeof WaiterRoute
+  '/admin/floor-plan': typeof AdminFloorPlanRoute
   '/admin/table-qrs': typeof AdminTableQrsRoute
 }
 export interface FileRoutesById {
@@ -88,6 +96,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/order': typeof OrderRoute
   '/waiter': typeof WaiterRoute
+  '/admin/floor-plan': typeof AdminFloorPlanRoute
   '/admin/table-qrs': typeof AdminTableQrsRoute
 }
 export interface FileRouteTypes {
@@ -100,6 +109,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/order'
     | '/waiter'
+    | '/admin/floor-plan'
     | '/admin/table-qrs'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/order'
     | '/waiter'
+    | '/admin/floor-plan'
     | '/admin/table-qrs'
   id:
     | '__root__'
@@ -120,6 +131,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/order'
     | '/waiter'
+    | '/admin/floor-plan'
     | '/admin/table-qrs'
   fileRoutesById: FileRoutesById
 }
@@ -191,14 +203,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminTableQrsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/floor-plan': {
+      id: '/admin/floor-plan'
+      path: '/floor-plan'
+      fullPath: '/admin/floor-plan'
+      preLoaderRoute: typeof AdminFloorPlanRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
 interface AdminRouteChildren {
+  AdminFloorPlanRoute: typeof AdminFloorPlanRoute
   AdminTableQrsRoute: typeof AdminTableQrsRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminFloorPlanRoute: AdminFloorPlanRoute,
   AdminTableQrsRoute: AdminTableQrsRoute,
 }
 
