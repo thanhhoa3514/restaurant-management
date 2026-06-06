@@ -92,20 +92,6 @@ func TestJWTValidPopulatesContext(t *testing.T) {
 	require.Equal(t, rid, gotTenant)
 }
 
-func TestRBAC(t *testing.T) {
-	run := func(role string, allowed ...string) int {
-		r := gin.New()
-		r.GET("/x", func(c *gin.Context) { c.Set(CtxRole, role); c.Next() }, RBAC(allowed...), ok)
-		req := httptest.NewRequest(http.MethodGet, "/x", nil)
-		w := httptest.NewRecorder()
-		r.ServeHTTP(w, req)
-		return w.Code
-	}
-	require.Equal(t, http.StatusOK, run("MANAGER", "MANAGER", "CASHIER"))
-	require.Equal(t, http.StatusForbidden, run("SERVER", "MANAGER"))
-	require.Equal(t, http.StatusForbidden, run("", "MANAGER"))
-}
-
 func TestIssueRoundTripsThroughJWT(t *testing.T) {
 	rid := uuid.New()
 	uid := uuid.New()

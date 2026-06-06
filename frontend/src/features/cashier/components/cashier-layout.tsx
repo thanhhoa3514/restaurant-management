@@ -45,6 +45,7 @@ const CashierWorkspace: FC = () => {
   return (
     <StaffShell
       role="cashier"
+      activeView="cashier"
       brandName={t('restaurant')}
       title={t('cashier')}
       subtitle={`${t('restaurant')} · ${t('shift')} · ${t('cashier_name')}`}

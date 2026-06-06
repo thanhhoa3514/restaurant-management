@@ -1,4 +1,6 @@
 import { type FC, useState } from 'react'
+import { Spinner } from '@/components/ui/spinner'
+import { Phone, ShoppingBag } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
@@ -53,9 +55,7 @@ export const SessionSummary: FC = () => {
           </>
         ) : orders.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-2">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-quaternary">
-              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0" />
-            </svg>
+            <ShoppingBag size={32} className="text-quaternary" />
             <p className="text-sm text-tertiary">{t.empty_cart}</p>
           </div>
         ) : (
@@ -104,9 +104,7 @@ export const SessionSummary: FC = () => {
             className="flex-1 rounded-xl h-14 text-sm font-medium"
             onClick={() => dispatch({ type: 'SET_SCREEN', payload: 'qr' })}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-1.5">
-              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-            </svg>
+            <Phone size={18} className="mr-1.5" />
             {t.call_waiter}
           </Button>
           <Button
@@ -146,10 +144,7 @@ export const SessionSummary: FC = () => {
       {simulatingPayment && (
         <div className="fixed inset-0 z-[600] flex flex-col items-center justify-center bg-black/60 backdrop-blur-xl text-center text-white animate-in fade-in duration-300">
           <div className="flex flex-col items-center gap-4">
-            <svg className="h-10 w-10 animate-spin text-system-blue" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
+            <Spinner className="h-10 w-10 text-system-blue" />
             <div className="font-bold text-lg">{state.lang === 'vi' ? 'Đang xử lý thanh toán...' : 'Processing payment...'}</div>
             <p className="text-sm text-zinc-300 max-w-xs px-6 leading-relaxed">
               {state.lang === 'vi'

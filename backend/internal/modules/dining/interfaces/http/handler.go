@@ -26,17 +26,17 @@ func NewHandler(openSession *application.OpenSession, joinSession *application.J
 	return &Handler{OpenSession: openSession, JoinSession: joinSession, CloseSession: closeSession, ManageTableQR: manageTableQR, ListTableQRs: listTableQRs}
 }
 
-func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string) {
+func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver) {
 	g := r.Group("/dining")
 	g.POST("/join-session", h.joinSession) // public: QR guest entry bootstrap
-	staff := g.Group("", auth.JWT(secret), auth.RBAC("SERVER", "MANAGER"))
+	staff := g.Group("", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionDiningServe))
 	staff.POST("/open-session", h.openSession)
-	cashier := g.Group("", auth.JWT(secret), auth.RBAC("SERVER", "CASHIER", "MANAGER"))
+	cashier := g.Group("", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionDiningCashier))
 	cashier.POST("/close-session", h.closeSession)
 
 	// QR codes are tied to printed assets, so generate/rotate/listing is
 	// restricted to MANAGER. Rotation deactivates the prior token.
-	manager := g.Group("", auth.JWT(secret), auth.RBAC("MANAGER"))
+	manager := g.Group("", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionDiningManage))
 	manager.GET("/table-qrs", h.listTableQRs)
 	manager.POST("/manage-table-qr", h.manageTableQR)
 }

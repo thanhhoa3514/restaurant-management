@@ -1,4 +1,5 @@
 import { type FC } from 'react'
+import { ShoppingBag } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
@@ -57,9 +58,7 @@ export const OrderStatusScreen: FC = () => {
           </>
         ) : orders.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-2">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-quaternary">
-              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0" />
-            </svg>
+            <ShoppingBag size={32} className="text-quaternary" />
             <p className="text-sm text-tertiary">{t.empty_cart}</p>
           </div>
         ) : (

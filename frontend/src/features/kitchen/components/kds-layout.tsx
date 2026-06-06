@@ -22,10 +22,11 @@ export const KdsLayout: FC = () => {
   return (
     <StaffShell
       role="kitchen"
+      activeView="kitchen"
+      sidebar
       brandName={kds.t('restaurant')}
       title={kds.t('kitchen_display')}
       subtitle={kds.t('restaurant')}
-      sidebar={false}
       headerCenter={
         <div className="rounded-[18px] bg-[var(--surface-grouped)] px-5 py-2 font-mono text-3xl font-bold tracking-tight tabular-nums">
           {fmtClock(kds.now)}

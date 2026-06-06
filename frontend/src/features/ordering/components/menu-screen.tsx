@@ -1,4 +1,5 @@
 import { useMemo, useState, type FC } from 'react'
+import { Search, ShoppingCart } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
@@ -38,16 +39,19 @@ export const MenuScreen: FC = () => {
     enabled: !!sessionToken,
   })
 
-  const items = itemsQuery.data ?? []
   const filtered = useMemo(
-    () =>
+    () => {
+      const items = itemsQuery.data ?? []
+      return (
       items.filter((item) => {
         if (!item.is_available) return false
         if (activeCategory !== 'all' && item.category_id !== activeCategory) return false
         if (search && !item.name.toLowerCase().includes(search.toLowerCase())) return false
         return true
-      }),
-    [items, activeCategory, search],
+      })
+      )
+    },
+    [itemsQuery.data, activeCategory, search],
   )
 
   const cartCount = totalItems(state.cart)
@@ -80,13 +84,7 @@ export const MenuScreen: FC = () => {
           </div>
 
           <div className="relative">
-            <svg
-              width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="2" className="absolute left-3 top-1/2 -translate-y-1/2 text-quaternary"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.35-4.35" />
-            </svg>
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-quaternary" />
             <Input
               placeholder={t.search_placeholder}
               className="pl-9 h-10 text-sm rounded-xl"
@@ -134,10 +132,7 @@ export const MenuScreen: FC = () => {
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-2">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-quaternary">
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.35-4.35" />
-            </svg>
+            <Search size={32} className="text-quaternary" />
             <p className="text-sm text-tertiary">{t.no_results}</p>
           </div>
         ) : (
@@ -161,11 +156,7 @@ export const MenuScreen: FC = () => {
             size="lg"
             onClick={() => dispatch({ type: 'OPEN_CART' })}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="9" cy="21" r="1" />
-              <circle cx="20" cy="21" r="1" />
-              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-            </svg>
+            <ShoppingCart size={20} />
             {t.view_cart} &middot; {state.lang === 'vi' ? `${cartCount} món` : `${cartCount} item${cartCount === 1 ? '' : 's'}`}
           </Button>
         </div>

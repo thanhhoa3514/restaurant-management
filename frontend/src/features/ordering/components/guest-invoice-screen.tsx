@@ -1,4 +1,6 @@
 import { type FC, useMemo } from 'react'
+import { Spinner } from '@/components/ui/spinner'
+import { Download } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { PDFDownloadLink, Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer'
 
@@ -6,6 +8,7 @@ import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
 import { formatVND } from '../helpers'
 import { fetchGuestOrders } from '../api'
+import { brandNameUpper } from '@/lib/brand'
 import type { Session } from '../types'
 import { Button } from '../../../components/ui/button'
 import { Card } from '../../../components/ui/card'
@@ -317,7 +320,7 @@ export const GuestInvoiceScreen: FC = () => {
         <PDFDownloadLink
           document={
             <GuestInvoicePDF
-              restaurantName={state.lang === 'vi' ? 'QUÁN CƠM TẤM SÀI GÒN' : 'SAIGON BROKEN RICE'}
+              restaurantName={brandNameUpper(state.lang)}
               tableName={`${state.session?.table}`}
               date={currentDateString}
               items={invoiceItems}
@@ -334,17 +337,12 @@ export const GuestInvoiceScreen: FC = () => {
             <Button className="w-full h-14 rounded-xl font-bold flex items-center justify-center cursor-pointer shadow-lg" disabled={loading}>
               {loading ? (
                 <span className="flex items-center justify-center">
-                  <svg className="mr-2 h-5 w-5 animate-spin text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
+                  <Spinner className="mr-2 h-5 w-5 text-current" />
                   {state.lang === 'vi' ? 'Đang chuẩn bị PDF...' : 'Preparing PDF...'}
                 </span>
               ) : (
                 <>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="mr-2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
-                  </svg>
+                  <Download size={20} className="mr-2" />
                   {state.lang === 'vi' ? 'Tải Hóa Đơn Điện Tử (A5 PDF)' : 'Download E-Invoice (A5 PDF)'}
                 </>
               )}

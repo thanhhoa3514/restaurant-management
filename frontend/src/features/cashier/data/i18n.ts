@@ -1,9 +1,10 @@
 import type { Lang } from '../types'
+import { BRAND } from '@/lib/brand'
 
 export const CS_DICT: Record<Lang, Record<string, string | ((...args: never[]) => string)>> = {
   vi: {
     cashier: 'Thu ngân',
-    restaurant: 'Quán Cơm Tấm Sài Gòn',
+    restaurant: BRAND.name.vi,
     restaurant_address: '142 Nguyễn Đình Chiểu, Quận 3, TP. HCM',
     restaurant_phone: 'ĐT: 028 3930 4567 · MST: 0301234567',
     shift: 'Ca chiều',
@@ -139,7 +140,7 @@ export const CS_DICT: Record<Lang, Record<string, string | ((...args: never[]) =
   },
   en: {
     cashier: 'Cashier',
-    restaurant: 'Quán Cơm Tấm Sài Gòn',
+    restaurant: BRAND.name.en,
     restaurant_address: '142 Nguyen Dinh Chieu St, District 3, HCMC',
     restaurant_phone: 'Tel: 028 3930 4567 · TAX: 0301234567',
     shift: 'Evening shift',

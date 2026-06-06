@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Shield, Smartphone, ArrowRight } from 'lucide-react'
 
+import { BRAND } from '@/lib/brand'
+
 export const Route = createFileRoute('/')({
   component: () => (
     <div className="relative flex min-h-dvh flex-col items-center justify-center bg-zinc-950 px-4 py-12 text-zinc-100 overflow-hidden font-sans">
@@ -15,7 +17,7 @@ export const Route = createFileRoute('/')({
             ₫
           </div>
           <h1 className="text-3xl font-black tracking-tight text-white sm:text-4xl">
-            Cơm Tấm Sài Gòn
+            {BRAND.name.vi}
           </h1>
           <p className="text-sm font-medium text-zinc-400">
             Hệ thống Quản lý Vận hành & Phục vụ nhà hàng

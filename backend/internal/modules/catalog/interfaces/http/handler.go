@@ -35,8 +35,8 @@ func NewHandler(createMenuItem *application.CreateMenuItem, updateMenuItem *appl
 	}
 }
 
-func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string) {
-	g := r.Group("/catalog", auth.JWT(secret), auth.RBAC("MANAGER"))
+func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver) {
+	g := r.Group("/catalog", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionCatalogManage))
 	g.POST("/create-menu-item", h.handle(h.CreateMenuItem))
 	g.POST("/update-menu-item", h.handle(h.UpdateMenuItem))
 	g.POST("/delete-menu-item", h.handle(h.DeleteMenuItem))

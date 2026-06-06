@@ -80,21 +80,6 @@ func JWT(secret string) gin.HandlerFunc {
 		c.Next()
 	}
 }
-func RBAC(roles ...string) gin.HandlerFunc {
-	allowed := map[string]struct{}{}
-	for _, r := range roles {
-		allowed[r] = struct{}{}
-	}
-	return func(c *gin.Context) {
-		role := c.GetString(CtxRole)
-		if _, ok := allowed[role]; !ok && len(allowed) > 0 {
-			httpx.RespondError(c, apperr.New(apperr.CodeForbidden, "forbidden"))
-			c.Abort()
-			return
-		}
-		c.Next()
-	}
-}
 func QRSessionToken(v SessionValidator) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := strings.TrimSpace(c.GetHeader("X-Session-Token"))

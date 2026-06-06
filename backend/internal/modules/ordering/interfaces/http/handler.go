@@ -48,16 +48,16 @@ func NewHandler(placeOrder *application.PlaceOrder, cancelOrEditItem *applicatio
 	}
 }
 
-func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string) {
-	g := r.Group("/ordering", auth.JWT(secret), auth.RBAC("SERVER", "KITCHEN", "MANAGER"))
+func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver) {
+	g := r.Group("/ordering", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionOrderingOperate))
 	g.POST("/place-order", h.handle(h.PlaceOrder))
 	g.POST("/cancel-or-edit-item", h.handle(h.CancelOrEditItem))
 	g.POST("/update-item-status", h.handle(h.UpdateItemStatus))
 	g.POST("/review-cancel-request", h.handle(h.ReviewCancelRequest))
 }
 
-func (h *Handler) RegisterStaffRoutes(r *gin.RouterGroup, secret string) {
-	g := r.Group("/staff", auth.JWT(secret), auth.RBAC("SERVER", "KITCHEN", "CASHIER", "MANAGER"))
+func (h *Handler) RegisterStaffRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver) {
+	g := r.Group("/staff", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionOrderingStaff))
 	g.GET("/tables", h.staffTables)
 	g.POST("/sessions/:sessionId/request-bill", h.staffRequestBill)
 	g.PATCH("/order-items/:itemId/status", h.staffUpdateItemStatus)
@@ -185,7 +185,12 @@ func uuidFromParam(c *gin.Context, name string) (uuid.UUID, error) {
 }
 
 func respondLineErrors(c *gin.Context, status int, ae *apperr.Error, lineErrors []application.LineError) {
-	c.JSON(status, gin.H{"data": nil, "error": gin.H{"code": string(ae.Code), "message": ae.Message}, "line_errors": lineErrors})
+	c.JSON(status, gin.H{
+		"code":        status,
+		"data":        nil,
+		"error":       gin.H{"code": string(ae.Code), "message": ae.Message},
+		"line_errors": lineErrors,
+	})
 }
 
 func (h *Handler) staffTables(c *gin.Context) {

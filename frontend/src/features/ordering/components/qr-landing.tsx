@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FC } from 'react'
+import { QrCode } from 'lucide-react'
 
 import { ApiError } from '@/lib/api'
 
@@ -108,26 +109,7 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
     <div className="flex min-h-dvh flex-col items-center justify-center px-6 gap-8">
       <div className="flex flex-col items-center gap-4 text-center">
         <div className="size-32 rounded-full bg-system-blue/10 flex items-center justify-center">
-          <svg
-            width="48"
-            height="48"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            className="text-system-blue"
-          >
-            <path d="M3 3h18v18H3z" />
-            <path d="M9 9h6v6H9z" />
-            <path d="M3 9h6" />
-            <path d="M15 9h6" />
-            <path d="M3 15h6" />
-            <path d="M15 15h6" />
-            <path d="M9 3v6" />
-            <path d="M9 15v6" />
-            <path d="M15 3v6" />
-            <path d="M15 15v6" />
-          </svg>
+          <QrCode size={48} className="text-system-blue" />
         </div>
 
         <div>
@@ -141,33 +123,7 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
           {qrToken ? `${labels.scanned} ${displayToken}` : labels.noTokenTitle}
         </Badge>
         <div className="size-40 rounded-xl bg-surface-grouped flex items-center justify-center">
-          <svg
-            width="80"
-            height="80"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            className="text-quaternary"
-          >
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <circle cx="6" cy="6" r="1" fill="currentColor" />
-            <circle cx="10" cy="6" r="1" fill="currentColor" />
-            <circle cx="14" cy="6" r="1" fill="currentColor" />
-            <circle cx="18" cy="6" r="1" fill="currentColor" />
-            <circle cx="6" cy="10" r="1" fill="currentColor" />
-            <circle cx="10" cy="10" r="1" fill="currentColor" />
-            <circle cx="14" cy="10" r="1" fill="currentColor" />
-            <circle cx="18" cy="10" r="1" fill="currentColor" />
-            <circle cx="6" cy="14" r="1" fill="currentColor" />
-            <circle cx="10" cy="14" r="1" fill="currentColor" />
-            <circle cx="14" cy="14" r="1" fill="currentColor" />
-            <circle cx="18" cy="14" r="1" fill="currentColor" />
-            <circle cx="6" cy="18" r="1" fill="currentColor" />
-            <circle cx="10" cy="18" r="1" fill="currentColor" />
-            <circle cx="14" cy="18" r="1" fill="currentColor" />
-            <circle cx="18" cy="18" r="1" fill="currentColor" />
-          </svg>
+          <QrCode size={80} className="text-quaternary" />
         </div>
         <p className="text-xs text-tertiary text-center">
           {message || (qrToken ? t.session_hint : labels.noTokenDesc)}

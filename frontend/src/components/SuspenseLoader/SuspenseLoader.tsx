@@ -1,31 +1,15 @@
 import React, { Suspense } from 'react'
 
+import { Spinner } from '@/components/ui/spinner'
+
 interface SuspenseLoaderProps {
   children: React.ReactNode
   fallback?: React.ReactNode
 }
 
 const DefaultFallback = () => (
-  <div
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: 200,
-      color: '#9ca3af',
-      fontSize: 14,
-    }}
-  >
-    <span
-      style={{
-        width: 20,
-        height: 20,
-        border: '2px solid #e5e4e7',
-        borderTopColor: '#aa3bff',
-        borderRadius: '50%',
-        animation: 'spin 0.6s linear infinite',
-      }}
-    />
+  <div className="flex min-h-[200px] items-center justify-center">
+    <Spinner className="size-5 text-[var(--system-purple)]" />
   </div>
 )
 

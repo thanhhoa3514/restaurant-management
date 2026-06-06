@@ -1,8 +1,9 @@
 import type { Lang } from '../types'
+import { BRAND } from '@/lib/brand'
 
 export const KDS_DICT: Record<Lang, Record<string, string | ((...args: never[]) => string)>> = {
   vi: {
-    restaurant: 'Quán Cơm Tấm Sài Gòn',
+    restaurant: BRAND.name.vi,
     kitchen_display: 'Màn hình bếp',
     pending_count: 'Đang chờ',
     preparing_count: 'Đang làm',
@@ -47,7 +48,7 @@ export const KDS_DICT: Record<Lang, Record<string, string | ((...args: never[]) 
     demo_resume: 'Bật tự động',
   },
   en: {
-    restaurant: 'Quán Cơm Tấm Sài Gòn',
+    restaurant: BRAND.name.en,
     kitchen_display: 'Kitchen Display',
     pending_count: 'Pending',
     preparing_count: 'Preparing',

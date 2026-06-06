@@ -5,6 +5,7 @@ import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { routeTree } from './routeTree.gen'
 import { queryClient } from './lib/queryClient'
 import { RealtimeProvider } from './lib/realtime'
+import { PermissionProvider } from './lib/permissions'
 import './index.css'
 
 const router = createRouter({
@@ -22,9 +23,11 @@ declare module '@tanstack/react-router' {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <RealtimeProvider>
-        <RouterProvider router={router} />
-      </RealtimeProvider>
+      <PermissionProvider>
+        <RealtimeProvider>
+          <RouterProvider router={router} />
+        </RealtimeProvider>
+      </PermissionProvider>
     </QueryClientProvider>
   </StrictMode>,
 )

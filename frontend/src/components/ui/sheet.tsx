@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { X } from 'lucide-react'
 import { createPortal } from 'react-dom'
 
 import { cn } from '@/lib/utils'
@@ -244,19 +245,7 @@ function SheetClose({ onClick }: SheetCloseProps) {
       className="absolute top-3 right-3 z-10 w-7 h-7 rounded-full bg-[var(--surface-grouped)] inline-flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--surface-grouped)]/80 transition-colors duration-[150ms] cursor-pointer"
       aria-label="Close"
     >
-      <svg
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M18 6 6 18" />
-        <path d="m6 6 12 12" />
-      </svg>
+      <X size={14} />
     </button>
   )
 }

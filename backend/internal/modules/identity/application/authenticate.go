@@ -23,6 +23,8 @@ type AuthenticateResponse struct {
 	Token        string    `json:"token"`
 	UserID       uuid.UUID `json:"user_id"`
 	Role         string    `json:"role"`
+	Name         string    `json:"name"`
+	Permissions  []string  `json:"permissions"`
 	RestaurantID uuid.UUID `json:"restaurant_id"`
 	ExpiresAt    time.Time `json:"expires_at"`
 }
@@ -83,7 +85,14 @@ func (s *Authenticate) Handle(ctx context.Context, req AuthenticateRequest) (Aut
 		if err := s.repo.RecordLoginSuccess(ctx, restaurantID, user.ID); err != nil {
 			return err
 		}
-		out = AuthenticateResponse{Token: token, UserID: user.ID, Role: role, RestaurantID: restaurantID, ExpiresAt: time.Now().Add(s.jwtTTL)}
+		permissions, err := s.repo.ResolvePermissionCodes(ctx, restaurantID, user.ID)
+		if err != nil {
+			return err
+		}
+		out = AuthenticateResponse{
+			Token: token, UserID: user.ID, Role: role, Name: user.FullName,
+			Permissions: permissions, RestaurantID: restaurantID, ExpiresAt: time.Now().Add(s.jwtTTL),
+		}
 		_ = s.outbox // reserved for later identity audit events; no outbox event in Batch A.
 		return nil
 	})

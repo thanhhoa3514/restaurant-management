@@ -1,9 +1,10 @@
 import type { Lang } from '../types'
+import { BRAND } from '@/lib/brand'
 
 export const WF_DICT: Record<Lang, Record<string, string | ((...args: never[]) => string)>> = {
   vi: {
     floor_view: 'Phòng phục vụ',
-    restaurant: 'Quán Cơm Tấm Sài Gòn',
+    restaurant: BRAND.name.vi,
     shift: 'Ca chiều',
     calls: 'Gọi nhân viên',
     ready: 'Sẵn sàng phục vụ',
@@ -70,7 +71,7 @@ export const WF_DICT: Record<Lang, Record<string, string | ((...args: never[]) =
   },
   en: {
     floor_view: 'Floor View',
-    restaurant: 'Quán Cơm Tấm Sài Gòn',
+    restaurant: BRAND.name.en,
     shift: 'Evening shift',
     calls: 'Calls',
     ready: 'Ready',

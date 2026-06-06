@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createFileRoute, redirect } from '@tanstack/react-router'
+import { z } from 'zod'
 import {
   ArrowUpRight,
   Banknote,
@@ -17,12 +18,23 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { StaffShell } from '@/components/staff-shell'
+import { makeAdminT } from '@/features/admin/data/i18n'
+import { CashierLayout } from '@/features/cashier/components/cashier-layout'
+import { KdsLayout } from '@/features/kitchen/components/kds-layout'
+import { WaiterLayout } from '@/features/waiter/components/waiter-layout'
 import { isStaffAuthenticated, getStaffSession } from '@/lib/auth'
+import { usePermissions } from '@/lib/permission-context'
+import { useLang } from '@/lib/use-lang'
 import { cn } from '@/lib/utils'
 
+const searchSchema = z.object({
+  view: z.enum(['dashboard', 'cashier', 'waiter', 'kitchen']).optional(),
+})
+
 export const Route = createFileRoute('/admin')({
+  validateSearch: (search) => searchSchema.parse(search),
   beforeLoad: ({ location }) => {
-    if (!isStaffAuthenticated('admin')) {
+    if (!isStaffAuthenticated()) {
       throw redirect({
         to: '/login',
         search: {
@@ -34,7 +46,44 @@ export const Route = createFileRoute('/admin')({
 })
 
 export const RouteComponent = () => {
+  const { view: requestedView } = Route.useSearch()
+  const { permissions, loading } = usePermissions()
+
+  const allowedViews = [
+    permissions.has('identity.manage') && 'dashboard',
+    permissions.has('billing.process') && 'cashier',
+    permissions.has('dining.serve') && 'waiter',
+    permissions.has('kitchen.operate') && 'kitchen',
+  ].filter(Boolean) as Array<'dashboard' | 'cashier' | 'waiter' | 'kitchen'>
+
+  const view =
+    requestedView && allowedViews.includes(requestedView) ? requestedView : allowedViews[0]
+
+  if (!view && loading) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-[var(--bg)] text-sm text-[var(--text-secondary)]">
+        Đang tải quyền truy cập...
+      </div>
+    )
+  }
+  if (!view) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-[var(--bg)] text-sm text-[var(--system-red)]">
+        Tài khoản chưa được cấp quyền sử dụng hệ thống.
+      </div>
+    )
+  }
+
+  if (view === 'cashier') return <CashierLayout />
+  if (view === 'waiter') return <WaiterLayout />
+  if (view === 'kitchen') return <KdsLayout />
+  return <AdminDashboard />
+}
+
+const AdminDashboard = () => {
   const session = getStaffSession()
+  const { lang, setLang } = useLang()
+  const t = makeAdminT(lang)
   const [now, setNow] = useState(() => new Date())
 
   useEffect(() => {
@@ -42,13 +91,14 @@ export const RouteComponent = () => {
     return () => clearInterval(timer)
   }, [])
 
-  const fmtDate = now.toLocaleDateString('vi-VN', {
+  const locale = lang === 'vi' ? 'vi-VN' : 'en-US'
+  const fmtDate = now.toLocaleDateString(locale, {
     weekday: 'long',
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
   })
-  const fmtTime = now.toLocaleTimeString('vi-VN', {
+  const fmtTime = now.toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
@@ -57,14 +107,13 @@ export const RouteComponent = () => {
   return (
     <StaffShell
       role="admin"
-      title="Quản trị vận hành"
+      title={t('dashboard_title')}
       subtitle={`${session?.name ?? 'Administrator'} · ${fmtDate}`}
-      eyebrow="Admin Portal"
+      lang={lang}
+      setLang={setLang}
       headerCenter={
         <div className="flex items-center gap-3 rounded-full bg-[var(--surface-grouped)]/70 px-4 py-2 text-sm text-[var(--text-secondary)]">
           <span className="font-mono font-semibold tabular-nums text-[var(--text)]">{fmtTime}</span>
-          <span className="h-4 w-px bg-[var(--separator)]" />
-          <span className="font-semibold">Backend API adapter · JWT staff auth</span>
         </div>
       }
       contentClassName="bg-[var(--surface-grouped)]/45"
@@ -72,50 +121,33 @@ export const RouteComponent = () => {
       <div className="mx-auto max-w-7xl space-y-6">
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard
-            title="Doanh thu hôm nay"
+            title={t('metric_revenue')}
             value="12.450.000 ₫"
-            sub="24 hóa đơn hoàn tất · +15%"
+            sub="24 · +15%"
             icon={Banknote}
             tone="green"
           />
           <MetricCard
-            title="Bàn đang hoạt động"
+            title={t('metric_tables')}
             value="18 / 24"
-            sub="Tầng 1: 8 · Tầng 2: 6 · Garden: 4"
+            sub="T1: 8 · T2: 6 · Garden: 4"
             icon={Table2}
             tone="blue"
           />
-          <MetricCard
-            title="Món chờ bếp"
-            value="8 món"
-            sub="Thời gian trả món TB 14 phút"
-            icon={ChefHat}
-            tone="orange"
-          />
-          <MetricCard
-            title="Yêu cầu thanh toán"
-            value="3 bàn"
-            sub="POS đang chờ xác nhận"
-            icon={Clock}
-            tone="purple"
-          />
+          <MetricCard title={t('metric_kitchen')} value="8" sub="~14'" icon={ChefHat} tone="orange" />
+          <MetricCard title={t('metric_payments')} value="3" sub="POS" icon={Clock} tone="purple" />
         </section>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
           <Card className="overflow-hidden bg-[var(--material-regular)] backdrop-blur-2xl">
             <CardHeader className="border-b border-[var(--separator)] pb-4">
               <div className="flex items-center justify-between gap-3">
-                <div>
-                  <CardTitle className="flex items-center gap-2 text-[20px]">
-                    <UserCheck className="size-5 text-[var(--system-purple)]" />
-                    Ca trực nhân viên
-                  </CardTitle>
-                  <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                    Phiên đăng nhập dùng JWT thật từ backend API.
-                  </p>
-                </div>
+                <CardTitle className="flex items-center gap-2 text-[20px]">
+                  <UserCheck className="size-5 text-[var(--system-purple)]" />
+                  {t('staff_on_shift')}
+                </CardTitle>
                 <Badge variant="success" className="px-3 py-1.5">
-                  4 đang hoạt động
+                  {t('active_count', 4)}
                 </Badge>
               </div>
             </CardHeader>
@@ -124,42 +156,18 @@ export const RouteComponent = () => {
                 <table className="w-full min-w-[640px] text-left text-sm">
                   <thead className="bg-[var(--surface-grouped)]/60 text-[12px] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
                     <tr>
-                      <th className="px-5 py-3 font-bold">Nhân viên</th>
-                      <th className="px-5 py-3 font-bold">Mã số</th>
-                      <th className="px-5 py-3 font-bold">Bộ phận</th>
-                      <th className="px-5 py-3 text-center font-bold">Trạng thái</th>
-                      <th className="px-5 py-3 text-right font-bold">Thời gian</th>
+                      <th className="px-5 py-3 font-bold">{t('col_staff')}</th>
+                      <th className="px-5 py-3 font-bold">{t('col_code')}</th>
+                      <th className="px-5 py-3 font-bold">{t('col_dept')}</th>
+                      <th className="px-5 py-3 text-center font-bold">{t('col_status')}</th>
+                      <th className="px-5 py-3 text-right font-bold">{t('col_time')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--separator)]">
-                    <StaffRow
-                      name="Nguyễn Quản Trị"
-                      code="ADMIN001"
-                      role="Admin"
-                      tone="purple"
-                      time="6h 45m"
-                    />
-                    <StaffRow
-                      name="Trần Thu Ngân"
-                      code="CASH001"
-                      role="Cashier"
-                      tone="green"
-                      time="4h 12m"
-                    />
-                    <StaffRow
-                      name="Lê Phục Vụ"
-                      code="WAIT001"
-                      role="Waiter"
-                      tone="blue"
-                      time="3h 28m"
-                    />
-                    <StaffRow
-                      name="Phạm Đầu Bếp"
-                      code="KITCH001"
-                      role="Kitchen"
-                      tone="orange"
-                      time="5h 02m"
-                    />
+                    <StaffRow name="Nguyễn Quản Trị" code="ADMIN001" role="Admin" tone="purple" time="6h 45m" onDuty={t('on_duty')} />
+                    <StaffRow name="Trần Thu Ngân" code="CASH001" role="Cashier" tone="green" time="4h 12m" onDuty={t('on_duty')} />
+                    <StaffRow name="Lê Phục Vụ" code="WAIT001" role="Waiter" tone="blue" time="3h 28m" onDuty={t('on_duty')} />
+                    <StaffRow name="Phạm Đầu Bếp" code="KITCH001" role="Kitchen" tone="orange" time="5h 02m" onDuty={t('on_duty')} />
                   </tbody>
                 </table>
               </div>
@@ -170,28 +178,13 @@ export const RouteComponent = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-[20px]">
                 <Settings className="size-5 text-[var(--system-purple)]" />
-                Lệnh nhanh
+                {t('quick_actions')}
               </CardTitle>
-              <p className="text-sm text-[var(--text-secondary)]">
-                Mẫu shadcn-admin đổi thành tác vụ nhà hàng.
-              </p>
             </CardHeader>
             <CardContent className="space-y-3">
-              <ActionButton
-                label="Xem báo cáo doanh thu"
-                desc="Xuất file tài chính ngày"
-                icon={FileText}
-              />
-              <ActionButton
-                label="Cấu hình sơ đồ bàn"
-                desc="Chỉnh phân khu và sức chứa"
-                icon={TrendingUp}
-              />
-              <ActionButton
-                label="Quản lý danh mục món"
-                desc="Đổi giá, ẩn/hiện món"
-                icon={UtensilsCrossed}
-              />
+              <ActionButton label={t('action_report')} desc={t('action_report_desc')} icon={FileText} />
+              <ActionButton label={t('action_floor')} desc={t('action_floor_desc')} icon={TrendingUp} />
+              <ActionButton label={t('action_menu')} desc={t('action_menu_desc')} icon={UtensilsCrossed} />
             </CardContent>
           </Card>
         </div>
@@ -248,12 +241,14 @@ function StaffRow({
   role,
   tone,
   time,
+  onDuty,
 }: {
   name: string
   code: string
   role: string
   tone: 'green' | 'blue' | 'orange' | 'purple'
   time: string
+  onDuty: string
 }) {
   return (
     <tr className="transition-colors duration-[220ms] hover:bg-[var(--surface-grouped)]/50">
@@ -275,7 +270,7 @@ function StaffRow({
       <td className="px-5 py-4 text-center">
         <span className="inline-flex items-center gap-2 text-xs font-bold text-[var(--system-green)]">
           <span className="size-2 rounded-full bg-[var(--system-green)]" />
-          Đang trực
+          {onDuty}
         </span>
       </td>
       <td className="px-5 py-4 text-right font-mono text-xs text-[var(--text-secondary)]">

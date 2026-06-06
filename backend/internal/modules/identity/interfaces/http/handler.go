@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	"restaurant-management/internal/modules/identity/application"
 	"restaurant-management/internal/platform/auth"
@@ -14,20 +15,24 @@ import (
 
 type Handler struct {
 	Authenticate *application.Authenticate
+	GetSession   *application.GetSession
 	ManageUsers  *application.ManageUsers
 }
 
-func NewHandler(authenticate *application.Authenticate, manageUsers *application.ManageUsers) *Handler {
+func NewHandler(authenticate *application.Authenticate, getSession *application.GetSession, manageUsers *application.ManageUsers) *Handler {
 	return &Handler{
 		Authenticate: authenticate,
+		GetSession:   getSession,
 		ManageUsers:  manageUsers,
 	}
 }
 
-func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string) {
+func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver) {
 	g := r.Group("/identity")
 	g.POST("/authenticate", h.authenticate) // public: login, no token yet
-	admin := g.Group("", auth.JWT(secret), auth.RBAC("MANAGER"))
+	authenticated := g.Group("", auth.JWT(secret))
+	authenticated.GET("/me", h.me)
+	admin := authenticated.Group("", auth.RequirePermission(resolver, auth.PermissionIdentityManage))
 	admin.POST("/manage-users", h.manageUsers)
 }
 
@@ -38,6 +43,25 @@ func (h *Handler) authenticate(c *gin.Context) {
 		return
 	}
 	out, err := h.Authenticate.Handle(c.Request.Context(), req)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) me(c *gin.Context) {
+	restaurantID, ok := tenant.RestaurantID(c.Request.Context())
+	if !ok {
+		httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant"))
+		return
+	}
+	userID, err := uuid.Parse(c.GetString(auth.CtxUserID))
+	if err != nil || userID == uuid.Nil {
+		httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "invalid user claim"))
+		return
+	}
+	out, err := h.GetSession.Handle(c.Request.Context(), restaurantID, userID)
 	if err != nil {
 		httpx.RespondError(c, err)
 		return

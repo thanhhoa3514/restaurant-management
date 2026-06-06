@@ -10,6 +10,7 @@ import (
 )
 
 type Envelope struct {
+	Code  int        `json:"code"`
 	Data  any        `json:"data"`
 	Meta  any        `json:"meta,omitempty"`
 	Error *ErrorBody `json:"error"`
@@ -21,11 +22,11 @@ type ErrorBody struct {
 }
 
 func Respond(c *gin.Context, status int, data any, meta any) {
-	c.JSON(status, Envelope{Data: data, Meta: meta, Error: nil})
+	c.JSON(status, Envelope{Code: status, Data: data, Meta: meta, Error: nil})
 }
 func RespondError(c *gin.Context, err error) {
 	status, body := MapError(err)
-	c.JSON(status, Envelope{Data: nil, Error: body})
+	c.JSON(status, Envelope{Code: status, Data: nil, Error: body})
 }
 
 func MapError(err error) (int, *ErrorBody) {

@@ -22,6 +22,7 @@ export const WaiterLayout: FC = () => {
   return (
     <StaffShell
       role="waiter"
+      activeView="waiter"
       brandName={t('restaurant')}
       title={t('floor_view')}
       subtitle={`${t('restaurant')} · ${t('shift')}`}

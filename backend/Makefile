@@ -1,13 +1,32 @@
-.PHONY: build run migrate seed lint test vet tidy
+.PHONY: build run migrate seed lint test vet tidy db-up dev compose-up compose-migrate
+
+COMPOSE_FILE := deployments/docker-compose.yml
+# Match deployments/docker-compose.yml default host port (5440).
+DATABASE_URL ?= postgres://postgres:postgres@localhost:5440/restaurant?sslmode=disable
+export DATABASE_URL
 
 build:
 	go build ./...
 
-run:
-	go run ./cmd/api
+db-up:
+	docker compose -f $(COMPOSE_FILE) up -d postgres
 
 migrate:
-	go run github.com/pressly/goose/v3/cmd/goose@latest -dir migrations postgres "$${DATABASE_URL}" up
+	go run ./cmd/migrate
+
+compose-migrate:
+	docker compose -f $(COMPOSE_FILE) run --rm migrate
+
+compose-up:
+	docker compose -f $(COMPOSE_FILE) up -d --build
+
+dev: db-up
+	@echo "Waiting for postgres..."
+	@until docker compose -f $(COMPOSE_FILE) exec -T postgres pg_isready -U postgres -d restaurant >/dev/null 2>&1; do sleep 1; done
+	$(MAKE) run
+
+run: migrate
+	go run ./cmd/api
 
 seed:
 	go run ./cmd/seed

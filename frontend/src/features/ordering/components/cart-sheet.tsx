@@ -1,4 +1,5 @@
 import { useState, type FC } from 'react'
+import { Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
@@ -109,11 +110,7 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
         <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-3">
           {state.cart.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 gap-2">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-quaternary">
-                <circle cx="9" cy="21" r="1" />
-                <circle cx="20" cy="21" r="1" />
-                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-              </svg>
+              <ShoppingCart size={32} className="text-quaternary" />
               <p className="text-sm text-tertiary">{t.empty_cart}</p>
               <p className="text-xs text-quaternary">{t.empty_cart_hint}</p>
             </div>
@@ -193,9 +190,7 @@ const CartLineRow: FC<CartLineRowProps> = ({ line, index, onRemove, onQtyChange 
             className="size-7 rounded-full bg-surface-grouped flex items-center justify-center shrink-0 active:scale-90 transition-transform"
             onClick={() => onRemove(index)}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-tertiary">
-              <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-            </svg>
+            <Trash2 size={14} className="text-tertiary" />
           </button>
         </div>
         <div className="flex items-center justify-between mt-2">
@@ -204,9 +199,7 @@ const CartLineRow: FC<CartLineRowProps> = ({ line, index, onRemove, onQtyChange 
               className="size-7 rounded-full bg-surface-grouped flex items-center justify-center text-primary active:scale-90 transition-transform"
               onClick={() => onQtyChange(index, -1)}
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M5 12h14" />
-              </svg>
+              <Minus size={12} />
             </button>
             <span className="text-sm font-semibold text-primary min-w-5 text-center tabular-nums">
               {line.quantity}
@@ -215,9 +208,7 @@ const CartLineRow: FC<CartLineRowProps> = ({ line, index, onRemove, onQtyChange 
               className="size-7 rounded-full bg-surface-grouped flex items-center justify-center text-primary active:scale-90 transition-transform"
               onClick={() => onQtyChange(index, 1)}
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
+              <Plus size={12} />
             </button>
           </div>
           <span className="text-sm font-semibold text-primary tabular-nums">

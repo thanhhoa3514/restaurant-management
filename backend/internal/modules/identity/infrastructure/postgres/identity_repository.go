@@ -71,6 +71,69 @@ func (r *Repository) FindByUsername(ctx context.Context, restaurantID uuid.UUID,
 	return user, nil
 }
 
+func (r *Repository) FindByID(ctx context.Context, restaurantID, userID uuid.UUID) (*domain.User, error) {
+	user := &domain.User{}
+	err := r.q(ctx).QueryRow(ctx, `
+		SELECT u.id, u.restaurant_id, u.username, u.password_hash, u.full_name,
+		       u.status, u.role_id, COALESCE(ro.name, ''), u.locked_until,
+		       u.version, u.deleted_at
+		FROM users u
+		LEFT JOIN roles ro ON ro.id = u.role_id AND ro.deleted_at IS NULL
+		WHERE u.restaurant_id = $1
+		  AND u.id = $2
+		  AND u.deleted_at IS NULL
+	`, restaurantID, userID).Scan(
+		&user.ID,
+		&user.RestaurantID,
+		&user.Username,
+		&user.PasswordHash,
+		&user.FullName,
+		&user.Status,
+		&user.RoleID,
+		&user.RoleName,
+		&user.LockedUntil,
+		&user.Version,
+		&user.DeletedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperr.New(apperr.CodeNotFound, "user not found")
+	}
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func (r *Repository) ResolvePermissionCodes(ctx context.Context, restaurantID, userID uuid.UUID) ([]string, error) {
+	rows, err := r.q(ctx).Query(ctx, `
+		SELECT p.code
+		FROM users u
+		JOIN role_permissions rp ON rp.role_id = u.role_id
+		JOIN permissions p ON p.id = rp.permission_id AND p.deleted_at IS NULL
+		WHERE u.restaurant_id = $1
+		  AND u.id = $2
+		  AND u.deleted_at IS NULL
+		ORDER BY p.module, p.code
+	`, restaurantID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	codes := make([]string, 0, 8)
+	for rows.Next() {
+		var code string
+		if err := rows.Scan(&code); err != nil {
+			return nil, err
+		}
+		codes = append(codes, code)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return codes, nil
+}
+
 func (r *Repository) RecordLoginSuccess(ctx context.Context, restaurantID, userID uuid.UUID) error {
 	cmd, err := r.q(ctx).Exec(ctx, `
 		UPDATE users

@@ -12,7 +12,19 @@ export interface StaffSession {
   userId: string
   restaurantId: string
   expiresAt: string
+  permissions: PermissionCode[]
 }
+
+export type PermissionCode =
+  | 'billing.process'
+  | 'identity.manage'
+  | 'ordering.operate'
+  | 'ordering.staff'
+  | 'kitchen.operate'
+  | 'dining.serve'
+  | 'dining.cashier'
+  | 'dining.manage'
+  | 'catalog.manage'
 
 interface AuthEnvelope<T> {
   data: T | null
@@ -24,18 +36,14 @@ interface AuthenticateResponse {
   token: string
   user_id: string
   role: string
+  name: string
+  permissions: PermissionCode[]
   restaurant_id: string
   expires_at: string
 }
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
-
-const ROLE_TO_BACKEND: Record<StaffRole, BackendStaffRole> = {
-  admin: 'MANAGER',
-  cashier: 'CASHIER',
-  waiter: 'SERVER',
-  kitchen: 'KITCHEN',
-}
+const STAFF_SESSION_EVENT = 'staff-session-changed'
 
 const BACKEND_TO_ROLE: Record<BackendStaffRole, StaffRole> = {
   MANAGER: 'admin',
@@ -79,7 +87,6 @@ export async function loginStaff(
   restaurantCode: string,
   code: string,
   pass: string,
-  expectedRole: StaffRole,
 ): Promise<StaffSession | null> {
   const res = await fetch(`${API_BASE_URL}/api/v1/identity/authenticate`, {
     method: 'POST',
@@ -104,25 +111,27 @@ export async function loginStaff(
 
   const backendRole = normalizeBackendRole(envelope.data.role)
   if (!backendRole) throw new Error('Vai trò người dùng không hợp lệ')
-  if (backendRole !== ROLE_TO_BACKEND[expectedRole]) return null
 
   const session: StaffSession = {
     code: code.trim(),
     restaurantCode: restaurantCode.trim(),
     role: BACKEND_TO_ROLE[backendRole],
     backendRole,
-    name: displayNameFor(code, backendRole),
+    name: envelope.data.name || displayNameFor(code, backendRole),
     token: envelope.data.token,
     userId: envelope.data.user_id,
     restaurantId: envelope.data.restaurant_id,
     expiresAt: envelope.data.expires_at,
+    permissions: envelope.data.permissions ?? [],
   }
   localStorage.setItem('staff_session', JSON.stringify(session))
+  window.dispatchEvent(new Event(STAFF_SESSION_EVENT))
   return session
 }
 
 export function logoutStaff(): void {
   localStorage.removeItem('staff_session')
+  window.dispatchEvent(new Event(STAFF_SESSION_EVENT))
 }
 
 export function getStaffSession(): StaffSession | null {
@@ -131,13 +140,14 @@ export function getStaffSession(): StaffSession | null {
   try {
     const session = JSON.parse(raw) as Partial<StaffSession>
     if (!session.token || !session.role || !session.expiresAt) return null
+    session.permissions = Array.isArray(session.permissions) ? session.permissions : []
     return session as StaffSession
   } catch {
     return null
   }
 }
 
-export function isStaffAuthenticated(role?: StaffRole): boolean {
+export function isStaffAuthenticated(): boolean {
   const session = getStaffSession()
   if (!session) return false
   if (
@@ -147,9 +157,31 @@ export function isStaffAuthenticated(role?: StaffRole): boolean {
     logoutStaff()
     return false
   }
-  if (role && session.role !== role && session.role !== 'admin') {
-    // Admin/manager has superuser access to all staff views.
-    return false
-  }
   return true
+}
+
+export function hasStaffPermission(permission: PermissionCode): boolean {
+  const session = getStaffSession()
+  return Boolean(session?.permissions.includes(permission))
+}
+
+export function updateStaffSession(
+  updates: Partial<Pick<StaffSession, 'name' | 'backendRole' | 'role' | 'permissions'>>,
+): StaffSession | null {
+  const current = getStaffSession()
+  if (!current) return null
+  const next = { ...current, ...updates }
+  localStorage.setItem('staff_session', JSON.stringify(next))
+  window.dispatchEvent(new Event(STAFF_SESSION_EVENT))
+  return next
+}
+
+export function subscribeStaffSession(listener: (session: StaffSession | null) => void): () => void {
+  const handleChange = () => listener(getStaffSession())
+  window.addEventListener(STAFF_SESSION_EVENT, handleChange)
+  window.addEventListener('storage', handleChange)
+  return () => {
+    window.removeEventListener(STAFF_SESSION_EVENT, handleChange)
+    window.removeEventListener('storage', handleChange)
+  }
 }

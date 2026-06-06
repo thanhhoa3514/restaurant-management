@@ -10,8 +10,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet'
 import { SecureActionDialog } from '@/components/SecureActionDialog'
 import { StaffShell } from '@/components/staff-shell'
+import { makeAdminT, type AdminT } from '@/features/admin/data/i18n'
 import { ApiError } from '@/lib/api'
-import { isStaffAuthenticated } from '@/lib/auth'
+import { hasStaffPermission, isStaffAuthenticated } from '@/lib/auth'
+import { useLang } from '@/lib/use-lang'
 import { cn } from '@/lib/utils'
 import { buildQROrderURL, listTableQRs, manageTableQR } from '@/features/dining/api'
 import type { TableQR } from '@/features/dining/types'
@@ -20,13 +22,16 @@ const TABLE_QRS_KEY = ['dining', 'table-qrs'] as const
 
 export const Route = createFileRoute('/admin/table-qrs')({
   beforeLoad: ({ location }) => {
-    if (!isStaffAuthenticated('admin')) {
+    if (!isStaffAuthenticated()) {
       throw redirect({ to: '/login', search: { redirect: location.href } })
     }
+    if (!hasStaffPermission('dining.manage')) throw redirect({ to: '/admin' })
   },
 })
 
 export const RouteComponent = () => {
+  const { lang, setLang } = useLang()
+  const t = makeAdminT(lang)
   const query = useQuery({ queryKey: TABLE_QRS_KEY, queryFn: listTableQRs })
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
@@ -34,30 +39,32 @@ export const RouteComponent = () => {
   const withQR = tables.filter((t) => t.has_active_qr).length
   // Derive the open row from live query data (not a captured snapshot) so the
   // sheet re-renders with the fresh token after a generate/rotate refetch.
-  const selected = tables.find((t) => t.table_id === selectedId) ?? null
+  const selected = tables.find((table) => table.table_id === selectedId) ?? null
 
   return (
     <StaffShell
       role="admin"
-      eyebrow="Admin Portal"
-      title="Mã QR theo bàn"
-      subtitle="Tạo và xoay mã QR gọi món cho từng bàn"
+      activeView="table-qrs"
+      title={t('qr_title')}
+      subtitle={t('qr_subtitle')}
+      lang={lang}
+      setLang={setLang}
       headerCenter={
         <div className="rounded-full bg-[var(--surface-grouped)]/70 px-4 py-2 text-sm font-semibold text-[var(--text-secondary)]">
-          {withQR}/{tables.length} bàn có mã QR
+          {t('qr_summary', withQR, tables.length)}
         </div>
       }
       contentClassName="bg-[var(--surface-grouped)]/45"
     >
       <div className="mx-auto max-w-7xl space-y-6">
         {query.isLoading && (
-          <p className="text-sm text-[var(--text-secondary)]">Đang tải danh sách bàn…</p>
+          <p className="text-sm text-[var(--text-secondary)]">{t('qr_loading')}</p>
         )}
         {query.isError && (
           <Card className="border border-[var(--system-red)]/30 bg-[var(--system-red)]/5">
             <CardContent className="p-5 text-sm text-[var(--system-red)]">
-              Không tải được danh sách bàn:{' '}
-              {query.error instanceof ApiError ? query.error.message : 'lỗi không xác định'}
+              {t('qr_load_error')}:{' '}
+              {query.error instanceof ApiError ? query.error.message : t('qr_unknown_error')}
             </CardContent>
           </Card>
         )}
@@ -65,7 +72,7 @@ export const RouteComponent = () => {
         {query.isSuccess && tables.length === 0 && (
           <Card className="bg-[var(--material-regular)] backdrop-blur-2xl">
             <CardContent className="p-10 text-center text-sm text-[var(--text-secondary)]">
-              Chưa có bàn nào. Thêm bàn ở phần quản lý sơ đồ trước.
+              {t('qr_empty')}
             </CardContent>
           </Card>
         )}
@@ -75,18 +82,19 @@ export const RouteComponent = () => {
             <TableCard
               key={table.table_id}
               table={table}
+              t={t}
               onOpen={() => setSelectedId(table.table_id)}
             />
           ))}
         </section>
       </div>
 
-      <QRDetailSheet table={selected} onClose={() => setSelectedId(null)} />
+      <QRDetailSheet table={selected} t={t} onClose={() => setSelectedId(null)} />
     </StaffShell>
   )
 }
 
-function TableCard({ table, onOpen }: { table: TableQR; onOpen: () => void }) {
+function TableCard({ table, t, onOpen }: { table: TableQR; t: AdminT; onOpen: () => void }) {
   return (
     <button
       type="button"
@@ -119,13 +127,21 @@ function TableCard({ table, onOpen }: { table: TableQR; onOpen: () => void }) {
             : 'bg-[var(--surface-grouped)] text-[var(--text-secondary)]',
         )}
       >
-        {table.has_active_qr ? 'Đã có mã QR' : 'Chưa tạo mã'}
+        {table.has_active_qr ? t('qr_has') : t('qr_none')}
       </Badge>
     </button>
   )
 }
 
-function QRDetailSheet({ table, onClose }: { table: TableQR | null; onClose: () => void }) {
+function QRDetailSheet({
+  table,
+  t,
+  onClose,
+}: {
+  table: TableQR | null
+  t: AdminT
+  onClose: () => void
+}) {
   const queryClient = useQueryClient()
   const [dataUrl, setDataUrl] = useState<string | null>(null)
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
@@ -185,12 +201,12 @@ function QRDetailSheet({ table, onClose }: { table: TableQR | null; onClose: () 
                       {shownDataUrl ? (
                         <img
                           src={shownDataUrl}
-                          alt={`Mã QR ${table.table_name}`}
+                          alt={`${t('qr_title')} · ${table.table_name}`}
                           className="size-64"
                         />
                       ) : (
                         <div className="flex size-64 items-center justify-center text-sm text-zinc-400">
-                          Đang tạo mã…
+                          {t('qr_generating')}
                         </div>
                       )}
                     </div>
@@ -198,7 +214,7 @@ function QRDetailSheet({ table, onClose }: { table: TableQR | null; onClose: () 
                     {orderUrl && (
                       <div className="rounded-[16px] bg-[var(--surface-grouped)]/70 p-3">
                         <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
-                          Liên kết gọi món
+                          {t('qr_link')}
                         </div>
                         <div className="break-all font-mono text-xs text-[var(--text-secondary)]">
                           {orderUrl}
@@ -213,7 +229,7 @@ function QRDetailSheet({ table, onClose }: { table: TableQR | null; onClose: () 
                         onClick={handleCopy}
                       >
                         {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-                        {copied ? 'Đã chép' : 'Chép link'}
+                        {copied ? t('qr_copied') : t('qr_copy')}
                       </Button>
                       <Button
                         variant="secondary"
@@ -223,7 +239,7 @@ function QRDetailSheet({ table, onClose }: { table: TableQR | null; onClose: () 
                       >
                         <a href={shownDataUrl ?? '#'} download={`qr-${table.table_code}.png`}>
                           <Download className="size-4" />
-                          Tải PNG
+                          {t('qr_download')}
                         </a>
                       </Button>
                     </div>
@@ -235,14 +251,14 @@ function QRDetailSheet({ table, onClose }: { table: TableQR | null; onClose: () 
                       onClick={() => setRotateOpen(true)}
                     >
                       <RefreshCw className="size-4" />
-                      Xoay mã QR mới
+                      {t('qr_rotate')}
                     </Button>
                   </>
                 ) : (
                   <div className="space-y-4">
                     <Card className="border border-[var(--separator)] bg-[var(--material-regular)] p-4 backdrop-blur-2xl">
                       <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
-                        Bàn này chưa có mã QR. Tạo mã để khách quét và gọi món.
+                        {t('qr_create_hint')}
                       </p>
                     </Card>
                     <Button
@@ -251,7 +267,7 @@ function QRDetailSheet({ table, onClose }: { table: TableQR | null; onClose: () 
                       onClick={() => mutation.mutate({ tableId: table.table_id })}
                     >
                       <Plus className="size-4" />
-                      {mutation.isPending ? 'Đang tạo…' : 'Tạo mã QR'}
+                      {mutation.isPending ? t('qr_creating') : t('qr_create')}
                     </Button>
                   </div>
                 )}
@@ -260,7 +276,7 @@ function QRDetailSheet({ table, onClose }: { table: TableQR | null; onClose: () 
                   <p className="text-sm text-[var(--system-red)]">
                     {mutation.error instanceof ApiError
                       ? mutation.error.message
-                      : 'Thao tác thất bại'}
+                      : t('qr_action_failed')}
                   </p>
                 )}
               </div>
@@ -272,12 +288,12 @@ function QRDetailSheet({ table, onClose }: { table: TableQR | null; onClose: () 
       {table && (
         <SecureActionDialog
           open={rotateOpen}
-          title="Xoay mã QR"
-          description={`Tạo mã QR mới cho ${table.table_name} sẽ vô hiệu hóa mã đang in/dán tại bàn. Khách dùng mã cũ sẽ không gọi món được. Hành động này không thể hoàn tác.`}
+          title={t('qr_rotate_title')}
+          description={t('qr_rotate_desc', table.table_name)}
           requireConfirmationText={table.table_code}
-          inputPlaceholder={`Nhập mã bàn "${table.table_code}" để xác nhận`}
-          confirmText="Xoay mã"
-          cancelText="Hủy"
+          inputPlaceholder={t('qr_confirm_placeholder', table.table_code)}
+          confirmText={t('qr_rotate_confirm')}
+          cancelText={t('qr_cancel')}
           variant="warning"
           onOpenChange={setRotateOpen}
           onConfirm={() => mutation.mutate({ tableId: table.table_id, rotate: true })}

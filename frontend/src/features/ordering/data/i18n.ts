@@ -1,7 +1,9 @@
+import { BRAND } from '@/lib/brand'
+
 export const DICT = {
   vi: {
-    restaurant: 'Quán Cơm Tấm Sài Gòn',
-    tagline: 'Hương vị Sài Gòn — phục vụ tại bàn',
+    restaurant: BRAND.name.vi,
+    tagline: BRAND.tagline.vi,
     table: 'Bàn số',
     area: 'Khu vực',
     floor: 'Tầng 2 — Khu sân vườn',
@@ -50,8 +52,8 @@ export const DICT = {
     confirm_order: 'Xác nhận đơn',
   },
   en: {
-    restaurant: 'Quán Cơm Tấm Sài Gòn',
-    tagline: 'Saigon flavors — served at your table',
+    restaurant: BRAND.name.en,
+    tagline: BRAND.tagline.en,
     table: 'Table',
     area: 'Area',
     floor: '2nd Floor — Garden Section',

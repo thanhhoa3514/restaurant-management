@@ -36,6 +36,7 @@ import (
 	"restaurant-management/internal/platform/outbox"
 	"restaurant-management/internal/platform/postgres"
 	"restaurant-management/internal/platform/realtime"
+	"restaurant-management/internal/platform/swaggerui"
 )
 
 func main() {
@@ -80,6 +81,7 @@ func main() {
 		httpx.Respond(c, http.StatusOK, gin.H{"status": "ready"}, nil)
 	})
 	router.GET("/ws", hub.ServeGin)
+	swaggerui.Register(router)
 
 	api := router.Group("/api/v1")
 	wireRoutes(api, tx, dispatcher, pool, cfg)
@@ -110,16 +112,20 @@ func main() {
 func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outbox.Dispatcher, pool *pgxpool.Pool, cfg config.Config) {
 	secret := cfg.JWTSecret
 	identityRepo := identityrepo.NewRepository(pool)
-	identityHandler := identityhttp.NewHandler(identityapp.NewAuthenticate(tx, identityRepo, outboxWriter, secret, cfg.JWTTTL), identityapp.NewManageUsers(tx, identityRepo, outboxWriter))
-	identityHandler.RegisterRoutes(api, secret)
+	identityHandler := identityhttp.NewHandler(
+		identityapp.NewAuthenticate(tx, identityRepo, outboxWriter, secret, cfg.JWTTTL),
+		identityapp.NewGetSession(identityRepo),
+		identityapp.NewManageUsers(tx, identityRepo, outboxWriter),
+	)
+	identityHandler.RegisterRoutes(api, secret, identityRepo)
 
 	catalogRepo := catalogrepo.NewRepository(pool)
 	catalogHandler := cataloghttp.NewHandler(catalogapp.NewCreateMenuItem(tx, catalogRepo, outboxWriter), catalogapp.NewUpdateMenuItem(tx, catalogRepo, outboxWriter), catalogapp.NewDeleteMenuItem(tx, catalogRepo, outboxWriter), catalogapp.NewToggleAvailability(tx, catalogRepo, outboxWriter), catalogapp.NewListCategories(catalogRepo), catalogapp.NewListMenuItems(catalogRepo), catalogapp.NewGetMenuItem(catalogRepo))
-	catalogHandler.RegisterRoutes(api, secret)
+	catalogHandler.RegisterRoutes(api, secret, identityRepo)
 
 	diningRepo := diningrepo.NewRepository(pool)
 	diningHandler := dininghttp.NewHandler(diningapp.NewOpenSession(tx, diningRepo, outboxWriter), diningapp.NewJoinSession(tx, diningRepo, outboxWriter), diningapp.NewCloseSession(tx, diningRepo, outboxWriter), diningapp.NewManageTableQR(tx, diningRepo, outboxWriter), diningapp.NewListTableQRs(diningRepo))
-	diningHandler.RegisterRoutes(api, secret)
+	diningHandler.RegisterRoutes(api, secret, identityRepo)
 	guestGroup := api.Group("/guest", auth.QRSessionToken(diningRepo))
 	catalogHandler.RegisterGuestRoutes(guestGroup)
 
@@ -139,10 +145,10 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 		orderingapp.NewStaffUpdateItemStatus(tx, orderingRepo, outboxWriter),
 		orderingapp.NewKitchenQueue(orderingRepo),
 	)
-	orderingHandler.RegisterRoutes(api, secret)
-	orderingHandler.RegisterStaffRoutes(api, secret)
+	orderingHandler.RegisterRoutes(api, secret, identityRepo)
+	orderingHandler.RegisterStaffRoutes(api, secret, identityRepo)
 	orderingHandler.RegisterGuestRoutes(guestGroup)
-	orderingHandler.RegisterKitchenRoutes(api, secret)
+	orderingHandler.RegisterKitchenRoutes(api, secret, identityRepo)
 
 	billingRepo := billingrepo.NewRepository(pool)
 	gateways := buildGatewayRegistry(cfg)
@@ -153,7 +159,7 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 		billingapp.NewHandleWebhook(tx, billingRepo, outboxWriter, gateways, cfg.MockWebhookSecret),
 		cfg.AppEnv,
 	)
-	billingHandler.RegisterRoutes(api, secret)
+	billingHandler.RegisterRoutes(api, secret, identityRepo)
 	billingHandler.RegisterWebhookRoutes(api)
 }
 

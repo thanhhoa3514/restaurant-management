@@ -22,6 +22,7 @@ type fakeRepo struct {
 	user         *domain.User
 	resolveErr   error
 	findErr      error
+	permissions  []string
 	successes    int
 	failures     int
 }
@@ -37,6 +38,15 @@ func (r *fakeRepo) FindByUsername(context.Context, uuid.UUID, string) (*domain.U
 		return nil, r.findErr
 	}
 	return r.user, nil
+}
+func (r *fakeRepo) FindByID(context.Context, uuid.UUID, uuid.UUID) (*domain.User, error) {
+	if r.findErr != nil {
+		return nil, r.findErr
+	}
+	return r.user, nil
+}
+func (r *fakeRepo) ResolvePermissionCodes(context.Context, uuid.UUID, uuid.UUID) ([]string, error) {
+	return r.permissions, nil
 }
 func (r *fakeRepo) RecordLoginSuccess(context.Context, uuid.UUID, uuid.UUID) error {
 	r.successes++
@@ -94,7 +104,11 @@ func TestAuthenticateHandle(t *testing.T) {
 			if tc.req != (AuthenticateRequest{}) {
 				req = tc.req
 			}
-			repo := &fakeRepo{restaurantID: rid, user: activeUser(t, rid)}
+			repo := &fakeRepo{
+				restaurantID: rid,
+				user:         activeUser(t, rid),
+				permissions:  []string{"billing.process", "ordering.staff"},
+			}
 			if tc.mutate != nil {
 				tc.mutate(repo)
 			}
@@ -110,6 +124,8 @@ func TestAuthenticateHandle(t *testing.T) {
 				require.Equal(t, repo.user.ID, out.UserID)
 				require.Equal(t, rid, out.RestaurantID)
 				require.Equal(t, "MANAGER", out.Role)
+				require.Equal(t, repo.user.FullName, out.Name)
+				require.Equal(t, repo.permissions, out.Permissions)
 			}
 			require.Equal(t, tc.wantSuccesses, repo.successes)
 			require.Equal(t, tc.wantFailures, repo.failures)

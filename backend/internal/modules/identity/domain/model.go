@@ -49,6 +49,8 @@ type Event struct {
 
 type UserRepository interface {
 	FindByUsername(ctx context.Context, restaurantID uuid.UUID, username string) (*User, error)
+	FindByID(ctx context.Context, restaurantID, userID uuid.UUID) (*User, error)
+	ResolvePermissionCodes(ctx context.Context, restaurantID, userID uuid.UUID) ([]string, error)
 	ResolveRestaurantIDByCode(ctx context.Context, code string) (uuid.UUID, error)
 	RecordLoginSuccess(ctx context.Context, restaurantID, userID uuid.UUID) error
 	RecordLoginFailure(ctx context.Context, restaurantID, userID uuid.UUID) error

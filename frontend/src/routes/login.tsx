@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Spinner } from '@/components/ui/spinner'
 import { createFileRoute, useNavigate, useSearch } from '@tanstack/react-router'
 import { z } from 'zod'
 import {
@@ -15,6 +16,7 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import { loginStaff, DEMO_CREDENTIALS, type StaffRole } from '@/lib/auth'
+import { BRAND } from '@/lib/brand'
 
 const searchSchema = z.object({
   redirect: z.string().optional(),
@@ -62,10 +64,10 @@ export const RouteComponent = () => {
     setLoading(true)
 
     try {
-      const session = await loginStaff(restaurantCode, code, password, role)
+      const session = await loginStaff(restaurantCode, code, password)
 
       if (!session) {
-        setError('Tài khoản, mật khẩu hoặc vai trò không chính xác!')
+        setError('Tài khoản hoặc mật khẩu không chính xác!')
         setLoading(false)
         return
       }
@@ -77,10 +79,9 @@ export const RouteComponent = () => {
       window.setTimeout(() => {
         if (redirect) {
           window.location.href = redirect
-        } else if (session.role === 'admin') navigate({ to: '/admin' })
-        else if (session.role === 'cashier') navigate({ to: '/cashier' })
-        else if (session.role === 'waiter') navigate({ to: '/waiter' })
-        else if (session.role === 'kitchen') navigate({ to: '/kitchen' })
+        } else {
+          navigate({ to: '/admin' })
+        }
       }, 1200)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không thể đăng nhập vào API')
@@ -145,7 +146,7 @@ export const RouteComponent = () => {
           <div className="inline-flex size-14 items-center justify-center rounded-2xl bg-zinc-900 border border-zinc-800 text-2xl font-black text-white shadow-xl">
             ₫
           </div>
-          <h2 className="text-3xl font-extrabold tracking-tight text-white">Cơm Tấm Sài Gòn</h2>
+          <h2 className="text-3xl font-extrabold tracking-tight text-white">{BRAND.name.vi}</h2>
           <p className="text-sm font-medium text-zinc-400">Hệ thống Quản lý Vận hành & Gọi món</p>
         </div>
 
@@ -174,7 +175,7 @@ export const RouteComponent = () => {
               {/* Role selector tabs */}
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-                  Vai trò đăng nhập
+                  Tài khoản mẫu
                 </label>
                 <div className="grid grid-cols-4 gap-2">
                   {(Object.keys(roleMeta) as StaffRole[]).map((r) => {
@@ -307,25 +308,7 @@ export const RouteComponent = () => {
               >
                 {loading ? (
                   <div className="flex items-center gap-2">
-                    <svg
-                      className="animate-spin text-zinc-950"
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                    >
-                      <circle
-                        className="opacity-20"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                      />
-                      <path d="M12 2a10 10 0 0 1 10 10" />
-                    </svg>
+                    <Spinner className="size-[18px] text-zinc-950" />
                     <span>Đang kiểm tra...</span>
                   </div>
                 ) : (

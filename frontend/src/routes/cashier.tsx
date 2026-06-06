@@ -1,17 +1,13 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { CashierLayout } from '@/features/cashier/components/cashier-layout'
 import { isStaffAuthenticated } from '@/lib/auth'
 
 export const Route = createFileRoute('/cashier')({
-  beforeLoad: ({ location }) => {
-    if (!isStaffAuthenticated('cashier')) {
+  beforeLoad: () => {
+    if (!isStaffAuthenticated()) {
       throw redirect({
         to: '/login',
-        search: {
-          redirect: location.href,
-        },
       })
     }
+    throw redirect({ to: '/admin', search: { view: 'cashier' } })
   },
-  component: CashierLayout,
 })

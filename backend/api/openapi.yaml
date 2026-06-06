@@ -4,9 +4,11 @@ info:
   version: 0.1.0
   description: >
     HTTP API for QR-based restaurant ordering. Most staff endpoints require a JWT
-    bearer token (RBAC-gated by role). Guest endpoints under /api/v1/guest require an
+    bearer token and a server-resolved permission. Guest endpoints under /api/v1/guest require an
     X-Session-Token issued by /api/v1/dining/join-session. Public endpoints require
     neither.
+  x-response-envelope:
+    description: Every JSON response includes the numeric HTTP status in `code`.
 servers:
   - url: /
 tags:
@@ -59,18 +61,45 @@ paths:
       tags: [identity]
       summary: Login, returns JWT
       security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthenticateRequest'
+            example:
+              restaurant_code: DEMO
+              username: cashier
+              password: demo1234
       responses:
         '200':
-          description: Authenticated
+          description: Authenticated; response includes permission codes for shell rendering
         '401':
           description: Invalid credentials
+  /api/v1/identity/me:
+    get:
+      tags: [identity]
+      summary: Return the current staff identity and permissions
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user, role, restaurant, and permission codes
+        '401':
+          description: Invalid or expired token
   /api/v1/identity/manage-users:
     post:
       tags: [identity]
       summary: Create or update users
       security:
         - bearerAuth: []
-      description: 'RBAC: MANAGER'
+      description: 'Permission: identity.manage'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScaffoldRequest'
       responses:
         '200':
           description: User mutation result
@@ -83,7 +112,13 @@ paths:
       summary: Create menu item
       security:
         - bearerAuth: []
-      description: 'RBAC: MANAGER'
+      description: 'Permission: catalog.manage. Endpoint scaffold.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScaffoldRequest'
       responses:
         '200':
           description: Created
@@ -93,7 +128,13 @@ paths:
       summary: Update menu item
       security:
         - bearerAuth: []
-      description: 'RBAC: MANAGER'
+      description: 'Permission: catalog.manage. Endpoint scaffold.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScaffoldRequest'
       responses:
         '200':
           description: Updated
@@ -103,7 +144,13 @@ paths:
       summary: Delete menu item
       security:
         - bearerAuth: []
-      description: 'RBAC: MANAGER'
+      description: 'Permission: catalog.manage. Endpoint scaffold.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScaffoldRequest'
       responses:
         '200':
           description: Deleted
@@ -113,24 +160,13 @@ paths:
       summary: Set menu item availability
       security:
         - bearerAuth: []
-      description: >
-        RBAC: MANAGER. High-impact: hides/shows an item across the whole system.
-        Takes the explicit target state (not a blind flip) so concurrent edits
-        don't net-cancel and the action is auditable.
+      description: 'Permission: catalog.manage. Endpoint scaffold.'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [item_id, available]
-              properties:
-                item_id:
-                  type: string
-                  format: uuid
-                available:
-                  type: boolean
-                  description: Desired availability state to set
+              $ref: '#/components/schemas/ScaffoldRequest'
       responses:
         '200':
           description: Availability set
@@ -149,6 +185,12 @@ paths:
       tags: [dining]
       summary: QR guest entry; issues session token
       security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JoinSessionRequest'
       responses:
         '200':
           description: Session joined
@@ -158,7 +200,13 @@ paths:
       summary: Open a table session
       security:
         - bearerAuth: []
-      description: 'RBAC: SERVER, MANAGER'
+      description: 'Permission: dining.serve'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenSessionRequest'
       responses:
         '200':
           description: Session opened
@@ -168,7 +216,13 @@ paths:
       summary: Close a table session
       security:
         - bearerAuth: []
-      description: 'RBAC: SERVER, MANAGER'
+      description: 'Permission: dining.cashier'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloseSessionRequest'
       responses:
         '200':
           description: Session closed
@@ -178,10 +232,26 @@ paths:
       summary: Manage table QR codes
       security:
         - bearerAuth: []
-      description: 'RBAC: SERVER, MANAGER'
+      description: 'Permission: dining.manage'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManageTableQRRequest'
       responses:
         '200':
           description: QR managed
+  /api/v1/dining/table-qrs:
+    get:
+      tags: [dining]
+      summary: List restaurant tables and active QR codes
+      security:
+        - bearerAuth: []
+      description: 'Permission: dining.manage'
+      responses:
+        '200':
+          description: Table QR list
 
   /api/v1/guest/menu/categories:
     get:
@@ -198,6 +268,11 @@ paths:
       summary: List menu items (guest)
       security:
         - sessionToken: []
+      parameters:
+        - name: category_id
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
       responses:
         '200':
           description: Item list
@@ -222,6 +297,12 @@ paths:
       summary: Place a guest order
       security:
         - sessionToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GuestPlaceOrderRequest'
       responses:
         '200':
           description: Order placed
@@ -246,6 +327,12 @@ paths:
           in: path
           required: true
           schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GuestEditOrderRequest'
       responses:
         '200':
           description: Order updated
@@ -278,6 +365,12 @@ paths:
           in: path
           required: true
           schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GuestCancelRequest'
       responses:
         '201':
           description: Cancel request created
@@ -288,7 +381,13 @@ paths:
       summary: Place an order (staff)
       security:
         - bearerAuth: []
-      description: 'RBAC: SERVER, KITCHEN, MANAGER'
+      description: 'Permission: ordering.operate'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScaffoldRequest'
       responses:
         '200':
           description: Order placed
@@ -298,7 +397,13 @@ paths:
       summary: Cancel or edit an order item (staff)
       security:
         - bearerAuth: []
-      description: 'RBAC: SERVER, KITCHEN, MANAGER'
+      description: 'Permission: ordering.operate'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScaffoldRequest'
       responses:
         '200':
           description: Item updated
@@ -308,7 +413,13 @@ paths:
       summary: Update an order item's status (staff)
       security:
         - bearerAuth: []
-      description: 'RBAC: SERVER, KITCHEN, MANAGER'
+      description: 'Permission: ordering.operate'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScaffoldRequest'
       responses:
         '200':
           description: Status updated
@@ -318,10 +429,63 @@ paths:
       summary: Approve or reject a guest cancel request (staff)
       security:
         - bearerAuth: []
-      description: 'RBAC: SERVER, KITCHEN, MANAGER'
+      description: 'Permission: ordering.operate'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScaffoldRequest'
       responses:
         '200':
           description: Request reviewed
+
+  /api/v1/staff/tables:
+    get:
+      tags: [ordering]
+      summary: List tables, active sessions, orders, and item statuses for staff
+      security:
+        - bearerAuth: []
+      description: 'Permission: ordering.staff'
+      responses:
+        '200':
+          description: Staff table board
+  /api/v1/staff/sessions/{sessionId}/request-bill:
+    post:
+      tags: [ordering]
+      summary: Mark a dining session as requesting the bill
+      security:
+        - bearerAuth: []
+      description: 'Permission: ordering.staff. This action uses only the sessionId path parameter.'
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Bill request recorded
+  /api/v1/staff/order-items/{itemId}/status:
+    patch:
+      tags: [ordering]
+      summary: Update an order item status from the staff board
+      security:
+        - bearerAuth: []
+      description: 'Permission: ordering.staff'
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateItemStatusRequest'
+      responses:
+        '200':
+          description: Item status updated
 
   /api/v1/kitchen/queue:
     get:
@@ -329,7 +493,7 @@ paths:
       summary: Kitchen display queue
       security:
         - bearerAuth: []
-      description: 'RBAC: KITCHEN, MANAGER'
+      description: 'Permission: kitchen.operate'
       responses:
         '501':
           description: Scaffold stub
@@ -339,12 +503,18 @@ paths:
       summary: Update kitchen item status
       security:
         - bearerAuth: []
-      description: 'RBAC: KITCHEN, MANAGER'
+      description: 'Permission: kitchen.operate'
       parameters:
         - name: id
           in: path
           required: true
           schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateItemStatusRequest'
       responses:
         '501':
           description: Scaffold stub
@@ -355,7 +525,13 @@ paths:
       summary: Build an invoice
       security:
         - bearerAuth: []
-      description: 'RBAC: CASHIER, MANAGER'
+      description: 'Permission: billing.process'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BuildInvoiceRequest'
       responses:
         '200':
           description: Invoice built
@@ -365,7 +541,13 @@ paths:
       summary: Adjust an invoice
       security:
         - bearerAuth: []
-      description: 'RBAC: CASHIER, MANAGER'
+      description: 'Permission: billing.process'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdjustInvoiceRequest'
       responses:
         '200':
           description: Invoice adjusted
@@ -376,10 +558,16 @@ paths:
       security:
         - bearerAuth: []
       description: >
-        RBAC: CASHIER, MANAGER. Cash/card complete synchronously. Configured
+        Permission: billing.process. Cash/card complete synchronously. Configured
         E_WALLET methods create a PROCESSING payment and return pay_url,
         deeplink, and qr_code_url for gateway checkout; the invoice is paid only
         after the provider webhook is reconciled.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcessPaymentRequest'
       responses:
         '200':
           description: Payment processed or initiated
@@ -395,7 +583,18 @@ paths:
           schema:
             type: string
             enum: [momo, zalopay, mock]
+        - name: X-Mock-Signature
+          in: header
+          required: false
+          description: HMAC signature required by the mock provider.
+          schema: { type: string }
       description: Public signature-authenticated callback. Amount must match the stored payment.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentWebhookRequest'
       responses:
         '200':
           description: Provider-specific acknowledgement
@@ -407,6 +606,12 @@ paths:
       summary: Complete mock e-wallet payment in non-production
       security: []
       description: Registered only when APP_ENV is not production; signs and routes through the real mock webhook handler.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MockCompletePaymentRequest'
       responses:
         '200':
           description: Mock webhook applied
@@ -421,9 +626,15 @@ components:
       in: header
       name: X-Session-Token
   schemas:
+    ScaffoldRequest:
+      type: object
+      description: Endpoint scaffold. The backend currently accepts an empty JSON object only.
+      additionalProperties: false
+      example: {}
     Envelope:
       type: object
       properties:
+        code: { type: integer, example: 200 }
         data: {}
         meta: {}
         error:
@@ -432,3 +643,143 @@ components:
           properties:
             code: { type: string }
             message: { type: string }
+    AuthenticateRequest:
+      type: object
+      required: [restaurant_code, username, password]
+      properties:
+        restaurant_code: { type: string, example: DEMO }
+        username: { type: string, example: cashier }
+        password: { type: string, format: password, example: demo1234 }
+    JoinSessionRequest:
+      type: object
+      required: [qr_token]
+      properties:
+        qr_token: { type: string }
+    OpenSessionRequest:
+      type: object
+      required: [table_id]
+      properties:
+        table_id: { type: string, format: uuid }
+    CloseSessionRequest:
+      type: object
+      required: [session_id]
+      properties:
+        session_id: { type: string, format: uuid }
+    ManageTableQRRequest:
+      type: object
+      required: [table_id]
+      properties:
+        table_id: { type: string, format: uuid }
+        rotate: { type: boolean, default: false }
+    GuestOrderOptionRequest:
+      type: object
+      required: [option_id, quantity]
+      properties:
+        option_id: { type: string, format: uuid }
+        quantity: { type: integer, minimum: 1, example: 1 }
+    GuestOrderLineRequest:
+      type: object
+      required: [menu_item_id, quantity]
+      properties:
+        menu_item_id: { type: string, format: uuid }
+        variant_id: { type: string, format: uuid, nullable: true }
+        quantity: { type: integer, minimum: 1, example: 1 }
+        note: { type: string, example: Không cay }
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/GuestOrderOptionRequest'
+    GuestPlaceOrderRequest:
+      type: object
+      required: [items]
+      properties:
+        note: { type: string }
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/GuestOrderLineRequest'
+    GuestEditOrderLineRequest:
+      type: object
+      required: [order_item_id, quantity]
+      properties:
+        order_item_id: { type: string, format: uuid }
+        quantity: { type: integer, minimum: 1 }
+        note: { type: string }
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/GuestOrderOptionRequest'
+    GuestEditOrderRequest:
+      type: object
+      required: [version, items]
+      properties:
+        version: { type: integer, minimum: 1 }
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/GuestEditOrderLineRequest'
+    GuestCancelRequest:
+      type: object
+      required: [order_item_id, reason]
+      properties:
+        order_item_id: { type: string, format: uuid }
+        reason: { type: string }
+    UpdateItemStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [PENDING, PREPARING, READY, SERVED, CANCELLED]
+    BuildInvoiceRequest:
+      type: object
+      required: [dining_session_id]
+      properties:
+        dining_session_id: { type: string, format: uuid }
+    AdjustInvoiceRequest:
+      type: object
+      required: [invoice_id, discount_amount_vnd]
+      properties:
+        invoice_id: { type: string, format: uuid }
+        discount_amount_vnd: { type: integer, format: int64, minimum: 0 }
+        discount_reason:
+          type: string
+          enum: [promo, regular, complaint]
+    ProcessPaymentRequest:
+      type: object
+      required: [invoice_id, payment_method_code]
+      properties:
+        invoice_id: { type: string, format: uuid }
+        payment_method_code:
+          type: string
+          example: cash
+        received_amount_vnd:
+          type: integer
+          format: int64
+          example: 500000
+        reference_code: { type: string }
+    PaymentWebhookRequest:
+      type: object
+      description: >
+        Provider-specific webhook JSON. The fields below document the built-in mock
+        provider; MoMo and ZaloPay send their native payload shapes.
+      required: [event_id, gateway_transaction_id, payment_number, amount_vnd, status]
+      properties:
+        event_id: { type: string, example: evt_01 }
+        gateway_transaction_id: { type: string, example: mock_txn_01 }
+        payment_number: { type: string, example: PAY-20260606-0001 }
+        amount_vnd: { type: integer, format: int64, example: 150000 }
+        status:
+          type: string
+          enum: [success, failed]
+    MockCompletePaymentRequest:
+      type: object
+      required: [payment_number]
+      properties:
+        payment_number: { type: string, example: PAY-20260606-0001 }
+        result:
+          type: string
+          enum: [success, failed]
+          default: success

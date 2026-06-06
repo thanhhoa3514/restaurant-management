@@ -70,9 +70,17 @@ deployments/       Dockerfile, docker-compose.yml
 
 ```bash
 make build            # go build ./...
-docker compose -f deployments/docker-compose.yml up -d  # app + postgres
-make migrate          # apply goose migrations
-make run              # start API + websocket + outbox dispatcher
+
+# Local dev (postgres in Docker, API on host):
+make dev              # postgres up → wait healthy → migrate → API
+
+# Or step by step:
+make db-up            # start postgres only
+make migrate          # apply goose migrations (required before API)
+make run              # migrate (if pending) then start API
+
+# Full stack in Docker (migrate runs once, then app starts):
+make compose-up       # postgres → migrate → app
 ```
 
 (During the scaffolding phase, handlers are stubs; the server still starts.)

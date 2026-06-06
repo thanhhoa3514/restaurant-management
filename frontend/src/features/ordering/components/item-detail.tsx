@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FC } from 'react'
+import { ChevronLeft, Minus, Plus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
@@ -53,12 +54,19 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
   // Initialise selections + defaults once the detail loads.
   useEffect(() => {
     if (!item) return
-    const defVariant = item.variants.find((v) => v.is_default) ?? item.variants[0]
-    setVariantId(defVariant?.id ?? '')
-    setSelections(defaultSelections(item.option_groups))
-    setActiveImage(item.image_url)
-    setQty(1)
-    setNotes('')
+    let cancelled = false
+    queueMicrotask(() => {
+      if (cancelled) return
+      const defVariant = item.variants.find((v) => v.is_default) ?? item.variants[0]
+      setVariantId(defVariant?.id ?? '')
+      setSelections(defaultSelections(item.option_groups))
+      setActiveImage(item.image_url)
+      setQty(1)
+      setNotes('')
+    })
+    return () => {
+      cancelled = true
+    }
   }, [item])
 
   const estUnitPrice = useMemo(() => {
@@ -148,9 +156,7 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
               className="absolute top-4 left-4 size-9 rounded-full bg-background/60 backdrop-blur-md flex items-center justify-center text-primary active:scale-90 transition-transform cursor-pointer"
               onClick={onClose}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="m15 18-6-6 6-6" />
-              </svg>
+              <ChevronLeft size={20} />
             </button>
           </div>
 
@@ -254,18 +260,14 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
                   disabled={qty <= 1}
                   onClick={() => setQty((q) => Math.max(1, q - 1))}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M5 12h14" />
-                  </svg>
+                  <Minus size={16} />
                 </button>
                 <span className="text-lg font-semibold text-primary min-w-8 text-center tabular-nums">{qty}</span>
                 <button
                   className="size-9 rounded-full bg-surface-grouped flex items-center justify-center text-primary font-medium active:scale-90 transition-transform cursor-pointer"
                   onClick={() => setQty((q) => q + 1)}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
+                  <Plus size={16} />
                 </button>
               </div>
             </div>
