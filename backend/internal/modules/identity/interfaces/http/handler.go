@@ -34,6 +34,7 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string, resolver aut
 	authenticated.GET("/me", h.me)
 	admin := authenticated.Group("", auth.RequirePermission(resolver, auth.PermissionIdentityManage))
 	admin.POST("/manage-users", h.manageUsers)
+	admin.GET("/dashboard", h.dashboard)
 }
 
 func (h *Handler) authenticate(c *gin.Context) {

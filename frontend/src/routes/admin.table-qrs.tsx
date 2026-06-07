@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet'
 import { SecureActionDialog } from '@/components/SecureActionDialog'
-import { useShellConfig } from '@/components/staff-shell'
+import { useShellConfig, ShellHeaderCenter } from '@/components/admin-shell'
 import { makeAdminT, type AdminT } from '@/features/admin/data/i18n'
 import { ApiError } from '@/lib/api'
 import { hasStaffPermission, isStaffAuthenticated } from '@/lib/auth'
@@ -30,7 +30,7 @@ export const Route = createFileRoute('/admin/table-qrs')({
 })
 
 export const RouteComponent = () => {
-  const { lang, setLang } = useLang()
+  const { lang } = useLang()
   const t = makeAdminT(lang)
   const query = useQuery({ queryKey: TABLE_QRS_KEY, queryFn: listTableQRs })
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -41,20 +41,19 @@ export const RouteComponent = () => {
   // sheet re-renders with the fresh token after a generate/rotate refetch.
   const selected = tables.find((table) => table.table_id === selectedId) ?? null
 
-  return (
   useShellConfig({
     title: t('qr_title'),
     subtitle: t('qr_subtitle'),
-    headerCenter: (
-      <div className="rounded-full bg-[var(--surface-grouped)]/70 px-4 py-2 text-sm font-semibold text-[var(--text-secondary)]">
-        {t('qr_summary', withQR, tables.length)}
-      </div>
-    ),
     contentClassName: "bg-[var(--surface-grouped)]/45"
   })
 
   return (
     <>
+      <ShellHeaderCenter>
+        <div className="rounded-full bg-[var(--surface-grouped)]/70 px-4 py-2 text-sm font-semibold text-[var(--text-secondary)]">
+          {t('qr_summary', withQR, tables.length)}
+        </div>
+      </ShellHeaderCenter>
       <div className="mx-auto max-w-7xl space-y-6">
         {query.isLoading && (
           <p className="text-sm text-[var(--text-secondary)]">{t('qr_loading')}</p>

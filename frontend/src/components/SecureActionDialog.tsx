@@ -1,4 +1,4 @@
-import { useState, useEffect, type FC } from 'react'
+import { useState, type FC } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -41,12 +41,13 @@ export const SecureActionDialog: FC<SecureActionDialogProps> = ({
 }) => {
   const [userInput, setUserInput] = useState('')
 
-  // Reset input when dialog opens or changes session
-  useEffect(() => {
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (open !== prevOpen) {
+    setPrevOpen(open)
     if (open) {
       setUserInput('')
     }
-  }, [open, requireConfirmationText])
+  }
 
   const isVerified = (() => {
     if (!requireConfirmationText) return true

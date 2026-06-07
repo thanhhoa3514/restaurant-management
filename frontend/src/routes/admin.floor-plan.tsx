@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { useShellConfig } from '@/components/staff-shell'
+import { useShellConfig } from '@/components/admin-shell'
 import { makeAdminT } from '@/features/admin/data/i18n'
 import { hasStaffPermission, isStaffAuthenticated } from '@/lib/auth'
 import { useLang } from '@/lib/use-lang'
@@ -15,10 +15,9 @@ export const Route = createFileRoute('/admin/floor-plan')({
 })
 
 export const RouteComponent = () => {
-  const { lang, setLang } = useLang()
+  const { lang } = useLang()
   const t = makeAdminT(lang)
 
-  return (
   useShellConfig({
     title: t('action_floor'),
     subtitle: t('action_floor_desc'),

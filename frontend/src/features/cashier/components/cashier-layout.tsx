@@ -1,11 +1,9 @@
 import { useMemo, useState, type FC } from 'react'
 
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { LanguageLoader } from '@/components/ui/language-loader'
-import { useShellConfig } from '@/components/staff-shell'
+import { useShellConfig, ShellHeaderCenter, ShellHeaderActions } from '@/components/admin-shell'
 import { LanguageSwitcher } from '@/components/ui/language-switcher'
 import { InvoicePanel } from '@/features/cashier/components/invoice-panel'
 import { PaymentPanel } from '@/features/cashier/components/payment-panel'
@@ -13,6 +11,7 @@ import { ReceiptDialog } from '@/features/cashier/components/receipt-dialog'
 import { SessionList } from '@/features/cashier/components/session-list'
 import { fmtClockSec } from '@/features/cashier/helpers'
 import { CashierProvider, useCashier } from '@/features/cashier/hooks/use-cashier'
+import { DemoControls } from '@/features/cashier/components/demo-controls'
 
 export const CashierLayout: FC = () => (
   <CashierProvider>
@@ -45,17 +44,21 @@ const CashierWorkspace: FC = () => {
   useShellConfig({
     title: t('cashier'),
     subtitle: `${t('restaurant')} · ${t('shift')} · ${t('cashier_name')}`,
-    headerCenter: (
-      <div className="flex items-center justify-center gap-3">
-        <div className="font-mono text-xl font-bold tabular-nums">{fmtClockSec(state.now)}</div>
-        <div className="h-5 w-px bg-[var(--separator)]" />
-        <div className="text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
-          ×{state.timeMultiplier}
+    contentClassName: "p-0"
+  })
+
+  return (
+    <>
+      <ShellHeaderCenter>
+        <div className="flex items-center justify-center gap-3">
+          <div className="font-mono text-xl font-bold tabular-nums">{fmtClockSec(state.now)}</div>
+          <div className="h-5 w-px bg-[var(--separator)]" />
+          <div className="text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+            ×{state.timeMultiplier}
+          </div>
         </div>
-      </div>
-    ),
-    headerActions: (
-      <>
+      </ShellHeaderCenter>
+      <ShellHeaderActions>
         <StatPill label={t('pending_label')} value={pendingCount} tone="orange" />
         <StatPill label={t('closed_today')} value={closedToday} tone="green" />
         <LanguageSwitcher
@@ -68,13 +71,7 @@ const CashierWorkspace: FC = () => {
             }, 750)
           }}
         />
-      </>
-    ),
-    contentClassName: "p-0"
-  })
-
-  return (
-    <>
+      </ShellHeaderActions>
       <div className="grid min-h-0 flex-1 h-[calc(100dvh-64px)] grid-cols-1 overflow-hidden lg:grid-cols-[300px_minmax(0,1fr)_400px]">
         <aside className="min-h-0 overflow-hidden border-r border-[var(--separator)] bg-[var(--material-thin)] backdrop-blur-xl max-lg:hidden">
           <SessionList
@@ -186,118 +183,6 @@ function StatPill({
   )
 }
 
-function DemoControls({
-  open,
-  setOpen,
-  paused,
-  multiplier,
-  hasPendingPayment,
-  t,
-  onInjectBill,
-  onForceSuccess,
-  onForceFail,
-  onReset,
-  onPauseChange,
-  onMultiplierChange,
-}: {
-  open: boolean
-  setOpen: (open: boolean) => void
-  paused: boolean
-  multiplier: number
-  hasPendingPayment: boolean
-  t: (key: string, ...args: Array<number | string>) => string
-  onInjectBill: () => void
-  onForceSuccess: () => void
-  onForceFail: () => void
-  onReset: () => void
-  onPauseChange: (paused: boolean) => void
-  onMultiplierChange: (value: number) => void
-}) {
-  if (!open) {
-    return (
-      <Button
-        className="fixed bottom-5 right-5 z-[var(--z-modal)] rounded-full shadow-2xl"
-        onClick={() => setOpen(true)}
-      >
-        {t('demo_title')}
-      </Button>
-    )
-  }
 
-  return (
-    <Card className="fixed bottom-5 right-5 z-[var(--z-modal)] w-72 border border-[var(--separator)] bg-zinc-950 p-3 text-white shadow-2xl">
-      <div className="mb-3 flex items-start justify-between gap-2">
-        <div>
-          <div className="text-xs font-bold uppercase tracking-wider">{t('demo_title')}</div>
-          <div className="text-[10px] text-zinc-400">{t('demo_subtitle')}</div>
-        </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          className="h-7 rounded-full px-2"
-          onClick={() => setOpen(false)}
-        >
-          −
-        </Button>
-      </div>
-      <div className="space-y-2">
-        <Button
-          variant="secondary"
-          className="w-full justify-between rounded-[var(--radius-lg)]"
-          onClick={onInjectBill}
-        >
-          {t('demo_inject_bill')}
-          <span>▶</span>
-        </Button>
-        <Button
-          variant="secondary"
-          className="w-full justify-between rounded-[var(--radius-lg)]"
-          disabled={!hasPendingPayment}
-          onClick={onForceSuccess}
-        >
-          {t('demo_force_success')}
-          <span>▶</span>
-        </Button>
-        <Button
-          variant="secondary"
-          className="w-full justify-between rounded-[var(--radius-lg)]"
-          disabled={!hasPendingPayment}
-          onClick={onForceFail}
-        >
-          {t('demo_force_fail')}
-          <span>▶</span>
-        </Button>
-        <Button
-          variant="secondary"
-          className="w-full justify-between rounded-[var(--radius-lg)]"
-          onClick={onReset}
-        >
-          {t('demo_reset')}
-          <span>↺</span>
-        </Button>
-        <Button
-          variant={paused ? 'default' : 'secondary'}
-          className="w-full justify-between rounded-[var(--radius-lg)]"
-          onClick={() => onPauseChange(!paused)}
-        >
-          {t('demo_pause')}
-          <span>{paused ? 'ON' : 'OFF'}</span>
-        </Button>
-        <label className="block text-xs font-semibold text-zinc-300" htmlFor="cashier-speed">
-          Speed multiplier
-        </label>
-        <Input
-          id="cashier-speed"
-          type="number"
-          min={1}
-          max={60}
-          value={multiplier}
-          className="bg-zinc-900 text-white"
-          onChange={(event) => onMultiplierChange(Number(event.target.value) || 1)}
-        />
-      </div>
-    </Card>
-  )
-}
 
 export default CashierLayout

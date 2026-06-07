@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { wfFmtHMS, wfPriorityOf, wfPriorityRank, wfTimeSinceSignal } from '@/features/waiter/helpers'
 import { cn } from '@/lib/utils'
 import type { Lang, WFTable } from '@/features/waiter/types'
-import { priorityLabel, secondarySignals, signalDot, tableVisuals } from './floor-plan'
+import { priorityLabel, secondarySignals, signalDot, tableVisuals } from '@/features/waiter/helpers'
 
 interface GridViewProps {
   tables: WFTable[]

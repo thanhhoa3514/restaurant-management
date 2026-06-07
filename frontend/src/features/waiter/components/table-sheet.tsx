@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FC } from 'react'
+import { useMemo, useState, type FC } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -50,12 +50,15 @@ export const TableSheet: FC<TableSheetProps> = ({
   const [guestCount, setGuestCount] = useState(2)
   const [notes, setNotes] = useState('')
 
-  useEffect(() => {
+  const [prevTableId, setPrevTableId] = useState(table?.id)
+
+  if (table?.id !== prevTableId) {
+    setPrevTableId(table?.id)
     setConfirmBill(false)
     setShowOpenForm(false)
     setGuestCount(table?.capacity ? Math.min(2, table.capacity) : 2)
     setNotes('')
-  }, [table?.capacity, table?.id])
+  }
 
   const readyItems = useMemo<ReadyItem[]>(() => {
     if (!table?.session) return []

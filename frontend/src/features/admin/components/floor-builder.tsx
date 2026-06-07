@@ -139,7 +139,7 @@ export function FloorBuilder() {
   )
 }
 
-function DraggableTable({ table }: { table: any }) {
+function DraggableTable({ table }: { table: TableData }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: table.id,
   })

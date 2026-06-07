@@ -1,84 +1,31 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useNavigate } from '@tanstack/react-router'
-import {
-  BarChart3,
-  ChefHat,
-  ClipboardList,
-  CreditCard,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  QrCode,
-  Search,
-  Settings,
-  SlidersHorizontal,
-  Table2,
-  UserRound,
-  UsersRound,
-  type LucideIcon,
-} from 'lucide-react'
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { LogOut, Menu, Search, SlidersHorizontal, UserRound } from 'lucide-react'
+import { useMemo, useState, useCallback, type CSSProperties, type ReactNode } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { LanguageLoader } from '@/components/ui/language-loader'
 import { LanguageSwitcher } from '@/components/ui/language-switcher'
 import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
-import { CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command'
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { shellStrings } from '@/components/shell-i18n'
 import {
-  getStaffSession,
-  logoutStaff,
-  type PermissionCode,
-  type StaffRole,
-} from '@/lib/auth'
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { shellStrings } from '@/components/shell-i18n'
+import { getStaffSession, logoutStaff, type StaffRole } from '@/lib/auth'
 import { BRAND } from '@/lib/brand'
 import { usePermissions } from '@/lib/permission-context'
 import type { Lang } from '@/lib/use-lang'
 import { cn } from '@/lib/utils'
-
-type NavHref = '/admin' | '/admin/table-qrs'
-type AdminView = 'dashboard' | 'cashier' | 'waiter' | 'kitchen'
-export type StaffView = AdminView | 'table-qrs'
-
-
-
-interface NavItem {
-  id: string
-  href: NavHref
-  view?: AdminView
-  icon: LucideIcon
-  permission: PermissionCode
-}
-
-interface ToolItem {
-  id: string
-  icon: LucideIcon
-  permission: PermissionCode
-}
-
-const roleTint: Record<StaffRole, string> = {
-  admin: 'var(--system-purple)',
-  cashier: 'var(--system-green)',
-  waiter: 'var(--system-blue)',
-  kitchen: 'var(--system-orange)',
-}
-
-const navItems: NavItem[] = [
-  { id: 'dashboard', href: '/admin', view: 'dashboard', icon: LayoutDashboard, permission: 'identity.manage' },
-  { id: 'table-qrs', href: '/admin/table-qrs', icon: QrCode, permission: 'dining.manage' },
-  { id: 'cashier', href: '/admin', view: 'cashier', icon: CreditCard, permission: 'billing.process' },
-  { id: 'waiter', href: '/admin', view: 'waiter', icon: Table2, permission: 'dining.serve' },
-  { id: 'kitchen', href: '/admin', view: 'kitchen', icon: ChefHat, permission: 'kitchen.operate' },
-]
-
-const adminTools: ToolItem[] = [
-  { id: 'catalog', icon: ClipboardList, permission: 'catalog.manage' },
-  { id: 'staff', icon: UsersRound, permission: 'identity.manage' },
-  { id: 'reports', icon: BarChart3, permission: 'identity.manage' },
-  { id: 'settings', icon: Settings, permission: 'identity.manage' },
-]
+import { roleTint, navItems, adminTools, type StaffView, type AdminView } from './admin-config'
+import { SidebarContent } from './admin-sidebar'
+import { AdminCommandDialog, type CommandEntry } from './admin-search'
 
 import { createContext, useContext, useLayoutEffect } from 'react'
 
@@ -86,8 +33,6 @@ export interface ShellConfig {
   title?: string
   subtitle?: string
   eyebrow?: string
-  headerCenter?: ReactNode
-  headerActions?: ReactNode
   contentClassName?: string
 }
 
@@ -98,11 +43,7 @@ export const ShellContext = createContext<{
 
 export function ShellProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<ShellConfig>({})
-  return (
-    <ShellContext.Provider value={{ config, setConfig }}>
-      {children}
-    </ShellContext.Provider>
-  )
+  return <ShellContext.Provider value={{ config, setConfig }}>{children}</ShellContext.Provider>
 }
 
 export function useShellConfig(config: ShellConfig) {
@@ -121,23 +62,37 @@ export function useShellConfig(config: ShellConfig) {
     // Note: We intentionally don't include ReactNodes to avoid infinite loops.
     // Instead, we assume they update alongside other primitives or we rely on parent re-renders.
   ])
-  
+
   // To handle ReactNodes updating without looping, we can use a ref to track them
   // but for our simple dashboard, the initial layout effect is usually enough,
   // or we can just force update if needed. Actually, a better approach is to just
   // pass the setter to children. But let's stick to the simple effect.
 }
 
-interface CommandEntry {
-  key: string
-  label: string
-  description: string
-  icon: LucideIcon
-  href?: NavHref
-  view?: AdminView
+import { createPortal } from 'react-dom'
+import { useEffect } from 'react'
+
+export function ShellHeaderCenter({ children }: { children: ReactNode }) {
+  const [target, setTarget] = useState<HTMLElement | null>(null)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTarget(document.getElementById('shell-header-center'))
+  }, [])
+  if (!target) return null
+  return createPortal(children, target)
 }
 
-interface StaffShellProps extends ShellConfig {
+export function ShellHeaderActions({ children }: { children: ReactNode }) {
+  const [target, setTarget] = useState<HTMLElement | null>(null)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTarget(document.getElementById('shell-header-actions'))
+  }, [])
+  if (!target) return null
+  return createPortal(children, target)
+}
+
+interface AdminShellProps extends ShellConfig {
   role: StaffRole
   activeView?: StaffView
   brandName?: string
@@ -147,21 +102,20 @@ interface StaffShellProps extends ShellConfig {
   children: ReactNode
 }
 
-export function StaffShell({
+export function AdminShell({
   role: _role,
   activeView: _activeView,
   title: _title,
   subtitle: _subtitle,
   eyebrow: _eyebrow,
   brandName = BRAND.name.vi,
-  headerCenter: _headerCenter,
-  headerActions: _headerActions,
+
   sidebar = true,
   contentClassName: _contentClassName,
   lang = 'vi',
   setLang,
   children,
-}: StaffShellProps) {
+}: AdminShellProps) {
   const session = getStaffSession()
   const role = session?.role ?? _role
   const activeView = _activeView ?? (role === 'admin' ? 'dashboard' : role)
@@ -180,11 +134,16 @@ export function StaffShell({
   const title = ctx?.config.title ?? _title
   const subtitle = ctx?.config.subtitle ?? _subtitle
   const eyebrow = ctx?.config.eyebrow ?? _eyebrow
-  const headerCenter = ctx?.config.headerCenter ?? _headerCenter
-  const headerActions = ctx?.config.headerActions ?? _headerActions
   const contentClassName = ctx?.config.contentClassName ?? _contentClassName
 
   const nav = useMemo(() => navItems.filter((item) => has(item.permission)), [has])
+
+  const handleCommand = useCallback((href?: string, view?: string) => {
+    if (href === '/admin') navigate({ to: '/admin', search: { view: view as AdminView | undefined } })
+    else if (href) navigate({ to: href })
+    setSearchOpen(false)
+    setMobileOpen(false)
+  }, [navigate])
 
   const commandItems = useMemo<CommandEntry[]>(() => {
     const navEntries: CommandEntry[] = nav.map((item) => ({
@@ -192,21 +151,21 @@ export function StaffShell({
       label: s.navLabel[item.id],
       description: s.navDesc[item.id],
       icon: item.icon,
-      href: item.href,
-      view: item.view,
+      action: () => handleCommand(item.href, item.view),
     }))
     const toolEntries: CommandEntry[] = adminTools
       .filter((tool) => has(tool.permission))
       .map((tool) => ({
-            key: tool.id,
-            label: s.toolLabel[tool.id],
-            description: s.toolDesc[tool.id],
-            icon: tool.icon,
-          }))
+        key: tool.id,
+        label: s.toolLabel[tool.id],
+        description: s.toolDesc[tool.id],
+        icon: tool.icon,
+        action: () => handleCommand('/admin'),
+      }))
     return [...navEntries, ...toolEntries].filter((item) =>
       `${item.label} ${item.description}`.toLowerCase().includes(query.trim().toLowerCase()),
     )
-  }, [has, nav, query, s])
+  }, [has, nav, query, s, handleCommand])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -227,13 +186,6 @@ export function StaffShell({
   const handleLogout = () => {
     logoutStaff()
     navigate({ to: '/login' })
-  }
-
-  const handleCommand = (item: CommandEntry) => {
-    if (item.href === '/admin') navigate({ to: '/admin', search: { view: item.view } })
-    else if (item.href) navigate({ to: item.href })
-    setSearchOpen(false)
-    setMobileOpen(false)
   }
 
   const handleLangChange = (next: Lang) => {
@@ -293,14 +245,12 @@ export function StaffShell({
                   )}
                 </div>
 
-                {headerCenter && (
-                  <div className="hidden min-w-0 flex-1 items-center justify-center xl:flex">
-                    {headerCenter}
-                  </div>
-                )}
+                <div
+                  id="shell-header-center"
+                  className="hidden min-w-0 flex-1 items-center justify-center xl:flex"
+                ></div>
 
-                <div className="ml-auto flex shrink-0 items-center gap-2">
-                  {headerActions}
+                <div id="shell-header-actions" className="ml-auto flex shrink-0 items-center gap-2">
                   <Button
                     type="button"
                     variant="secondary"
@@ -333,7 +283,7 @@ export function StaffShell({
                   </Button>
                   <div className="relative">
                     <DropdownMenu open={profileOpen} onOpenChange={setProfileOpen}>
-                    <DropdownMenuTrigger>
+                      <DropdownMenuTrigger>
                         <button
                           type="button"
                           className="flex size-10 cursor-pointer items-center justify-center rounded-full bg-[var(--staff-tint)] text-sm font-bold text-white transition-opacity duration-[220ms] hover:opacity-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--staff-tint)]/20"
@@ -342,7 +292,10 @@ export function StaffShell({
                           {(session?.name ?? s.roleLabel[role]).slice(0, 1).toUpperCase()}
                         </button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-72 rounded-[18px] border-[var(--separator)] bg-[var(--material-thick)] p-2 text-[13px] backdrop-blur-2xl">
+                      <DropdownMenuContent
+                        align="end"
+                        className="w-72 rounded-[18px] border-[var(--separator)] bg-[var(--material-thick)] p-2 text-[13px] backdrop-blur-2xl"
+                      >
                         <DropdownMenuLabel className="px-3 py-3">
                           <div className="flex items-center gap-3">
                             <div className="flex size-10 items-center justify-center rounded-full bg-[var(--surface-grouped)] text-[var(--text-secondary)]">
@@ -418,147 +371,19 @@ export function StaffShell({
           </SheetContent>
         </Sheet>
 
-        <CommandDialog open={searchOpen} onOpenChange={setSearchOpen}>
-          <CommandInput
-            placeholder={s.searchPlaceholder}
-            value={query}
-            onValueChange={setQuery}
-          />
-          <CommandList>
-            <CommandEmpty>{s.searchEmpty}</CommandEmpty>
-            <CommandGroup>
-              {commandItems.map((item) => {
-                const Icon = item.icon
-                return (
-                  <CommandItem
-                    key={item.key}
-                    value={`${item.label} ${item.description}`}
-                    onSelect={() => handleCommand(item)}
-                    className="flex min-h-14 cursor-pointer items-center gap-3 rounded-[16px] px-3"
-                  >
-                    <span className="flex size-10 items-center justify-center rounded-[14px] bg-[var(--staff-tint)]/10 text-[var(--staff-tint)]">
-                      <Icon className="size-5" />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block font-semibold text-[var(--text)]">
-                        {item.label}
-                      </span>
-                      <span className="block truncate text-[12px] text-[var(--text-secondary)]">
-                        {item.description}
-                      </span>
-                    </span>
-                  </CommandItem>
-                )
-              })}
-            </CommandGroup>
-          </CommandList>
-        </CommandDialog>
+        <AdminCommandDialog
+          open={searchOpen}
+          onOpenChange={setSearchOpen}
+          query={query}
+          setQuery={setQuery}
+          s={s}
+          commandItems={commandItems}
+        />
 
         {setLang && (
           <LanguageLoader open={changingLang !== null} targetLang={changingLang ?? lang} />
         )}
       </div>
     </TooltipProvider>
-  )
-}
-
-function SidebarContent({
-  nav,
-  role,
-  activeView,
-  brandName,
-  s,
-  onNavigate,
-}: {
-  nav: NavItem[]
-  role: StaffRole
-  activeView: StaffView
-  brandName: string
-  s: ReturnType<typeof shellStrings>
-  onNavigate?: () => void
-}) {
-  const navigate = useNavigate()
-
-  const handleNavigate = (item: NavItem) => {
-    if (item.href === '/admin') {
-      navigate({ to: '/admin', search: { view: item.view } })
-    } else {
-      navigate({ to: item.href })
-    }
-    onNavigate?.()
-  }
-
-  return (
-    <div
-      className="flex h-full flex-col p-4"
-      style={{ '--staff-tint': roleTint[role] } as CSSProperties}
-    >
-      <div className="mb-6 flex items-center gap-3 px-2 pt-2">
-        <div className="flex size-11 items-center justify-center rounded-[16px] bg-[var(--text)] text-[13px] font-black tracking-tight text-[var(--bg)]">
-          {BRAND.shortName}
-        </div>
-        <div className="min-w-0">
-          <div className="truncate text-[17px] font-semibold text-[var(--text)]">{brandName}</div>
-          <div className="truncate text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--staff-tint)]">
-            {s.staffOs}
-          </div>
-        </div>
-      </div>
-
-      <nav className="space-y-1" aria-label={s.navAria}>
-        {nav.map((item) => {
-          const Icon = item.icon
-          return (
-            <Tooltip key={item.id}>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={() => handleNavigate(item)}
-                  className={cn(
-                    'group flex min-h-12 w-full items-center gap-3 rounded-[16px] px-3 text-left text-[15px] font-semibold transition-colors duration-[220ms] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--staff-tint)]/20',
-                    (item.href === '/admin' && item.view === activeView) ||
-                      (item.href === '/admin/table-qrs' && activeView === 'table-qrs')
-                      ? 'bg-[var(--staff-tint)]/12 text-[var(--staff-tint)]'
-                      : 'text-[var(--text-secondary)] hover:bg-[var(--surface-grouped)] hover:text-[var(--text)]',
-                  )}
-                >
-                  <Icon className="size-5 shrink-0" />
-                  <span>{s.navLabel[item.id]}</span>
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">{s.navDesc[item.id]}</TooltipContent>
-            </Tooltip>
-          )
-        })}
-      </nav>
-
-      {role === 'admin' && (
-        <div className="mt-8">
-          <div className="mb-3 px-3 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--text-tertiary)]">
-            {s.settingsTitle || 'Management'}
-          </div>
-          <nav className="space-y-1">
-            {adminTools.map((tool) => {
-              const Icon = tool.icon
-              return (
-                <Tooltip key={tool.id}>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => navigate({ to: '/admin' })} // Stub for now until real routes exist
-                      className="group flex min-h-12 w-full items-center gap-3 rounded-[16px] px-3 text-left text-[15px] font-semibold text-[var(--text-secondary)] transition-colors duration-[220ms] hover:bg-[var(--surface-grouped)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--staff-tint)]/20"
-                    >
-                      <Icon className="size-5 shrink-0" />
-                      <span>{s.toolLabel[tool.id]}</span>
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">{s.toolDesc[tool.id]}</TooltipContent>
-                </Tooltip>
-              )
-            })}
-          </nav>
-        </div>
-      )}
-    </div>
   )
 }
