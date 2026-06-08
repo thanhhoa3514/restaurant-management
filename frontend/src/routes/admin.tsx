@@ -85,10 +85,18 @@ export const RouteComponent = () => {
 
   const session = getStaffSession()
 
-  // Determine active view for the sidebar
+  // Determine active view for the sidebar. Operate views ride the `?view=`
+  // param; manage surfaces are their own routes keyed by pathname.
   let currentActiveView: StaffView | undefined = view
-  if (location.pathname === '/admin/table-qrs') currentActiveView = 'table-qrs'
-  if (location.pathname === '/admin/floor-plan') currentActiveView = 'dashboard'
+  const manageRoutes: Record<string, StaffView> = {
+    '/admin/table-qrs': 'table-qrs',
+    '/admin/floor-plan': 'table-qrs',
+    '/admin/catalog': 'catalog',
+    '/admin/staff': 'staff',
+    '/admin/reports': 'reports',
+    '/admin/settings': 'settings',
+  }
+  if (manageRoutes[location.pathname]) currentActiveView = manageRoutes[location.pathname]
 
   return (
     <ShellProvider>

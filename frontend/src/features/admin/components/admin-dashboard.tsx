@@ -168,9 +168,9 @@ export const AdminDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <ActionButton label={t('action_report')} desc={t('action_report_desc')} icon={FileText} onClick={() => navigate({ to: '/admin' })} />
-              <ActionButton label={t('action_floor')} desc={t('action_floor_desc')} icon={TrendingUp} onClick={() => navigate({ to: '/admin/table-qrs' })} />
-              <ActionButton label={t('action_menu')} desc={t('action_menu_desc')} icon={UtensilsCrossed} onClick={() => navigate({ to: '/admin' })} />
+              <ActionButton label={t('action_report')} desc={t('action_report_desc')} icon={FileText} onClick={() => navigate({ to: '/admin/reports' })} />
+              <ActionButton label={t('action_floor')} desc={t('action_floor_desc')} icon={TrendingUp} onClick={() => navigate({ to: '/admin/floor-plan' })} />
+              <ActionButton label={t('action_menu')} desc={t('action_menu_desc')} icon={UtensilsCrossed} onClick={() => navigate({ to: '/admin/catalog' })} />
             </CardContent>
           </Card>
         </div>

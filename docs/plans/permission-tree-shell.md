@@ -17,6 +17,26 @@ heavy." One shell, permission-driven, scales better than N screens.
 
 ---
 
+## Addendum 2026-06-08 — Operate vs Manage split
+
+The original plan collapsed the four **operate** workspaces into one shell.
+It did not distinguish them from **manage** surfaces (catalog/staff/reports/
+settings), which left admin nav rendering live staff workspaces — admin
+"remoting into a staff screen" instead of managing the domain. Resolved by
+splitting nav into two groups (`admin-config.ts:NavGroup`):
+
+- **operate** — live staff workspaces (cashier/waiter/kitchen), ride `?view=`
+  on `/admin`. Staff land here directly; admins reach them as a secondary group.
+- **manage** — configuration/oversight per domain, each its own route under
+  `/admin/*` (dashboard, table-qrs, catalog, staff, reports, settings).
+
+Phase 1 (shipped): nav regrouped; dead `navigate({to:'/admin'})` stubs replaced
+with real routes. catalog/staff/reports/settings render a `ComingSoon`
+placeholder (gated by permission) until built. Build order next: `staff` first
+(api+mappers already exist), then catalog/reports/settings (need specs).
+
+---
+
 ## INVARIANT — read first
 
 > **The permission tree is presentation-only. Server-side authorization

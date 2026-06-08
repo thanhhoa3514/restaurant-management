@@ -23,7 +23,7 @@ import { BRAND } from '@/lib/brand'
 import { usePermissions } from '@/lib/permission-context'
 import type { Lang } from '@/lib/use-lang'
 import { cn } from '@/lib/utils'
-import { roleTint, navItems, adminTools, type StaffView, type AdminView } from './admin-config'
+import { roleTint, navItems, type StaffView, type AdminView } from './admin-config'
 import { SidebarContent } from './admin-sidebar'
 import { AdminCommandDialog, type CommandEntry } from './admin-search'
 
@@ -153,19 +153,10 @@ export function AdminShell({
       icon: item.icon,
       action: () => handleCommand(item.href, item.view),
     }))
-    const toolEntries: CommandEntry[] = adminTools
-      .filter((tool) => has(tool.permission))
-      .map((tool) => ({
-        key: tool.id,
-        label: s.toolLabel[tool.id],
-        description: s.toolDesc[tool.id],
-        icon: tool.icon,
-        action: () => handleCommand('/admin'),
-      }))
-    return [...navEntries, ...toolEntries].filter((item) =>
+    return navEntries.filter((item) =>
       `${item.label} ${item.description}`.toLowerCase().includes(query.trim().toLowerCase()),
     )
-  }, [has, nav, query, s, handleCommand])
+  }, [nav, query, s, handleCommand])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

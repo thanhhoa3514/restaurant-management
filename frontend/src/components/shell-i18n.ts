@@ -9,10 +9,9 @@ import type { StaffRole } from '@/lib/auth'
  */
 export interface ShellStrings {
   roleLabel: Record<StaffRole, string>
+  navGroup: Record<'manage' | 'operate', string>
   navLabel: Record<string, string>
   navDesc: Record<string, string>
-  toolLabel: Record<string, string>
-  toolDesc: Record<string, string>
   staffOs: string
   search: string
   searchPlaceholder: string
@@ -33,9 +32,14 @@ export interface ShellStrings {
 const SHELL: Record<Lang, ShellStrings> = {
   vi: {
     roleLabel: { admin: 'Quản trị', cashier: 'Thu ngân', waiter: 'Phục vụ', kitchen: 'Bếp' },
+    navGroup: { manage: 'Quản lý', operate: 'Vận hành' },
     navLabel: {
       dashboard: 'Tổng quan',
       'table-qrs': 'Mã QR bàn',
+      catalog: 'Danh mục món',
+      staff: 'Nhân sự',
+      reports: 'Báo cáo',
+      settings: 'Cài đặt',
       cashier: 'Thanh toán',
       waiter: 'Sơ đồ bàn',
       kitchen: 'Bếp KDS',
@@ -43,21 +47,13 @@ const SHELL: Record<Lang, ShellStrings> = {
     navDesc: {
       dashboard: 'Tổng quan vận hành',
       'table-qrs': 'Tạo và xoay mã QR gọi món',
-      cashier: 'Hóa đơn và POS',
-      waiter: 'Phòng ăn và yêu cầu',
-      kitchen: 'Hàng đợi món',
-    },
-    toolLabel: {
-      catalog: 'Danh mục món',
-      staff: 'Nhân sự',
-      reports: 'Báo cáo',
-      settings: 'Cài đặt',
-    },
-    toolDesc: {
       catalog: 'Ẩn/hiện món và cập nhật giá',
       staff: 'Vai trò và ca trực',
       reports: 'Doanh thu và vận hành',
       settings: 'Nhà hàng và giao diện',
+      cashier: 'Hóa đơn và POS',
+      waiter: 'Phòng ăn và yêu cầu',
+      kitchen: 'Hàng đợi món',
     },
     staffOs: 'Staff OS',
     search: 'Tìm kiếm',
@@ -77,9 +73,14 @@ const SHELL: Record<Lang, ShellStrings> = {
   },
   en: {
     roleLabel: { admin: 'Management', cashier: 'Cashier', waiter: 'Service', kitchen: 'Kitchen' },
+    navGroup: { manage: 'Manage', operate: 'Operate' },
     navLabel: {
       dashboard: 'Overview',
       'table-qrs': 'Table QR codes',
+      catalog: 'Menu catalog',
+      staff: 'Staff',
+      reports: 'Reports',
+      settings: 'Settings',
       cashier: 'Payments',
       waiter: 'Floor plan',
       kitchen: 'Kitchen KDS',
@@ -87,21 +88,13 @@ const SHELL: Record<Lang, ShellStrings> = {
     navDesc: {
       dashboard: 'Operations overview',
       'table-qrs': 'Create & rotate ordering QR codes',
-      cashier: 'Invoices & POS',
-      waiter: 'Dining room & requests',
-      kitchen: 'Order queue',
-    },
-    toolLabel: {
-      catalog: 'Menu catalog',
-      staff: 'Staff',
-      reports: 'Reports',
-      settings: 'Settings',
-    },
-    toolDesc: {
       catalog: 'Toggle items & update prices',
       staff: 'Roles & shifts',
       reports: 'Revenue & operations',
       settings: 'Restaurant & appearance',
+      cashier: 'Invoices & POS',
+      waiter: 'Dining room & requests',
+      kitchen: 'Order queue',
     },
     staffOs: 'Staff OS',
     search: 'Search',
