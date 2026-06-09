@@ -43,30 +43,23 @@ export const ShellContext = createContext<{
 
 export function ShellProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<ShellConfig>({})
-  return <ShellContext.Provider value={{ config, setConfig }}>{children}</ShellContext.Provider>
+  // Memoize the context value so it only changes when `config` actually changes,
+  // not on every provider render — keeps consumers from re-rendering needlessly.
+  const value = useMemo(() => ({ config, setConfig }), [config])
+  return <ShellContext.Provider value={value}>{children}</ShellContext.Provider>
 }
 
 export function useShellConfig(config: ShellConfig) {
   const ctx = useContext(ShellContext)
+  // Depend ONLY on the stable setter (from useState) and the primitive config
+  // values — never on `ctx` itself. The context value object is recreated when
+  // `config` state changes, so listing `ctx` in the deps would re-fire this
+  // effect on every setConfig and spin into an infinite update loop.
+  const setConfig = ctx?.setConfig
+  const { title, subtitle, eyebrow, contentClassName } = config
   useLayoutEffect(() => {
-    if (ctx) {
-      ctx.setConfig(config)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    ctx,
-    config.title,
-    config.subtitle,
-    config.eyebrow,
-    config.contentClassName,
-    // Note: We intentionally don't include ReactNodes to avoid infinite loops.
-    // Instead, we assume they update alongside other primitives or we rely on parent re-renders.
-  ])
-
-  // To handle ReactNodes updating without looping, we can use a ref to track them
-  // but for our simple dashboard, the initial layout effect is usually enough,
-  // or we can just force update if needed. Actually, a better approach is to just
-  // pass the setter to children. But let's stick to the simple effect.
+    setConfig?.({ title, subtitle, eyebrow, contentClassName })
+  }, [setConfig, title, subtitle, eyebrow, contentClassName])
 }
 
 import { createPortal } from 'react-dom'
