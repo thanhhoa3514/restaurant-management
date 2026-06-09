@@ -45,6 +45,15 @@ export const Route = createFileRoute('/admin')({
   ),
 })
 
+const MANAGE_ROUTES: Record<string, StaffView> = {
+  '/admin/table-qrs': 'table-qrs',
+  '/admin/floor-plan': 'table-qrs',
+  '/admin/catalog': 'catalog',
+  '/admin/staff': 'staff',
+  '/admin/reports': 'reports',
+  '/admin/settings': 'settings',
+}
+
 export const RouteComponent = () => {
   const { view: requestedView } = Route.useSearch()
   const { permissions, loading } = usePermissions()
@@ -89,15 +98,7 @@ export const RouteComponent = () => {
   // Determine active view for the sidebar. Operate views ride the `?view=`
   // param; manage surfaces are their own routes keyed by pathname.
   let currentActiveView: StaffView | undefined = view
-  const manageRoutes: Record<string, StaffView> = {
-    '/admin/table-qrs': 'table-qrs',
-    '/admin/floor-plan': 'table-qrs',
-    '/admin/catalog': 'catalog',
-    '/admin/staff': 'staff',
-    '/admin/reports': 'reports',
-    '/admin/settings': 'settings',
-  }
-  if (manageRoutes[location.pathname]) currentActiveView = manageRoutes[location.pathname]
+  if (MANAGE_ROUTES[location.pathname]) currentActiveView = MANAGE_ROUTES[location.pathname]
 
   return (
     <ShellProvider>

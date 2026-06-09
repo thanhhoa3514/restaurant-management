@@ -76,7 +76,7 @@ export const FloorPlan: FC<FloorPlanProps> = ({ tables, now, lang, t, onSelectTa
           >
             <span className={cn('relative flex h-full w-full flex-col items-center justify-center font-bold', visual.text)}>
               {priority !== 'empty' && priority !== 'occupied' && priority !== 'idle' && (
-                <span className="absolute top-2.5 animate-bounce">
+                <span className="absolute top-2.5 animate-in slide-in-from-bottom-1 fade-in duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]">
                   {priority === 'call' && <Bell className="size-3 text-red-500" />}
                   {priority === 'ready' && <Check className="size-3 text-emerald-500" />}
                   {priority === 'bill' && <Receipt className="size-3 text-blue-500" />}

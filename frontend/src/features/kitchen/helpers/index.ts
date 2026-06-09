@@ -7,10 +7,12 @@ export function nextStatus(s: ItemStatus): ItemStatus {
   return STATUS_FLOW[idx + 1]
 }
 
+const STATUS_INDEX = new Map(STATUS_FLOW.map((s, i) => [s, i]))
+
 export function minStatus(items: KDSItem[]): ItemStatus {
   let minIdx = STATUS_FLOW.length
   for (const it of items) {
-    const i = STATUS_FLOW.indexOf(it.status)
+    const i = STATUS_INDEX.get(it.status) ?? STATUS_FLOW.length
     if (i < minIdx) minIdx = i
   }
   return STATUS_FLOW[minIdx]

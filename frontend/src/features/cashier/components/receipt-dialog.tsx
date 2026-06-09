@@ -1,5 +1,10 @@
-import { useMemo, lazy, Suspense, useState, useEffect, type FC } from 'react'
+import { useMemo, lazy, Suspense, useSyncExternalStore, type FC } from 'react'
 import { Loader2 } from 'lucide-react'
+
+const subscribeTimer = (cb: () => void) => {
+  const timer = setInterval(cb, 1000)
+  return () => clearInterval(timer)
+}
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -18,8 +23,8 @@ interface ReceiptDialogProps {
 }
 
 export const ReceiptDialog: FC<ReceiptDialogProps> = ({ open, session, t, lang, onOpenChange }) => {
-  const [now, setNow] = useState<Date | null>(null)
-  useEffect(() => setNow(new Date()), [])
+  const nowMs = useSyncExternalStore(subscribeTimer, () => Date.now(), () => 0)
+  const now = nowMs ? new Date(nowMs) : null
 
   const methodLabel = useMemo(() => {
     const payment = session?.payment

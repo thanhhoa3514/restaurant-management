@@ -3,6 +3,8 @@ import type { Lang } from '@/lib/use-lang'
 type DictValue = string | ((...args: never[]) => string)
 
 /** Page-level strings for admin routes (dashboard, table-QR manager). */
+const viFormat = new Intl.NumberFormat('vi-VN')
+
 export const ADMIN_DICT: Record<Lang, Record<string, DictValue>> = {
   vi: {
     dashboard_title: 'Tổng quan vận hành',
@@ -46,7 +48,7 @@ export const ADMIN_DICT: Record<Lang, Record<string, DictValue>> = {
     catalog_empty_title: 'Chưa có món trong phạm vi này',
     catalog_empty_desc: 'Tạo món đầu tiên hoặc chọn danh mục khác.',
     catalog_uncategorized: 'Chưa phân loại',
-    catalog_from_price: (price: number) => `Từ ${new Intl.NumberFormat('vi-VN').format(price)}đ`,
+    catalog_from_price: (price: number) => `Từ ${viFormat.format(price)}đ`,
     catalog_hidden: 'Ẩn',
     catalog_edit: 'Sửa',
     catalog_delete: 'Xóa',
@@ -172,7 +174,7 @@ export const ADMIN_DICT: Record<Lang, Record<string, DictValue>> = {
     catalog_empty_title: 'No items in this scope',
     catalog_empty_desc: 'Create the first item or choose another category.',
     catalog_uncategorized: 'Uncategorized',
-    catalog_from_price: (price: number) => `From ${new Intl.NumberFormat('vi-VN').format(price)}đ`,
+    catalog_from_price: (price: number) => `From ${viFormat.format(price)}đ`,
     catalog_hidden: 'Hidden',
     catalog_edit: 'Edit',
     catalog_delete: 'Delete',

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FC } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type FC } from 'react'
 import { QrCode } from 'lucide-react'
 
 import { ApiError } from '@/lib/api'
@@ -21,13 +21,16 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
   const attemptedToken = useRef<string | null>(null)
   const [joinState, setJoinState] = useState<JoinState>('idle')
   const [message, setMessage] = useState('')
-  const [now, setNow] = useState<Date | null>(null)
 
-  useEffect(() => {
-    setNow(new Date())
-    const timer = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(timer)
-  }, [])
+  const nowMs = useSyncExternalStore(
+    useCallback((cb) => {
+      const timer = setInterval(cb, 1000)
+      return () => clearInterval(timer)
+    }, []),
+    () => Date.now(),
+    () => 0
+  )
+  const now = nowMs ? new Date(nowMs) : null
 
   const labels = useMemo(
     () =>

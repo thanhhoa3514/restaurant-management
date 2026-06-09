@@ -40,12 +40,14 @@ export const SecureActionDialog: FC<SecureActionDialogProps> = ({
   onConfirm,
 }) => {
   const [userInput, setUserInput] = useState('')
+  const [prevOpen, setPrevOpen] = useState(open)
 
-  useEffect(() => {
+  if (open !== prevOpen) {
+    setPrevOpen(open)
     if (open) {
       setUserInput('')
     }
-  }, [open])
+  }
 
   const isVerified = (() => {
     if (!requireConfirmationText) return true

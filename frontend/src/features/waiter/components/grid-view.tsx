@@ -45,7 +45,7 @@ export const GridView: FC<GridViewProps> = ({ tables, now, lang, onSelectTable, 
         const icons = {
           empty: null,
           occupied: <Users className="size-3.5 text-amber-500" />,
-          call: <Bell className="size-3.5 text-red-500 animate-bounce" />,
+          call: <Bell className="size-3.5 text-red-500 animate-in slide-in-from-bottom-1 fade-in duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]" />,
           ready: <Check className="size-3.5 text-emerald-500" />,
           bill: <Receipt className="size-3.5 text-blue-500" />,
           idle: <Clock className="size-3.5 text-amber-500" />,

@@ -80,12 +80,11 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
   return (
     <>
       {open && (
-        <div
-          role="button"
-          tabIndex={0}
-          className="fixed inset-0 bg-black/40 z-overlay animate-fade-in"
+        <button
+          type="button"
+          aria-label={lang === 'vi' ? 'Đóng giỏ hàng' : 'Close cart'}
+          className="fixed inset-0 bg-black/40 z-overlay animate-fade-in w-full border-0 cursor-default"
           onClick={onClose}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClose() }}
         />
       )}
 
@@ -119,7 +118,7 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
             </div>
           ) : (
             state.cart.map((line, i) => (
-              <CartLineRow key={`${line.menuItemId}-${i}`} line={line} index={i} onRemove={handleRemove} onQtyChange={handleQtyChange} />
+              <CartLineRow key={line.id ?? `${line.menuItemId}-${i}`} line={line} index={i} onRemove={handleRemove} onQtyChange={handleQtyChange} />
             ))
           )}
         </div>

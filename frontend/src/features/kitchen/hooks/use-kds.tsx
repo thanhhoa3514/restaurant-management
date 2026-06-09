@@ -86,6 +86,8 @@ export function useKds(): UseKdsValue {
   const langRef = useRef(lang)
   const soundOnRef = useRef(soundOn)
   const prevUrgencyRef = useRef<Record<string, Urgency>>({})
+  const ticketsRef = useRef(tickets)
+  const fadingIdsRef = useRef(fadingIds)
 
   useEffect(() => {
     langRef.current = lang
@@ -94,6 +96,14 @@ export function useKds(): UseKdsValue {
   useEffect(() => {
     soundOnRef.current = soundOn
   }, [soundOn])
+
+  useEffect(() => {
+    ticketsRef.current = tickets
+  }, [tickets])
+
+  useEffect(() => {
+    fadingIdsRef.current = fadingIds
+  }, [fadingIds])
 
   const setLang = useCallback((newLang: Lang) => {
     localStorage.setItem('rest_lang_kds', newLang)
@@ -116,38 +126,38 @@ export function useKds(): UseKdsValue {
 
   useEffect(() => {
     const timerId = window.setInterval(() => {
-      setNow((prev) => new Date(prev.getTime() + 1_000 * timeMultiplier))
+      setNow((prev) => {
+        const nextNow = new Date(prev.getTime() + 1_000 * timeMultiplier)
+        const nextUrgency: Record<string, Urgency> = {}
+        let justWentRed = false
+
+        for (const ticket of ticketsRef.current) {
+          if (fadingIdsRef.current.has(ticket.order_id)) continue
+          if (ticket.items.every((item) => item.status === 'served')) continue
+
+          const waitSec = Math.max(
+            0,
+            Math.floor((nextNow.getTime() - ticket.submitted_at.getTime()) / 1_000),
+          )
+          const urgency = urgencyFor(waitSec)
+          const previous = prevUrgencyRef.current[ticket.order_id]
+          if (previous && previous !== 'red' && urgency === 'red') justWentRed = true
+          nextUrgency[ticket.order_id] = urgency
+        }
+
+        prevUrgencyRef.current = nextUrgency
+        if (justWentRed && soundOnRef.current) {
+          notify(
+            langRef.current === 'vi'
+              ? 'Một đơn vừa chuyển sang khẩn cấp'
+              : 'An order just became urgent',
+          )
+        }
+        return nextNow
+      })
     }, 1_000)
     return () => window.clearInterval(timerId)
-  }, [timeMultiplier])
-
-  useEffect(() => {
-    const nextUrgency: Record<string, Urgency> = {}
-    let justWentRed = false
-
-    for (const ticket of tickets) {
-      if (fadingIds.has(ticket.order_id)) continue
-      if (ticket.items.every((item) => item.status === 'served')) continue
-
-      const waitSec = Math.max(
-        0,
-        Math.floor((now.getTime() - ticket.submitted_at.getTime()) / 1_000),
-      )
-      const urgency = urgencyFor(waitSec)
-      const previous = prevUrgencyRef.current[ticket.order_id]
-      if (previous && previous !== 'red' && urgency === 'red') justWentRed = true
-      nextUrgency[ticket.order_id] = urgency
-    }
-
-    prevUrgencyRef.current = nextUrgency
-    if (justWentRed && soundOnRef.current) {
-      notify(
-        langRef.current === 'vi'
-          ? 'Một đơn vừa chuyển sang khẩn cấp'
-          : 'An order just became urgent',
-      )
-    }
-  }, [fadingIds, notify, now, tickets])
+  }, [timeMultiplier, notify])
 
   const advanceAll = useCallback(
     (orderId: string) => {
@@ -159,9 +169,12 @@ export function useKds(): UseKdsValue {
       const target = nextStatus(lowestStatus).toUpperCase()
       const toastKey = statusToastKey(lowestStatus)
       void Promise.all(
-        ticket.items
-          .filter((item) => item.status === lowestStatus)
-          .map((item) => updateKitchenOrderItemStatus(item.id, target)),
+        ticket.items.reduce((acc, item) => {
+          if (item.status === lowestStatus) {
+            acc.push(updateKitchenOrderItemStatus(item.id, target))
+          }
+          return acc
+        }, [] as Promise<any>[]),
       ).then(() => {
         if (toastKey) notify(t(toastKey, ticket.table_number))
         refetchQueue()
@@ -221,7 +234,7 @@ export function useKds(): UseKdsValue {
   }, [tickets])
 
   const sortedTickets = useMemo(
-    () => [...tickets].sort((a, b) => a.submitted_at.getTime() - b.submitted_at.getTime()),
+    () => tickets.toSorted((a, b) => a.submitted_at.getTime() - b.submitted_at.getTime()),
     [tickets],
   )
 

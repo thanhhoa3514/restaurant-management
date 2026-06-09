@@ -151,18 +151,19 @@ interface CounterPillProps {
   value: number
 }
 
+const TONE_CLASSES: Record<CounterPillProps['tone'], string> = {
+  red: 'bg-red-500 text-white shadow-red-500/20',
+  emerald: 'bg-emerald-500 text-white shadow-emerald-500/20',
+  blue: 'bg-blue-500 text-white shadow-blue-500/20',
+}
+
 const CounterPill: FC<CounterPillProps> = ({ tone, label, value }) => {
   if (value === 0) return null
-  const toneClass: Record<CounterPillProps['tone'], string> = {
-    red: 'bg-red-500 text-white shadow-red-500/20',
-    emerald: 'bg-emerald-500 text-white shadow-emerald-500/20',
-    blue: 'bg-blue-500 text-white shadow-blue-500/20',
-  }
   return (
     <div
       className={cn(
         'hidden items-center gap-2 rounded-full py-1 pl-3 pr-1 text-sm font-bold shadow-lg sm:inline-flex',
-        toneClass[tone],
+        TONE_CLASSES[tone],
       )}
     >
       <span>{label}</span>

@@ -28,6 +28,7 @@ export interface CartOption {
 // A line in the local cart, modelled to match the place-order payload so no
 // re-mapping is needed at submit time (variant is distinct from options).
 export interface CartLine {
+  id?: string
   menuItemId: string
   variantId?: string
   variantNameSnapshot?: string

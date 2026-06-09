@@ -1,10 +1,12 @@
 import type { CartLine } from '../types'
 
+const vndFormatter = new Intl.NumberFormat('vi-VN', {
+  style: 'currency',
+  currency: 'VND',
+})
+
 export function formatVND(price: number): string {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-  }).format(price)
+  return vndFormatter.format(price)
 }
 
 export function formatTime(date: Date): string {

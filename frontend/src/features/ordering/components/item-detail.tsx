@@ -146,6 +146,7 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
       }
     }
     const line: CartLine = {
+      id: crypto.randomUUID(),
       menuItemId: item.id,
       variantId: variant?.id,
       variantNameSnapshot: variant?.name,

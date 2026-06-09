@@ -1,4 +1,4 @@
-import { useMemo, useState, type FC } from 'react'
+import { useMemo, useReducer, useRef, type FC } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -45,25 +45,30 @@ export const TableSheet: FC<TableSheetProps> = ({
   onRequestBill,
   onOpenSession,
 }) => {
-  const [confirmBill, setConfirmBill] = useState(false)
-  const [showOpenForm, setShowOpenForm] = useState(false)
-  const [guestCount, setGuestCount] = useState(2)
-  const [notes, setNotes] = useState('')
+  const [{ confirmBill, showOpenForm, guestCount, notes }, dispatch] = useReducer(
+    (s: any, a: any) => ({ ...s, ...a }),
+    { confirmBill: false, showOpenForm: false, guestCount: 2, notes: '' }
+  )
 
-  const [prevTableId, setPrevTableId] = useState(table?.id)
+  const prevTableIdRef = useRef(table?.id)
 
-  if (table?.id !== prevTableId) {
-    setPrevTableId(table?.id)
-    setConfirmBill(false)
-    setShowOpenForm(false)
-    setGuestCount(table?.capacity ? Math.min(2, table.capacity) : 2)
-    setNotes('')
+  if (table?.id !== prevTableIdRef.current) {
+    prevTableIdRef.current = table?.id
+    dispatch({
+      confirmBill: false,
+      showOpenForm: false,
+      guestCount: table?.capacity ? Math.min(2, table.capacity) : 2,
+      notes: ''
+    })
   }
 
   const readyItems = useMemo<ReadyItem[]>(() => {
     if (!table?.session) return []
     return table.session.orders.flatMap((order) =>
-      order.items.filter((item) => item.status === 'ready').map((item) => ({ item, orderId: order.id })),
+      order.items.reduce<ReadyItem[]>((acc, item) => {
+        if (item.status === 'ready') acc.push({ item, orderId: order.id })
+        return acc
+      }, [])
     )
   }, [table])
 
@@ -115,14 +120,14 @@ export const TableSheet: FC<TableSheetProps> = ({
               lang={lang}
               t={t}
               showOpenForm={showOpenForm}
-              setShowOpenForm={setShowOpenForm}
+              setShowOpenForm={(v) => dispatch({ showOpenForm: v })}
               guestCount={guestCount}
-              setGuestCount={setGuestCount}
+              setGuestCount={(v) => dispatch({ guestCount: v })}
               notes={notes}
-              setNotes={setNotes}
+              setNotes={(v) => dispatch({ notes: v })}
               onSubmit={() => {
                 onOpenSession(table.id, guestCount, notes)
-                setShowOpenForm(false)
+                dispatch({ showOpenForm: false })
               }}
             />
           ) : (
@@ -156,7 +161,7 @@ export const TableSheet: FC<TableSheetProps> = ({
                   {t('signal_bill')}
                 </Badge>
               ) : (
-                <Button className="rounded-2xl" onClick={() => setConfirmBill(true)}>
+                <Button className="rounded-2xl" onClick={() => dispatch({ confirmBill: true })}>
                   {t('btn_request_bill')}
                 </Button>
               )}
@@ -167,10 +172,10 @@ export const TableSheet: FC<TableSheetProps> = ({
         {confirmBill && (
           <ConfirmBillDialog
             t={t}
-            onCancel={() => setConfirmBill(false)}
+            onCancel={() => dispatch({ confirmBill: false })}
             onConfirm={() => {
               onRequestBill(table.id)
-              setConfirmBill(false)
+              dispatch({ confirmBill: false })
             }}
           />
         )}
@@ -358,16 +363,17 @@ const QuantityPill: FC<{ qty: number; muted?: boolean }> = ({ qty, muted }) => (
   </span>
 )
 
+const CHIP_VARIANTS: Record<ItemStatus, 'default' | 'secondary' | 'outline' | 'success' | 'warning'> = {
+  pending: 'secondary',
+  acknowledged: 'default',
+  preparing: 'warning',
+  ready: 'success',
+  served: 'outline',
+}
+
 const StatusChip: FC<{ status: ItemStatus; t: (key: string, ...args: Array<string | number>) => string }> = ({ status, t }) => {
-  const variantByStatus: Record<ItemStatus, 'default' | 'secondary' | 'outline' | 'success' | 'warning'> = {
-    pending: 'secondary',
-    acknowledged: 'default',
-    preparing: 'warning',
-    ready: 'success',
-    served: 'outline',
-  }
   return (
-    <Badge variant={variantByStatus[status]} className="shrink-0 rounded-full">
+    <Badge variant={CHIP_VARIANTS[status]} className="shrink-0 rounded-full">
       {t(`status_${status}`)}
     </Badge>
   )

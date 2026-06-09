@@ -1,7 +1,14 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useNavigate } from '@tanstack/react-router'
 import { LogOut, Menu, Search, SlidersHorizontal, UserRound } from 'lucide-react'
-import { useMemo, useState, useCallback, type CSSProperties, type ReactNode } from 'react'
+import {
+  useMemo,
+  useState,
+  useCallback,
+  useEffect,
+  type CSSProperties,
+  type ReactNode,
+} from 'react'
 
 import { Button } from '@/components/ui/button'
 import { LanguageLoader } from '@/components/ui/language-loader'
@@ -62,25 +69,28 @@ export function useShellConfig(config: ShellConfig) {
 }
 
 import { createPortal } from 'react-dom'
-/* eslint-disable react-refresh/only-export-components, react-doctor/only-export-components */
-import { useEffect } from 'react'
+import { useSyncExternalStore } from 'react'
+
+const emptySubscribe = () => () => {}
 
 export function ShellHeaderCenter({ children }: { children: ReactNode }) {
-  const [target, setTarget] = useState<HTMLElement | null>(null)
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setTarget(document.getElementById('shell-header-center'))
-  }, [])
+  const isClient = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  )
+  const target = isClient ? document.getElementById('shell-header-center') : null
   if (!target) return null
   return createPortal(children, target)
 }
 
 export function ShellHeaderActions({ children }: { children: ReactNode }) {
-  const [target, setTarget] = useState<HTMLElement | null>(null)
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setTarget(document.getElementById('shell-header-actions'))
-  }, [])
+  const isClient = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  )
+  const target = isClient ? document.getElementById('shell-header-actions') : null
   if (!target) return null
   return createPortal(children, target)
 }
@@ -131,12 +141,16 @@ export function AdminShell({
 
   const nav = useMemo(() => navItems.filter((item) => has(item.permission)), [has])
 
-  const handleCommand = useCallback((href?: string, view?: string) => {
-    if (href === '/admin') navigate({ to: '/admin', search: { view: view as AdminView | undefined } })
-    else if (href) navigate({ to: href })
-    setSearchOpen(false)
-    setMobileOpen(false)
-  }, [navigate])
+  const handleCommand = useCallback(
+    (href?: string, view?: string) => {
+      if (href === '/admin')
+        navigate({ to: '/admin', search: { view: view as AdminView | undefined } })
+      else if (href) navigate({ to: href })
+      setSearchOpen(false)
+      setMobileOpen(false)
+    },
+    [navigate],
+  )
 
   const commandItems = useMemo<CommandEntry[]>(() => {
     const navEntries: CommandEntry[] = nav.map((item) => ({

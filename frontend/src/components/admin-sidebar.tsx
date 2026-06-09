@@ -43,10 +43,11 @@ export function SidebarContent({
   const isActive = (item: NavItem) =>
     item.view ? item.href === '/admin' && item.view === activeView : item.id === activeView
 
-  const groups = GROUP_ORDER.map((group) => ({
-    group,
-    items: nav.filter((item) => item.group === group),
-  })).filter((entry) => entry.items.length > 0)
+  const groups = GROUP_ORDER.reduce<{ group: NavGroup; items: NavItem[] }[]>((acc, group) => {
+    const items = nav.filter((item) => item.group === group)
+    if (items.length > 0) acc.push({ group, items })
+    return acc
+  }, [])
 
   return (
     <div
