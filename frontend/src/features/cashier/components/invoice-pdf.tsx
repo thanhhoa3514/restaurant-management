@@ -1,3 +1,4 @@
+/* eslint-disable react-doctor/prefer-dynamic-import */
 import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
 import type { CashierSession } from '@/features/cashier/types';
 import { fmtDateTime, fmtVND, providerName } from '@/features/cashier/helpers';

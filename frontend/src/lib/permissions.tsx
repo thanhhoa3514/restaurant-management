@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useReducer, type ReactNode } from 'react'
 
 import { ApiError, apiRequest } from '@/lib/api'
 import {
@@ -24,14 +24,19 @@ interface MeResponse {
 }
 
 export function PermissionProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<StaffSession | null>(() => getStaffSession())
-  const [loading, setLoading] = useState(() => Boolean(getStaffSession()?.token))
+  const [{ session, loading }, dispatch] = useReducer(
+    (s: { session: StaffSession | null; loading: boolean }, a: Partial<typeof s>) => ({ ...s, ...a }),
+    null as any,
+    () => {
+      const initSession = getStaffSession()
+      return { session: initSession, loading: Boolean(initSession?.token) }
+    }
+  )
 
   useEffect(
     () =>
       subscribeStaffSession((next) => {
-        setSession(next)
-        setLoading(Boolean(next?.token))
+        dispatch({ session: next, loading: Boolean(next?.token) })
       }),
     [],
   )
@@ -46,17 +51,19 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
           name: me.name,
           permissions: me.permissions,
         })
-        setSession(next)
+        dispatch({ session: next, loading: false })
       })
       .catch((error: unknown) => {
         if (!active) return
         if (error instanceof ApiError && error.status === 401) {
           logoutStaff()
-          setSession(null)
+          dispatch({ session: null, loading: false })
+        } else {
+          dispatch({ loading: false })
         }
       })
       .finally(() => {
-        if (active) setLoading(false)
+        if (active) dispatch({ loading: false })
       })
     return () => {
       active = false

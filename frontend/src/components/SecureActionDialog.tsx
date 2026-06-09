@@ -1,4 +1,4 @@
-import { useState, useEffect, type FC } from 'react'
+import { useState, useRef, type FC } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -40,10 +40,10 @@ export const SecureActionDialog: FC<SecureActionDialogProps> = ({
   onConfirm,
 }) => {
   const [userInput, setUserInput] = useState('')
-  const [prevOpen, setPrevOpen] = useState(open)
+  const prevOpenRef = useRef(open)
 
-  if (open !== prevOpen) {
-    setPrevOpen(open)
+  if (open !== prevOpenRef.current) {
+    prevOpenRef.current = open
     if (open) {
       setUserInput('')
     }

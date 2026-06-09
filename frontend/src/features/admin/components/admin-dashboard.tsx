@@ -307,7 +307,7 @@ function ActionButton({
   onClick?: () => void
 }) {
   return (
-    <button onClick={onClick} className="group flex min-h-16 w-full cursor-pointer items-center justify-between rounded-[18px] bg-[var(--surface-grouped)]/70 p-3 text-left transition-colors duration-[220ms] hover:bg-[var(--system-purple)]/10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--system-purple)]/20">
+    <button type="button" onClick={onClick} className="group flex min-h-16 w-full cursor-pointer items-center justify-between rounded-[18px] bg-[var(--surface-grouped)]/70 p-3 text-left transition-colors duration-[220ms] hover:bg-[var(--system-purple)]/10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--system-purple)]/20">
       <span className="flex items-center gap-3">
         <span className="flex size-10 items-center justify-center rounded-[14px] bg-[var(--bg-elevated)] text-[var(--text-secondary)] group-hover:text-[var(--system-purple)]">
           <Icon className="size-5" />

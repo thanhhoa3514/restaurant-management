@@ -1,4 +1,4 @@
-/* eslint-disable react-refresh/only-export-components */
+/* eslint-disable react-refresh/only-export-components, react-doctor/only-export-components */
 import { useNavigate } from '@tanstack/react-router'
 import { LogOut, Menu, Search, SlidersHorizontal, UserRound } from 'lucide-react'
 import {
@@ -6,6 +6,7 @@ import {
   useState,
   useCallback,
   useEffect,
+  useReducer,
   type CSSProperties,
   type ReactNode,
 } from 'react'
@@ -33,7 +34,7 @@ import { roleTint, navItems, type StaffView, type AdminView } from './admin-conf
 import { SidebarContent } from './admin-sidebar'
 import { AdminCommandDialog, type CommandEntry } from './admin-search'
 
-import { createContext, useContext, useLayoutEffect } from 'react'
+import { createContext, use, useLayoutEffect } from 'react'
 
 export interface ShellConfig {
   title?: string
@@ -56,7 +57,7 @@ export function ShellProvider({ children }: { children: ReactNode }) {
 }
 
 export function useShellConfig(config: ShellConfig) {
-  const ctx = useContext(ShellContext)
+  const ctx = use(ShellContext)
   // Depend ONLY on the stable setter (from useState) and the primitive config
   // values — never on `ctx` itself. The context value object is recreated when
   // `config` state changes, so listing `ctx` in the deps would re-fire this
@@ -125,15 +126,18 @@ export function AdminShell({
   const navigate = useNavigate()
   const { has } = usePermissions()
   const s = shellStrings(lang)
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [searchOpen, setSearchOpen] = useState(false)
-  const [configOpen, setConfigOpen] = useState(false)
-  const [profileOpen, setProfileOpen] = useState(false)
-  const [query, setQuery] = useState('')
-  const [changingLang, setChangingLang] = useState<Lang | null>(null)
+  const [state, dispatch] = useReducer((s: any, a: any) => ({ ...s, ...a }), {
+    mobileOpen: false,
+    searchOpen: false,
+    configOpen: false,
+    profileOpen: false,
+    query: '',
+    changingLang: null as Lang | null
+  })
+  const { mobileOpen, searchOpen, configOpen, profileOpen, query, changingLang } = state
 
   // Merge with context config if we are hoisted
-  const ctx = useContext(ShellContext)
+  const ctx = use(ShellContext)
   const title = ctx?.config.title ?? _title
   const subtitle = ctx?.config.subtitle ?? _subtitle
   const eyebrow = ctx?.config.eyebrow ?? _eyebrow
@@ -146,8 +150,8 @@ export function AdminShell({
       if (href === '/admin')
         navigate({ to: '/admin', search: { view: view as AdminView | undefined } })
       else if (href) navigate({ to: href })
-      setSearchOpen(false)
-      setMobileOpen(false)
+      ((v: boolean) => dispatch({ searchOpen: v }))(false)
+      ((v: boolean) => dispatch({ mobileOpen: v }))(false)
     },
     [navigate],
   )
@@ -169,11 +173,11 @@ export function AdminShell({
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
-        setSearchOpen(true)
+        ((v: boolean) => dispatch({ searchOpen: v }))(true)
       }
       if (event.key === 'Escape') {
-        setSearchOpen(false)
-        setProfileOpen(false)
+        ((v: boolean) => dispatch({ searchOpen: v }))(false)
+        ((v: boolean) => dispatch({ profileOpen: v }))(false)
       }
     }
 
@@ -188,10 +192,10 @@ export function AdminShell({
 
   const handleLangChange = (next: Lang) => {
     if (!setLang) return
-    setChangingLang(next)
+    ((v: Lang | null) => dispatch({ changingLang: v }))(next)
     setTimeout(() => {
       setLang(next)
-      setChangingLang(null)
+      ((v: Lang | null) => dispatch({ changingLang: v }))(null)
     }, 750)
   }
 
@@ -222,7 +226,7 @@ export function AdminShell({
                     variant="secondary"
                     size="icon"
                     className="size-11 shrink-0 rounded-full border border-[var(--separator)] bg-[var(--material-thin)] lg:hidden"
-                    onClick={() => setMobileOpen(true)}
+                    onClick={() => ((v: boolean) => dispatch({ mobileOpen: v }))(true)}
                     aria-label={s.openNavAria}
                   >
                     <Menu />
@@ -253,7 +257,7 @@ export function AdminShell({
                     type="button"
                     variant="secondary"
                     className="hidden h-10 rounded-full border border-[var(--separator)] bg-[var(--surface-grouped)]/70 px-3 text-[13px] text-[var(--text-secondary)] backdrop-blur-md sm:inline-flex"
-                    onClick={() => setSearchOpen(true)}
+                    onClick={() => ((v: boolean) => dispatch({ searchOpen: v }))(true)}
                   >
                     <Search className="size-4" />
                     <span>{s.search}</span>
@@ -274,13 +278,13 @@ export function AdminShell({
                     variant="secondary"
                     size="icon"
                     className="size-10 rounded-full border border-[var(--separator)] bg-[var(--material-thin)] backdrop-blur-md"
-                    onClick={() => setConfigOpen(true)}
+                    onClick={() => ((v: boolean) => dispatch({ configOpen: v }))(true)}
                     aria-label={s.openSettingsAria}
                   >
                     <SlidersHorizontal />
                   </Button>
                   <div className="relative">
-                    <DropdownMenu open={profileOpen} onOpenChange={setProfileOpen}>
+                    <DropdownMenu open={profileOpen} onOpenChange={((v: boolean) => dispatch({ profileOpen: v }))}>
                       <DropdownMenuTrigger>
                         <button
                           type="button"
@@ -335,7 +339,7 @@ export function AdminShell({
           </div>
         </div>
 
-        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <Sheet open={mobileOpen} onOpenChange={((v: boolean) => dispatch({ mobileOpen: v }))}>
           <SheetContent
             side="left"
             className="max-w-[288px] bg-[var(--material-thick)] text-[var(--text)]"
@@ -347,12 +351,12 @@ export function AdminShell({
               activeView={activeView}
               brandName={brandName}
               s={s}
-              onNavigate={() => setMobileOpen(false)}
+              onNavigate={() => ((v: boolean) => dispatch({ mobileOpen: v }))(false)}
             />
           </SheetContent>
         </Sheet>
 
-        <Sheet open={configOpen} onOpenChange={setConfigOpen}>
+        <Sheet open={configOpen} onOpenChange={((v: boolean) => dispatch({ configOpen: v }))}>
           <SheetContent side="right" className="bg-[var(--material-thick)] text-[var(--text)]">
             <SheetHeader title={s.settingsTitle} />
             <div className="space-y-4 px-5 pb-5 pt-2">
@@ -371,9 +375,9 @@ export function AdminShell({
 
         <AdminCommandDialog
           open={searchOpen}
-          onOpenChange={setSearchOpen}
+          onOpenChange={((v: boolean) => dispatch({ searchOpen: v }))}
           query={query}
-          setQuery={setQuery}
+          setQuery={(v: string) => dispatch({ query: v })}
           s={s}
           commandItems={commandItems}
         />

@@ -124,18 +124,18 @@ export async function loginStaff(
     expiresAt: envelope.data.expires_at,
     permissions: envelope.data.permissions ?? [],
   }
-  localStorage.setItem('staff_session', JSON.stringify(session))
+  localStorage.setItem('staff_session:v1', JSON.stringify(session))
   window.dispatchEvent(new Event(STAFF_SESSION_EVENT))
   return session
 }
 
 export function logoutStaff(): void {
-  localStorage.removeItem('staff_session')
+  localStorage.removeItem('staff_session:v1')
   window.dispatchEvent(new Event(STAFF_SESSION_EVENT))
 }
 
 export function getStaffSession(): StaffSession | null {
-  const raw = localStorage.getItem('staff_session')
+  const raw = localStorage.getItem('staff_session:v1')
   if (!raw) return null
   try {
     const session = JSON.parse(raw) as Partial<StaffSession>
@@ -171,7 +171,7 @@ export function updateStaffSession(
   const current = getStaffSession()
   if (!current) return null
   const next = { ...current, ...updates }
-  localStorage.setItem('staff_session', JSON.stringify(next))
+  localStorage.setItem('staff_session:v1', JSON.stringify(next))
   window.dispatchEvent(new Event(STAFF_SESSION_EVENT))
   return next
 }

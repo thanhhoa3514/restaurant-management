@@ -61,8 +61,14 @@ export function wfTimeSinceSignal(table: WFTable, priority: WFPriority, now: Dat
     for (const o of s.orders) {
       for (const it of o.items) {
         if (it.status === 'ready') {
-          const h = it.status_history.find((x) => x.status === 'ready')
-          if (h && h.timestamp.getTime() < earliest) earliest = h.timestamp.getTime()
+          let readyTime: number | null = null
+          for (const x of it.status_history) {
+            if (x.status === 'ready') {
+              readyTime = x.timestamp.getTime()
+              break
+            }
+          }
+          if (readyTime !== null && readyTime < earliest) earliest = readyTime
         }
       }
     }

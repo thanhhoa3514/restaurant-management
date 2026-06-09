@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react'
+import { createContext, use, useEffect, useMemo, useReducer, type ReactNode } from 'react'
 
 import {
   adjustInvoice,
@@ -466,7 +466,7 @@ export function CashierProvider({ children }: { children: ReactNode }) {
 }
 
 export function useCashier(): CashierContextValue {
-  const context = useContext(CashierContext)
+  const context = use(CashierContext)
   if (!context) throw new Error('useCashier must be used within CashierProvider')
   return context
 }

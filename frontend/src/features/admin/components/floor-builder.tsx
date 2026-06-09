@@ -25,7 +25,7 @@ interface TableData {
 }
 
 export function FloorBuilder() {
-  const [tables, setTables] = useState<TableData[]>(
+  const [tables, setTables] = useState<TableData[]>(() =>
     WF_TABLE_LAYOUT.map((t: { number: number, capacity: number, x: number, y: number }) => ({ ...t, id: `T${t.number}` }))
   )
   const [isSaving, setIsSaving] = useState(false)

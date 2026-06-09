@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react'
+import { createContext, use } from 'react'
 
 import type { PermissionCode } from '@/lib/auth'
 
@@ -12,7 +12,7 @@ export interface PermissionContextValue {
 export const PermissionContext = createContext<PermissionContextValue | null>(null)
 
 export function usePermissions(): PermissionContextValue {
-  const value = useContext(PermissionContext)
+  const value = use(PermissionContext)
   if (!value) throw new Error('usePermissions must be used inside PermissionProvider')
   return value
 }
