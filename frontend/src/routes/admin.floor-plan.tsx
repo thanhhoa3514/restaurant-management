@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components, react-doctor/only-export-components */
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useShellConfig } from '@/components/admin-shell'
 import { makeAdminT } from '@/features/admin/data/i18n'

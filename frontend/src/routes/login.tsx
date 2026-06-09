@@ -1,4 +1,5 @@
-import { useState } from 'react'
+/* eslint-disable react-refresh/only-export-components, react-doctor/only-export-components */
+import * as React from 'react'
 import { Loader2 } from 'lucide-react'
 import { createFileRoute, useNavigate, useSearch } from '@tanstack/react-router'
 import { z } from 'zod'
@@ -18,6 +19,36 @@ import {
 import { loginStaff, DEMO_CREDENTIALS, type StaffRole } from '@/lib/auth'
 import { BRAND } from '@/lib/brand'
 
+const roleMeta: Record<
+  StaffRole,
+  { label: string; desc: string; icon: typeof Shield; color: string }
+> = {
+  admin: {
+    label: 'Admin',
+    desc: 'Quản trị hệ thống',
+    icon: Shield,
+    color: 'text-[var(--system-purple)] border-[var(--system-purple)]/30 bg-[var(--system-purple)]/5',
+  },
+  cashier: {
+    label: 'Cashier',
+    desc: 'Thu ngân & thanh toán',
+    icon: CreditCard,
+    color: 'text-[var(--system-green)] border-[var(--system-green)]/30 bg-[var(--system-green)]/5',
+  },
+  waiter: {
+    label: 'Waiter',
+    desc: 'Phục vụ bàn ăn',
+    icon: ClipboardList,
+    color: 'text-[var(--system-blue)] border-[var(--system-blue)]/30 bg-[var(--system-blue)]/5',
+  },
+  kitchen: {
+    label: 'Kitchen',
+    desc: 'Nhà bếp & KDS',
+    icon: ChefHat,
+    color: 'text-[var(--system-orange)] border-[var(--system-orange)]/30 bg-[var(--system-orange)]/5',
+  },
+}
+
 const searchSchema = z.object({
   redirect: z.string().optional(),
 })
@@ -30,50 +61,53 @@ export const RouteComponent = () => {
   const { redirect } = useSearch({ from: '/login' })
   const navigate = useNavigate()
 
-  const [role, setRole] = useState<StaffRole>('cashier')
-  const [restaurantCode, setRestaurantCode] = useState(DEMO_CREDENTIALS.cashier.restaurantCode)
-  const [code, setCode] = useState('')
-  const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
-  const [loggedInUser, setLoggedInUser] = useState('')
+  const [state, setState] = React.useReducer(
+    (s: any, a: any) => ({ ...s, ...a }),
+    {
+      role: 'cashier' as StaffRole,
+      restaurantCode: DEMO_CREDENTIALS.cashier.restaurantCode,
+      code: '',
+      password: '',
+      showPassword: false,
+      loading: false,
+      error: null as string | null,
+      success: false,
+      loggedInUser: '',
+    }
+  )
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
+    setState({ error: null })
 
-    if (!restaurantCode.trim()) {
-      setError('Vui lòng nhập mã nhà hàng!')
+    if (!state.restaurantCode.trim()) {
+      setState({ error: 'Vui lòng nhập mã nhà hàng!' })
       return
     }
-    if (!code.trim()) {
-      setError(
-        role === 'admin'
+    if (!state.code.trim()) {
+      setState({
+        error: state.role === 'admin'
           ? 'Vui lòng nhập tài khoản quản trị!'
           : 'Vui lòng nhập tài khoản nhân viên!',
-      )
+      })
       return
     }
-    if (!password) {
-      setError('Vui lòng nhập mật khẩu!')
+    if (!state.password) {
+      setState({ error: 'Vui lòng nhập mật khẩu!' })
       return
     }
 
-    setLoading(true)
+    setState({ loading: true })
 
     try {
-      const session = await loginStaff(restaurantCode, code, password)
+      const session = await loginStaff(state.restaurantCode, state.code, state.password)
 
       if (!session) {
-        setError('Tài khoản hoặc mật khẩu không chính xác!')
-        setLoading(false)
+        setState({ error: 'Tài khoản hoặc mật khẩu không chính xác!', loading: false })
         return
       }
 
-      setSuccess(true)
-      setLoggedInUser(session.name)
+      setState({ success: true, loggedInUser: session.name })
 
       // Wait 1.2s for the checkmark animation before redirecting.
       window.setTimeout(() => {
@@ -84,52 +118,22 @@ export const RouteComponent = () => {
         }
       }, 1200)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể đăng nhập vào API')
-      setLoading(false)
+      setState({ error: err instanceof Error ? err.message : 'Không thể đăng nhập vào API', loading: false })
     }
   }
 
   // Helper to prefill fields for easy evaluation
   const handleQuickFill = (targetRole: StaffRole) => {
-    setRole(targetRole)
-    setRestaurantCode(DEMO_CREDENTIALS[targetRole].restaurantCode)
-    setCode(DEMO_CREDENTIALS[targetRole].code)
-    setPassword(DEMO_CREDENTIALS[targetRole].pass)
-    setError(null)
+    setState({
+      role: targetRole,
+      restaurantCode: DEMO_CREDENTIALS[targetRole].restaurantCode,
+      code: DEMO_CREDENTIALS[targetRole].code,
+      password: DEMO_CREDENTIALS[targetRole].pass,
+      error: null,
+    })
   }
 
-  const roleMeta: Record<
-    StaffRole,
-    { label: string; desc: string; icon: typeof Shield; color: string }
-  > = {
-    admin: {
-      label: 'Admin',
-      desc: 'Quản trị hệ thống',
-      icon: Shield,
-      color:
-        'text-[var(--system-purple)] border-[var(--system-purple)]/30 bg-[var(--system-purple)]/5',
-    },
-    cashier: {
-      label: 'Cashier',
-      desc: 'Thu ngân & thanh toán',
-      icon: CreditCard,
-      color:
-        'text-[var(--system-green)] border-[var(--system-green)]/30 bg-[var(--system-green)]/5',
-    },
-    waiter: {
-      label: 'Waiter',
-      desc: 'Phục vụ bàn ăn',
-      icon: ClipboardList,
-      color: 'text-[var(--system-blue)] border-[var(--system-blue)]/30 bg-[var(--system-blue)]/5',
-    },
-    kitchen: {
-      label: 'Kitchen',
-      desc: 'Nhà bếp & KDS',
-      icon: ChefHat,
-      color:
-        'text-[var(--system-orange)] border-[var(--system-orange)]/30 bg-[var(--system-orange)]/5',
-    },
-  }
+
 
   return (
     <div className="relative flex min-h-dvh items-center justify-center bg-zinc-950 px-4 py-12 font-sans text-zinc-100 overflow-hidden">
@@ -152,7 +156,7 @@ export const RouteComponent = () => {
 
         {/* Main card */}
         <div className="relative overflow-hidden rounded-3xl border border-zinc-800/80 bg-zinc-900/60 p-6 shadow-2xl backdrop-blur-2xl sm:p-8">
-          {success ? (
+          {state.success ? (
             /* Beautiful success screen */
             <div className="flex flex-col items-center justify-center py-10 text-center space-y-4 animate-scale-in">
               <div className="relative flex size-20 items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.15)] animate-pulse">
@@ -161,7 +165,7 @@ export const RouteComponent = () => {
               <div className="space-y-1">
                 <h3 className="text-xl font-bold text-white">Đăng nhập thành công!</h3>
                 <p className="text-sm text-zinc-400 leading-relaxed">
-                  Xin chào, <span className="font-semibold text-emerald-400">{loggedInUser}</span>.
+                  Xin chào, <span className="font-semibold text-emerald-400">{state.loggedInUser}</span>.
                   <br />
                   Hệ thống đang chuyển tiếp bạn...
                 </p>
@@ -174,22 +178,21 @@ export const RouteComponent = () => {
             <form onSubmit={handleLogin} className="space-y-6">
               {/* Role selector tabs */}
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                <div className="text-xs font-bold uppercase tracking-wider text-zinc-400">
                   Tài khoản mẫu
-                </label>
+                </div>
                 <div className="grid grid-cols-4 gap-2">
                   {(Object.keys(roleMeta) as StaffRole[]).map((r) => {
                     const meta = roleMeta[r]
                     const Icon = meta.icon
-                    const isSelected = role === r
+                    const isSelected = state.role === r
 
                     return (
                       <button
                         key={r}
                         type="button"
                         onClick={() => {
-                          setRole(r)
-                          setError(null)
+                          setState({ role: r, error: null })
                         }}
                         className={`group relative flex flex-col items-center justify-center rounded-2xl border p-3 text-center transition-all duration-200 cursor-pointer ${
                           isSelected
@@ -207,15 +210,15 @@ export const RouteComponent = () => {
                   })}
                 </div>
                 <p className="text-center text-xs text-zinc-400 pt-1 font-medium italic">
-                  &middot; {roleMeta[role].desc} &middot;
+                  &middot; {roleMeta[state.role].desc} &middot;
                 </p>
               </div>
 
               {/* Error state */}
-              {error && (
+              {state.error && (
                 <div className="flex items-center gap-3 rounded-2xl bg-red-950/30 border border-red-500/20 p-4 text-xs font-semibold text-red-400 animate-shake">
                   <AlertCircle size={16} className="shrink-0" />
-                  <p>{error}</p>
+                  <p>{state.error}</p>
                 </div>
               )}
 
@@ -238,8 +241,8 @@ export const RouteComponent = () => {
                       type="text"
                       placeholder="VD: DEMO"
                       className="h-12 w-full rounded-2xl border border-zinc-800 bg-zinc-950/40 pl-11 pr-4 text-sm font-semibold tracking-wide text-white placeholder-zinc-500 transition focus:border-zinc-600 focus:bg-zinc-950 focus:ring-1 focus:ring-zinc-600 outline-none"
-                      value={restaurantCode}
-                      onChange={(e) => setRestaurantCode(e.target.value)}
+                      value={state.restaurantCode}
+                      onChange={(e) => setState({ restaurantCode: e.target.value })}
                     />
                   </div>
                 </div>
@@ -261,8 +264,8 @@ export const RouteComponent = () => {
                       type="text"
                       placeholder="VD: cashier, server,..."
                       className="h-12 w-full rounded-2xl border border-zinc-800 bg-zinc-950/40 pl-11 pr-4 text-sm font-semibold tracking-wide text-white placeholder-zinc-500 transition focus:border-zinc-600 focus:bg-zinc-950 focus:ring-1 focus:ring-zinc-600 outline-none"
-                      value={code}
-                      onChange={(e) => setCode(e.target.value)}
+                      value={state.code}
+                      onChange={(e) => setState({ code: e.target.value })}
                     />
                   </div>
                 </div>
@@ -283,18 +286,18 @@ export const RouteComponent = () => {
                     </span>
                     <input
                       id="staffPass"
-                      type={showPassword ? 'text' : 'password'}
+                      type={state.showPassword ? 'text' : 'password'}
                       placeholder="••••••••••••"
                       className="h-12 w-full rounded-2xl border border-zinc-800 bg-zinc-950/40 pl-11 pr-12 text-sm font-semibold tracking-widest text-white placeholder-zinc-600 transition focus:border-zinc-600 focus:bg-zinc-950 focus:ring-1 focus:ring-zinc-600 outline-none"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      value={state.password}
+                      onChange={(e) => setState({ password: e.target.value })}
                     />
                     <button
                       type="button"
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition cursor-pointer"
-                      onClick={() => setShowPassword(!showPassword)}
+                      onClick={() => setState({ showPassword: !state.showPassword })}
                     >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      {state.showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
                 </div>
@@ -303,10 +306,10 @@ export const RouteComponent = () => {
               {/* Submit button */}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={state.loading}
                 className="group relative flex h-13 w-full items-center justify-center rounded-2xl bg-white text-zinc-950 font-bold text-base shadow-lg transition active:scale-[0.98] disabled:opacity-60 cursor-pointer overflow-hidden hover:bg-zinc-200"
               >
-                {loading ? (
+                {state.loading ? (
                   <div className="flex items-center gap-2">
                     <Loader2 className="animate-spin size-[18px] text-zinc-950" />
                     <span>Đang kiểm tra...</span>
@@ -326,7 +329,7 @@ export const RouteComponent = () => {
         </div>
 
         {/* Quick Demo Credentials Panel (extremely helpful for grading/testing) */}
-        {!success && (
+        {!state.success && (
           <div className="rounded-3xl border border-zinc-800/40 bg-zinc-900/20 p-5 backdrop-blur-md">
             <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-3 text-center">
               Tài khoản API seed (Nhấp chọn để tự động điền)

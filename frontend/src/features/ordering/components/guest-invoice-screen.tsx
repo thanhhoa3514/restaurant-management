@@ -31,7 +31,7 @@ export const GuestInvoiceScreen: FC = () => {
   const t = DICT[state.lang]
   const sessionToken = state.session?.token
 
-  const ordersQuery = useQuery({
+  const { data: ordersData } = useQuery({
     queryKey: ['guest-orders', sessionToken],
     queryFn: () => fetchGuestOrders(sessionToken!),
     enabled: !!sessionToken,
@@ -41,7 +41,7 @@ export const GuestInvoiceScreen: FC = () => {
     const itemsList: Array<{ name: string; qty: number; price: number }> = []
     let subtotal = 0
 
-    for (const order of ordersQuery.data?.orders ?? []) {
+    for (const order of ordersData?.orders ?? []) {
       for (const item of order.items) {
         const name = item.variant_name_snapshot
           ? `${item.name_snapshot} (${item.variant_name_snapshot})`
@@ -56,14 +56,14 @@ export const GuestInvoiceScreen: FC = () => {
       }
     }
 
-    const grand = ordersQuery.data?.session_total_vnd ?? subtotal
+    const grand = ordersData?.session_total_vnd ?? subtotal
     return {
       total: subtotal,
       vat: grand - subtotal,
       grandTotal: grand,
       invoiceItems: itemsList,
     }
-  }, [ordersQuery.data])
+  }, [ordersData])
 
   const handleFinish = () => {
     // Clear cart and session, then redirect to landing page
@@ -88,7 +88,7 @@ export const GuestInvoiceScreen: FC = () => {
       <div className="flex-1 px-4 py-6 flex flex-col gap-5 overflow-y-auto">
         {/* Success Visual Card */}
         <Card className="border border-separator bg-elevated/70 shadow-lg p-5 text-center">
-          <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-system-green/10 text-2xl text-system-green animate-bounce">
+          <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-system-green/10 text-2xl text-system-green animate-in zoom-in duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]">
             ✓
           </div>
           <h2 className="mt-3 text-base font-bold text-primary">

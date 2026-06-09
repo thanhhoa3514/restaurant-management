@@ -323,20 +323,20 @@ const CashierContext = createContext<CashierContextValue | null>(null)
 export function CashierProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const [state, baseDispatch] = useReducer(cashierReducer, undefined, () => createInitialState())
-  const staffTablesQuery = useQuery({
+  const { data: staffTablesData } = useQuery({
     queryKey: STAFF_TABLES_QUERY_KEY,
     queryFn: fetchStaffTables,
     refetchInterval: 8_000,
   })
 
   useEffect(() => {
-    if (staffTablesQuery.data) {
+    if (staffTablesData) {
       baseDispatch({
         type: 'replaceSessions',
-        sessions: toCashierSessions(staffTablesQuery.data.tables),
+        sessions: toCashierSessions(staffTablesData.tables),
       })
     }
-  }, [staffTablesQuery.data])
+  }, [staffTablesData])
 
   useEffect(() => {
     queryClient.setQueryData(CASHIER_QUERY_KEY, state.sessions)

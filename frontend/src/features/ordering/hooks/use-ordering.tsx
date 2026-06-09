@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, type ReactNode } from 'react'
+import { createContext, use, useMemo, useReducer, type ReactNode } from 'react'
 import type { CartLine, Screen, Session, Lang } from '../types'
 
 interface OrderingState {
@@ -97,15 +97,17 @@ export function OrderingProvider({ children }: { children: ReactNode }) {
     placing: false,
   })
 
+  const value = useMemo(() => ({ state, dispatch }), [state, dispatch])
+
   return (
-    <OrderingContext.Provider value={{ state, dispatch }}>
+    <OrderingContext.Provider value={value}>
       {children}
     </OrderingContext.Provider>
   )
 }
 
 export function useOrdering(): OrderingContextValue {
-  const ctx = useContext(OrderingContext)
+  const ctx = use(OrderingContext)
   if (!ctx) throw new Error('useOrdering must be used within OrderingProvider')
   return ctx
 }

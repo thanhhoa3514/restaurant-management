@@ -23,13 +23,27 @@ function defaultSelections(groups: ApiOptionGroup[]): Selections {
   const sel: Selections = {}
   for (const g of groups) {
     if (g.selection_type === 'SINGLE') {
-      const def = g.options.find((o) => o.is_default) ?? (g.is_required ? g.options[0] : undefined)
-      sel[g.id] = def?.id ?? ''
+      let def: typeof g.options[0] | undefined
+      for (const o of g.options) {
+        if (o.is_default) { def = o; break; }
+      }
+      sel[g.id] = def?.id ?? (g.is_required ? g.options[0]?.id : '') ?? ''
     } else {
-      sel[g.id] = g.options.filter((o) => o.is_default).map((o) => o.id)
+      sel[g.id] = g.options.reduce<string[]>((acc, o) => {
+        if (o.is_default) acc.push(o.id)
+        return acc
+      }, [])
     }
   }
   return sel
+}
+
+interface FormState {
+  variantId: string;
+  selections: Selections;
+  qty: number;
+  notes: string;
+  activeImage: string;
 }
 
 export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
@@ -37,19 +51,19 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
   const t = DICT[lang]
   const sessionToken = state.session?.token
 
-  const detailQuery = useQuery({
+  const { data: item, isLoading: isItemLoading } = useQuery({
     queryKey: ['guest-item', sessionToken, itemId],
     queryFn: () => fetchMenuItem(sessionToken!, itemId),
     enabled: !!sessionToken,
   })
 
-  const item = detailQuery.data
-
-  const [variantId, setVariantId] = useState<string>('')
-  const [selections, setSelections] = useState<Selections>({})
-  const [qty, setQty] = useState(1)
-  const [notes, setNotes] = useState('')
-  const [activeImage, setActiveImage] = useState('')
+  const [form, setForm] = useState<FormState>({
+    variantId: '',
+    selections: {},
+    qty: 1,
+    notes: '',
+    activeImage: ''
+  })
 
   // Initialise selections + defaults once the detail loads.
   useEffect(() => {
@@ -58,11 +72,13 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
     queueMicrotask(() => {
       if (cancelled) return
       const defVariant = item.variants.find((v) => v.is_default) ?? item.variants[0]
-      setVariantId(defVariant?.id ?? '')
-      setSelections(defaultSelections(item.option_groups))
-      setActiveImage(item.image_url)
-      setQty(1)
-      setNotes('')
+      setForm({
+        variantId: defVariant?.id ?? '',
+        selections: defaultSelections(item.option_groups),
+        activeImage: item.image_url,
+        qty: 1,
+        notes: ''
+      })
     })
     return () => {
       cancelled = true
@@ -71,41 +87,53 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
 
   const estUnitPrice = useMemo(() => {
     if (!item) return 0
-    const variant = item.variants.find((v) => v.id === variantId)
+    const variant = item.variants.find((v) => v.id === form.variantId)
     let total = variant ? variant.price_vnd : item.base_price_vnd
+    const optMap = new Map()
     for (const g of item.option_groups) {
-      const sel = selections[g.id]
+      for (const o of g.options) optMap.set(o.id, o)
+    }
+    for (const g of item.option_groups) {
+      const sel = form.selections[g.id]
       const ids = Array.isArray(sel) ? sel : sel ? [sel] : []
       for (const id of ids) {
-        const opt = g.options.find((o) => o.id === id)
+        const opt = optMap.get(id)
         if (opt) total += opt.price_delta_vnd
       }
     }
     return total
-  }, [item, variantId, selections])
+  }, [item, form.variantId, form.selections])
 
   const handleSelectOption = (group: ApiOptionGroup, optionId: string) => {
-    setSelections((prev) => {
+    setForm((prev) => {
+      let newSel: Selections;
       if (group.selection_type === 'SINGLE') {
-        return { ...prev, [group.id]: optionId }
+        newSel = { ...prev.selections, [group.id]: optionId }
+      } else {
+        const current = (prev.selections[group.id] ?? []) as string[]
+        if (current.includes(optionId)) {
+          newSel = { ...prev.selections, [group.id]: current.filter((id) => id !== optionId) }
+        } else {
+          newSel = { ...prev.selections, [group.id]: [...current, optionId] }
+        }
       }
-      const current = (prev[group.id] ?? []) as string[]
-      if (current.includes(optionId)) {
-        return { ...prev, [group.id]: current.filter((id) => id !== optionId) }
-      }
-      return { ...prev, [group.id]: [...current, optionId] }
+      return { ...prev, selections: newSel }
     })
   }
 
   const handleAdd = () => {
     if (!item) return
-    const variant = item.variants.find((v) => v.id === variantId)
+    const variant = item.variants.find((v) => v.id === form.variantId)
     const options: CartOption[] = []
+    const optMap = new Map()
     for (const g of item.option_groups) {
-      const sel = selections[g.id]
+      for (const o of g.options) optMap.set(o.id, o)
+    }
+    for (const g of item.option_groups) {
+      const sel = form.selections[g.id]
       const ids = Array.isArray(sel) ? sel : sel ? [sel] : []
       for (const id of ids) {
-        const opt = g.options.find((o) => o.id === id)
+        const opt = optMap.get(id)
         if (opt) {
           options.push({
             optionId: opt.id,
@@ -121,8 +149,8 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
       menuItemId: item.id,
       variantId: variant?.id,
       variantNameSnapshot: variant?.name,
-      quantity: qty,
-      note: notes,
+      quantity: form.qty,
+      note: form.notes,
       nameSnapshot: item.name,
       imageUrl: item.image_url,
       estUnitPriceVnd: estUnitPrice,
@@ -134,7 +162,7 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
 
   return (
     <div className="fixed inset-0 max-w-lg mx-auto md:left-1/2 md:-translate-x-1/2 z-overlay flex flex-col bg-background animate-in slide-in-from-bottom">
-      {detailQuery.isLoading || !item ? (
+      {isItemLoading || !item ? (
         <div className="flex flex-col gap-4 p-4">
           <Skeleton className="aspect-[3/2] rounded-xl" />
           <Skeleton className="h-6 w-2/3 rounded" />
@@ -147,12 +175,13 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
       ) : (
         <>
           <div className="relative aspect-[3/2] bg-surface-grouped shrink-0">
-            {activeImage ? (
-              <img src={activeImage} alt={item.name} className="size-full object-cover" />
+            {form.activeImage ? (
+              <img src={form.activeImage} alt={item.name} className="size-full object-cover" />
             ) : (
               <div className="size-full bg-surface-grouped" />
             )}
             <button
+              type="button"
               className="absolute top-4 left-4 size-9 rounded-full bg-background/60 backdrop-blur-md flex items-center justify-center text-primary active:scale-90 transition-transform cursor-pointer"
               onClick={onClose}
             >
@@ -164,15 +193,15 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
             {item.images.length > 0 && (
               <div className="flex gap-2.5 overflow-x-auto py-1 no-scrollbar shrink-0">
                 {item.images.map((imgUrl, idx) => {
-                  const isSelected = activeImage === imgUrl
+                  const isSelected = form.activeImage === imgUrl
                   return (
                     <button
-                      key={idx}
+                      key={imgUrl}
                       type="button"
                       className={`relative size-16 shrink-0 rounded-xl overflow-hidden border-2 transition-all active:scale-95 cursor-pointer ${
                         isSelected ? 'border-[var(--system-blue)] scale-[1.04] shadow-sm' : 'border-transparent opacity-65 hover:opacity-90'
                       }`}
-                      onClick={() => setActiveImage(imgUrl)}
+                      onClick={() => setForm(prev => ({ ...prev, activeImage: imgUrl }))}
                     >
                       <img src={imgUrl} alt={`${item.name}-${idx}`} className="size-full object-cover" />
                     </button>
@@ -198,15 +227,16 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {item.variants.map((v) => {
-                    const isSelected = variantId === v.id
+                    const isSelected = form.variantId === v.id
                     return (
                       <button
                         key={v.id}
+                        type="button"
                         disabled={!v.is_available}
                         className={`rounded-full px-4 py-2 text-sm font-medium transition-all active:scale-95 cursor-pointer disabled:opacity-40 ${
                           isSelected ? 'bg-system-blue text-white shadow-sm' : 'bg-surface-grouped text-secondary active:bg-surface-grouped/70'
                         }`}
-                        onClick={() => setVariantId(v.id)}
+                        onClick={() => setForm(prev => ({ ...prev, variantId: v.id }))}
                       >
                         {v.name}
                         {v.unit ? ` (${v.unit})` : ''}
@@ -229,11 +259,12 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {group.options.map((opt) => {
-                    const sel = selections[group.id]
+                    const sel = form.selections[group.id]
                     const isSelected = Array.isArray(sel) ? sel.includes(opt.id) : sel === opt.id
                     return (
                       <button
                         key={opt.id}
+                        type="button"
                         disabled={!opt.is_available}
                         className={`rounded-full px-4 py-2 text-sm font-medium transition-all active:scale-95 cursor-pointer disabled:opacity-40 ${
                           isSelected ? 'bg-system-blue text-white shadow-sm' : 'bg-surface-grouped text-secondary active:bg-surface-grouped/70'
@@ -256,16 +287,18 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
               <span className="text-sm font-medium text-primary mb-2 block">{t.qty}</span>
               <div className="flex items-center gap-3">
                 <button
+                  type="button"
                   className="size-9 rounded-full bg-surface-grouped flex items-center justify-center text-primary font-medium active:scale-90 transition-transform disabled:opacity-30 cursor-pointer"
-                  disabled={qty <= 1}
-                  onClick={() => setQty((q) => Math.max(1, q - 1))}
+                  disabled={form.qty <= 1}
+                  onClick={() => setForm(prev => ({ ...prev, qty: Math.max(1, prev.qty - 1) }))}
                 >
                   <Minus size={16} />
                 </button>
-                <span className="text-lg font-semibold text-primary min-w-8 text-center tabular-nums">{qty}</span>
+                <span className="text-lg font-semibold text-primary min-w-8 text-center tabular-nums">{form.qty}</span>
                 <button
+                  type="button"
                   className="size-9 rounded-full bg-surface-grouped flex items-center justify-center text-primary font-medium active:scale-90 transition-transform cursor-pointer"
-                  onClick={() => setQty((q) => q + 1)}
+                  onClick={() => setForm(prev => ({ ...prev, qty: prev.qty + 1 }))}
                 >
                   <Plus size={16} />
                 </button>
@@ -278,8 +311,8 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
               <Textarea
                 placeholder={t.notes_placeholder}
                 className="rounded-xl resize-none h-20 text-sm"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                value={form.notes}
+                onChange={(e) => setForm(prev => ({ ...prev, notes: e.target.value }))}
               />
             </div>
           </div>
@@ -290,7 +323,7 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
               size="lg"
               onClick={handleAdd}
             >
-              {t.add_to_cart} &middot; {formatVND(estUnitPrice * qty)}
+              {t.add_to_cart} &middot; {formatVND(estUnitPrice * form.qty)}
             </Button>
           </div>
         </>

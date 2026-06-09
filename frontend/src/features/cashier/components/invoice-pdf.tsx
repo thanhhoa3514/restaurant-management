@@ -130,12 +130,12 @@ export const InvoicePDF = ({ session, t, lang }: InvoicePDFProps) => {
         <View style={styles.header}>
           <View>
             <Text style={styles.restaurantName}>{t('restaurant')}</Text>
-            <Text style={{ fontSize: 8, color: '#6b7280' }}>{t('restaurant_address')}</Text>
-            <Text style={{ fontSize: 8, color: '#6b7280' }}>{t('restaurant_phone')}</Text>
+            <Text style={{ fontSize: 12, color: '#6b7280' }}>{t('restaurant_address')}</Text>
+            <Text style={{ fontSize: 12, color: '#6b7280' }}>{t('restaurant_phone')}</Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={styles.invoiceTitle}>{t('receipt_title').toUpperCase()}</Text>
-            <Text style={{ fontSize: 8, color: '#6b7280', marginTop: 2 }}>{invoice.number}</Text>
+            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{invoice.number}</Text>
           </View>
         </View>
 
@@ -154,7 +154,7 @@ export const InvoicePDF = ({ session, t, lang }: InvoicePDFProps) => {
           <View style={[styles.metaCol, { alignItems: 'flex-end' }]}>
             <Text>
               <Text style={{ fontFamily: 'Roboto-Bold' }}>{t('receipt_date')}: </Text>
-              {fmtDateTime(session.payment?.completed_at ?? new Date())}
+              {session.payment?.completed_at ? fmtDateTime(session.payment.completed_at) : ''}
             </Text>
             <Text>
               <Text style={{ fontFamily: 'Roboto-Bold' }}>{t('receipt_method')}: </Text>
@@ -223,7 +223,7 @@ export const InvoicePDF = ({ session, t, lang }: InvoicePDFProps) => {
         {/* Footer */}
         <View style={styles.footer}>
           <Text>{t('receipt_thanks')}</Text>
-          <Text style={{ fontSize: 6, color: '#d1d5db', marginTop: 4 }}>Powered by Smart QR System</Text>
+          <Text style={{ fontSize: 12, color: '#d1d5db', marginTop: 4 }}>Powered by Smart QR System</Text>
         </View>
       </Page>
     </Document>

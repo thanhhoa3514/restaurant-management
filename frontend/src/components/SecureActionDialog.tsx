@@ -1,4 +1,4 @@
-import { useState, type FC } from 'react'
+import { useState, useEffect, type FC } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -41,13 +41,11 @@ export const SecureActionDialog: FC<SecureActionDialogProps> = ({
 }) => {
   const [userInput, setUserInput] = useState('')
 
-  const [prevOpen, setPrevOpen] = useState(open)
-  if (open !== prevOpen) {
-    setPrevOpen(open)
+  useEffect(() => {
     if (open) {
       setUserInput('')
     }
-  }
+  }, [open])
 
   const isVerified = (() => {
     if (!requireConfirmationText) return true
@@ -116,5 +114,3 @@ export const SecureActionDialog: FC<SecureActionDialogProps> = ({
     </Sheet>
   )
 }
-
-export default SecureActionDialog

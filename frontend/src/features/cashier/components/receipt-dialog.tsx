@@ -1,4 +1,4 @@
-import { useMemo, lazy, Suspense, type FC } from 'react'
+import { useMemo, lazy, Suspense, useState, useEffect, type FC } from 'react'
 import { Loader2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -18,6 +18,9 @@ interface ReceiptDialogProps {
 }
 
 export const ReceiptDialog: FC<ReceiptDialogProps> = ({ open, session, t, lang, onOpenChange }) => {
+  const [now, setNow] = useState<Date | null>(null)
+  useEffect(() => setNow(new Date()), [])
+
   const methodLabel = useMemo(() => {
     const payment = session?.payment
     if (!payment) return '—'
@@ -45,7 +48,7 @@ export const ReceiptDialog: FC<ReceiptDialogProps> = ({ open, session, t, lang, 
             <div className="text-center text-sm font-bold uppercase tracking-wider">{t('receipt_title')}</div>
             <div className="mt-2 space-y-1">
               <ReceiptRow label={t('receipt_no')} value={invoice.number} />
-              <ReceiptRow label={t('receipt_date')} value={fmtDateTime(session.payment?.completed_at ?? new Date())} />
+              <ReceiptRow label={t('receipt_date')} value={session.payment?.completed_at ? fmtDateTime(session.payment.completed_at) : (now ? fmtDateTime(now) : '')} />
               <ReceiptRow
                 label={t('receipt_table')}
                 value={`${session.table_number} · ${lang === 'vi' ? session.area_name_vi : session.area_name_en}`}

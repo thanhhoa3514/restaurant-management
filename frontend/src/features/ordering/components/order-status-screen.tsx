@@ -31,13 +31,13 @@ export const OrderStatusScreen: FC = () => {
   const t = DICT[state.lang]
   const sessionToken = state.session?.token
 
-  const ordersQuery = useQuery({
+  const { data: ordersData, isLoading: isOrdersLoading } = useQuery({
     queryKey: ['guest-orders', sessionToken],
     queryFn: () => fetchGuestOrders(sessionToken!),
     enabled: !!sessionToken,
   })
 
-  const orders = ordersQuery.data?.orders ?? []
+  const orders = ordersData?.orders ?? []
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -51,7 +51,7 @@ export const OrderStatusScreen: FC = () => {
       </header>
 
       <div className="flex-1 px-4 py-4 flex flex-col gap-4">
-        {ordersQuery.isLoading ? (
+        {isOrdersLoading ? (
           <>
             <Skeleton className="h-24 rounded-xl" />
             <Skeleton className="h-24 rounded-xl" />

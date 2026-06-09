@@ -76,12 +76,20 @@ const formFromDetail = (item: AdminMenuItemDetailDTO): MenuItemFormBody => ({
   display_order: item.display_order,
 })
 
-const money = (value: number) =>
-  new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: 0,
-  }).format(value)
+const moneyFormatter = new Intl.NumberFormat('vi-VN', {
+  style: 'currency',
+  currency: 'VND',
+  maximumFractionDigits: 0,
+})
+
+const money = (value: number) => moneyFormatter.format(value)
+
+const availabilityAfterToggle = (item: AdminMenuItemSummaryDTO) =>
+  !item.is_available
+    ? ('AVAILABLE' as const)
+    : item.availability_status === 'HIDDEN'
+      ? ('HIDDEN' as const)
+      : ('OUT_OF_STOCK' as const)
 
 export function CatalogManagement() {
   const { lang } = useLang()
@@ -94,17 +102,27 @@ export function CatalogManagement() {
   const [toggleTarget, setToggleTarget] = useState<AdminMenuItemSummaryDTO | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<AdminMenuItemSummaryDTO | null>(null)
 
-  const categoriesQuery = useQuery({
+  const {
+    data: categories = [],
+    isLoading: isCategoriesLoading,
+    isError: isCategoriesError,
+    error: categoriesError,
+  } = useQuery({
     queryKey: catalogQueryKeys.categories,
     queryFn: listAdminCategories,
   })
-  const itemsQuery = useQuery({
+  const {
+    data: items = [],
+    refetch: refetchItems,
+    isFetching: isItemsFetching,
+    isError: isItemsError,
+    error: itemsError,
+    isLoading: isItemsLoading,
+    isSuccess: isItemsSuccess,
+  } = useQuery({
     queryKey: catalogQueryKeys.items(categoryId),
     queryFn: () => listAdminMenuItems(categoryId),
   })
-
-  const categories = categoriesQuery.data ?? []
-  const items = itemsQuery.data ?? []
   const selectedCategoryName = categoryId
     ? categories.find((category) => category.id === categoryId)?.name
     : t('catalog_all')
@@ -119,12 +137,7 @@ export function CatalogManagement() {
     await queryClient.invalidateQueries({ queryKey: ['catalog'] })
   }
 
-  const availabilityAfterToggle = (item: AdminMenuItemSummaryDTO) =>
-    !item.is_available
-      ? ('AVAILABLE' as const)
-      : item.availability_status === 'HIDDEN'
-        ? ('HIDDEN' as const)
-        : ('OUT_OF_STOCK' as const)
+
 
   const toggleMutation = useMutation({
     mutationFn: (item: AdminMenuItemSummaryDTO) =>
@@ -174,6 +187,7 @@ export function CatalogManagement() {
     mutationFn: (item: AdminMenuItemSummaryDTO) => deleteMenuItem(item.id, item.version),
     onSuccess: async () => {
       setDeleteTarget(null)
+      await queryClient.invalidateQueries({ queryKey: ['catalog'] })
       await invalidateCatalog()
     },
     onError: async (error) => {
@@ -207,7 +221,7 @@ export function CatalogManagement() {
         <CategoryFilter
           categories={categories}
           selectedId={categoryId}
-          loading={categoriesQuery.isLoading}
+          loading={isCategoriesLoading}
           t={t}
           onSelect={setCategoryId}
         />
@@ -225,21 +239,21 @@ export function CatalogManagement() {
             <Button
               variant="secondary"
               className="rounded-full"
-              onClick={() => itemsQuery.refetch()}
+              onClick={() => refetchItems()}
             >
-              {itemsQuery.isFetching && <Loader2 className="size-4 animate-spin" />}
+              {isItemsFetching && <Loader2 className="size-4 animate-spin" />}
               {t('catalog_refresh')}
             </Button>
           </div>
 
-          {(categoriesQuery.isError || itemsQuery.isError) && (
+          {(isCategoriesError || isItemsError) && (
             <ErrorCard
-              error={categoriesQuery.error ?? itemsQuery.error}
+              error={categoriesError ?? itemsError}
               fallback={t('catalog_load_error')}
             />
           )}
 
-          {itemsQuery.isLoading && (
+          {isItemsLoading && (
             <Card className="border border-[var(--separator)] bg-[var(--material-regular)] backdrop-blur-2xl">
               <CardContent className="flex items-center gap-3 p-6 text-sm text-[var(--text-secondary)]">
                 <Loader2 className="size-4 animate-spin" />
@@ -248,7 +262,7 @@ export function CatalogManagement() {
             </Card>
           )}
 
-          {itemsQuery.isSuccess && items.length === 0 && (
+          {isItemsSuccess && items.length === 0 && (
             <Card className="border border-[var(--separator)] bg-[var(--material-regular)] backdrop-blur-2xl">
               <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
                 <div className="flex size-14 items-center justify-center rounded-[20px] bg-[var(--surface-grouped)] text-[var(--text-tertiary)]">
@@ -558,14 +572,17 @@ function CatalogItemSheet({
   onSaved: () => Promise<void>
 }) {
   const editingId = state?.mode === 'edit' ? state.id : undefined
-  const detailQuery = useQuery({
+  const {
+    data: detail,
+    isLoading: isDetailLoading,
+    error: detailError,
+  } = useQuery({
     queryKey: editingId
       ? catalogQueryKeys.detail(editingId)
       : ['catalog', 'items', 'detail', 'new'],
     queryFn: () => getAdminMenuItem(editingId ?? ''),
     enabled: Boolean(editingId),
   })
-  const detail = detailQuery.data
   const open = state !== null
   const initialForm =
     state?.mode === 'edit' && detail ? formFromDetail(detail) : blankForm(defaultCategoryId)
@@ -585,7 +602,7 @@ function CatalogItemSheet({
               : t('catalog_sheet_subtitle')
           }
         />
-        {state?.mode === 'edit' && detailQuery.isLoading ? (
+        {state?.mode === 'edit' && isDetailLoading ? (
           <div className="flex flex-1 items-center justify-center gap-3 text-sm text-[var(--text-secondary)]">
             <Loader2 className="size-4 animate-spin" />
             {t('catalog_loading_detail')}
@@ -597,7 +614,7 @@ function CatalogItemSheet({
             detail={detail}
             initialForm={initialForm}
             categories={categories}
-            detailError={detailQuery.error}
+            detailError={detailError}
             t={t}
             onClose={onClose}
             onSaved={onSaved}
@@ -635,6 +652,7 @@ function CatalogItemForm({
     mutationFn: createMenuItem,
     onSuccess: async () => {
       onClose()
+      await queryClient.invalidateQueries({ queryKey: ['catalog'] })
       await onSaved()
     },
   })

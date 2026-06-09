@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components, react-doctor/only-export-components */
 import { useEffect, useState } from 'react'
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -32,10 +33,10 @@ export const Route = createFileRoute('/admin/table-qrs')({
 export const RouteComponent = () => {
   const { lang } = useLang()
   const t = makeAdminT(lang)
-  const query = useQuery({ queryKey: TABLE_QRS_KEY, queryFn: listTableQRs })
+  const { data: tablesData, isLoading, isError, error, isSuccess } = useQuery({ queryKey: TABLE_QRS_KEY, queryFn: listTableQRs })
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
-  const tables = query.data ?? []
+  const tables = tablesData ?? []
   const withQR = tables.filter((t) => t.has_active_qr).length
   // Derive the open row from live query data (not a captured snapshot) so the
   // sheet re-renders with the fresh token after a generate/rotate refetch.
@@ -55,19 +56,19 @@ export const RouteComponent = () => {
         </div>
       </ShellHeaderCenter>
       <div className="mx-auto max-w-7xl space-y-6">
-        {query.isLoading && (
+        {isLoading && (
           <p className="text-sm text-[var(--text-secondary)]">{t('qr_loading')}</p>
         )}
-        {query.isError && (
+        {isError && (
           <Card className="border border-[var(--system-red)]/30 bg-[var(--system-red)]/5">
             <CardContent className="p-5 text-sm text-[var(--system-red)]">
               {t('qr_load_error')}:{' '}
-              {query.error instanceof ApiError ? query.error.message : t('qr_unknown_error')}
+              {error instanceof ApiError ? error.message : t('qr_unknown_error')}
             </CardContent>
           </Card>
         )}
 
-        {query.isSuccess && tables.length === 0 && (
+        {isSuccess && tables.length === 0 && (
           <Card className="bg-[var(--material-regular)] backdrop-blur-2xl">
             <CardContent className="p-10 text-center text-sm text-[var(--text-secondary)]">
               {t('qr_empty')}

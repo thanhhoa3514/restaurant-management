@@ -27,13 +27,18 @@ export const MenuScreen: FC = () => {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [changingLang, setChangingLang] = useState<'vi' | 'en' | null>(null)
 
-  const categoriesQuery = useQuery({
+  const { data: categoriesData } = useQuery({
     queryKey: ['guest-categories', sessionToken],
     queryFn: () => fetchCategories(sessionToken!),
     enabled: !!sessionToken,
   })
 
-  const itemsQuery = useQuery({
+  const {
+    data: itemsData,
+    isLoading: isItemsLoading,
+    isError: isItemsError,
+    refetch: refetchItems,
+  } = useQuery({
     queryKey: ['guest-items', sessionToken],
     queryFn: () => fetchMenuItems(sessionToken!),
     enabled: !!sessionToken,
@@ -41,7 +46,7 @@ export const MenuScreen: FC = () => {
 
   const filtered = useMemo(
     () => {
-      const items = itemsQuery.data ?? []
+      const items = itemsData ?? []
       return (
       items.filter((item) => {
         if (!item.is_available) return false
@@ -51,7 +56,7 @@ export const MenuScreen: FC = () => {
       })
       )
     },
-    [itemsQuery.data, activeCategory, search],
+    [itemsData, activeCategory, search],
   )
 
   const cartCount = totalItems(state.cart)
@@ -105,7 +110,7 @@ export const MenuScreen: FC = () => {
             <TabsTrigger value="all" className="text-sm whitespace-nowrap">
               {state.lang === 'vi' ? 'Tất cả' : 'All'}
             </TabsTrigger>
-            {(categoriesQuery.data ?? []).map((cat) => (
+            {(categoriesData ?? []).map((cat) => (
               <TabsTrigger key={cat.id} value={cat.id} className="text-sm whitespace-nowrap">
                 {cat.name}
               </TabsTrigger>
@@ -115,18 +120,18 @@ export const MenuScreen: FC = () => {
       </div>
 
       <div className="flex-1 px-4">
-        {itemsQuery.isLoading ? (
+        {isItemsLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} className="aspect-[4/3] rounded-xl" />
             ))}
           </div>
-        ) : itemsQuery.isError ? (
+        ) : isItemsError ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <p className="text-sm text-tertiary">
               {state.lang === 'vi' ? 'Không tải được thực đơn.' : 'Could not load the menu.'}
             </p>
-            <Button variant="secondary" size="sm" onClick={() => itemsQuery.refetch()}>
+            <Button variant="secondary" size="sm" onClick={() => refetchItems()}>
               {state.lang === 'vi' ? 'Thử lại' : 'Retry'}
             </Button>
           </div>

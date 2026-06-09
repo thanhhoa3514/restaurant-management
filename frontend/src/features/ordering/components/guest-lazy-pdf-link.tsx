@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { PDFDownloadLink, Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer'
 import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-react'
@@ -137,11 +138,11 @@ const GuestInvoicePDF = ({
         <View style={pdfStyles.header}>
           <View>
             <Text style={pdfStyles.restaurantName}>{restaurantName}</Text>
-            <Text style={{ fontSize: 7, color: '#6b7280' }}>Hóa đơn điện tử thông minh</Text>
+            <Text style={{ fontSize: 12, color: '#6b7280' }}>Hóa đơn điện tử thông minh</Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={pdfStyles.invoiceTitle}>{lang === 'vi' ? 'HÓA ĐƠN ĐIỆN TỬ' : 'E-INVOICE'}</Text>
-            <Text style={{ fontSize: 7, color: '#6b7280', marginTop: 2 }}>#{invoiceNumber}</Text>
+            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>#{invoiceNumber}</Text>
           </View>
         </View>
 
@@ -164,8 +165,8 @@ const GuestInvoicePDF = ({
             <Text style={[pdfStyles.colTotal, { paddingRight: 4 }]}>{lang === 'vi' ? 'Thành tiền' : 'Total'}</Text>
           </View>
 
-          {items.map((item, index) => (
-            <View key={index} style={pdfStyles.tableRow}>
+          {items.map((item) => (
+            <View key={item.name} style={pdfStyles.tableRow}>
               <Text style={[pdfStyles.colName, { paddingLeft: 4, fontFamily: 'Roboto-Bold' }]}>{item.name}</Text>
               <Text style={pdfStyles.colQty}>{item.qty}</Text>
               <Text style={pdfStyles.colPrice}>{formatVND(item.price)}</Text>
@@ -191,7 +192,7 @@ const GuestInvoicePDF = ({
 
         <View style={pdfStyles.footer}>
           <Text>{lang === 'vi' ? 'Cảm ơn quý khách và Hẹn gặp lại!' : 'Thank you and See you again!'}</Text>
-          <Text style={{ fontSize: 5, color: '#d1d5db', marginTop: 4 }}>Powered by Smart Restaurant QR System</Text>
+          <Text style={{ fontSize: 12, color: '#d1d5db', marginTop: 4 }}>Powered by Smart Restaurant QR System</Text>
         </View>
       </Page>
     </Document>
@@ -199,9 +200,10 @@ const GuestInvoicePDF = ({
 };
 
 export default function GuestLazyPDFLink({ pdfProps }: { pdfProps: GuestPDFProps }) {
+  const documentProps = useMemo(() => <GuestInvoicePDF {...pdfProps} />, [pdfProps]);
   return (
     <PDFDownloadLink
-      document={<GuestInvoicePDF {...pdfProps} />}
+      document={documentProps}
       fileName={`Hoa_Don_Dien_Tu_Ban_${pdfProps.tableName}.pdf`}
     >
       {({ loading }) => (

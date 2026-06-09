@@ -21,6 +21,13 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
   const attemptedToken = useRef<string | null>(null)
   const [joinState, setJoinState] = useState<JoinState>('idle')
   const [message, setMessage] = useState('')
+  const [now, setNow] = useState<Date | null>(null)
+
+  useEffect(() => {
+    setNow(new Date())
+    const timer = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   const labels = useMemo(
     () =>
@@ -150,7 +157,7 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
       </Button>
 
       <p className="text-xs text-quaternary">
-        {t.now}: {new Date().toLocaleTimeString()}
+        {t.now}: {now ? now.toLocaleTimeString() : ''}
       </p>
     </div>
   )

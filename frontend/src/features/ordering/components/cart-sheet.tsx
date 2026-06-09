@@ -81,8 +81,11 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
     <>
       {open && (
         <div
+          role="button"
+          tabIndex={0}
           className="fixed inset-0 bg-black/40 z-overlay animate-fade-in"
           onClick={onClose}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClose() }}
         />
       )}
 
@@ -116,7 +119,7 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
             </div>
           ) : (
             state.cart.map((line, i) => (
-              <CartLineRow key={i} line={line} index={i} onRemove={handleRemove} onQtyChange={handleQtyChange} />
+              <CartLineRow key={`${line.menuItemId}-${i}`} line={line} index={i} onRemove={handleRemove} onQtyChange={handleQtyChange} />
             ))
           )}
         </div>
@@ -187,6 +190,7 @@ const CartLineRow: FC<CartLineRowProps> = ({ line, index, onRemove, onQtyChange 
             )}
           </div>
           <button
+            type="button"
             className="size-7 rounded-full bg-surface-grouped flex items-center justify-center shrink-0 active:scale-90 transition-transform"
             onClick={() => onRemove(index)}
           >
@@ -196,6 +200,7 @@ const CartLineRow: FC<CartLineRowProps> = ({ line, index, onRemove, onQtyChange 
         <div className="flex items-center justify-between mt-2">
           <div className="flex items-center gap-2">
             <button
+              type="button"
               className="size-7 rounded-full bg-surface-grouped flex items-center justify-center text-primary active:scale-90 transition-transform"
               onClick={() => onQtyChange(index, -1)}
             >
@@ -205,6 +210,7 @@ const CartLineRow: FC<CartLineRowProps> = ({ line, index, onRemove, onQtyChange 
               {line.quantity}
             </span>
             <button
+              type="button"
               className="size-7 rounded-full bg-surface-grouped flex items-center justify-center text-primary active:scale-90 transition-transform"
               onClick={() => onQtyChange(index, 1)}
             >

@@ -16,14 +16,14 @@ export const SessionSummary: FC = () => {
   const t = DICT[state.lang]
   const sessionToken = state.session?.token
 
-  const ordersQuery = useQuery({
+  const { data: ordersData, isLoading: isOrdersLoading } = useQuery({
     queryKey: ['guest-orders', sessionToken],
     queryFn: () => fetchGuestOrders(sessionToken!),
     enabled: !!sessionToken,
   })
 
-  const orders = ordersQuery.data?.orders ?? []
-  const sessionTotal = ordersQuery.data?.session_total_vnd ?? 0
+  const orders = ordersData?.orders ?? []
+  const sessionTotal = ordersData?.session_total_vnd ?? 0
 
   const [payConfirmOpen, setPayConfirmOpen] = useState(false)
   const [simulatingPayment, setSimulatingPayment] = useState(false)
@@ -48,7 +48,7 @@ export const SessionSummary: FC = () => {
       </header>
 
       <div className="flex-1 px-4 py-4 flex flex-col gap-4">
-        {ordersQuery.isLoading ? (
+        {isOrdersLoading ? (
           <>
             <Skeleton className="h-24 rounded-xl" />
             <Skeleton className="h-20 rounded-xl" />

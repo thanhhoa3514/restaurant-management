@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components, react-doctor/only-export-components */
 import { createFileRoute, redirect, Outlet, useLocation } from '@tanstack/react-router'
 import { z } from 'zod'
 import {

@@ -75,13 +75,13 @@ export function useKds(): UseKdsValue {
   const [demoOpen, setDemoOpen] = useState(false)
   const [lastMessage, setLastMessage] = useState<string | null>(null)
 
-  const queueQuery = useQuery({
+  const { data: queueData, refetch: refetchQueueQuery } = useQuery({
     queryKey: KITCHEN_QUEUE_QUERY_KEY,
     queryFn: fetchKitchenQueue,
     refetchInterval: paused ? false : 5_000,
   })
 
-  const tickets = useMemo(() => toKdsTickets(queueQuery.data?.tickets ?? []), [queueQuery.data])
+  const tickets = useMemo(() => toKdsTickets(queueData?.tickets ?? []), [queueData])
 
   const langRef = useRef(lang)
   const soundOnRef = useRef(soundOn)
@@ -111,8 +111,8 @@ export function useKds(): UseKdsValue {
   }, [])
 
   const refetchQueue = useCallback(() => {
-    void queueQuery.refetch()
-  }, [queueQuery])
+    void refetchQueueQuery()
+  }, [refetchQueueQuery])
 
   useEffect(() => {
     const timerId = window.setInterval(() => {

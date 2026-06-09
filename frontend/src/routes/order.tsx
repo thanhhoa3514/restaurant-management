@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components, react-doctor/only-export-components */
 import { createFileRoute } from '@tanstack/react-router'
 import { OrderingProvider, useOrdering } from '../features/ordering/hooks/use-ordering'
 import { QRLanding } from '../features/ordering/components/qr-landing'

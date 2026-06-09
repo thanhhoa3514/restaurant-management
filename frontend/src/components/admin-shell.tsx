@@ -62,6 +62,7 @@ export function useShellConfig(config: ShellConfig) {
 }
 
 import { createPortal } from 'react-dom'
+/* eslint-disable react-refresh/only-export-components, react-doctor/only-export-components */
 import { useEffect } from 'react'
 
 export function ShellHeaderCenter({ children }: { children: ReactNode }) {

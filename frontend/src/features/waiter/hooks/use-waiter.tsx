@@ -78,13 +78,13 @@ export function useWaiter(): UseWaiterValue {
   const [justChangedIds, setJustChangedIds] = useState<Set<string>>(() => new Set())
   const [demoOpen, setDemoOpen] = useState(false)
 
-  const tablesQuery = useQuery({
+  const { data: tablesData, refetch: refetchTablesQuery } = useQuery({
     queryKey: STAFF_TABLES_QUERY_KEY,
     queryFn: fetchStaffTables,
     refetchInterval: 8_000,
   })
 
-  const tables = useMemo(() => toWaiterTables(tablesQuery.data?.tables ?? []), [tablesQuery.data])
+  const tables = useMemo(() => toWaiterTables(tablesData?.tables ?? []), [tablesData])
 
   const setLang = useCallback((newLang: Lang) => {
     localStorage.setItem('rest_lang_waiter', newLang)
@@ -119,8 +119,8 @@ export function useWaiter(): UseWaiterValue {
   }, [timeMultiplier])
 
   const refetchTables = useCallback(() => {
-    void tablesQuery.refetch()
-  }, [tablesQuery])
+    void refetchTablesQuery()
+  }, [refetchTablesQuery])
 
   const selectTable = useCallback((tableId: string | null) => {
     setSelectedTableId(tableId)
