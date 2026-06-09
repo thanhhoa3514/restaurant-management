@@ -158,4 +158,4 @@ function fmtDateTime(d: Date): string {
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-export default GuestInvoiceScreen
+

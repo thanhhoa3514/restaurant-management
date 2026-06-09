@@ -14,7 +14,7 @@ export function fmtClockSec(d: Date): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`
 }
 
-export function fmtDate(d: Date): string {
+function fmtDate(d: Date): string {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
 }
 
@@ -32,11 +32,11 @@ export function fmtHMS(seconds: number | null): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-export function fmtMin(seconds: number): number {
+function fmtMin(seconds: number): number {
   return Math.max(0, Math.round(seconds / 60))
 }
 
-export function calcInvoice(orders: Order[], discount: DiscountRecord | null): {
+function calcInvoice(orders: Order[], discount: DiscountRecord | null): {
   subtotal: number
   vat_amount: number
   total: number
@@ -68,7 +68,7 @@ export function providerName(id: SubMethod): string {
   return names[id] ?? id
 }
 
-export function sessionDurationMin(session: CashierSession): number {
+function sessionDurationMin(session: CashierSession): number {
   return Math.round((Date.now() - session.started_at.getTime()) / 60000)
 }
 
@@ -76,6 +76,6 @@ export function itemsCount(session: CashierSession): number {
   return session.invoice.orders.reduce((s, o) => s + o.items.reduce((s2, it) => s2 + it.qty, 0), 0)
 }
 
-export function sessionTotal(session: CashierSession): number {
+function sessionTotal(session: CashierSession): number {
   return session.invoice.total
 }

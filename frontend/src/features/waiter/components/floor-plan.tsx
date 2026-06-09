@@ -129,4 +129,4 @@ const LegendDot: FC<LegendDotProps> = ({ color, label }) => (
   </span>
 )
 
-export default FloorPlan
+

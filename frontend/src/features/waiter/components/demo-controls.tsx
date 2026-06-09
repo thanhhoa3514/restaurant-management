@@ -107,4 +107,4 @@ const DemoButton: FC<DemoButtonProps> = ({ color, label, onClick }) => (
   </Button>
 )
 
-export default DemoControls
+

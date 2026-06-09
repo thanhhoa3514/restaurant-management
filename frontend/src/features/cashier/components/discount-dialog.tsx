@@ -95,4 +95,4 @@ export const DiscountDialog: FC<DiscountDialogProps> = ({
   )
 }
 
-export default DiscountDialog
+

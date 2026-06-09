@@ -43,7 +43,7 @@ export interface ShellConfig {
   contentClassName?: string
 }
 
-export const ShellContext = createContext<{
+const ShellContext = createContext<{
   config: ShellConfig
   setConfig: (config: ShellConfig) => void
 } | null>(null)

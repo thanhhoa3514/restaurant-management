@@ -35,4 +35,4 @@ export const VoidDialog: FC<VoidDialogProps> = ({
   )
 }
 
-export default VoidDialog
+

@@ -53,7 +53,7 @@ export interface BillingInvoiceResponse {
   invoice: BillingInvoiceDTO
 }
 
-export function buildInvoice(diningSessionId: string): Promise<BillingInvoiceResponse> {
+function buildInvoice(diningSessionId: string): Promise<BillingInvoiceResponse> {
   return apiRequest<BillingInvoiceResponse>('/api/v1/billing/build-invoice', {
     method: 'POST',
     body: { dining_session_id: diningSessionId },

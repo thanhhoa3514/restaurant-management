@@ -182,4 +182,4 @@ const ItemRow: FC<{ item: KDSItem; lang: Lang; t: TicketCardProps['t'] }> = ({ i
   )
 }
 
-export default TicketCard
+

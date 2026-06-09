@@ -48,7 +48,7 @@ export function urgencyFor(waitSec: number): Urgency {
   return 'red'
 }
 
-export function buildHistory(
+function buildHistory(
   currentStatus: ItemStatus,
   submittedAt: Date,
   now: Date = new Date(),
@@ -65,6 +65,6 @@ export function buildHistory(
   return history
 }
 
-export function getDisplayTime(now: Date, ticket: Ticket): number {
+function getDisplayTime(now: Date, ticket: Ticket): number {
   return Math.max(0, Math.floor((now.getTime() - ticket.submitted_at.getTime()) / 1000))
 }

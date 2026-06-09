@@ -127,7 +127,7 @@ function wfMakeSession({
   }
 }
 
-export function buildInitialTables(now: Date = new Date()): WFTable[] {
+function buildInitialTables(now: Date = new Date()): WFTable[] {
   const at = (secAgo: number) => new Date(now.getTime() - secAgo * 1000)
   const tables: WFTable[] = WF_TABLE_LAYOUT.map((t) => ({
     id: 'T' + t.number,

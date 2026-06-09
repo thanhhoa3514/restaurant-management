@@ -134,4 +134,4 @@ function Dashed() {
   return <Separator className="my-3 border-t border-dashed border-zinc-400 bg-transparent" />
 }
 
-export default ReceiptDialog
+

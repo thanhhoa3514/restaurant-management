@@ -50,4 +50,4 @@ export const ThemeToggle: FC = () => {
   )
 }
 
-export default ThemeToggle
+

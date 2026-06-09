@@ -195,4 +195,4 @@ const Timeline: FC<{ history: StatusHistoryEntry[]; t: Translate }> = ({ history
   </ol>
 )
 
-export default ManageItemsDialog
+

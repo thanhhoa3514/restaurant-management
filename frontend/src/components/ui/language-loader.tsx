@@ -8,30 +8,31 @@ interface LanguageLoaderProps {
 }
 
 export const LanguageLoader: FC<LanguageLoaderProps> = ({ open, targetLang }) => {
-  const [shouldRender, setShouldRender] = useState(false)
-  const [animationClass, setAnimationClass] = useState('opacity-0 scale-95 pointer-events-none')
+  const [prevOpen, setPrevOpen] = useState(open)
+  const [shouldRender, setShouldRender] = useState(open)
+  const [animationClass, setAnimationClass] = useState(
+    open ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
+  )
+
+  if (open !== prevOpen) {
+    setPrevOpen(open)
+    if (open) {
+      setShouldRender(true)
+    }
+  }
 
   useEffect(() => {
     if (open) {
-      setShouldRender(true)
       const t = setTimeout(() => {
         setAnimationClass('opacity-100 scale-100')
       }, 20)
-      return () => {
-        clearTimeout(t)
-      }
+      return () => clearTimeout(t)
     } else {
-      const animationTimer = setTimeout(
-        () => setAnimationClass('opacity-0 scale-95 pointer-events-none'),
-        0,
-      )
+      setAnimationClass('opacity-0 scale-95 pointer-events-none')
       const t = setTimeout(() => {
         setShouldRender(false)
       }, 300) // matches transition duration
-      return () => {
-        clearTimeout(animationTimer)
-        clearTimeout(t)
-      }
+      return () => clearTimeout(t)
     }
   }, [open])
 

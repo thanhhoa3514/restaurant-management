@@ -176,4 +176,4 @@ function PriceRow({ label, value, tone }: { label: string; value: string; tone?:
   )
 }
 
-export default InvoicePanel
+

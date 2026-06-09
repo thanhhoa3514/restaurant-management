@@ -88,4 +88,4 @@ export const GuestPayConfirmDialog: FC<GuestPayConfirmDialogProps> = ({
   )
 }
 
-export default GuestPayConfirmDialog
+

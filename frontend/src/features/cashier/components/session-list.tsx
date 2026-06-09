@@ -163,4 +163,4 @@ function SessionCard({
   )
 }
 
-export default SessionList
+

@@ -5,7 +5,7 @@ type DictValue = string | ((...args: never[]) => string)
 /** Page-level strings for admin routes (dashboard, table-QR manager). */
 const viFormat = new Intl.NumberFormat('vi-VN')
 
-export const ADMIN_DICT: Record<Lang, Record<string, DictValue>> = {
+const ADMIN_DICT: Record<Lang, Record<string, DictValue>> = {
   vi: {
     dashboard_title: 'Tổng quan vận hành',
 

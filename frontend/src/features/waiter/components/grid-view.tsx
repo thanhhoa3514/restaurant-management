@@ -116,4 +116,4 @@ export const GridView: FC<GridViewProps> = ({ tables, now, lang, onSelectTable, 
   )
 }
 
-export default GridView
+

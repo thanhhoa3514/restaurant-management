@@ -93,4 +93,4 @@ export const DemoControls: FC<DemoControlsProps> = ({
   )
 }
 
-export default DemoControls
+

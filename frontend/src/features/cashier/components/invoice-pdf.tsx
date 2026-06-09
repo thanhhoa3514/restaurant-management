@@ -231,4 +231,4 @@ export const InvoicePDF = ({ session, t, lang }: InvoicePDFProps) => {
   );
 };
 
-export default InvoicePDF;
+

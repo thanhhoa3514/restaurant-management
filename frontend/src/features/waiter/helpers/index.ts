@@ -87,7 +87,7 @@ export function wfFmtClock(d: Date): string {
   return `${h}:${m}`
 }
 
-export function wfFmtTimestamp(d: Date): string {
+function wfFmtTimestamp(d: Date): string {
   const h = String(d.getHours()).padStart(2, '0')
   const m = String(d.getMinutes()).padStart(2, '0')
   return `${h}:${m}`
@@ -112,7 +112,7 @@ export function wfFmtVND(amount: number): string {
   return r + 'đ'
 }
 
-export function makeTxnId(): string {
+function makeTxnId(): string {
   return 'TXN' + Math.random().toString(36).substr(2, 9).toUpperCase()
 }
 

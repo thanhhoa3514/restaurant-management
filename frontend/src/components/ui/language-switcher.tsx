@@ -65,4 +65,4 @@ export const LanguageSwitcher: FC<LanguageSwitcherProps> = ({
   )
 }
 
-export default LanguageSwitcher
+
