@@ -31,6 +31,28 @@ type MenuItemDetailDTO struct {
 	OptionGroups       []OptionGroupDTO `json:"option_groups"`
 }
 
+type AdminMenuItemDetailDTO struct {
+	ID                 uuid.UUID        `json:"id"`
+	CategoryID         uuid.UUID        `json:"category_id"`
+	Name               string           `json:"name"`
+	Slug               string           `json:"slug"`
+	Description        string           `json:"description"`
+	ShortDescription   string           `json:"short_description"`
+	ImageURL           string           `json:"image_url"`
+	Images             []string         `json:"images"`
+	BasePriceVND       int64            `json:"base_price_vnd"`
+	AvailabilityStatus string           `json:"availability_status"`
+	IsAvailable        bool             `json:"is_available"`
+	Status             string           `json:"status"`
+	IsFeatured         bool             `json:"is_featured"`
+	IsSpicy            bool             `json:"is_spicy"`
+	Station            string           `json:"station"`
+	DisplayOrder       int              `json:"display_order"`
+	Version            int              `json:"version"`
+	Variants           []VariantDTO     `json:"variants"`
+	OptionGroups       []OptionGroupDTO `json:"option_groups"`
+}
+
 type VariantDTO struct {
 	ID           uuid.UUID `json:"id"`
 	Name         string    `json:"name"`
@@ -79,6 +101,25 @@ func (s *GetMenuItem) Handle(ctx context.Context, req GetMenuItemRequest) (MenuI
 	return toDetailDTO(*item), nil
 }
 
+type GetAdminMenuItem struct{ repo domain.MenuReadRepository }
+
+func NewGetAdminMenuItem(repo domain.MenuReadRepository) *GetAdminMenuItem {
+	return &GetAdminMenuItem{repo: repo}
+}
+
+func (s *GetAdminMenuItem) Handle(ctx context.Context, req GetMenuItemRequest) (AdminMenuItemDetailDTO, error) {
+	var out AdminMenuItemDetailDTO
+	restaurantID, err := tenant.MustRestaurantID(ctx)
+	if err != nil {
+		return out, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant")
+	}
+	item, err := s.repo.GetItemAdmin(ctx, restaurantID, req.ItemID)
+	if err != nil {
+		return out, err
+	}
+	return toAdminDetailDTO(*item), nil
+}
+
 func toDetailDTO(item domain.MenuItemDetail) MenuItemDetailDTO {
 	variants := make([]VariantDTO, 0, len(item.Variants))
 	for _, v := range item.Variants {
@@ -117,5 +158,45 @@ func toDetailDTO(item domain.MenuItemDetail) MenuItemDetailDTO {
 		IsSpicy:            item.IsSpicy,
 		Variants:           variants,
 		OptionGroups:       groups,
+	}
+}
+
+func toAdminDetailDTO(item domain.AdminMenuItemDetail) AdminMenuItemDetailDTO {
+	base := toDetailDTO(domain.MenuItemDetail{
+		ID:                 item.ID,
+		CategoryID:         item.CategoryID,
+		Name:               item.Name,
+		Slug:               item.Slug,
+		Description:        item.Description,
+		ShortDescription:   item.ShortDescription,
+		ImageURL:           item.ImageURL,
+		Images:             item.Images,
+		BasePriceVND:       item.BasePriceVND,
+		AvailabilityStatus: item.AvailabilityStatus,
+		IsAvailable:        item.IsAvailable,
+		IsSpicy:            item.IsSpicy,
+		Variants:           item.Variants,
+		OptionGroups:       item.OptionGroups,
+	})
+	return AdminMenuItemDetailDTO{
+		ID:                 base.ID,
+		CategoryID:         base.CategoryID,
+		Name:               base.Name,
+		Slug:               base.Slug,
+		Description:        base.Description,
+		ShortDescription:   base.ShortDescription,
+		ImageURL:           base.ImageURL,
+		Images:             base.Images,
+		BasePriceVND:       base.BasePriceVND,
+		AvailabilityStatus: base.AvailabilityStatus,
+		IsAvailable:        base.IsAvailable,
+		Status:             item.Status,
+		IsFeatured:         item.IsFeatured,
+		IsSpicy:            base.IsSpicy,
+		Station:            item.Station,
+		DisplayOrder:       item.DisplayOrder,
+		Version:            item.Version,
+		Variants:           base.Variants,
+		OptionGroups:       base.OptionGroups,
 	}
 }

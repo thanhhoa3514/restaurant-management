@@ -68,9 +68,11 @@ options are read-only display this batch** (their editors are a follow-up) —
 keeps scope bounded.
 
 Editable fields: `category_id, name, description, short_description,
-base_price_vnd, image_url, is_available, availability_status, is_featured,
-is_spicy, station, display_order`. Server owns `slug` (from name), `code`,
-`version`, `created_by/updated_by`, timestamps.
+base_price_vnd, image_url, is_available, availability_status, status,
+is_featured, is_spicy, station, display_order`. Server owns `slug` (from name),
+`code`, `version`, `created_by/updated_by`, timestamps. `status` controls
+publish lifecycle (`DRAFT|PUBLISHED|ARCHIVED`); `availability_status` controls
+sellability/display (`AVAILABLE|OUT_OF_STOCK|TEMPORARILY_UNAVAILABLE|HIDDEN`).
 
 ### Out of scope (later sub-phases)
 - Variant / option group editors (create/edit nested rows).
@@ -86,12 +88,18 @@ is_spicy, station, display_order`. Server owns `slug` (from name), `code`,
 > The frontend permission tree is presentation-only.
 
 1. **Admin read endpoints** under `RegisterRoutes` (`catalog.manage` group):
+   - `GET /catalog/categories` — active, non-deleted categories for the
+     restaurant. This is staff-JWT authenticated; the frontend must not call
+     the guest category endpoint.
    - `GET /catalog/items` — full set incl. HIDDEN/unpublished/unavailable,
      **excludes** `deleted_at IS NOT NULL`. Optional `?category_id=`. Reuse
-     `MenuItemSummaryDTO` but via a new repo method (e.g. `ListItemsAdmin`)
-     without the guest `PUBLISHED`/`HIDDEN` filter.
+     the guest projection logic but expose a separate
+     `AdminMenuItemSummaryDTO` via a new repo method (e.g. `ListItemsAdmin`)
+     without the guest `PUBLISHED`/`HIDDEN` filter. The admin DTO also includes
+     `status, is_featured, station, display_order, version`.
    - `GET /catalog/items/:id` — full detail incl. variants/options for the
-     edit form. (Admin variant of `GetMenuItem`.)
+     edit form. Use `AdminMenuItemDetailDTO`, including all editable fields,
+     `status`, and `version`. (Admin variant of `GetMenuItem`.)
    - Keep guest `/menu/*` untouched.
 2. **Define real command DTOs** (replace placeholder `Input`/`Output`, or add
    per-command request structs — match the project's command pattern):
@@ -101,15 +109,34 @@ is_spicy, station, display_order`. Server owns `slug` (from name), `code`,
      concurrency (table has `version`); reject on stale version.
    - `DeleteMenuItemRequest`: `id` (+ `version`). **Soft delete** (`deleted_at`),
      not physical — FK from order line snapshots must stay intact.
-   - `ToggleAvailabilityRequest`: `id`, `is_available` (and/or
-     `availability_status`).
+   - `ToggleAvailabilityRequest`: `id`, `is_available`, optional
+     `availability_status`, and `version`; reject stale toggles. This command
+     must not mutate publish `status`.
 3. **Implement the 4 stub `Handle` bodies**: validate → domain mutation →
    repo write → outbox event (pattern mirrors other shipped command handlers,
    e.g. dining `manage_table_qr`). Bump `version`, set `updated_by`.
-4. **Audit logging** for create/update/delete/toggle (high-impact — see
-   `high-impact-action-policy` memory). Actor = JWT user id.
-5. Tests: repo read (admin includes hidden), each command happy + stale-version
-   + permission-denied path.
+   Use explicit command-repository methods shaped to the SQL mutation:
+   `CreateItem`, `UpdateItem`, `SoftDeleteItem`, `ToggleAvailability`,
+   `GetItemForUpdate`, and `CategoryExists`. Do not force these writes through
+   the currently incomplete generic `MenuItem.Save/Get` aggregate boundary.
+   Create/update must verify the category belongs to the current tenant.
+4. **Server-owned identifiers:** slugify the name and append a short item UUID
+   suffix so the tenant slug is stable and collision-resistant; generate code
+   as `MI-<uppercase short UUID>`. Translate any remaining unique violation to
+   `conflict`.
+5. **Audit logging** for create/update/delete/toggle (high-impact — see
+   `high-impact-action-policy` memory). Actor = JWT user id. Write the
+   `audit_logs` row directly inside the same database transaction as the
+   command, with action
+   `catalog.item_created|catalog.item_updated|catalog.item_deleted|catalog.item_availability_toggled`,
+   entity type `menu_item`, old/new values, IP/user-agent metadata when
+   supplied by the HTTP handler. Also emit outbox events
+   `catalog.item_created|catalog.item_updated|catalog.item_deleted|catalog.item_availability_toggled`
+   for realtime
+   invalidation.
+6. Tests: repo read (admin includes hidden), admin categories/items permission
+   gates, admin DTO version/admin fields, each command happy + stale-version
+   (including toggle) + audit/outbox write + slug/code collision path.
 
 ---
 
@@ -121,7 +148,11 @@ that's session-token + guest-filtered).
 1. **`features/catalog/api.ts`** — staff-JWT calls via `apiRequest`:
    `listAdminCategories()`, `listAdminMenuItems(categoryId?)`,
    `getAdminMenuItem(id)`, `createMenuItem(body)`, `updateMenuItem(body)`,
-   `deleteMenuItem(id, version)`, `toggleAvailability(id, isAvailable)`.
+   `deleteMenuItem(id, version)`,
+   `toggleAvailability(id, isAvailable, version, availabilityStatus?)`. The
+   toggle call must send the card/detail's current `version` and
+   invalidate/refetch item queries after success so the next mutation uses the
+   returned/current version.
 2. **`features/catalog/types.ts`** — mirror the DTOs above.
 3. **Screen** — replace `ComingSoon` in `routes/admin.catalog.tsx`:
    - Category sidebar/tabs + item grid (cards show name, price, availability
@@ -130,6 +161,9 @@ that's session-token + guest-filtered).
      invalidate `['catalog','items']`).
    - **Create / Edit** in a right `Sheet` (reuse `admin.table-qrs.tsx`
      pattern + `useShellConfig`/`ShellHeaderCenter`).
+     On edit, compare the submitted `base_price_vnd` with the loaded original;
+     intercept a changed price with `SecureActionDialog`, then submit with the
+     loaded `version`.
    - **Delete** via `SecureActionDialog` (high-impact, require typed
      confirmation — same as QR rotate).
 4. **i18n** — page copy in `features/admin/data/i18n.ts` (chrome strings

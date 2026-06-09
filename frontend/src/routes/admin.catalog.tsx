@@ -1,10 +1,7 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { ClipboardList } from 'lucide-react'
 
-import { ComingSoon } from '@/components/coming-soon'
-import { shellStrings } from '@/components/shell-i18n'
+import CatalogManagement from '@/features/catalog/components/catalog-management'
 import { hasStaffPermission, isStaffAuthenticated } from '@/lib/auth'
-import { useLang } from '@/lib/use-lang'
 
 export const Route = createFileRoute('/admin/catalog')({
   beforeLoad: ({ location }) => {
@@ -15,10 +12,6 @@ export const Route = createFileRoute('/admin/catalog')({
   },
 })
 
-export const RouteComponent = () => {
-  const { lang } = useLang()
-  const s = shellStrings(lang)
-  return <ComingSoon title={s.navLabel.catalog} subtitle={s.navDesc.catalog} icon={ClipboardList} />
-}
+export const RouteComponent = () => <CatalogManagement />
 
 Route.options.component = RouteComponent

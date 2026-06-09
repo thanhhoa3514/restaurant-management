@@ -32,6 +32,7 @@ func QuerierFromContext(ctx context.Context, pool *pgxpool.Pool) Querier {
 	}
 	return pool
 }
+
 func (m *TxManager) Run(ctx context.Context, fn func(context.Context) error) error {
 	tx, err := m.pool.Begin(ctx)
 	if err != nil {

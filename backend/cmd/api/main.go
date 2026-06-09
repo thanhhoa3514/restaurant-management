@@ -67,10 +67,9 @@ func main() {
 	}
 	router := gin.New()
 	router.Use(httpx.RequestID(), httpx.Logger(log), httpx.Recover(), httpx.CORS(cfg.AllowedOrigins), httpx.MaxBodyBytes(1<<20))
-	// Liveness: process is up. Must NOT touch the DB — a DB blip should not
-	// trigger a pod restart.
+
 	router.GET("/health", func(c *gin.Context) { httpx.Respond(c, http.StatusOK, gin.H{"status": "ok"}, nil) })
-	// Readiness: can serve traffic. Pings the DB with a short timeout.
+
 	router.GET("/health/ready", func(c *gin.Context) {
 		pingCtx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
 		defer cancel()
@@ -120,7 +119,7 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 	identityHandler.RegisterRoutes(api, secret, identityRepo)
 
 	catalogRepo := catalogrepo.NewRepository(pool)
-	catalogHandler := cataloghttp.NewHandler(catalogapp.NewCreateMenuItem(tx, catalogRepo, outboxWriter), catalogapp.NewUpdateMenuItem(tx, catalogRepo, outboxWriter), catalogapp.NewDeleteMenuItem(tx, catalogRepo, outboxWriter), catalogapp.NewToggleAvailability(tx, catalogRepo, outboxWriter), catalogapp.NewListCategories(catalogRepo), catalogapp.NewListMenuItems(catalogRepo), catalogapp.NewGetMenuItem(catalogRepo))
+	catalogHandler := cataloghttp.NewHandler(catalogapp.NewCreateMenuItem(tx, catalogRepo, outboxWriter), catalogapp.NewUpdateMenuItem(tx, catalogRepo, outboxWriter), catalogapp.NewDeleteMenuItem(tx, catalogRepo, outboxWriter), catalogapp.NewToggleAvailability(tx, catalogRepo, outboxWriter), catalogapp.NewListCategories(catalogRepo), catalogapp.NewListMenuItems(catalogRepo), catalogapp.NewGetMenuItem(catalogRepo), catalogapp.NewListAdminMenuItems(catalogRepo), catalogapp.NewGetAdminMenuItem(catalogRepo))
 	catalogHandler.RegisterRoutes(api, secret, identityRepo)
 
 	diningRepo := diningrepo.NewRepository(pool)

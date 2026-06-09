@@ -16,6 +16,8 @@ type fakeReadRepo struct {
 	categories []domain.CategoryRead
 	items      []domain.MenuItemSummary
 	item       *domain.MenuItemDetail
+	adminItems []domain.AdminMenuItemSummary
+	adminItem  *domain.AdminMenuItemDetail
 	err        error
 	gotCatID   *uuid.UUID
 }
@@ -32,6 +34,16 @@ func (r *fakeReadRepo) GetItem(context.Context, uuid.UUID, uuid.UUID) (*domain.M
 		return nil, r.err
 	}
 	return r.item, nil
+}
+func (r *fakeReadRepo) ListItemsAdmin(_ context.Context, _ uuid.UUID, categoryID *uuid.UUID) ([]domain.AdminMenuItemSummary, error) {
+	r.gotCatID = categoryID
+	return r.adminItems, r.err
+}
+func (r *fakeReadRepo) GetItemAdmin(context.Context, uuid.UUID, uuid.UUID) (*domain.AdminMenuItemDetail, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	return r.adminItem, nil
 }
 
 func catalogTenantCtx() context.Context {
@@ -91,4 +103,49 @@ func TestGetMenuItemDetailAndNotFound(t *testing.T) {
 	repo = &fakeReadRepo{err: apperr.New(apperr.CodeNotFound, "menu item not found")}
 	_, err = NewGetMenuItem(repo).Handle(catalogTenantCtx(), GetMenuItemRequest{ItemID: itemID})
 	require.True(t, apperr.Is(err, apperr.CodeNotFound))
+}
+
+func TestListAdminMenuItemsIncludesAdminFieldsAndHiddenRows(t *testing.T) {
+	catID := uuid.New()
+	price := int64(120000)
+	repo := &fakeReadRepo{adminItems: []domain.AdminMenuItemSummary{{
+		ID: uuid.New(), CategoryID: catID, Name: "Draft hotpot", Slug: "draft-hotpot",
+		BasePriceVND: 100000, AvailabilityStatus: "HIDDEN", IsAvailable: false,
+		HasVariants: true, PriceFromVND: &price, Status: "DRAFT", IsFeatured: true,
+		Station: "HOTPOT", DisplayOrder: 7, Version: 3,
+	}}}
+	out, err := NewListAdminMenuItems(repo).Handle(catalogTenantCtx(), ListMenuItemsRequest{CategoryID: &catID})
+	require.NoError(t, err)
+	require.Equal(t, catID, *repo.gotCatID)
+	require.Len(t, out, 1)
+	require.Equal(t, "DRAFT", out[0].Status)
+	require.Equal(t, "HIDDEN", out[0].AvailabilityStatus)
+	require.True(t, out[0].IsFeatured)
+	require.Equal(t, "HOTPOT", out[0].Station)
+	require.Equal(t, 7, out[0].DisplayOrder)
+	require.Equal(t, 3, out[0].Version)
+}
+
+func TestGetAdminMenuItemIncludesEditableFields(t *testing.T) {
+	max := 2
+	itemID := uuid.New()
+	repo := &fakeReadRepo{adminItem: &domain.AdminMenuItemDetail{
+		ID: itemID, CategoryID: uuid.New(), Name: "Archived noodles", Slug: "archived-noodles",
+		Description: "full", ShortDescription: "short", ImageURL: "img", Images: []string{"a.jpg"},
+		BasePriceVND: 90000, AvailabilityStatus: "OUT_OF_STOCK", IsAvailable: false,
+		Status: "ARCHIVED", IsFeatured: true, IsSpicy: true, Station: "NOODLE",
+		DisplayOrder: 11, Version: 5,
+		Variants:     []domain.VariantRead{{ID: uuid.New(), Name: "Large", PriceVND: 120000}},
+		OptionGroups: []domain.OptionGroupRead{{ID: uuid.New(), Name: "Spice", SelectionType: "SINGLE", MaxSelections: &max}},
+	}}
+	out, err := NewGetAdminMenuItem(repo).Handle(catalogTenantCtx(), GetMenuItemRequest{ItemID: itemID})
+	require.NoError(t, err)
+	require.Equal(t, itemID, out.ID)
+	require.Equal(t, "ARCHIVED", out.Status)
+	require.True(t, out.IsFeatured)
+	require.Equal(t, "NOODLE", out.Station)
+	require.Equal(t, 11, out.DisplayOrder)
+	require.Equal(t, 5, out.Version)
+	require.Len(t, out.Variants, 1)
+	require.Len(t, out.OptionGroups, 1)
 }

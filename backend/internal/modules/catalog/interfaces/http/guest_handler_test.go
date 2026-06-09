@@ -26,6 +26,12 @@ func (fakeMenuReadRepo) ListItems(context.Context, uuid.UUID, *uuid.UUID) ([]dom
 func (fakeMenuReadRepo) GetItem(context.Context, uuid.UUID, uuid.UUID) (*domain.MenuItemDetail, error) {
 	return nil, nil
 }
+func (fakeMenuReadRepo) ListItemsAdmin(context.Context, uuid.UUID, *uuid.UUID) ([]domain.AdminMenuItemSummary, error) {
+	return []domain.AdminMenuItemSummary{}, nil
+}
+func (fakeMenuReadRepo) GetItemAdmin(context.Context, uuid.UUID, uuid.UUID) (*domain.AdminMenuItemDetail, error) {
+	return nil, nil
+}
 
 type fakeSessionValidator struct {
 	err error
@@ -41,7 +47,7 @@ func (v fakeSessionValidator) ValidateSessionToken(context.Context, string) (aut
 func guestRouter(v auth.SessionValidator) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	repo := fakeMenuReadRepo{}
-	h := NewHandler(nil, nil, nil, nil, application.NewListCategories(repo), application.NewListMenuItems(repo), application.NewGetMenuItem(repo))
+	h := NewHandler(nil, nil, nil, nil, application.NewListCategories(repo), application.NewListMenuItems(repo), application.NewGetMenuItem(repo), application.NewListAdminMenuItems(repo), application.NewGetAdminMenuItem(repo))
 	r := gin.New()
 	guestGroup := r.Group("/api/v1/guest", auth.QRSessionToken(v))
 	h.RegisterGuestRoutes(guestGroup)

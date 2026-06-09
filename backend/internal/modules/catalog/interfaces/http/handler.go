@@ -1,7 +1,6 @@
 package http
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -21,9 +20,11 @@ type Handler struct {
 	ListCategories     *application.ListCategories
 	ListMenuItems      *application.ListMenuItems
 	GetMenuItem        *application.GetMenuItem
+	ListAdminMenuItems *application.ListAdminMenuItems
+	GetAdminMenuItem   *application.GetAdminMenuItem
 }
 
-func NewHandler(createMenuItem *application.CreateMenuItem, updateMenuItem *application.UpdateMenuItem, deleteMenuItem *application.DeleteMenuItem, toggleAvailability *application.ToggleAvailability, listCategories *application.ListCategories, listMenuItems *application.ListMenuItems, getMenuItem *application.GetMenuItem) *Handler {
+func NewHandler(createMenuItem *application.CreateMenuItem, updateMenuItem *application.UpdateMenuItem, deleteMenuItem *application.DeleteMenuItem, toggleAvailability *application.ToggleAvailability, listCategories *application.ListCategories, listMenuItems *application.ListMenuItems, getMenuItem *application.GetMenuItem, listAdminMenuItems *application.ListAdminMenuItems, getAdminMenuItem *application.GetAdminMenuItem) *Handler {
 	return &Handler{
 		CreateMenuItem:     createMenuItem,
 		UpdateMenuItem:     updateMenuItem,
@@ -32,15 +33,20 @@ func NewHandler(createMenuItem *application.CreateMenuItem, updateMenuItem *appl
 		ListCategories:     listCategories,
 		ListMenuItems:      listMenuItems,
 		GetMenuItem:        getMenuItem,
+		ListAdminMenuItems: listAdminMenuItems,
+		GetAdminMenuItem:   getAdminMenuItem,
 	}
 }
 
 func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver) {
 	g := r.Group("/catalog", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionCatalogManage))
-	g.POST("/create-menu-item", h.handle(h.CreateMenuItem))
-	g.POST("/update-menu-item", h.handle(h.UpdateMenuItem))
-	g.POST("/delete-menu-item", h.handle(h.DeleteMenuItem))
-	g.POST("/toggle-availability", h.handle(h.ToggleAvailability))
+	g.GET("/categories", h.listCategories)
+	g.GET("/items", h.listAdminMenuItems)
+	g.GET("/items/:id", h.getAdminMenuItem)
+	g.POST("/create-menu-item", h.createMenuItem)
+	g.POST("/update-menu-item", h.updateMenuItem)
+	g.POST("/delete-menu-item", h.deleteMenuItem)
+	g.POST("/toggle-availability", h.toggleAvailability)
 }
 
 func (h *Handler) RegisterGuestRoutes(g *gin.RouterGroup) {
@@ -50,26 +56,40 @@ func (h *Handler) RegisterGuestRoutes(g *gin.RouterGroup) {
 	menu.GET("/items/:id", h.getMenuItem)
 }
 
-func (h *Handler) handle(fn interface {
-	Handle(context.Context, application.Input) (application.Output, error)
-}) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		var in application.Input
-		if err := c.ShouldBindJSON(&in); err != nil {
-			httpx.RespondError(c, err)
-			return
-		}
-		out, err := fn.Handle(c.Request.Context(), in)
-		if err != nil {
-			httpx.RespondError(c, err)
-			return
-		}
-		httpx.Respond(c, http.StatusOK, out, nil)
-	}
-}
-
 func (h *Handler) listCategories(c *gin.Context) {
 	out, err := h.ListCategories.Handle(c.Request.Context())
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) listAdminMenuItems(c *gin.Context) {
+	var req application.ListMenuItemsRequest
+	if raw := c.Query("category_id"); raw != "" {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid category_id", err))
+			return
+		}
+		req.CategoryID = &id
+	}
+	out, err := h.ListAdminMenuItems.Handle(c.Request.Context(), req)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) getAdminMenuItem(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid item id", err))
+		return
+	}
+	out, err := h.GetAdminMenuItem.Handle(c.Request.Context(), application.GetMenuItemRequest{ItemID: id})
 	if err != nil {
 		httpx.RespondError(c, err)
 		return
@@ -107,4 +127,78 @@ func (h *Handler) getMenuItem(c *gin.Context) {
 		return
 	}
 	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) createMenuItem(c *gin.Context) {
+	var req application.CreateMenuItemRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
+		return
+	}
+	req.CommandMetadata = commandMetadata(c)
+	out, err := h.CreateMenuItem.Handle(c.Request.Context(), req)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) updateMenuItem(c *gin.Context) {
+	var req application.UpdateMenuItemRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
+		return
+	}
+	req.CommandMetadata = commandMetadata(c)
+	out, err := h.UpdateMenuItem.Handle(c.Request.Context(), req)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) deleteMenuItem(c *gin.Context) {
+	var req application.DeleteMenuItemRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
+		return
+	}
+	req.CommandMetadata = commandMetadata(c)
+	out, err := h.DeleteMenuItem.Handle(c.Request.Context(), req)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) toggleAvailability(c *gin.Context) {
+	var req application.ToggleAvailabilityRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
+		return
+	}
+	req.CommandMetadata = commandMetadata(c)
+	out, err := h.ToggleAvailability.Handle(c.Request.Context(), req)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func commandMetadata(c *gin.Context) application.CommandMetadata {
+	actorID, _ := uuid.Parse(c.GetString(auth.CtxUserID))
+	traceID := c.GetHeader("X-Request-ID")
+	if traceID == "" {
+		traceID = c.Writer.Header().Get("X-Request-ID")
+	}
+	return application.CommandMetadata{
+		ActorID:   actorID,
+		IPAddress: c.ClientIP(),
+		UserAgent: c.Request.UserAgent(),
+		TraceID:   traceID,
+	}
 }
