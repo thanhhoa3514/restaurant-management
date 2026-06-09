@@ -13,7 +13,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -280,7 +279,7 @@ export function AdminShell({
                         align="end"
                         className="w-72 rounded-[18px] border-[var(--separator)] bg-[var(--material-thick)] p-2 text-[13px] backdrop-blur-2xl"
                       >
-                        <DropdownMenuLabel className="px-3 py-3">
+                        <div className="px-3 py-3">
                           <div className="flex items-center gap-3">
                             <div className="flex size-10 items-center justify-center rounded-full bg-[var(--surface-grouped)] text-[var(--text-secondary)]">
                               <UserRound className="size-5" />
@@ -294,7 +293,7 @@ export function AdminShell({
                               </div>
                             </div>
                           </div>
-                        </DropdownMenuLabel>
+                        </div>
                         <DropdownMenuSeparator className="bg-[var(--separator)]" />
                         <DropdownMenuItem
                           onClick={handleLogout}
