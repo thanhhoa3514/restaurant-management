@@ -132,7 +132,7 @@ export function AdminShell({
     configOpen: false,
     profileOpen: false,
     query: '',
-    changingLang: null as Lang | null
+    changingLang: null as Lang | null,
   })
   const { mobileOpen, searchOpen, configOpen, profileOpen, query, changingLang } = state
 
@@ -149,9 +149,10 @@ export function AdminShell({
     (href?: string, view?: string) => {
       if (href === '/admin')
         navigate({ to: '/admin', search: { view: view as AdminView | undefined } })
-      else if (href) navigate({ to: href })
-      ((v: boolean) => dispatch({ searchOpen: v }))(false)
-      ((v: boolean) => dispatch({ mobileOpen: v }))(false)
+      else if (href)
+        navigate({ to: href })((v: boolean) => dispatch({ searchOpen: v }))(false)((v: boolean) =>
+          dispatch({ mobileOpen: v }),
+        )(false)
     },
     [navigate],
   )
@@ -172,12 +173,11 @@ export function AdminShell({
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault()
-        ((v: boolean) => dispatch({ searchOpen: v }))(true)
+        event.preventDefault()((v: boolean) => dispatch({ searchOpen: v }))(true)
       }
       if (event.key === 'Escape') {
-        ((v: boolean) => dispatch({ searchOpen: v }))(false)
-        ((v: boolean) => dispatch({ profileOpen: v }))(false)
+        // ((v: boolean) => dispatch({ searchOpen: v }))(false)
+        ;((v: boolean) => dispatch({ profileOpen: v }))(false)
       }
     }
 
@@ -192,10 +192,9 @@ export function AdminShell({
 
   const handleLangChange = (next: Lang) => {
     if (!setLang) return
-    ((v: Lang | null) => dispatch({ changingLang: v }))(next)
+    ;((v: Lang | null) => dispatch({ changingLang: v }))(next)
     setTimeout(() => {
-      setLang(next)
-      ((v: Lang | null) => dispatch({ changingLang: v }))(null)
+      setLang(next)((v: Lang | null) => dispatch({ changingLang: v }))(null)
     }, 750)
   }
 
@@ -284,7 +283,10 @@ export function AdminShell({
                     <SlidersHorizontal />
                   </Button>
                   <div className="relative">
-                    <DropdownMenu open={profileOpen} onOpenChange={((v: boolean) => dispatch({ profileOpen: v }))}>
+                    <DropdownMenu
+                      open={profileOpen}
+                      onOpenChange={(v: boolean) => dispatch({ profileOpen: v })}
+                    >
                       <DropdownMenuTrigger>
                         <button
                           type="button"
@@ -339,7 +341,7 @@ export function AdminShell({
           </div>
         </div>
 
-        <Sheet open={mobileOpen} onOpenChange={((v: boolean) => dispatch({ mobileOpen: v }))}>
+        <Sheet open={mobileOpen} onOpenChange={(v: boolean) => dispatch({ mobileOpen: v })}>
           <SheetContent
             side="left"
             className="max-w-[288px] bg-[var(--material-thick)] text-[var(--text)]"
@@ -356,7 +358,7 @@ export function AdminShell({
           </SheetContent>
         </Sheet>
 
-        <Sheet open={configOpen} onOpenChange={((v: boolean) => dispatch({ configOpen: v }))}>
+        <Sheet open={configOpen} onOpenChange={(v: boolean) => dispatch({ configOpen: v })}>
           <SheetContent side="right" className="bg-[var(--material-thick)] text-[var(--text)]">
             <SheetHeader title={s.settingsTitle} />
             <div className="space-y-4 px-5 pb-5 pt-2">
@@ -375,7 +377,7 @@ export function AdminShell({
 
         <AdminCommandDialog
           open={searchOpen}
-          onOpenChange={((v: boolean) => dispatch({ searchOpen: v }))}
+          onOpenChange={(v: boolean) => dispatch({ searchOpen: v })}
           query={query}
           setQuery={(v: string) => dispatch({ query: v })}
           s={s}

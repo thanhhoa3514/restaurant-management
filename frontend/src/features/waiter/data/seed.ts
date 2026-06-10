@@ -12,8 +12,8 @@ import { wfBuildHistory } from '../helpers'
 const WF_MENU: MenuItemOption[] = [
   { id: 'pho_bo_tai', name_vi: 'Phở bò tái', name_en: 'Rare beef pho',
     opts_vi: 'Tô lớn • Nhiều hành', opts_en: 'Large • Extra scallion', price: 75000 },
-  { id: 'com_tam_suon', name_vi: 'Cơm tấm sườn nướng bì chả', name_en: 'Special broken rice',
-    opts_vi: 'Thêm trứng • Nước mắm pha', opts_en: 'Extra egg • House fish sauce', price: 85000 },
+  { id: 'com_tam_suon', name_vi: 'Set Lẩu Thái Bò Mỹ', name_en: 'Thai Beef Hotpot Set',
+    opts_vi: 'Cay vừa • Nhiều thịt', opts_en: 'Medium spice • Extra meat', price: 250000 },
   { id: 'bun_bo_hue', name_vi: 'Bún bò Huế', name_en: 'Huế-style beef noodle',
     opts_vi: 'Cay vừa • Thêm chả Huế', opts_en: 'Medium spice • Extra Huế sausage', price: 80000 },
   { id: 'banh_xeo', name_vi: 'Bánh xèo miền Tây', name_en: 'Mekong sizzling pancake',

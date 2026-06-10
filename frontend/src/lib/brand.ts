@@ -10,11 +10,11 @@ type Lang = 'vi' | 'en'
 
 export const BRAND = {
   /** Logo initials shown in the sidebar/header avatar. */
-  shortName: 'LN',
+  shortName: 'ZH',
   /** Full restaurant name per language. */
   name: {
-    vi: 'Quán Lẩu Nướng',
-    en: 'Hotpot & Grill House',
+    vi: 'Zenith Lẩu Nướng',
+    en: 'Zenith Hotpot & Grill',
   },
   /** Short tagline under the name on guest/landing screens. */
   tagline: {
