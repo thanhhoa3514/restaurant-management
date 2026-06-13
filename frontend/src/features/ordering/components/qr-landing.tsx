@@ -1,13 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type FC } from 'react'
-import { QrCode } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FC } from 'react'
+import { QrCode, ScanLine, Sparkles, AlertCircle } from 'lucide-react'
 
 import { ApiError } from '@/lib/api'
 
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
 import { joinDiningSession } from '../api'
-import { Button } from '../../../components/ui/button'
-import { Badge } from '../../../components/ui/badge'
+import { cn } from '../../../lib/utils'
 
 interface QRLandingProps {
   qrToken?: string
@@ -98,7 +97,11 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
         })
         setJoinState('ready')
         setMessage(labels.ready)
-        dispatch({ type: 'SET_SCREEN', payload: 'menu' })
+        
+        // Add a slight delay before transitioning for smoothness
+        setTimeout(() => {
+          dispatch({ type: 'SET_SCREEN', payload: 'menu' })
+        }, 600)
       } catch (err) {
         setJoinState('error')
         setMessage(err instanceof ApiError && err.status === 0 ? labels.network : labels.invalid)
@@ -116,52 +119,110 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
   const canRetry = Boolean(qrToken) && joinState !== 'joining'
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center px-6 gap-8">
-      <div className="flex flex-col items-center gap-4 text-center">
-        <div className="size-32 rounded-full bg-system-blue/10 flex items-center justify-center">
-          <QrCode size={48} className="text-system-blue" />
+    <div className="relative flex min-h-dvh flex-col items-center justify-center px-6 overflow-hidden bg-[var(--bg)]">
+      {/* Background ambient glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120vw] h-[120vw] max-w-[600px] max-h-[600px] bg-[var(--system-blue)]/5 blur-[100px] rounded-full pointer-events-none" />
+
+      <div className="relative z-10 flex flex-col items-center gap-12 w-full max-w-sm animate-in fade-in slide-in-from-bottom-8 duration-700">
+        {/* Branding Section */}
+        <div className="flex flex-col items-center gap-5 text-center">
+          <div className="relative size-24">
+            <div className="absolute inset-0 bg-gradient-to-tr from-[var(--system-blue)] to-[var(--system-purple)] rounded-3xl opacity-20 blur-xl animate-pulse" />
+            <div className="relative size-full rounded-3xl bg-gradient-to-br from-[var(--system-blue)] to-[var(--system-purple)] p-[2px] shadow-lg">
+              <div className="size-full bg-[var(--bg)] rounded-[22px] flex items-center justify-center">
+                <Sparkles size={40} className="text-[var(--system-blue)] drop-shadow-sm" />
+              </div>
+            </div>
+          </div>
+          <div>
+            <h1 className="text-3xl font-black tracking-tight text-[var(--text)] bg-clip-text">
+              {t.restaurant}
+            </h1>
+            <p className="text-[15px] font-medium text-[var(--text-tertiary)] mt-2">
+              {t.tagline}
+            </p>
+          </div>
         </div>
 
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-primary">{t.restaurant}</h1>
-          <p className="text-sm text-secondary mt-1">{t.tagline}</p>
+        {/* Scan / Status Card */}
+        <div className={cn(
+          "w-full rounded-[32px] p-8 flex flex-col items-center gap-6 shadow-[0_8px_40px_rgba(0,0,0,0.06)] border border-[var(--separator)]/50 backdrop-blur-3xl transition-all duration-500",
+          joinState === 'error' || joinState === 'not_opened' 
+            ? "bg-[var(--system-red)]/5 border-[var(--system-red)]/20" 
+            : joinState === 'joining'
+              ? "bg-[var(--system-blue)]/5 border-[var(--system-blue)]/20 scale-[0.98]"
+              : "bg-[var(--material-thin)]/80"
+        )}>
+          
+          <div className="flex flex-col items-center gap-2">
+            <div className={cn(
+              "px-4 py-1.5 rounded-full text-[12px] font-bold uppercase tracking-widest",
+              qrToken 
+                ? joinState === 'error' || joinState === 'not_opened'
+                  ? "bg-[var(--system-red)]/10 text-[var(--system-red)]"
+                  : "bg-[var(--system-green)]/10 text-[var(--system-green)]"
+                : "bg-[var(--surface-grouped)] text-[var(--text-secondary)]"
+            )}>
+              {qrToken ? (joinState === 'error' || joinState === 'not_opened' ? 'Action Required' : `${labels.scanned} ${displayToken}`) : labels.noTokenTitle}
+            </div>
+          </div>
+
+          <div className="relative size-48 rounded-[24px] bg-[var(--surface-grouped)] flex items-center justify-center shadow-inner overflow-hidden border border-[var(--separator)]/30">
+            {joinState === 'joining' ? (
+              <>
+                <ScanLine size={80} className="text-[var(--system-blue)] animate-bounce" />
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--system-blue)]/20 to-transparent animate-[scan_2s_ease-in-out_infinite]" />
+              </>
+            ) : joinState === 'error' || joinState === 'not_opened' ? (
+              <AlertCircle size={80} className="text-[var(--system-red)]/80" />
+            ) : (
+              <QrCode size={80} className="text-[var(--text-quaternary)]/60" />
+            )}
+          </div>
+          
+          <p className={cn(
+            "text-[14px] font-medium text-center leading-relaxed",
+            joinState === 'error' || joinState === 'not_opened' ? "text-[var(--system-red)]" : "text-[var(--text-secondary)]"
+          )}>
+            {message || (qrToken ? t.session_hint : labels.noTokenDesc)}
+          </p>
+        </div>
+
+        {/* Action Section */}
+        <div className="w-full flex flex-col gap-4">
+          <button
+            className="group relative w-full h-[60px] flex items-center justify-center gap-2 overflow-hidden rounded-[20px] bg-[var(--text)] text-[var(--bg)] shadow-xl transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              if (!qrToken) return
+              attemptedToken.current = null
+              void handleJoin(qrToken)
+            }}
+            disabled={!canRetry}
+          >
+            {canRetry && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />}
+            <span className="font-bold text-[18px] relative z-10">
+              {joinState === 'joining'
+                ? labels.joining
+                : joinState === 'not_opened' || joinState === 'error'
+                  ? labels.retry
+                  : qrToken
+                    ? t.start_ordering
+                    : labels.noTokenTitle}
+            </span>
+          </button>
+
+          <p className="text-[12px] font-bold text-[var(--text-tertiary)] uppercase tracking-widest text-center mt-2">
+            {t.now} &middot; {now ? now.toLocaleTimeString() : '--:--'}
+          </p>
         </div>
       </div>
-
-      <div className="w-full max-w-xs rounded-xl bg-elevated p-6 flex flex-col items-center gap-3">
-        <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs font-medium">
-          {qrToken ? `${labels.scanned} ${displayToken}` : labels.noTokenTitle}
-        </Badge>
-        <div className="size-40 rounded-xl bg-surface-grouped flex items-center justify-center">
-          <QrCode size={80} className="text-quaternary" />
-        </div>
-        <p className="text-xs text-tertiary text-center">
-          {message || (qrToken ? t.session_hint : labels.noTokenDesc)}
-        </p>
-      </div>
-
-      <Button
-        size="lg"
-        className="w-full max-w-xs rounded-xl text-base font-semibold h-14"
-        onClick={() => {
-          if (!qrToken) return
-          attemptedToken.current = null
-          void handleJoin(qrToken)
-        }}
-        disabled={!canRetry}
-      >
-        {joinState === 'joining'
-          ? labels.joining
-          : joinState === 'not_opened' || joinState === 'error'
-            ? labels.retry
-            : qrToken
-              ? t.start_ordering
-              : labels.noTokenTitle}
-      </Button>
-
-      <p className="text-xs text-quaternary">
-        {t.now}: {now ? now.toLocaleTimeString() : ''}
-      </p>
+      
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes scan {
+          0% { transform: translateY(-100%); }
+          100% { transform: translateY(100%); }
+        }
+      `}} />
     </div>
   )
 }

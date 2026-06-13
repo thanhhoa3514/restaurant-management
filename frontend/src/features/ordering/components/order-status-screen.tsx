@@ -41,10 +41,14 @@ export const OrderStatusScreen: FC = () => {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-sticky bg-background/80 backdrop-blur-xl border-b border-separator px-4 pt-4 pb-3">
+      <header className="sticky top-0 z-[var(--z-sticky)] bg-[var(--material-thin)]/80 backdrop-blur-2xl border-b border-[var(--separator)] shadow-sm px-4 pt-5 pb-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-primary">{t.your_order}</h1>
-          <Badge className="rounded-full bg-system-green/15 text-system-green text-xs font-medium">
+          <div className="flex flex-col">
+            <h1 className="text-xl font-bold text-[var(--text)] tracking-tight flex items-center gap-2">
+              {t.your_order}
+            </h1>
+          </div>
+          <Badge className="rounded-full bg-[var(--system-green)]/15 text-[var(--system-green)] text-xs font-bold px-3 py-1 border-0">
             {orders.length} {t.orders_history.toLowerCase()}
           </Badge>
         </div>
@@ -78,7 +82,7 @@ export const OrderStatusScreen: FC = () => {
         )}
       </div>
 
-      <div className="sticky bottom-0 px-4 py-3 bg-background/80 backdrop-blur-xl border-t border-separator flex flex-col gap-2">
+      <div className="sticky bottom-0 px-4 py-4 bg-[var(--material-thin)]/80 backdrop-blur-2xl border-t border-[var(--separator)] flex flex-col gap-3 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
         <Button
           className="w-full rounded-xl h-14 text-base font-semibold"
           size="lg"

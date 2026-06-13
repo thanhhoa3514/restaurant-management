@@ -30,18 +30,20 @@ export const SessionSummary: FC = () => {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-sticky bg-background/80 backdrop-blur-xl border-b border-separator px-4 pt-4 pb-3">
+      <header className="sticky top-0 z-[var(--z-sticky)] bg-[var(--material-thin)]/80 backdrop-blur-2xl border-b border-[var(--separator)] shadow-sm px-4 pt-5 pb-4">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold text-primary">{t.session_summary}</h1>
+          <div className="flex flex-col">
+            <h1 className="text-xl font-bold text-[var(--text)] tracking-tight flex items-center gap-2">
+              {t.session_summary}
+            </h1>
             {state.session && (
-              <p className="text-xs text-tertiary mt-0.5">
+              <p className="text-xs font-medium text-[var(--text-tertiary)] mt-1">
                 {t.table} {state.session.table} &middot;{' '}
                 {t.session_started} {formatTime(state.session.startedAt)}
               </p>
             )}
           </div>
-          <Badge variant="secondary" className="rounded-full text-xs font-medium">
+          <Badge className="rounded-full bg-[var(--surface-grouped)] text-[var(--text-secondary)] border-0 text-xs font-bold px-3 py-1">
             {orders.length} {t.orders_history.toLowerCase()}
           </Badge>
         </div>
@@ -97,7 +99,7 @@ export const SessionSummary: FC = () => {
         )}
       </div>
 
-      <div className="sticky bottom-0 px-4 py-3 bg-background/80 backdrop-blur-xl border-t border-separator flex flex-col gap-2">
+      <div className="sticky bottom-0 px-4 py-4 bg-[var(--material-thin)]/80 backdrop-blur-2xl border-t border-[var(--separator)] flex flex-col gap-3 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
         <div className="flex gap-2">
           <Button
             variant="secondary"
