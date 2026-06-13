@@ -98,6 +98,7 @@ export const MenuScreen: FC = () => {
             </div>
             <input
               type="text"
+              aria-label={t.search_placeholder}
               placeholder={t.search_placeholder}
               className="w-full h-11 pl-10 pr-4 rounded-2xl bg-[var(--surface-grouped)]/60 border border-[var(--separator)] text-sm font-medium text-[var(--text)] placeholder-[var(--text-tertiary)] outline-none transition-all focus:bg-[var(--surface-grouped)] focus:ring-2 focus:ring-[var(--system-blue)]/20 focus:border-[var(--system-blue)]/40"
               value={search}
@@ -111,6 +112,7 @@ export const MenuScreen: FC = () => {
       <div className="sticky top-[125px] z-20 bg-[var(--bg)]/90 backdrop-blur-md pt-3 pb-3 border-b border-[var(--separator)]/50">
         <div className="flex overflow-x-auto no-scrollbar px-4 gap-2 items-center">
           <button
+            type="button"
             onClick={() => setActiveCategory('all')}
             className={cn(
               "whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 active:scale-95 border",
@@ -123,6 +125,7 @@ export const MenuScreen: FC = () => {
           </button>
           {(categoriesData ?? []).map((cat) => (
             <button
+              type="button"
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
               className={cn(
@@ -187,6 +190,7 @@ export const MenuScreen: FC = () => {
       {cartCount > 0 && (
         <div className="fixed bottom-6 left-0 right-0 z-[var(--z-floating)] px-4 pointer-events-none flex justify-center animate-in slide-in-from-bottom-10 fade-in duration-500">
           <button
+            type="button"
             className="group pointer-events-auto relative flex h-14 w-full max-w-sm items-center justify-between overflow-hidden rounded-full bg-[var(--text)] px-6 shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition-all active:scale-[0.98] cursor-pointer"
             onClick={() => dispatch({ type: 'OPEN_CART' })}
           >
@@ -241,8 +245,9 @@ const MenuItemCard: FC<MenuItemCardProps> = ({ item, lang, onSelect }) => {
   const price = item.has_variants && item.price_from_vnd != null ? item.price_from_vnd : item.base_price_vnd
 
   return (
-    <div
-      className="group flex flex-col gap-3 cursor-pointer"
+    <button
+      type="button"
+      className="group flex flex-col gap-3 cursor-pointer text-left w-full"
       onClick={onSelect}
     >
       <div className="relative aspect-[4/5] overflow-hidden rounded-3xl bg-[var(--surface-grouped)] transition-all duration-300 shadow-sm group-hover:shadow-lg group-hover:-translate-y-1">
@@ -284,6 +289,6 @@ const MenuItemCard: FC<MenuItemCardProps> = ({ item, lang, onSelect }) => {
           </span>
         </div>
       </div>
-    </div>
+    </button>
   )
 }

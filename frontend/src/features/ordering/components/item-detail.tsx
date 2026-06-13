@@ -184,62 +184,9 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
           <>
             <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col relative pb-4">
               
-              {/* Header Image Section */}
-              <div className="relative aspect-square sm:aspect-[4/3] bg-[var(--surface-grouped)] shrink-0">
-                {form.activeImage ? (
-                  <>
-                    <img src={form.activeImage} alt={item.name} className="size-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg)] via-transparent to-transparent opacity-90" />
-                  </>
-                ) : (
-                  <div className="size-full bg-gradient-to-br from-[var(--surface-grouped)] to-[var(--separator)]/30" />
-                )}
-                
-                {/* Floating Navigation Controls */}
-                <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
-                  <button
-                    type="button"
-                    className="size-11 rounded-full bg-black/30 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white active:scale-90 transition-transform cursor-pointer shadow-lg"
-                    onClick={onClose}
-                  >
-                    <ChevronLeft size={24} strokeWidth={2.5} />
-                  </button>
-                  <button
-                    type="button"
-                    className="size-11 rounded-full bg-black/30 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white active:scale-90 transition-transform cursor-pointer shadow-lg sm:hidden"
-                    onClick={onClose}
-                  >
-                    <X size={20} strokeWidth={2.5} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="px-5 -mt-12 relative z-10 flex flex-col gap-6">
-                {/* Image Gallery Thumbnails */}
-                {item.images.length > 1 && (
-                  <div className="flex gap-3 overflow-x-auto py-2 no-scrollbar shrink-0">
-                    {item.images.map((imgUrl, idx) => {
-                      const isSelected = form.activeImage === imgUrl
-                      return (
-                        <button
-                          key={imgUrl}
-                          type="button"
-                          className={cn(
-                            "relative size-16 shrink-0 rounded-[18px] overflow-hidden transition-all active:scale-95 cursor-pointer border-2 shadow-sm",
-                            isSelected 
-                              ? "border-[var(--system-blue)] scale-[1.05] ring-2 ring-[var(--system-blue)]/20" 
-                              : "border-transparent opacity-80 hover:opacity-100"
-                          )}
-                          onClick={() => setForm(prev => ({ ...prev, activeImage: imgUrl }))}
-                        >
-                          <img src={imgUrl} alt={`${item.name}-${idx}`} className="size-full object-cover" />
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-
-                {/* Title and Price */}
+              <ItemImageHeader item={item} activeImage={form.activeImage} onImageSelect={(url) => setForm((prev) => ({ ...prev, activeImage: url }))} onClose={onClose} />
+              
+              <div className="px-5 relative z-10 flex flex-col gap-6">
                 <div className="bg-[var(--material-thin)]/50 backdrop-blur-xl border border-[var(--separator)] rounded-[24px] p-5 shadow-sm mt-2">
                   <h2 className="text-2xl font-extrabold text-[var(--text)] tracking-tight leading-tight">{item.name}</h2>
                   {item.description && <p className="text-[14px] text-[var(--text-secondary)] mt-2 font-medium leading-relaxed">{item.description}</p>}
@@ -251,122 +198,10 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
                   </div>
                 </div>
 
-                {/* Variant selector */}
-                {item.variants.length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[15px] font-bold text-[var(--text)] tracking-wide">
-                        {lang === 'vi' ? 'Lựa chọn kích cỡ / loại' : 'Variant Selection'}
-                      </span>
-                      <span className="inline-flex items-center rounded-full bg-[var(--system-red)]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[var(--system-red)]">
-                        {t.required}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      {item.variants.map((v) => {
-                        const isSelected = form.variantId === v.id
-                        return (
-                          <button
-                            key={v.id}
-                            type="button"
-                            disabled={!v.is_available}
-                            className={cn(
-                              "flex flex-col items-start justify-center rounded-[20px] p-4 transition-all duration-200 active:scale-[0.98] cursor-pointer disabled:opacity-40 border-2",
-                              isSelected 
-                                ? "bg-[var(--system-blue)]/5 border-[var(--system-blue)] text-[var(--system-blue)]" 
-                                : "bg-[var(--surface-grouped)] border-transparent text-[var(--text-secondary)] hover:bg-[var(--separator)]/50"
-                            )}
-                            onClick={() => setForm(prev => ({ ...prev, variantId: v.id }))}
-                          >
-                            <span className="font-bold text-[15px]">{v.name} {v.unit ? `(${v.unit})` : ''}</span>
-                            <span className="text-xs font-semibold opacity-80 mt-1">{formatVND(v.price_vnd)}</span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Option groups */}
-                {item.option_groups.map((group) => (
-                  <div key={group.id} className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[15px] font-bold text-[var(--text)] tracking-wide">{group.name}</span>
-                      {group.is_required && (
-                        <span className="inline-flex items-center rounded-full bg-[var(--system-red)]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[var(--system-red)]">
-                          {t.required}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-2.5">
-                      {group.options.map((opt) => {
-                        const sel = form.selections[group.id]
-                        const isSelected = Array.isArray(sel) ? sel.includes(opt.id) : sel === opt.id
-                        return (
-                          <button
-                            key={opt.id}
-                            type="button"
-                            disabled={!opt.is_available}
-                            className={cn(
-                              "flex items-center gap-2 rounded-full px-5 py-2.5 text-[14px] font-bold transition-all active:scale-95 cursor-pointer disabled:opacity-40 border-2",
-                              isSelected 
-                                ? "bg-[var(--text)] border-[var(--text)] text-[var(--bg)] shadow-md" 
-                                : "bg-transparent border-[var(--separator)] text-[var(--text-secondary)] hover:bg-[var(--surface-grouped)]"
-                            )}
-                            onClick={() => handleSelectOption(group, opt.id)}
-                          >
-                            <span>{opt.name}</span>
-                            {opt.price_delta_vnd > 0 && (
-                              <span className={cn(
-                                "text-[11px] px-1.5 py-0.5 rounded-md",
-                                isSelected ? "bg-[var(--bg)]/20" : "bg-[var(--surface-grouped)]"
-                              )}>
-                                +{formatVND(opt.price_delta_vnd)}
-                              </span>
-                            )}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ))}
-
-                {/* Quantity and Notes Panel */}
-                <div className="bg-[var(--surface-grouped)]/50 rounded-[24px] p-5 space-y-5 border border-[var(--separator)]/50">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[15px] font-bold text-[var(--text)] tracking-wide">{t.qty}</span>
-                    <div className="flex items-center gap-4 bg-[var(--bg)] rounded-full p-1 shadow-sm border border-[var(--separator)]/50">
-                      <button
-                        type="button"
-                        className="size-10 rounded-full bg-transparent flex items-center justify-center text-[var(--text)] font-medium active:scale-90 transition-all disabled:opacity-30 cursor-pointer hover:bg-[var(--surface-grouped)]"
-                        disabled={form.qty <= 1}
-                        onClick={() => setForm(prev => ({ ...prev, qty: Math.max(1, prev.qty - 1) }))}
-                      >
-                        <Minus size={18} strokeWidth={2.5} />
-                      </button>
-                      <span className="text-[18px] font-black text-[var(--text)] min-w-[28px] text-center tabular-nums">{form.qty}</span>
-                      <button
-                        type="button"
-                        className="size-10 rounded-full bg-transparent flex items-center justify-center text-[var(--text)] font-medium active:scale-90 transition-all cursor-pointer hover:bg-[var(--surface-grouped)]"
-                        onClick={() => setForm(prev => ({ ...prev, qty: prev.qty + 1 }))}
-                      >
-                        <Plus size={18} strokeWidth={2.5} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <span className="text-[13px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider block">{t.notes_label}</span>
-                    <Textarea
-                      placeholder={t.notes_placeholder}
-                      className="rounded-[16px] resize-none h-24 text-[14px] bg-[var(--bg)] border-[var(--separator)]/50 focus:bg-[var(--bg)] focus:ring-[var(--system-blue)]/20 transition-all font-medium placeholder:font-normal"
-                      value={form.notes}
-                      onChange={(e) => setForm(prev => ({ ...prev, notes: e.target.value }))}
-                    />
-                  </div>
-                </div>
+                <ItemVariantSelector item={item} form={form} setForm={setForm} lang={lang} t={t} />
+                <ItemOptionsSelector item={item} form={form} handleSelectOption={handleSelectOption} t={t} />
+                <ItemQtyNotesPanel form={form} setForm={setForm} t={t} />
                 
-                {/* Spacer to push content above fixed bottom bar */}
                 <div className="h-4" />
               </div>
             </div>
@@ -374,6 +209,7 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
             {/* Bottom Action Bar */}
             <div className="p-4 sm:p-5 bg-[var(--material-thin)]/80 backdrop-blur-2xl border-t border-[var(--separator)] shrink-0 z-20 shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
               <button
+                type="button"
                 className="group relative w-full flex h-14 sm:h-16 items-center justify-center gap-2 overflow-hidden rounded-[20px] sm:rounded-2xl bg-[var(--text)] px-8 shadow-xl transition-all active:scale-[0.98] cursor-pointer"
                 onClick={handleAdd}
               >
@@ -385,6 +221,195 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
             </div>
           </>
         )}
+      </div>
+    </div>
+  )
+}
+
+function ItemImageHeader({ item, activeImage, onImageSelect, onClose }: any) {
+  return (
+    <>
+      <div className="relative aspect-square sm:aspect-[4/3] bg-[var(--surface-grouped)] shrink-0">
+        {activeImage ? (
+          <>
+            <img src={activeImage} alt={item.name} className="size-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg)] via-transparent to-transparent opacity-90" />
+          </>
+        ) : (
+          <div className="size-full bg-gradient-to-br from-[var(--surface-grouped)] to-[var(--separator)]/30" />
+        )}
+        <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
+          <button
+            type="button"
+            className="size-11 rounded-full bg-black/30 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white active:scale-90 transition-transform cursor-pointer shadow-lg"
+            onClick={onClose}
+          >
+            <ChevronLeft size={24} strokeWidth={2.5} />
+          </button>
+          <button
+            type="button"
+            className="size-11 rounded-full bg-black/30 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white active:scale-90 transition-transform cursor-pointer shadow-lg sm:hidden"
+            onClick={onClose}
+          >
+            <X size={20} strokeWidth={2.5} />
+          </button>
+        </div>
+      </div>
+      {item.images.length > 1 && (
+        <div className="px-5 -mt-12 relative z-10 flex gap-3 overflow-x-auto py-2 no-scrollbar shrink-0">
+          {item.images.map((imgUrl: string, idx: number) => {
+            const isSelected = activeImage === imgUrl
+            return (
+              <button
+                type="button"
+                key={imgUrl}
+                className={cn(
+                  'relative size-16 shrink-0 rounded-[18px] overflow-hidden transition-all active:scale-95 cursor-pointer border-2 shadow-sm',
+                  isSelected
+                    ? 'border-[var(--system-blue)] scale-[1.05] ring-2 ring-[var(--system-blue)]/20'
+                    : 'border-transparent opacity-80 hover:opacity-100',
+                )}
+                onClick={() => onImageSelect(imgUrl)}
+              >
+                <img src={imgUrl} alt={`${item.name}-${idx}`} className="size-full object-cover" />
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </>
+  )
+}
+
+function ItemVariantSelector({ item, form, setForm, lang, t }: any) {
+  if (item.variants.length === 0) return null
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <span className="text-[15px] font-bold text-[var(--text)] tracking-wide">
+          {lang === 'vi' ? 'Lựa chọn kích cỡ / loại' : 'Variant Selection'}
+        </span>
+        <span className="inline-flex items-center rounded-full bg-[var(--system-red)]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[var(--system-red)]">
+          {t.required}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {item.variants.map((v: any) => {
+          const isSelected = form.variantId === v.id
+          return (
+            <button
+              type="button"
+              key={v.id}
+              disabled={!v.is_available}
+              className={cn(
+                'flex flex-col items-start justify-center rounded-[20px] p-4 transition-all duration-200 active:scale-[0.98] cursor-pointer disabled:opacity-40 border-2',
+                isSelected
+                  ? 'bg-[var(--system-blue)]/5 border-[var(--system-blue)] text-[var(--system-blue)]'
+                  : 'bg-[var(--surface-grouped)] border-transparent text-[var(--text-secondary)] hover:bg-[var(--separator)]/50',
+              )}
+              onClick={() => setForm((prev: any) => ({ ...prev, variantId: v.id }))}
+            >
+              <span className="font-bold text-[15px]">
+                {v.name} {v.unit ? `(${v.unit})` : ''}
+              </span>
+              <span className="text-xs font-semibold opacity-80 mt-1">{formatVND(v.price_vnd)}</span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function ItemOptionsSelector({ item, form, handleSelectOption, t }: any) {
+  if (item.option_groups.length === 0) return null
+  return (
+    <>
+      {item.option_groups.map((group: any) => (
+        <div key={group.id} className="space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[15px] font-bold text-[var(--text)] tracking-wide">{group.name}</span>
+            {group.is_required && (
+              <span className="inline-flex items-center rounded-full bg-[var(--system-red)]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[var(--system-red)]">
+                {t.required}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2.5">
+            {group.options.map((opt: any) => {
+              const sel = form.selections[group.id]
+              const isSelected = Array.isArray(sel) ? sel.includes(opt.id) : sel === opt.id
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  disabled={!opt.is_available}
+                  className={cn(
+                    'flex items-center gap-2 rounded-full px-5 py-2.5 text-[14px] font-bold transition-all active:scale-95 cursor-pointer disabled:opacity-40 border-2',
+                    isSelected
+                      ? 'bg-[var(--text)] border-[var(--text)] text-[var(--bg)] shadow-md'
+                      : 'bg-transparent border-[var(--separator)] text-[var(--text-secondary)] hover:bg-[var(--surface-grouped)]',
+                  )}
+                  onClick={() => handleSelectOption(group, opt.id)}
+                >
+                  <span>{opt.name}</span>
+                  {opt.price_delta_vnd > 0 && (
+                    <span
+                      className={cn(
+                        'text-[11px] px-1.5 py-0.5 rounded-md',
+                        isSelected ? 'bg-[var(--bg)]/20' : 'bg-[var(--surface-grouped)]',
+                      )}
+                    >
+                      +{formatVND(opt.price_delta_vnd)}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+    </>
+  )
+}
+
+function ItemQtyNotesPanel({ form, setForm, t }: any) {
+  return (
+    <div className="bg-[var(--surface-grouped)]/50 rounded-[24px] p-5 space-y-5 border border-[var(--separator)]/50">
+      <div className="flex items-center justify-between">
+        <span className="text-[15px] font-bold text-[var(--text)] tracking-wide">{t.qty}</span>
+        <div className="flex items-center gap-4 bg-[var(--bg)] rounded-full p-1 shadow-sm border border-[var(--separator)]/50">
+          <button
+            type="button"
+            className="size-10 rounded-full bg-transparent flex items-center justify-center text-[var(--text)] font-medium active:scale-90 transition-all disabled:opacity-30 cursor-pointer hover:bg-[var(--surface-grouped)]"
+            disabled={form.qty <= 1}
+            onClick={() => setForm((prev: any) => ({ ...prev, qty: Math.max(1, prev.qty - 1) }))}
+          >
+            <Minus size={18} strokeWidth={2.5} />
+          </button>
+          <span className="text-[18px] font-black text-[var(--text)] min-w-[28px] text-center tabular-nums">
+            {form.qty}
+          </span>
+          <button
+            type="button"
+            className="flex size-10 items-center justify-center rounded-full bg-[var(--bg)] text-[var(--text)] shadow-sm active:scale-90 transition-transform cursor-pointer hover:bg-[var(--surface-grouped)]"
+            onClick={() => setForm((prev: any) => ({ ...prev, qty: prev.qty + 1 }))}
+          >
+            <Plus size={18} strokeWidth={2.5} />
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <span className="text-[13px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider block">
+          {t.notes_label}
+        </span>
+        <Textarea
+          placeholder={t.notes_placeholder}
+          className="rounded-[16px] resize-none h-24 text-[14px] bg-[var(--bg)] border-[var(--separator)]/50 focus:bg-[var(--bg)] focus:ring-[var(--system-blue)]/20 transition-all font-medium placeholder:font-normal"
+          value={form.notes}
+          onChange={(e) => setForm((prev: any) => ({ ...prev, notes: e.target.value }))}
+        />
       </div>
     </div>
   )

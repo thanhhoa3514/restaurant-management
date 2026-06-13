@@ -21,10 +21,9 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
   const [joinState, setJoinState] = useState<JoinState>('idle')
   const [message, setMessage] = useState('')
 
-  const [nowMs, setNowMs] = useState<number | null>(null)
+  const [nowMs, setNowMs] = useState<number>(() => Date.now())
 
   useEffect(() => {
-    setNowMs(Date.now())
     const timer = setInterval(() => setNowMs(Date.now()), 1000)
     return () => clearInterval(timer)
   }, [])
@@ -170,7 +169,7 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
           <div className="relative size-48 rounded-[24px] bg-[var(--surface-grouped)] flex items-center justify-center shadow-inner overflow-hidden border border-[var(--separator)]/30">
             {joinState === 'joining' ? (
               <>
-                <ScanLine size={80} className="text-[var(--system-blue)] animate-bounce" />
+                <ScanLine size={80} className="text-[var(--system-blue)] animate-pulse" />
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--system-blue)]/20 to-transparent animate-[scan_2s_ease-in-out_infinite]" />
               </>
             ) : joinState === 'error' || joinState === 'not_opened' ? (
@@ -191,6 +190,7 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
         {/* Action Section */}
         <div className="w-full flex flex-col gap-4">
           <button
+            type="button"
             className="group relative w-full h-[60px] flex items-center justify-center gap-2 overflow-hidden rounded-[20px] bg-[var(--text)] text-[var(--bg)] shadow-xl transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               if (!qrToken) return
@@ -216,13 +216,12 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
           </p>
         </div>
       </div>
-      
-      <style dangerouslySetInnerHTML={{__html: `
+      <style>{`
         @keyframes scan {
           0% { transform: translateY(-100%); }
           100% { transform: translateY(100%); }
         }
-      `}} />
+      `}</style>
     </div>
   )
 }

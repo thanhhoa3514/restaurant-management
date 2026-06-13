@@ -1,11 +1,8 @@
 /* eslint-disable react-refresh/only-export-components, react-doctor/only-export-components */
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { UsersRound } from 'lucide-react'
 
-import { ComingSoon } from '@/components/coming-soon'
-import { shellStrings } from '@/components/shell-i18n'
+import { StaffManagement } from '@/features/admin/components/staff-management'
 import { hasStaffPermission, isStaffAuthenticated } from '@/lib/auth'
-import { useLang } from '@/lib/use-lang'
 
 export const Route = createFileRoute('/admin/staff')({
   beforeLoad: ({ location }) => {
@@ -17,9 +14,7 @@ export const Route = createFileRoute('/admin/staff')({
 })
 
 export const RouteComponent = () => {
-  const { lang } = useLang()
-  const s = shellStrings(lang)
-  return <ComingSoon title={s.navLabel.staff} subtitle={s.navDesc.staff} icon={UsersRound} />
+  return <StaffManagement />
 }
 
 Route.options.component = RouteComponent

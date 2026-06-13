@@ -83,7 +83,7 @@ export function StaffManagement() {
   const statusMutation = useMutation({
     mutationFn: manageStaffUser,
     onSuccess: () => {
-      invalidate()
+      queryClient.invalidateQueries({ queryKey: staffQueryKeys.users })
       setStatusTarget(null)
     },
   })
@@ -336,9 +336,11 @@ function StaffSheetBody({
   )
   const isSelf = isEdit && state.user.id === getStaffSession()?.userId
 
+  const queryClient = useQueryClient()
   const mutation = useMutation({
     mutationFn: manageStaffUser,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: staffQueryKeys.users })
       onSaved()
       onClose()
     },
@@ -470,9 +472,11 @@ function ResetPasswordSheet({
 }) {
   const [password, setPassword] = useState('')
 
+  const queryClient = useQueryClient()
   const mutation = useMutation({
     mutationFn: manageStaffUser,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: staffQueryKeys.users })
       onSaved()
       setPassword('')
       onClose()

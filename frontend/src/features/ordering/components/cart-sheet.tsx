@@ -50,13 +50,17 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
       dispatch({ type: 'SET_SCREEN', payload: 'order' })
     } catch (err) {
       dispatch({ type: 'PLACE_FAILED' })
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : lang === 'vi'
-            ? 'Không thể gửi đơn. Vui lòng thử lại.'
-            : 'Could not place the order. Please retry.',
-      )
+      let msg = lang === 'vi' ? 'Không thể gửi đơn. Vui lòng thử lại.' : 'Could not place the order. Please retry.'
+      if (err instanceof ApiError) {
+        if (err.message === 'session is not accepting orders') {
+          msg = lang === 'vi' 
+            ? 'Bàn này đã yêu cầu thanh toán hoặc đã đóng, không thể đặt thêm món.' 
+            : 'This table has requested the bill or is closed.'
+        } else {
+          msg = err.message
+        }
+      }
+      setError(msg)
     }
   }
 
@@ -151,6 +155,7 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
 
             <div className="px-6 pb-6 pt-2">
               <button
+                type="button"
                 disabled={state.placing}
                 className="group relative w-full flex h-[60px] items-center justify-center gap-2 overflow-hidden rounded-[20px] bg-[var(--text)] px-8 shadow-xl transition-all active:scale-[0.98] cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                 onClick={handlePlaceOrder}
