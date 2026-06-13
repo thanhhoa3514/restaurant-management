@@ -123,6 +123,7 @@ type WebhookPayment struct {
 type InvoiceRepository interface {
 	BuildInvoice(ctx context.Context, restaurantID, diningSessionID uuid.UUID) (*Invoice, bool, error)
 	AdjustInvoice(ctx context.Context, restaurantID, invoiceID uuid.UUID, discountAmountVND int64, discountReason string) (*Invoice, error)
+	VoidInvoice(ctx context.Context, restaurantID, invoiceID uuid.UUID, reason string) (*Invoice, error)
 	FindPaymentMethod(ctx context.Context, restaurantID uuid.UUID, code string) (*PaymentMethod, error)
 	ProcessPayment(ctx context.Context, restaurantID uuid.UUID, input PaymentInput) (*Invoice, error)
 	PrepareAsyncPayment(ctx context.Context, restaurantID uuid.UUID, input AsyncPaymentInput) (*AsyncPaymentPreparation, error)

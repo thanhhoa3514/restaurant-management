@@ -180,6 +180,52 @@ paths:
         '403':
           description: Forbidden (not MANAGER)
 
+  /api/v1/billing/adjust-invoice:
+    post:
+      tags: [billing]
+      summary: Adjust invoice discounts
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdjustInvoiceRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceResponse'
+  /api/v1/billing/void-invoice:
+    post:
+      tags: [billing]
+      summary: Void an invoice
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [invoice_id, void_reason]
+              properties:
+                invoice_id:
+                  type: string
+                  format: uuid
+                void_reason:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceResponse'
+
   /api/v1/dining/join-session:
     post:
       tags: [dining]

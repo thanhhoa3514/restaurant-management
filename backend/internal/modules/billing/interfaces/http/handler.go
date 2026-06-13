@@ -17,17 +17,19 @@ type Handler struct {
 	AdjustInvoice  *application.AdjustInvoice
 	ProcessPayment *application.ProcessPayment
 	HandleWebhook  *application.HandleWebhook
+	VoidInvoice    *application.VoidInvoice
 	appEnv         string
 }
 
-func NewHandler(buildInvoice *application.BuildInvoice, adjustInvoice *application.AdjustInvoice, processPayment *application.ProcessPayment, handleWebhook *application.HandleWebhook, appEnv string) *Handler {
-	return &Handler{BuildInvoice: buildInvoice, AdjustInvoice: adjustInvoice, ProcessPayment: processPayment, HandleWebhook: handleWebhook, appEnv: appEnv}
+func NewHandler(buildInvoice *application.BuildInvoice, adjustInvoice *application.AdjustInvoice, processPayment *application.ProcessPayment, handleWebhook *application.HandleWebhook, voidInvoice *application.VoidInvoice, appEnv string) *Handler {
+	return &Handler{BuildInvoice: buildInvoice, AdjustInvoice: adjustInvoice, ProcessPayment: processPayment, HandleWebhook: handleWebhook, VoidInvoice: voidInvoice, appEnv: appEnv}
 }
 
 func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver) {
 	g := r.Group("/billing", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionBillingProcess))
 	g.POST("/build-invoice", h.buildInvoice)
 	g.POST("/adjust-invoice", h.adjustInvoice)
+	g.POST("/void-invoice", h.voidInvoice)
 	g.POST("/process-payment", h.processPayment)
 }
 
@@ -52,6 +54,26 @@ func (h *Handler) adjustInvoice(c *gin.Context) {
 		return
 	}
 	out, err := h.AdjustInvoice.Handle(c.Request.Context(), req)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) voidInvoice(c *gin.Context) {
+	var req application.VoidInvoiceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
+		return
+	}
+	actorID, err := uuid.Parse(c.GetString(auth.CtxUserID))
+	if err != nil || actorID == uuid.Nil {
+		httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "invalid user claim"))
+		return
+	}
+	req.ActorID = actorID
+	out, err := h.VoidInvoice.Handle(c.Request.Context(), req)
 	if err != nil {
 		httpx.RespondError(c, err)
 		return

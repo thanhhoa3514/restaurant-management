@@ -175,6 +175,37 @@ func (r *Repository) AdjustInvoice(ctx context.Context, restaurantID, invoiceID 
 	return r.LoadInvoice(ctx, restaurantID, invoiceID)
 }
 
+func (r *Repository) VoidInvoice(ctx context.Context, restaurantID, invoiceID uuid.UUID, reason string) (*domain.Invoice, error) {
+	var status string
+	err := r.q(ctx).QueryRow(ctx, `
+		SELECT status
+		FROM invoices
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+		FOR UPDATE
+	`, restaurantID, invoiceID).Scan(&status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperr.New(apperr.CodeNotFound, "invoice not found")
+	}
+	if err != nil {
+		return nil, err
+	}
+	if status == "PAID" || status == "VOID" || status == "REFUNDED" || status == "PARTIALLY_PAID" {
+		return nil, apperr.New(apperr.CodeConflict, "invoice is not voidable")
+	}
+
+	_, err = r.q(ctx).Exec(ctx, `
+		UPDATE invoices
+		SET status = 'VOID',
+		    version = version + 1,
+		    updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, restaurantID, invoiceID)
+	if err != nil {
+		return nil, err
+	}
+	return r.LoadInvoice(ctx, restaurantID, invoiceID)
+}
+
 func (r *Repository) FindPaymentMethod(ctx context.Context, restaurantID uuid.UUID, code string) (*domain.PaymentMethod, error) {
 	method := &domain.PaymentMethod{}
 	err := r.q(ctx).QueryRow(ctx, `

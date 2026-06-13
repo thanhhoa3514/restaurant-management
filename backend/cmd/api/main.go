@@ -158,6 +158,7 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 		billingapp.NewAdjustInvoice(tx, billingRepo, outboxWriter),
 		billingapp.NewProcessPayment(tx, billingRepo, outboxWriter, gateways, cfg.PublicBaseURL),
 		billingapp.NewHandleWebhook(tx, billingRepo, outboxWriter, gateways, cfg.MockWebhookSecret),
+		billingapp.NewVoidInvoice(tx, billingRepo, outboxWriter),
 		cfg.AppEnv,
 	)
 	billingHandler.RegisterRoutes(api, secret, identityRepo)
