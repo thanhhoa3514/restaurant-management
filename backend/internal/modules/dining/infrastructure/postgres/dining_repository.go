@@ -127,15 +127,20 @@ func (r *Repository) ValidateSessionToken(ctx context.Context, token string) (au
 
 func (r *Repository) ListTablesWithActiveQR(ctx context.Context, restaurantID uuid.UUID) ([]domain.TableWithQR, error) {
 	rows, err := r.q(ctx).Query(ctx, `
-		SELECT t.id, t.code, t.name, t.status, q.id, q.token
+		SELECT t.id, t.code, t.name, t.status, t.capacity,
+		       COALESCE(a.name, ''), COALESCE(a.display_order, 0),
+		       q.id, q.token
 		FROM tables t
+		LEFT JOIN areas a
+		  ON a.id = t.area_id
+		 AND a.deleted_at IS NULL
 		LEFT JOIN qr_codes q
 		  ON q.restaurant_id = t.restaurant_id
 		 AND q.table_id = t.id
 		 AND q.is_active = TRUE
 		 AND q.deleted_at IS NULL
 		WHERE t.restaurant_id = $1 AND t.deleted_at IS NULL
-		ORDER BY t.code
+		ORDER BY COALESCE(a.display_order, 0), t.code
 	`, restaurantID)
 	if err != nil {
 		return nil, err
@@ -147,7 +152,7 @@ func (r *Repository) ListTablesWithActiveQR(ctx context.Context, restaurantID uu
 		var row domain.TableWithQR
 		var qrID pgtype.UUID
 		var token pgtype.Text
-		if err := rows.Scan(&row.TableID, &row.TableCode, &row.TableName, &row.Status, &qrID, &token); err != nil {
+		if err := rows.Scan(&row.TableID, &row.TableCode, &row.TableName, &row.Status, &row.Capacity, &row.AreaName, &row.AreaOrder, &qrID, &token); err != nil {
 			return nil, err
 		}
 		if qrID.Valid {

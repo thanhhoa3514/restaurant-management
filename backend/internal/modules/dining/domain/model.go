@@ -54,6 +54,9 @@ type TableWithQR struct {
 	TableCode string
 	TableName string
 	Status    string
+	Capacity  int
+	AreaName  string
+	AreaOrder int
 	QRCodeID  *uuid.UUID
 	QRToken   *string
 }

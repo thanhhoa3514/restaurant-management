@@ -24,8 +24,13 @@ export function manageTableQR({
 
 // QR codes encode the guest order URL with the opaque token, never the table
 // id, so a leaked/printed code can be revoked by rotating the token.
+// VITE_PUBLIC_ORIGIN overrides the encoded origin for codes scanned from
+// another device (e.g. http://<LAN-IP>:5173 when demoing on a phone while the
+// admin browses via localhost).
 export function buildQROrderURL(token: string): string {
-  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  const origin =
+    (import.meta.env.VITE_PUBLIC_ORIGIN as string | undefined)?.replace(/\/$/, '') ??
+    (typeof window !== 'undefined' ? window.location.origin : '')
   return `${origin}/order?t=${encodeURIComponent(token)}`
 }
 

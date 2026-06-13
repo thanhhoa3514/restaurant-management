@@ -56,6 +56,25 @@ func (r *fakeRepo) RecordLoginFailure(context.Context, uuid.UUID, uuid.UUID) err
 	r.failures++
 	return nil
 }
+func (r *fakeRepo) ListStaff(context.Context, uuid.UUID) ([]domain.StaffUser, error) {
+	return nil, nil
+}
+func (r *fakeRepo) ListRoles(context.Context) ([]domain.RoleInfo, error) { return nil, nil }
+func (r *fakeRepo) FindRoleByName(_ context.Context, name string) (*domain.RoleInfo, error) {
+	return &domain.RoleInfo{ID: uuid.New(), Name: name, DisplayName: name}, nil
+}
+func (r *fakeRepo) CreateUser(context.Context, domain.NewUser) (uuid.UUID, error) {
+	return uuid.New(), nil
+}
+func (r *fakeRepo) UpdateUser(context.Context, uuid.UUID, uuid.UUID, domain.UserUpdate) error {
+	return nil
+}
+func (r *fakeRepo) SetUserStatus(context.Context, uuid.UUID, uuid.UUID, domain.UserStatus) error {
+	return nil
+}
+func (r *fakeRepo) SetUserPassword(context.Context, uuid.UUID, uuid.UUID, string) error {
+	return nil
+}
 
 func hashedPassword(t *testing.T, password string) string {
 	t.Helper()

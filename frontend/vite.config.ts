@@ -22,6 +22,9 @@ export default defineConfig({
   // browser talks same-origin and we avoid CORS. Override the backend target
   // with VITE_BACKEND_URL. In production, set VITE_API_URL instead (see src/lib/api.ts).
   server: {
+    // Listen on all interfaces so a phone on the same Wi-Fi can open the
+    // guest order page after scanning a table QR code.
+    host: true,
     proxy: {
       '/api': {
         target: process.env.VITE_BACKEND_URL || 'http://localhost:8080',

@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"restaurant-management/internal/modules/identity/domain"
@@ -147,6 +148,142 @@ func (r *Repository) RecordLoginSuccess(ctx context.Context, restaurantID, userI
 		return apperr.New(apperr.CodeNotFound, "user not found")
 	}
 	return nil
+}
+
+func (r *Repository) ListStaff(ctx context.Context, restaurantID uuid.UUID) ([]domain.StaffUser, error) {
+	rows, err := r.q(ctx).Query(ctx, `
+		SELECT u.id, u.username, u.full_name, u.email, u.phone,
+		       COALESCE(ro.name, ''), u.status, u.last_login_at, u.created_at
+		FROM users u
+		LEFT JOIN roles ro ON ro.id = u.role_id AND ro.deleted_at IS NULL
+		WHERE u.restaurant_id = $1 AND u.deleted_at IS NULL
+		ORDER BY u.created_at, u.username
+	`, restaurantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]domain.StaffUser, 0)
+	for rows.Next() {
+		var u domain.StaffUser
+		if err := rows.Scan(&u.ID, &u.Username, &u.FullName, &u.Email, &u.Phone, &u.RoleName, &u.Status, &u.LastLoginAt, &u.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, u)
+	}
+	return out, rows.Err()
+}
+
+func (r *Repository) ListRoles(ctx context.Context) ([]domain.RoleInfo, error) {
+	rows, err := r.q(ctx).Query(ctx, `
+		SELECT id, name, display_name
+		FROM roles
+		WHERE deleted_at IS NULL
+		ORDER BY name
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]domain.RoleInfo, 0)
+	for rows.Next() {
+		var ro domain.RoleInfo
+		if err := rows.Scan(&ro.ID, &ro.Name, &ro.DisplayName); err != nil {
+			return nil, err
+		}
+		out = append(out, ro)
+	}
+	return out, rows.Err()
+}
+
+func (r *Repository) FindRoleByName(ctx context.Context, name string) (*domain.RoleInfo, error) {
+	ro := &domain.RoleInfo{}
+	err := r.q(ctx).QueryRow(ctx, `
+		SELECT id, name, display_name
+		FROM roles
+		WHERE name = $1 AND deleted_at IS NULL
+	`, strings.ToLower(strings.TrimSpace(name))).Scan(&ro.ID, &ro.Name, &ro.DisplayName)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperr.New(apperr.CodeNotFound, "role not found")
+	}
+	if err != nil {
+		return nil, err
+	}
+	return ro, nil
+}
+
+func (r *Repository) CreateUser(ctx context.Context, u domain.NewUser) (uuid.UUID, error) {
+	var id uuid.UUID
+	err := r.q(ctx).QueryRow(ctx, `
+		INSERT INTO users (restaurant_id, username, email, phone, password_hash, full_name, role_id, status)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, 'ACTIVE')
+		RETURNING id
+	`, u.RestaurantID, u.Username, u.Email, u.Phone, u.PasswordHash, u.FullName, u.RoleID).Scan(&id)
+	if isUniqueViolation(err) {
+		return uuid.Nil, apperr.New(apperr.CodeConflict, "username, email or phone already in use")
+	}
+	return id, err
+}
+
+func (r *Repository) UpdateUser(ctx context.Context, restaurantID, userID uuid.UUID, upd domain.UserUpdate) error {
+	cmd, err := r.q(ctx).Exec(ctx, `
+		UPDATE users
+		SET full_name = COALESCE($3, full_name),
+		    email     = COALESCE($4, email),
+		    phone     = COALESCE($5, phone),
+		    role_id   = COALESCE($6, role_id),
+		    version   = version + 1,
+		    updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, restaurantID, userID, upd.FullName, upd.Email, upd.Phone, upd.RoleID)
+	if isUniqueViolation(err) {
+		return apperr.New(apperr.CodeConflict, "email or phone already in use")
+	}
+	if err != nil {
+		return err
+	}
+	if cmd.RowsAffected() == 0 {
+		return apperr.New(apperr.CodeNotFound, "user not found")
+	}
+	return nil
+}
+
+func (r *Repository) SetUserStatus(ctx context.Context, restaurantID, userID uuid.UUID, status domain.UserStatus) error {
+	cmd, err := r.q(ctx).Exec(ctx, `
+		UPDATE users
+		SET status = $3, version = version + 1, updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, restaurantID, userID, status)
+	if err != nil {
+		return err
+	}
+	if cmd.RowsAffected() == 0 {
+		return apperr.New(apperr.CodeNotFound, "user not found")
+	}
+	return nil
+}
+
+func (r *Repository) SetUserPassword(ctx context.Context, restaurantID, userID uuid.UUID, passwordHash string) error {
+	cmd, err := r.q(ctx).Exec(ctx, `
+		UPDATE users
+		SET password_hash = $3, failed_login_attempts = 0, locked_until = NULL,
+		    version = version + 1, updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, restaurantID, userID, passwordHash)
+	if err != nil {
+		return err
+	}
+	if cmd.RowsAffected() == 0 {
+		return apperr.New(apperr.CodeNotFound, "user not found")
+	}
+	return nil
+}
+
+func isUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }
 
 func (r *Repository) RecordLoginFailure(ctx context.Context, restaurantID, userID uuid.UUID) error {

@@ -22,14 +22,14 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
   const [joinState, setJoinState] = useState<JoinState>('idle')
   const [message, setMessage] = useState('')
 
-  const nowMs = useSyncExternalStore(
-    useCallback((cb) => {
-      const timer = setInterval(cb, 1000)
-      return () => clearInterval(timer)
-    }, []),
-    () => Date.now(),
-    () => 0
-  )
+  const [nowMs, setNowMs] = useState<number | null>(null)
+
+  useEffect(() => {
+    setNowMs(Date.now())
+    const timer = setInterval(() => setNowMs(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
   const now = nowMs ? new Date(nowMs) : null
 
   const labels = useMemo(

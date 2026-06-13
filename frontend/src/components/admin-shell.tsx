@@ -287,7 +287,7 @@ export function AdminShell({
                       open={profileOpen}
                       onOpenChange={(v: boolean) => dispatch({ profileOpen: v })}
                     >
-                      <DropdownMenuTrigger>
+                      <DropdownMenuTrigger asChild>
                         <button
                           type="button"
                           className="flex size-10 cursor-pointer items-center justify-center rounded-full bg-[var(--staff-tint)] text-sm font-bold text-white transition-opacity duration-[220ms] hover:opacity-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--staff-tint)]/20"

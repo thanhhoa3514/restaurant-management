@@ -15,6 +15,9 @@ type TableQRDTO struct {
 	TableCode   string     `json:"table_code"`
 	TableName   string     `json:"table_name"`
 	TableStatus string     `json:"table_status"`
+	Capacity    int        `json:"capacity"`
+	AreaName    string     `json:"area_name"`
+	AreaOrder   int        `json:"area_order"`
 	QRCodeID    *uuid.UUID `json:"qr_code_id,omitempty"`
 	QRToken     *string    `json:"qr_token,omitempty"`
 	HasActiveQR bool       `json:"has_active_qr"`
@@ -42,6 +45,9 @@ func (s *ListTableQRs) Handle(ctx context.Context) ([]TableQRDTO, error) {
 			TableCode:   row.TableCode,
 			TableName:   row.TableName,
 			TableStatus: row.Status,
+			Capacity:    row.Capacity,
+			AreaName:    row.AreaName,
+			AreaOrder:   row.AreaOrder,
 			QRCodeID:    row.QRCodeID,
 			QRToken:     row.QRToken,
 			HasActiveQR: row.QRCodeID != nil,

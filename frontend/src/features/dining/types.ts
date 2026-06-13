@@ -5,6 +5,9 @@ export interface TableQR {
   table_code: string
   table_name: string
   table_status: string
+  capacity: number
+  area_name: string
+  area_order: number
   qr_code_id?: string
   qr_token?: string
   has_active_qr: boolean

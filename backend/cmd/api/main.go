@@ -115,6 +115,8 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 		identityapp.NewAuthenticate(tx, identityRepo, outboxWriter, secret, cfg.JWTTTL),
 		identityapp.NewGetSession(identityRepo),
 		identityapp.NewManageUsers(tx, identityRepo, outboxWriter),
+		identityapp.NewListStaff(identityRepo),
+		identityapp.NewListRoles(identityRepo),
 	)
 	identityHandler.RegisterRoutes(api, secret, identityRepo)
 

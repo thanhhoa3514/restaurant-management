@@ -38,6 +38,20 @@ export const RouteComponent = () => {
 
   const tables = tablesData ?? []
   const withQR = tables.filter((t) => t.has_active_qr).length
+  // Group tables by area/floor, keeping the backend's area display order.
+  const areaGroups = tables.reduce<Array<{ name: string; tables: TableQR[] }>>(
+    (groups, table) => {
+      const name = table.area_name || t('qr_area_other')
+      const group = groups.find((g) => g.name === name)
+      if (group) {
+        group.tables.push(table)
+      } else {
+        groups.push({ name, tables: [table] })
+      }
+      return groups
+    },
+    [],
+  )
   // Derive the open row from live query data (not a captured snapshot) so the
   // sheet re-renders with the fresh token after a generate/rotate refetch.
   const selected = tables.find((table) => table.table_id === selectedId) ?? null
@@ -76,16 +90,26 @@ export const RouteComponent = () => {
           </Card>
         )}
 
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {tables.map((table) => (
-            <TableCard
-              key={table.table_id}
-              table={table}
-              t={t}
-              onOpen={() => setSelectedId(table.table_id)}
-            />
-          ))}
-        </section>
+        {areaGroups.map((group) => (
+          <section key={group.name} className="space-y-3">
+            <div className="flex items-baseline gap-2">
+              <h2 className="text-[17px] font-semibold text-[var(--text)]">{group.name}</h2>
+              <span className="text-sm text-[var(--text-tertiary)]">
+                {t('qr_summary', group.tables.filter((table) => table.has_active_qr).length, group.tables.length)}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {group.tables.map((table) => (
+                <TableCard
+                  key={table.table_id}
+                  table={table}
+                  t={t}
+                  onOpen={() => setSelectedId(table.table_id)}
+                />
+              ))}
+            </div>
+          </section>
+        ))}
       </div>
       <QRDetailSheet table={selected} t={t} onClose={() => setSelectedId(null)} />
     </>
@@ -104,7 +128,9 @@ function TableCard({ table, t, onOpen }: { table: TableQR; t: AdminT; onOpen: ()
           <div className="truncate text-[17px] font-semibold text-[var(--text)]">
             {table.table_name}
           </div>
-          <div className="font-mono text-xs text-[var(--text-tertiary)]">{table.table_code}</div>
+          <div className="font-mono text-xs text-[var(--text-tertiary)]">
+            {table.table_code} · {t('qr_seats', table.capacity)}
+          </div>
         </div>
         <span
           className={cn(
