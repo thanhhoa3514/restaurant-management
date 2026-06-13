@@ -10,7 +10,6 @@ import { LanguageSwitcher } from '@/components/ui/language-switcher'
 import { wfFmtClock } from '@/features/waiter/helpers'
 import { useWaiter, type WaiterView } from '@/features/waiter/hooks/use-waiter'
 import { cn } from '@/lib/utils'
-import { DemoControls } from './demo-controls'
 import { FloorPlan } from './floor-plan'
 import { GridView } from './grid-view'
 import { TableSheet } from './table-sheet'
@@ -127,20 +126,6 @@ export const WaiterLayout: FC = () => {
       />
 
       <LanguageLoader open={changingLang !== null} targetLang={changingLang || state.lang} />
-
-      <DemoControls
-        open={state.demoOpen}
-        t={t}
-        autoOn={state.autoOn}
-        setOpen={actions.setDemoOpen}
-        setAutoOn={actions.setAutoOn}
-        timeMultiplier={state.timeMultiplier}
-        setTimeMultiplier={actions.setTimeMultiplier}
-        onInjectReady={actions.injectItemReady}
-        onInjectCall={actions.injectCall}
-        onInjectBill={actions.injectBill}
-        onInjectSession={actions.injectNewSession}
-      />
     </>
   )
 }

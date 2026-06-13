@@ -11,7 +11,6 @@ import { ReceiptDialog } from '@/features/cashier/components/receipt-dialog'
 import { SessionList } from '@/features/cashier/components/session-list'
 import { fmtClockSec } from '@/features/cashier/helpers'
 import { CashierProvider, useCashier } from '@/features/cashier/hooks/use-cashier'
-import { DemoControls } from '@/features/cashier/components/demo-controls'
 
 export const CashierLayout: FC = () => (
   <CashierProvider>
@@ -22,7 +21,6 @@ export const CashierLayout: FC = () => (
 const CashierWorkspace: FC = () => {
   const { state, dispatch, selectedSession, t } = useCashier()
   const [receiptSessionId, setReceiptSessionId] = useState<string | null>(null)
-  const [demoOpen, setDemoOpen] = useState(true)
   const [changingLang, setChangingLang] = useState<'vi' | 'en' | null>(null)
 
   const receiptSession = useMemo(
@@ -33,13 +31,6 @@ const CashierWorkspace: FC = () => {
     (session) => session.status !== 'closed' && session.status !== 'voided',
   ).length
   const closedToday = 23 + state.sessions.filter((session) => session.status === 'closed').length
-  const hasPendingPayment = state.sessions.some((session) => session.payment?.status === 'pending')
-
-  const forcePayment = (success: boolean) => {
-    const pending = state.sessions.find((session) => session.payment?.status === 'pending')
-    if (!pending) return
-    dispatch({ type: success ? 'completePayment' : 'failPayment', sessionId: pending.id })
-  }
 
   useShellConfig({
     title: t('cashier'),
@@ -142,21 +133,6 @@ const CashierWorkspace: FC = () => {
       />
 
       <LanguageLoader open={changingLang !== null} targetLang={changingLang || state.lang} />
-
-      <DemoControls
-        open={demoOpen}
-        setOpen={setDemoOpen}
-        paused={state.paused}
-        multiplier={state.timeMultiplier}
-        hasPendingPayment={hasPendingPayment}
-        t={t}
-        onInjectBill={() => dispatch({ type: 'injectBill' })}
-        onForceSuccess={() => forcePayment(true)}
-        onForceFail={() => forcePayment(false)}
-        onReset={() => dispatch({ type: 'resetAll' })}
-        onPauseChange={(paused) => dispatch({ type: 'setPaused', paused })}
-        onMultiplierChange={(value) => dispatch({ type: 'setTimeMultiplier', value })}
-      />
     </>
   )
 }

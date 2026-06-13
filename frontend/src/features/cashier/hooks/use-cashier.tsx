@@ -1,10 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createContext, use, useEffect, useMemo, useReducer, type ReactNode } from 'react'
+import { toast } from 'sonner'
 
 import {
   adjustInvoice,
   createInvoice,
   processPayment,
+  voidInvoice,
   type BillingInvoiceDTO,
   type BillingPaymentDTO,
 } from '@/features/billing/api'
@@ -354,6 +356,16 @@ export function CashierProvider({ children }: { children: ReactNode }) {
     [state.sessions, state.selectedSessionId],
   )
 
+  const t = useMemo<TFunction>(() => {
+    return (key, ...args) => {
+      const value: DictValue | undefined = CS_DICT[state.lang][key]
+      if (typeof value === 'function') {
+        return (value as (...values: Array<number | string>) => string)(...args)
+      }
+      return value ?? key
+    }
+  }, [state.lang])
+
   const dispatch = useMemo<React.Dispatch<CashierAction>>(
     () => (action) => {
       const run = async () => {
@@ -375,6 +387,7 @@ export function CashierProvider({ children }: { children: ReactNode }) {
               discountAction: 'applied',
               at: action.at,
             })
+            toast(t('toast_discount_applied'))
             break
           }
           case 'removeDiscount': {
@@ -390,6 +403,7 @@ export function CashierProvider({ children }: { children: ReactNode }) {
               discountAction: 'removed',
               at: action.at,
             })
+            toast(t('toast_discount_removed'))
             break
           }
           case 'completePayment': {
@@ -414,13 +428,31 @@ export function CashierProvider({ children }: { children: ReactNode }) {
               invoice: response.invoice,
             })
             void queryClient.invalidateQueries({ queryKey: STAFF_TABLES_QUERY_KEY })
+            
+            if (methodCode === 'cash') toast(t('toast_cash_received'))
+            else if (methodCode === 'card') toast(t('toast_card_received'))
+            else toast(t('toast_ewallet_paid', currentSession.table_number))
+            
             break
           }
           case 'closeSession': {
             if (!currentSession) return
+            let voided = false
+            if (
+              currentSession.invoice.id &&
+              currentSession.invoice.status !== 'PAID' &&
+              currentSession.invoice.status !== 'VOID'
+            ) {
+              await voidInvoice(currentSession.invoice.id, 'void_session')
+              voided = true
+            }
             await closeDiningSession(currentSession.id)
             baseDispatch(action)
             void queryClient.invalidateQueries({ queryKey: STAFF_TABLES_QUERY_KEY })
+            
+            if (voided) toast(t('toast_session_voided', currentSession.table_number))
+            else toast(t('toast_session_closed', currentSession.table_number))
+            
             break
           }
           default:
@@ -429,11 +461,13 @@ export function CashierProvider({ children }: { children: ReactNode }) {
       }
       void run().catch((error) => {
         console.error('cashier action failed', error)
-        if (action.type === 'completePayment')
+        if (action.type === 'completePayment') {
+          toast(t('toast_ewallet_failed'))
           baseDispatch({ type: 'failPayment', sessionId: action.sessionId })
+        }
       })
     },
-    [queryClient, state.sessions],
+    [queryClient, state.sessions, t],
   )
 
   useEffect(() => {
@@ -446,16 +480,6 @@ export function CashierProvider({ children }: { children: ReactNode }) {
       )
       .catch((error) => console.error('invoice load failed', error))
   }, [selectedSession])
-
-  const t = useMemo<TFunction>(() => {
-    return (key, ...args) => {
-      const value: DictValue | undefined = CS_DICT[state.lang][key]
-      if (typeof value === 'function') {
-        return (value as (...values: Array<number | string>) => string)(...args)
-      }
-      return value ?? key
-    }
-  }, [state.lang])
 
   const value = useMemo(
     () => ({ state, dispatch, selectedSession, t }),

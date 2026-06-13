@@ -1,6 +1,7 @@
 import { useState, type FC } from 'react'
 import { Minus, Plus, ShoppingBag, Trash2, ChevronRight, Sparkles } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
 import { formatVND, summarizeCartLine, cartTotal, totalItems } from '../helpers'
@@ -46,6 +47,7 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
     try {
       await placeGuestOrder(sessionToken, input)
       await queryClient.invalidateQueries({ queryKey: ['guest-orders', sessionToken] })
+      toast.success(t.toast_order_placed)
       dispatch({ type: 'ORDER_PLACED' })
       dispatch({ type: 'SET_SCREEN', payload: 'order' })
     } catch (err) {

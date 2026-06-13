@@ -11,7 +11,6 @@ import { fmtClock } from '@/features/kitchen/helpers'
 import { useKds } from '@/features/kitchen/hooks/use-kds'
 import type { Lang } from '@/features/kitchen/types'
 
-import { DemoControls } from './demo-controls'
 import { ManageItemsDialog } from './manage-items-dialog'
 import { TicketCard } from './ticket-card'
 
@@ -81,17 +80,6 @@ export const KdsLayout: FC = () => {
           </div>
         )}
       </main>
-
-      <DemoControls
-        open={kds.demoOpen}
-        paused={kds.paused}
-        setOpen={kds.setDemoOpen}
-        setPaused={kds.setPaused}
-        setTimeMultiplier={kds.setTimeMultiplier}
-        t={kds.t}
-        timeMultiplier={kds.timeMultiplier}
-        onInject={kds.injectNewTicket}
-      />
 
       <LanguageLoader open={changingLang !== null} targetLang={changingLang || kds.lang} />
 

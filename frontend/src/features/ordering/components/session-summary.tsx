@@ -2,6 +2,7 @@ import { type FC, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { Phone, ShoppingBag } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
 import { formatVND, formatTime } from '../helpers'
@@ -104,7 +105,10 @@ export const SessionSummary: FC = () => {
           <Button
             variant="secondary"
             className="flex-1 rounded-xl h-14 text-sm font-medium"
-            onClick={() => dispatch({ type: 'SET_SCREEN', payload: 'qr' })}
+            onClick={() => {
+              toast.success(t.toast_waiter)
+              dispatch({ type: 'SET_SCREEN', payload: 'qr' })
+            }}
           >
             <Phone size={18} className="mr-1.5" />
             {t.call_waiter}
@@ -131,6 +135,7 @@ export const SessionSummary: FC = () => {
         t={t}
         onOpenChange={setPayConfirmOpen}
         onConfirm={(wantsDigitalInvoice) => {
+          toast.success(t.toast_bill)
           if (wantsDigitalInvoice) {
             setSimulatingPayment(true)
             setTimeout(() => {

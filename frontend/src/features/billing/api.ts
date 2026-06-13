@@ -75,6 +75,16 @@ export function adjustInvoice(
   })
 }
 
+export function voidInvoice(invoiceId: string, voidReason: string): Promise<BillingInvoiceResponse> {
+  return apiRequest<BillingInvoiceResponse>('/api/v1/billing/void-invoice', {
+    method: 'POST',
+    body: {
+      invoice_id: invoiceId,
+      void_reason: voidReason,
+    },
+  })
+}
+
 export function processPayment(args: {
   invoiceId: string
   paymentMethodCode: string

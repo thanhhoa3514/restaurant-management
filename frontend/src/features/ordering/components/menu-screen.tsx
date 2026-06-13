@@ -7,6 +7,7 @@ import { formatVND, totalItems } from '../helpers'
 import { fetchCategories, fetchMenuItems, type ApiMenuItemSummary } from '../api'
 import type { Lang } from '../types'
 import { Button } from '../../../components/ui/button'
+import { Card, CardContent } from '../../../components/ui/card'
 import { Skeleton } from '../../../components/ui/skeleton'
 import { LanguageLoader } from '../../../components/ui/language-loader'
 import { ThemeToggle } from '../../../components/ui/theme-toggle'
@@ -144,13 +145,16 @@ export const MenuScreen: FC = () => {
       {/* Menu Grid */}
       <main className="flex-1 px-4 py-6">
         {isItemsLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="flex flex-col gap-2">
-                <Skeleton className="aspect-square rounded-3xl" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-3 w-1/2" />
-              </div>
+              <Card key={i} className="flex flex-row sm:flex-col overflow-hidden">
+                <Skeleton className="size-28 sm:size-full sm:aspect-[4/3] rounded-none shrink-0" />
+                <CardContent className="p-4 flex flex-col justify-center flex-1 gap-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                  <Skeleton className="h-4 w-1/4 mt-auto" />
+                </CardContent>
+              </Card>
             ))}
           </div>
         ) : isItemsError ? (
@@ -173,7 +177,7 @@ export const MenuScreen: FC = () => {
             <p className="text-sm font-medium text-[var(--text-tertiary)]">{t.no_results}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filtered.map((item) => (
               <MenuItemCard
                 key={item.id}
@@ -213,13 +217,11 @@ export const MenuScreen: FC = () => {
         </div>
       )}
 
-      {selectedItemId && (
-        <ItemDetail
-          itemId={selectedItemId}
-          lang={state.lang}
-          onClose={() => setSelectedItemId(null)}
-        />
-      )}
+      <ItemDetail
+        itemId={selectedItemId}
+        lang={state.lang}
+        onClose={() => setSelectedItemId(null)}
+      />
 
       <CartSheet
         open={state.cartOpen}
@@ -245,50 +247,48 @@ const MenuItemCard: FC<MenuItemCardProps> = ({ item, lang, onSelect }) => {
   const price = item.has_variants && item.price_from_vnd != null ? item.price_from_vnd : item.base_price_vnd
 
   return (
-    <button
-      type="button"
-      className="group flex flex-col gap-3 cursor-pointer text-left w-full"
+    <Card 
+      className="group overflow-hidden cursor-pointer hover:shadow-md transition-all active:scale-[0.98] bg-[var(--bg-elevated)] border-[var(--separator)] flex flex-row sm:flex-col" 
       onClick={onSelect}
     >
-      <div className="relative aspect-[4/5] overflow-hidden rounded-3xl bg-[var(--surface-grouped)] transition-all duration-300 shadow-sm group-hover:shadow-lg group-hover:-translate-y-1">
+      <div className="relative w-[110px] sm:w-full shrink-0 aspect-square sm:aspect-[4/3] bg-[var(--surface-grouped)] overflow-hidden">
         {item.image_url ? (
           <>
             <img 
               src={item.image_url} 
               alt={item.name} 
-              className="size-full object-cover transition-transform duration-700 group-hover:scale-110" 
+              className="size-full object-cover transition-transform duration-500 group-hover:scale-105" 
               loading="lazy" 
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity" />
           </>
         ) : (
-          <div className="size-full bg-gradient-to-br from-[var(--surface-grouped)] to-[var(--separator)]/30" />
+          <div className="size-full flex items-center justify-center text-[var(--text-tertiary)] bg-gradient-to-br from-[var(--surface-grouped)] to-[var(--separator)]/30" />
         )}
-        
-        {/* Floating Add Button overlay */}
-        <div className="absolute bottom-3 right-3 flex size-9 items-center justify-center rounded-full bg-[var(--material-thick)]/90 backdrop-blur-md shadow-md text-[var(--text)] transition-transform duration-300 active:scale-90 group-hover:bg-[var(--text)] group-hover:text-[var(--bg)]">
-          <Plus size={18} strokeWidth={2.5} />
-        </div>
       </div>
       
-      <div className="flex flex-col gap-1 px-1">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="text-[15px] font-bold text-[var(--text)] leading-snug line-clamp-2 transition-colors group-hover:text-[var(--system-blue)]">
-            {item.name}
-          </h3>
-        </div>
+      <CardContent className="p-3 sm:p-4 flex flex-col flex-1 justify-center sm:justify-start gap-1 sm:gap-2">
+        <h3 className="text-[15px] font-bold text-[var(--text)] leading-snug line-clamp-2 transition-colors group-hover:text-[var(--system-blue)]">
+          {item.name}
+        </h3>
         {item.short_description && (
-          <p className="text-xs text-[var(--text-tertiary)] line-clamp-1 font-medium">{item.short_description}</p>
+          <p className="text-[13px] text-[var(--text-secondary)] line-clamp-1 sm:line-clamp-2 mt-0.5">
+            {item.short_description}
+          </p>
         )}
-        <div className="mt-1 flex items-center">
-          <span className="text-[14px] font-extrabold tracking-tight text-[var(--text)]">
+        <div className="mt-auto pt-2 flex items-center justify-between">
+          <span className="text-[14px] sm:text-[15px] font-extrabold text-[var(--text)]">
             {item.has_variants && item.price_from_vnd != null
-              ? <span className="text-[11px] font-bold text-[var(--text-tertiary)] uppercase mr-1">{lang === 'vi' ? 'Từ' : 'From'}</span>
+              ? <span className="text-[11px] sm:text-[12px] font-bold text-[var(--text-tertiary)] uppercase mr-1">{lang === 'vi' ? 'Từ' : 'From'}</span>
               : null}
             {formatVND(price)}
           </span>
+          <div className="flex size-7 sm:size-8 items-center justify-center rounded-full bg-[var(--surface-grouped)] text-[var(--text-secondary)] group-hover:bg-[var(--system-blue)] group-hover:text-[white] transition-colors">
+            <Plus size={16} strokeWidth={2.5} />
+          </div>
         </div>
-      </div>
-    </button>
+      </CardContent>
+    </Card>
   )
 }
+

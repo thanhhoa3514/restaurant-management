@@ -1,18 +1,20 @@
 import { useEffect, useMemo, useState, type FC } from 'react'
 import { ChevronLeft, Minus, Plus, X } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
 import { formatVND } from '../helpers'
 import { fetchMenuItem, type ApiOptionGroup } from '../api'
 import type { CartLine, CartOption, Lang } from '../types'
 import { Button } from '../../../components/ui/button'
+import { Sheet, SheetContent, SheetTitle } from '../../../components/ui/sheet'
 import { Skeleton } from '../../../components/ui/skeleton'
 import { Textarea } from '../../../components/ui/textarea'
 import { cn } from '../../../lib/utils'
 
 interface ItemDetailProps {
-  itemId: string
+  itemId: string | null
   lang: Lang
   onClose: () => void
 }
@@ -157,18 +159,14 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
       options,
     }
     dispatch({ type: 'ADD_TO_CART', payload: line })
+    toast.success(t.toast_added)
     onClose()
   }
 
   return (
-    <div className="fixed inset-0 z-[var(--z-modal)] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div 
-        className="absolute inset-0 z-0 cursor-pointer" 
-        onClick={onClose} 
-        aria-hidden="true" 
-      />
-      
-      <div className="relative z-10 flex w-full max-w-lg flex-col bg-[var(--bg)] rounded-t-[32px] sm:rounded-[32px] h-[92dvh] sm:h-auto sm:max-h-[90vh] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-full sm:zoom-in-95 duration-500">
+    <Sheet open={!!itemId} onOpenChange={(open) => { if (!open) onClose() }}>
+      <SheetContent side="right" hideClose className="w-full sm:max-w-md p-0 overflow-hidden flex flex-col border-none bg-[var(--bg)] shadow-2xl">
+        <SheetTitle className="sr-only">{item?.name ?? 'Item Detail'}</SheetTitle>
         
         {isItemLoading || !item ? (
           <div className="flex flex-col gap-5 p-6 h-full">
@@ -221,8 +219,8 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
             </div>
           </>
         )}
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   )
 }
 

@@ -7,6 +7,7 @@ import {
   type SetStateAction,
 } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { toast } from 'sonner'
 
 import { openDiningSession } from '@/features/dining/api'
 import { WF_DICT } from '@/features/waiter/data/i18n'
@@ -126,22 +127,37 @@ export function useWaiter(): UseWaiterValue {
     setSelectedTableId(tableId)
   }, [])
 
-  const acknowledgeCall = useCallback(() => {
-    refetchTables()
-  }, [refetchTables])
+  const acknowledgeCall = useCallback(
+    (tableId: string) => {
+      const table = tables.find((item) => item.id === tableId)
+      if (table) toast(t('toast_acknowledged', table.code))
+      refetchTables()
+    },
+    [refetchTables, t, tables],
+  )
 
-  const notifyCashier = useCallback(() => {
-    refetchTables()
-  }, [refetchTables])
+  const notifyCashier = useCallback(
+    (tableId: string) => {
+      toast(t('toast_bill_sent'))
+      refetchTables()
+    },
+    [refetchTables, t],
+  )
 
   const markItemServed = useCallback(
     (tableId: string, itemId: string) => {
+      const table = tables.find((item) => item.id === tableId)
+      const item = table?.session?.orders
+        .flatMap((order) => order.items)
+        .find((i) => i.id === itemId)
+      const itemName = item ? (lang === 'vi' ? item.name_snapshot_vi : item.name_snapshot_en) : ''
       void updateStaffOrderItemStatus(itemId, 'SERVED').then(() => {
         markJustChanged(tableId)
+        if (table) toast(t('toast_served', itemName, table.code))
         refetchTables()
       })
     },
-    [markJustChanged, refetchTables],
+    [markJustChanged, refetchTables, tables, t, lang],
   )
 
   const markAllServed = useCallback(
@@ -155,32 +171,37 @@ export function useWaiter(): UseWaiterValue {
         readyItems.map((item) => updateStaffOrderItemStatus(item.id, 'SERVED')),
       ).then(() => {
         markJustChanged(tableId)
+        if (table) toast(t('toast_all_served', table.code))
         refetchTables()
       })
     },
-    [markJustChanged, refetchTables, tables],
+    [markJustChanged, refetchTables, tables, t],
   )
 
   const requestBill = useCallback(
     (tableId: string) => {
-      const sessionId = tables.find((table) => table.id === tableId)?.session?.id
+      const table = tables.find((t) => t.id === tableId)
+      const sessionId = table?.session?.id
       if (!sessionId) return
       void requestSessionBill(sessionId).then(() => {
         markJustChanged(tableId)
+        toast(t('toast_bill_sent'))
         refetchTables()
       })
     },
-    [markJustChanged, refetchTables, tables],
+    [markJustChanged, refetchTables, tables, t],
   )
 
   const openSession = useCallback(
     (tableId: string) => {
+      const table = tables.find((t) => t.id === tableId)
       void openDiningSession(tableId).then(() => {
         markJustChanged(tableId)
+        if (table) toast(t('toast_session_opened', table.code))
         refetchTables()
       })
     },
-    [markJustChanged, refetchTables],
+    [markJustChanged, refetchTables, tables, t],
   )
 
   const counts = useMemo<WFCounts>(() => {
