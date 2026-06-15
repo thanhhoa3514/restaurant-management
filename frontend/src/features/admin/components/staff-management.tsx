@@ -9,7 +9,22 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { makeAdminT, type AdminT } from '@/features/admin/data/i18n'
 import {
   listRoles,
@@ -115,17 +130,17 @@ export function StaffManagement() {
         {users.length > 0 && (
           <Card className="overflow-hidden bg-[var(--material-regular)] backdrop-blur-2xl">
             <CardContent className="p-0">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--separator)] text-left text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
-                    <th className="px-5 py-3">{t('staff_col_name')}</th>
-                    <th className="px-5 py-3">{t('staff_col_role')}</th>
-                    <th className="px-5 py-3">{t('staff_col_status')}</th>
-                    <th className="hidden px-5 py-3 md:table-cell">{t('staff_col_last_login')}</th>
-                    <th className="px-5 py-3 text-right">{t('staff_col_actions')}</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-b border-[var(--separator)] hover:bg-transparent">
+                    <TableHead className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)] h-auto">{t('staff_col_name')}</TableHead>
+                    <TableHead className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)] h-auto">{t('staff_col_role')}</TableHead>
+                    <TableHead className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)] h-auto">{t('staff_col_status')}</TableHead>
+                    <TableHead className="hidden px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)] h-auto md:table-cell">{t('staff_col_last_login')}</TableHead>
+                    <TableHead className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)] h-auto">{t('staff_col_actions')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {users.map((user) => (
                     <StaffRow
                       key={user.id}
@@ -139,8 +154,8 @@ export function StaffManagement() {
                       statusPending={statusMutation.isPending && statusTarget?.id === user.id}
                     />
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         )}
@@ -214,8 +229,8 @@ function StaffRow({
         : 'staff_status_inactive'
 
   return (
-    <tr className="border-b border-[var(--separator)] last:border-0">
-      <td className="px-5 py-3">
+    <TableRow className="border-b border-[var(--separator)] last:border-0 hover:bg-[var(--surface-grouped)]/50">
+      <TableCell className="px-5 py-3">
         <div className="font-semibold text-[var(--text)]">
           {user.full_name}
           {isSelf && (
@@ -225,9 +240,9 @@ function StaffRow({
           )}
         </div>
         <div className="font-mono text-xs text-[var(--text-tertiary)]">{user.username}</div>
-      </td>
-      <td className="px-5 py-3 capitalize text-[var(--text-secondary)]">{user.role}</td>
-      <td className="px-5 py-3">
+      </TableCell>
+      <TableCell className="px-5 py-3 capitalize text-[var(--text-secondary)]">{user.role}</TableCell>
+      <TableCell className="px-5 py-3">
         <Badge
           className={cn(
             'border-0',
@@ -240,13 +255,13 @@ function StaffRow({
         >
           {t(statusKey)}
         </Badge>
-      </td>
-      <td className="hidden px-5 py-3 text-[var(--text-secondary)] md:table-cell">
+      </TableCell>
+      <TableCell className="hidden px-5 py-3 text-[var(--text-secondary)] md:table-cell">
         {user.last_login_at
           ? new Date(user.last_login_at).toLocaleString(lang === 'vi' ? 'vi-VN' : 'en-US')
           : t('staff_never_logged')}
-      </td>
-      <td className="px-5 py-3">
+      </TableCell>
+      <TableCell className="px-5 py-3">
         <div className="flex justify-end gap-1">
           <Button variant="ghost" size="sm" className="rounded-[10px]" onClick={onEdit} title={t('staff_edit')}>
             <Pencil className="size-4" />
@@ -287,8 +302,8 @@ function StaffRow({
               </Button>
             ))}
         </div>
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   )
 }
 
@@ -409,19 +424,23 @@ function StaffSheetBody({
             <Input value={form.phone} onChange={(e) => updateField('phone', e.target.value)} />
           </Field>
           <Field label={t('staff_field_role')}>
-            <select
-              className="h-10 w-full rounded-[10px] border border-transparent bg-[var(--surface-grouped)] px-[14px] text-sm capitalize text-[var(--text)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--system-blue)]/18"
+            <Select
               value={form.role}
-              onChange={(e) => updateField('role', e.target.value)}
+              onValueChange={(val) => updateField('role', val)}
               disabled={isSelf}
               required
             >
-              {roles.map((role) => (
-                <option key={role.name} value={role.name}>
-                  {role.display_name || role.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="h-10 w-full rounded-[10px] bg-[var(--surface-grouped)] px-[14px] text-sm capitalize text-[var(--text)] border-transparent focus:ring-[3px] focus:ring-[var(--system-blue)]/18">
+                <SelectValue placeholder="Chọn vai trò" />
+              </SelectTrigger>
+              <SelectContent>
+                {roles.map((role) => (
+                  <SelectItem key={role.name} value={role.name} className="capitalize">
+                    {role.display_name || role.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Field>
           {!isEdit && (
             <Field label={t('staff_field_password')} hint={t('staff_password_hint')}>

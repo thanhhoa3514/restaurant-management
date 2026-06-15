@@ -52,7 +52,7 @@ export const GridView: FC<GridViewProps> = ({ tables, now, lang, onSelectTable, 
         }
 
         return (
-          <button key={table.id} type="button" onClick={() => onSelectTable(table.id)} className="w-full text-left outline-none">
+          <button key={table.id} type="button" onClick={() => onSelectTable(table.id)} className="w-full text-left outline-none cursor-pointer">
             <Card
               className={cn(
                 'relative flex min-h-[148px] flex-col overflow-hidden rounded-[24px] border-2 p-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg active:scale-[0.99]',

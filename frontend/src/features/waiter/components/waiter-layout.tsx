@@ -40,7 +40,6 @@ export const WaiterLayout: FC = () => {
       <ShellHeaderActions>
         <CounterPill tone="red" label={t('calls')} value={counts.calls} />
         <CounterPill tone="emerald" label={t('ready')} value={counts.ready} />
-        <CounterPill tone="blue" label={t('bills')} value={counts.bills} />
         <LanguageSwitcher
           currentLang={state.lang}
           onLangChange={(newLang) => {
@@ -52,22 +51,8 @@ export const WaiterLayout: FC = () => {
           }}
           className="hidden sm:inline-flex"
         />
-        <Button
-          variant={state.soundOn ? 'default' : 'secondary'}
-          size="sm"
-          className="hidden rounded-full text-xs uppercase tracking-[0.12em] lg:inline-flex"
-          onClick={() => actions.setSoundOn((value) => !value)}
-        >
-          <span
-            className={cn(
-              'size-2 rounded-full',
-              state.soundOn ? 'bg-emerald-300' : 'bg-[var(--text-tertiary)]',
-            )}
-          />
-          Sound
-        </Button>
       </ShellHeaderActions>
-      <div className="sticky top-0 z-[240] border-b border-[var(--separator)] bg-[var(--material-regular)] backdrop-blur-2xl">
+      <div className="sticky top-0 z-30 border-b border-[var(--separator)] bg-[var(--material-regular)] backdrop-blur-2xl">
         <div className="mx-auto flex h-16 max-w-[1600px] items-center justify-between gap-4 px-5 lg:px-8">
           <Tabs value={state.view} onValueChange={(value) => actions.setView(value as WaiterView)}>
             <TabsList className="rounded-[18px]">

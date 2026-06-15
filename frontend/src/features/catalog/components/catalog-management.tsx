@@ -9,8 +9,26 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 import { makeAdminT, type AdminT } from '@/features/admin/data/i18n'
 import {
   catalogQueryKeys,
@@ -43,6 +61,22 @@ const AVAILABILITY_OPTIONS: MenuItemAvailabilityStatus[] = [
   'HIDDEN',
 ]
 const STATION_OPTIONS = ['HOTPOT', 'GRILL', 'NOODLE', 'DRINK', 'DESSERT', 'GENERAL'] as const
+
+const catalogFormSchema = z.object({
+  category_id: z.string().min(1, 'Category is required'),
+  name: z.string().min(1, 'Name is required'),
+  short_description: z.string().optional().default(''),
+  description: z.string().optional().default(''),
+  base_price_vnd: z.coerce.number().min(0),
+  image_url: z.string().optional().default(''),
+  is_available: z.boolean().default(true),
+  availability_status: z.enum(['AVAILABLE', 'OUT_OF_STOCK', 'TEMPORARILY_UNAVAILABLE', 'HIDDEN']),
+  status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']),
+  is_featured: z.boolean().default(false),
+  is_spicy: z.boolean().default(false),
+  station: z.string().optional().default(''),
+  display_order: z.coerce.number().default(0),
+})
 
 const blankForm = (categoryId = ''): MenuItemFormBody => ({
   category_id: categoryId,
@@ -379,27 +413,29 @@ function CategoryFilter({
       <div className="mb-2 px-2 py-1 text-xs font-bold uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
         {t('catalog_categories')}
       </div>
-      <button
+      <Button
         type="button"
+        variant="ghost"
         className={categoryButtonClass(!selectedId)}
         onClick={() => onSelect(undefined)}
       >
         <span>{t('catalog_all')}</span>
         <span className="text-xs text-[var(--text-tertiary)]">{t('catalog_all_hint')}</span>
-      </button>
+      </Button>
       {loading && (
         <p className="px-3 py-4 text-sm text-[var(--text-secondary)]">{t('catalog_loading')}</p>
       )}
       {categories.map((category) => (
-        <button
+        <Button
           key={category.id}
           type="button"
+          variant="ghost"
           className={categoryButtonClass(selectedId === category.id)}
           onClick={() => onSelect(category.id)}
         >
           <span>{category.name}</span>
           <span className="text-xs text-[var(--text-tertiary)]">#{category.display_order}</span>
-        </button>
+        </Button>
       ))}
     </aside>
   )
@@ -407,9 +443,9 @@ function CategoryFilter({
 
 function categoryButtonClass(active: boolean) {
   return cn(
-    'mb-1 flex w-full cursor-pointer items-center justify-between rounded-[16px] px-3 py-3 text-left text-sm font-semibold transition-colors duration-[220ms] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--system-purple)]/20',
+    'mb-1 flex w-full h-auto cursor-pointer items-center justify-between rounded-[16px] px-3 py-3 text-left text-sm font-semibold transition-colors duration-[220ms]',
     active
-      ? 'bg-[var(--system-purple)] text-white shadow-sm [&_span:last-child]:text-white/75'
+      ? 'bg-[var(--system-purple)] text-white shadow-sm [&_span:last-child]:text-white/75 hover:bg-[var(--system-purple)]/90 hover:text-white'
       : 'text-[var(--text-secondary)] hover:bg-[var(--surface-grouped)] hover:text-[var(--text)]',
   )
 }
@@ -645,7 +681,10 @@ function CatalogItemForm({
   onSaved: () => Promise<void>
 }) {
   const queryClient = useQueryClient()
-  const [form, setForm] = useState<MenuItemFormBody>(() => initialForm)
+  const hookForm = useForm<z.infer<typeof catalogFormSchema>>({
+    resolver: zodResolver(catalogFormSchema),
+    defaultValues: initialForm,
+  })
   const [pendingPriceUpdate, setPendingPriceUpdate] = useState<UpdateMenuItemRequest | null>(null)
 
   const createMutation = useMutation({
@@ -677,26 +716,16 @@ function CatalogItemForm({
   })
 
   const busy = createMutation.isPending || updateMutation.isPending
-  const valid =
-    form.category_id &&
-    form.name.trim() &&
-    Number.isFinite(form.base_price_vnd) &&
-    form.base_price_vnd >= 0
 
-  const updateField = <K extends keyof MenuItemFormBody>(key: K, value: MenuItemFormBody[K]) => {
-    setForm((current) => ({ ...current, [key]: value }))
-  }
-
-  const handleSubmit = (event: FormEvent) => {
-    event.preventDefault()
-    if (!valid) return
+  const onSubmit = (data: z.infer<typeof catalogFormSchema>) => {
+    const normalized = normalizeForm(data as MenuItemFormBody)
     if (state?.mode === 'create') {
-      createMutation.mutate(normalizeForm(form))
+      createMutation.mutate(normalized)
       return
     }
     if (!detail) return
     const payload: UpdateMenuItemRequest = {
-      ...normalizeForm(form),
+      ...normalized,
       id: detail.id,
       version: detail.version,
     }
@@ -709,144 +738,247 @@ function CatalogItemForm({
 
   return (
     <>
-      <form className="flex flex-1 flex-col overflow-hidden" onSubmit={handleSubmit}>
+      <Form {...hookForm}>
+        <form className="flex flex-1 flex-col overflow-hidden" onSubmit={hookForm.handleSubmit(onSubmit)}>
         <div className="flex-1 space-y-5 overflow-y-auto px-5 pb-5">
           <FormError error={detailError ?? createMutation.error ?? updateMutation.error} t={t} />
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label={t('catalog_field_category')}>
-              <select
-                className="h-10 w-full rounded-[10px] border border-transparent bg-[var(--surface-grouped)] px-[14px] text-sm text-[var(--text)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--system-blue)]/18"
-                value={form.category_id}
-                onChange={(event) => updateField('category_id', event.target.value)}
-                required
-              >
-                <option value="">{t('catalog_pick_category')}</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label={t('catalog_field_name')}>
-              <Input
-                value={form.name}
-                onChange={(event) => updateField('name', event.target.value)}
-                placeholder={t('catalog_name_placeholder')}
-                required
-              />
-            </Field>
+            <FormField
+              control={hookForm.control}
+              name="category_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('catalog_field_category')}</FormLabel>
+                  <Select onValueChange={(val) => field.onChange(val === 'none' ? '' : val)} value={field.value || 'none'}>
+                    <FormControl>
+                      <SelectTrigger className="h-10 w-full rounded-[10px] bg-[var(--surface-grouped)] text-sm text-[var(--text)] border-transparent focus:ring-[3px] focus:ring-[var(--system-blue)]/18">
+                        <SelectValue placeholder={t('catalog_pick_category')} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">{t('catalog_pick_category')}</SelectItem>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={hookForm.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('catalog_field_name')}</FormLabel>
+                  <FormControl>
+                    <Input placeholder={t('catalog_name_placeholder')} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
 
-          <Field label={t('catalog_field_short_description')}>
-            <Input
-              value={form.short_description}
-              onChange={(event) => updateField('short_description', event.target.value)}
-              placeholder={t('catalog_short_placeholder')}
-            />
-          </Field>
+          <FormField
+            control={hookForm.control}
+            name="short_description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t('catalog_field_short_description')}</FormLabel>
+                <FormControl>
+                  <Input placeholder={t('catalog_short_placeholder')} {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-          <Field label={t('catalog_field_description')}>
-            <Textarea
-              className="min-h-24"
-              value={form.description}
-              onChange={(event) => updateField('description', event.target.value)}
-              placeholder={t('catalog_desc_placeholder')}
-            />
-          </Field>
+          <FormField
+            control={hookForm.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t('catalog_field_description')}</FormLabel>
+                <FormControl>
+                  <Textarea className="min-h-24" placeholder={t('catalog_desc_placeholder')} {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label={t('catalog_field_price')}>
-              <Input
-                type="number"
-                min={0}
-                step={1000}
-                value={form.base_price_vnd}
-                onChange={(event) => updateField('base_price_vnd', Number(event.target.value))}
-                required
-              />
-            </Field>
-            <Field label={t('catalog_field_image')}>
-              <Input
-                value={form.image_url}
-                onChange={(event) => updateField('image_url', event.target.value)}
-                placeholder="https://"
-              />
-            </Field>
+            <FormField
+              control={hookForm.control}
+              name="base_price_vnd"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('catalog_field_price')}</FormLabel>
+                  <FormControl>
+                    <Input type="number" min={0} step={1000} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={hookForm.control}
+              name="image_url"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('catalog_field_image')}</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-3">
-            <Field label={t('catalog_field_status')}>
-              <select
-                className="h-10 w-full rounded-[10px] border border-transparent bg-[var(--surface-grouped)] px-[14px] text-sm text-[var(--text)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--system-blue)]/18"
-                value={form.status}
-                onChange={(event) => updateField('status', event.target.value as MenuItemStatus)}
-              >
-                {STATUS_OPTIONS.map((status) => (
-                  <option key={status} value={status}>
-                    {t(`catalog_status_${status.toLowerCase()}`)}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label={t('catalog_field_availability')}>
-              <select
-                className="h-10 w-full rounded-[10px] border border-transparent bg-[var(--surface-grouped)] px-[14px] text-sm text-[var(--text)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--system-blue)]/18"
-                value={form.availability_status}
-                onChange={(event) =>
-                  updateField(
-                    'availability_status',
-                    event.target.value as MenuItemAvailabilityStatus,
-                  )
-                }
-              >
-                {AVAILABILITY_OPTIONS.map((status) => (
-                  <option key={status} value={status}>
-                    {t(`catalog_availability_${status.toLowerCase()}`)}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label={t('catalog_field_station')}>
-              <select
-                className="h-10 w-full rounded-[10px] border border-transparent bg-[var(--surface-grouped)] px-[14px] text-sm text-[var(--text)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--system-blue)]/18"
-                value={form.station}
-                onChange={(event) => updateField('station', event.target.value)}
-              >
-                <option value="">{t('catalog_station_placeholder')}</option>
-                {STATION_OPTIONS.map((station) => (
-                  <option key={station} value={station}>
-                    {station}
-                  </option>
-                ))}
-              </select>
-            </Field>
+            <FormField
+              control={hookForm.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('catalog_field_status')}</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="h-10 w-full rounded-[10px] bg-[var(--surface-grouped)] text-sm text-[var(--text)] border-transparent focus:ring-[3px] focus:ring-[var(--system-blue)]/18">
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {STATUS_OPTIONS.map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {t(`catalog_status_${status.toLowerCase()}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={hookForm.control}
+              name="availability_status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('catalog_field_availability')}</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="h-10 w-full rounded-[10px] bg-[var(--surface-grouped)] text-sm text-[var(--text)] border-transparent focus:ring-[3px] focus:ring-[var(--system-blue)]/18">
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {AVAILABILITY_OPTIONS.map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {t(`catalog_availability_${status.toLowerCase()}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={hookForm.control}
+              name="station"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('catalog_field_station')}</FormLabel>
+                  <Select onValueChange={(val) => field.onChange(val === 'none' ? '' : val)} value={field.value || 'none'}>
+                    <FormControl>
+                      <SelectTrigger className="h-10 w-full rounded-[10px] bg-[var(--surface-grouped)] text-sm text-[var(--text)] border-transparent focus:ring-[3px] focus:ring-[var(--system-blue)]/18">
+                        <SelectValue placeholder={t('catalog_station_placeholder')} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">{t('catalog_station_placeholder')}</SelectItem>
+                      {STATION_OPTIONS.map((station) => (
+                        <SelectItem key={station} value={station}>
+                          {station}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label={t('catalog_field_display_order')}>
-              <Input
-                type="number"
-                value={form.display_order}
-                onChange={(event) => updateField('display_order', Number(event.target.value))}
-              />
-            </Field>
+            <FormField
+              control={hookForm.control}
+              name="display_order"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('catalog_field_display_order')}</FormLabel>
+                  <FormControl>
+                    <Input type="number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <div className="grid grid-cols-3 gap-2 pt-6">
-              <ToggleBox
-                label={t('catalog_field_available')}
-                checked={form.is_available}
-                onChange={(checked) => updateField('is_available', checked)}
+              <FormField
+                control={hookForm.control}
+                name="is_available"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <ToggleBox
+                        label={t('catalog_field_available')}
+                        checked={field.value}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-              <ToggleBox
-                label={t('catalog_field_featured')}
-                checked={form.is_featured}
-                onChange={(checked) => updateField('is_featured', checked)}
+              <FormField
+                control={hookForm.control}
+                name="is_featured"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <ToggleBox
+                        label={t('catalog_field_featured')}
+                        checked={field.value}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-              <ToggleBox
-                label={t('catalog_field_spicy')}
-                checked={form.is_spicy}
-                onChange={(checked) => updateField('is_spicy', checked)}
+              <FormField
+                control={hookForm.control}
+                name="is_spicy"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <ToggleBox
+                        label={t('catalog_field_spicy')}
+                        checked={field.value}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
           </div>
@@ -866,13 +998,14 @@ function CatalogItemForm({
           <Button
             type="submit"
             className="flex-1 rounded-[var(--radius-lg)]"
-            disabled={!valid || busy}
+            disabled={busy}
           >
             {busy && <Loader2 className="size-4 animate-spin" />}
             {state?.mode === 'edit' ? t('catalog_save_changes') : t('catalog_create_confirm')}
           </Button>
         </div>
       </form>
+      </Form>
 
       {pendingPriceUpdate && detail && (
         <SecureActionDialog
@@ -913,14 +1046,6 @@ function normalizeForm(form: MenuItemFormBody): MenuItemFormBody {
   }
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="space-y-2">
-      <Label className="text-[var(--text-secondary)]">{label}</Label>
-      {children}
-    </div>
-  )
-}
 
 function ToggleBox({
   label,
@@ -932,18 +1057,19 @@ function ToggleBox({
   onChange: (checked: boolean) => void
 }) {
   return (
-    <button
+    <Button
       type="button"
+      variant="outline"
       className={cn(
-        'rounded-[14px] border px-3 py-3 text-sm font-semibold transition-colors duration-[220ms]',
+        'h-auto min-h-12 rounded-[14px] px-3 py-3 text-sm font-semibold whitespace-normal h-full',
         checked
-          ? 'border-[var(--system-blue)]/30 bg-[var(--system-blue)]/10 text-[var(--system-blue)]'
-          : 'border-[var(--separator)] bg-[var(--surface-grouped)] text-[var(--text-secondary)]',
+          ? 'border-[var(--system-blue)]/30 bg-[var(--system-blue)]/10 text-[var(--system-blue)] hover:bg-[var(--system-blue)]/20 hover:text-[var(--system-blue)]'
+          : 'border-[var(--separator)] bg-[var(--surface-grouped)] text-[var(--text-secondary)] hover:bg-[var(--surface-grouped)]/80 hover:text-[var(--text)]',
       )}
       onClick={() => onChange(!checked)}
     >
       {label}
-    </button>
+    </Button>
   )
 }
 

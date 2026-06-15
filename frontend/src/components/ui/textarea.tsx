@@ -1,24 +1,18 @@
-import * as React from 'react'
+import * as React from "react"
 
-import { cn } from '@/lib/utils'
+import { cn } from "@/lib/utils"
 
-const Textarea = ({ className, ref, ...props }: React.ComponentProps<'textarea'>) => {
+function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
   return (
     <textarea
+      data-slot="textarea"
       className={cn(
-        'flex min-h-[100px] w-full rounded-[14px] bg-[var(--surface-grouped)] px-[18px] py-[14px] text-[15px] text-[var(--text)] placeholder:text-[var(--text-tertiary)] transition-all duration-[220ms] ease-out',
-        'border border-transparent',
-        'hover:bg-[var(--surface-grouped)]/80',
-        'focus-visible:outline-none focus-visible:ring-[4px] focus-visible:ring-[var(--system-blue)]/20 focus-visible:border-transparent',
-        'disabled:cursor-not-allowed disabled:opacity-50',
-        'resize-y',
-        className,
+        "flex field-sizing-content min-h-16 w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
+        className
       )}
-      ref={ref}
       {...props}
     />
   )
 }
-Textarea.displayName = 'Textarea'
 
 export { Textarea }

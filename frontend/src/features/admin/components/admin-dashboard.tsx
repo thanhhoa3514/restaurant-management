@@ -18,6 +18,14 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ShellHeaderCenter, useShellConfig } from '@/components/admin-shell'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { makeAdminT } from '@/features/admin/data/i18n'
 import { getStaffSession } from '@/lib/auth'
 import { useLang } from '@/lib/use-lang'
@@ -109,38 +117,38 @@ export const AdminDashboard = () => {
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[640px] text-left text-sm">
-                  <thead className="bg-[var(--surface-grouped)]/60 text-[12px] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
-                    <tr>
-                      <th className="px-5 py-3 font-bold">{t('col_staff')}</th>
-                      <th className="px-5 py-3 font-bold">{t('col_code')}</th>
-                      <th className="px-5 py-3 font-bold">{t('col_dept')}</th>
-                      <th className="px-5 py-3 text-center font-bold">{t('col_status')}</th>
-                      <th className="px-5 py-3 text-right font-bold">{t('col_time')}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[var(--separator)]">
+                <Table className="min-w-[640px]">
+                  <TableHeader className="bg-[var(--surface-grouped)]/60 [&_tr]:border-b-0">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="px-5 py-3 text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--text-tertiary)] h-auto">{t('col_staff')}</TableHead>
+                      <TableHead className="px-5 py-3 text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--text-tertiary)] h-auto">{t('col_code')}</TableHead>
+                      <TableHead className="px-5 py-3 text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--text-tertiary)] h-auto">{t('col_dept')}</TableHead>
+                      <TableHead className="px-5 py-3 text-center text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--text-tertiary)] h-auto">{t('col_status')}</TableHead>
+                      <TableHead className="px-5 py-3 text-right text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--text-tertiary)] h-auto">{t('col_time')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="divide-y divide-[var(--separator)]">
                     {isLoading ? (
-                      <tr>
-                        <td colSpan={5} className="py-8 text-center text-[var(--text-secondary)]">
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell colSpan={5} className="py-8 text-center text-[var(--text-secondary)]">
                           <div className="flex items-center justify-center gap-2">
                             <div className="size-4 animate-spin rounded-full border-2 border-[var(--system-purple)] border-t-transparent" />
                             Đang tải dữ liệu...
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ) : isError ? (
-                      <tr>
-                        <td colSpan={5} className="py-8 text-center text-[var(--system-red)]">
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell colSpan={5} className="py-8 text-center text-[var(--system-red)]">
                           Không thể tải dữ liệu. Vui lòng thử lại sau.
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ) : dashboard?.staffs.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="py-8 text-center text-[var(--text-secondary)]">
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell colSpan={5} className="py-8 text-center text-[var(--text-secondary)]">
                           Không có nhân viên nào đang trực
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ) : (
                       dashboard?.staffs.map((staff) => (
                         <StaffRow
@@ -154,8 +162,8 @@ export const AdminDashboard = () => {
                         />
                       ))
                     )}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>
@@ -245,10 +253,10 @@ const StaffRow = React.memo(function StaffRow({
   onDuty: string
 }) {
   return (
-    <tr className="transition-colors duration-[220ms] hover:bg-[var(--surface-grouped)]/50">
-      <td className="px-5 py-4 font-semibold text-[var(--text)]">{name}</td>
-      <td className="px-5 py-4 font-mono text-xs text-[var(--text-secondary)]">{code}</td>
-      <td className="px-5 py-4">
+    <TableRow className="border-b-0 transition-colors duration-[220ms] hover:bg-[var(--surface-grouped)]/50">
+      <TableCell className="px-5 py-4 font-semibold text-[var(--text)]">{name}</TableCell>
+      <TableCell className="px-5 py-4 font-mono text-xs text-[var(--text-secondary)]">{code}</TableCell>
+      <TableCell className="px-5 py-4">
         <Badge
           className={cn(
             'border-0',
@@ -260,17 +268,17 @@ const StaffRow = React.memo(function StaffRow({
         >
           {role}
         </Badge>
-      </td>
-      <td className="px-5 py-4 text-center">
-        <span className="inline-flex items-center gap-2 text-xs font-bold text-[var(--system-green)]">
+      </TableCell>
+      <TableCell className="px-5 py-4 text-center">
+        <span className="inline-flex items-center justify-center gap-2 text-xs font-bold text-[var(--system-green)]">
           <span className="size-2 rounded-full bg-[var(--system-green)]" />
           {onDuty}
         </span>
-      </td>
-      <td className="px-5 py-4 text-right font-mono text-xs text-[var(--text-secondary)]">
+      </TableCell>
+      <TableCell className="px-5 py-4 text-right font-mono text-xs text-[var(--text-secondary)]">
         {time}
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   )
 })
 

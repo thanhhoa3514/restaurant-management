@@ -62,7 +62,7 @@ export const FloorPlan: FC<FloorPlanProps> = ({ tables, now, lang, t, onSelectTa
             type="button"
             onClick={() => onSelectTable(table.id)}
             className={cn(
-              'absolute h-20 w-20 rounded-[22px] border-2 shadow-lg ring-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95',
+              'absolute h-20 w-20 rounded-[22px] border-2 shadow-lg ring-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95 cursor-pointer',
               'backdrop-blur-xl',
               priority === 'call' || priority === 'ready' ? 'animate-pulse' : '',
               changed ? 'scale-110' : '',

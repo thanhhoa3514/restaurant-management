@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components, react-doctor/only-export-components */
 import { useNavigate } from '@tanstack/react-router'
-import { LogOut, Menu, Search, SlidersHorizontal, UserRound } from 'lucide-react'
+import { LogOut, Search, UserRound } from 'lucide-react'
 import {
   useMemo,
   useState,
@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button'
 import { LanguageLoader } from '@/components/ui/language-loader'
 import { LanguageSwitcher } from '@/components/ui/language-switcher'
 import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet'
-import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -218,80 +218,41 @@ export function AdminShell({
 
           <div className="flex min-w-0 flex-1 flex-col">
             <header className="safe-top sticky top-0 z-[var(--z-sticky)] border-b border-[var(--separator)] bg-[var(--material-regular)] backdrop-blur-2xl">
-              <div className="flex min-h-16 items-center gap-3 px-4 py-3 sm:px-5 lg:px-6">
-                {sidebar && (
+              <div className="flex min-h-16 items-center justify-end px-4 py-3 sm:px-5 lg:px-6">
+                <div id="shell-header-actions" className="flex shrink-0 items-center gap-2">
                   <Button
                     type="button"
                     variant="secondary"
-                    size="icon"
-                    className="size-11 shrink-0 rounded-full border border-[var(--separator)] bg-[var(--material-thin)] lg:hidden"
-                    onClick={() => ((v: boolean) => dispatch({ mobileOpen: v }))(true)}
-                    aria-label={s.openNavAria}
-                  >
-                    <Menu />
-                  </Button>
-                )}
-
-                <div className="min-w-0">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--staff-tint)]">
-                    {eyebrow ?? s.roleLabel[role]}
-                  </p>
-                  <h1 className="truncate text-[22px] font-semibold leading-tight text-[var(--text)]">
-                    {title}
-                  </h1>
-                  {subtitle && (
-                    <p className="truncate text-[13px] font-medium text-[var(--text-secondary)]">
-                      {subtitle}
-                    </p>
-                  )}
-                </div>
-
-                <div
-                  id="shell-header-center"
-                  className="hidden min-w-0 flex-1 items-center justify-center xl:flex"
-                ></div>
-
-                <div id="shell-header-actions" className="ml-auto flex shrink-0 items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="hidden h-10 rounded-full border border-[var(--separator)] bg-[var(--surface-grouped)]/70 px-3 text-[13px] text-[var(--text-secondary)] backdrop-blur-md sm:inline-flex"
+                    className="h-10 rounded-full border border-[var(--separator)] bg-[var(--surface-grouped)]/70 px-3 text-[13px] text-[var(--text-secondary)] backdrop-blur-md"
                     onClick={() => ((v: boolean) => dispatch({ searchOpen: v }))(true)}
                   >
                     <Search className="size-4" />
-                    <span>{s.search}</span>
-                    <kbd className="rounded-md bg-[var(--bg-elevated)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--text-tertiary)]">
+                    <span className="hidden sm:inline">{s.search}</span>
+                    <kbd className="hidden sm:inline rounded-md bg-[var(--bg-elevated)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--text-tertiary)]">
                       ⌘K
                     </kbd>
                   </Button>
                   {setLang && (
-                    <LanguageSwitcher
-                      currentLang={lang}
-                      onLangChange={handleLangChange}
-                      className="hidden sm:inline-flex"
-                    />
+                    <LanguageSwitcher currentLang={lang} onLangChange={handleLangChange} />
                   )}
-                  <ThemeToggle />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="icon"
-                    className="size-10 rounded-full border border-[var(--separator)] bg-[var(--material-thin)] backdrop-blur-md"
-                    onClick={() => ((v: boolean) => dispatch({ configOpen: v }))(true)}
-                    aria-label={s.openSettingsAria}
-                  >
-                    <SlidersHorizontal />
-                  </Button>
                   <div className="relative">
                     <DropdownMenu
                       open={profileOpen}
                       onOpenChange={(v: boolean) => dispatch({ profileOpen: v })}
                     >
-                      <DropdownMenuTrigger
-                        className="flex size-10 cursor-pointer items-center justify-center rounded-full bg-[var(--staff-tint)] text-sm font-bold text-white transition-opacity duration-[220ms] hover:opacity-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--staff-tint)]/20"
-                        aria-label={s.openProfileAria}
-                      >
-                        {(session?.name ?? s.roleLabel[role]).slice(0, 1).toUpperCase()}
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className="relative h-10 w-10 rounded-full"
+                          aria-label={s.openProfileAria}
+                        >
+                          <Avatar className="size-10">
+                            <AvatarImage src="" />
+                            <AvatarFallback className="bg-[var(--staff-tint)] text-white text-sm font-bold">
+                              {(session?.name ?? s.roleLabel[role]).slice(0, 1).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent
                         align="end"
@@ -299,9 +260,12 @@ export function AdminShell({
                       >
                         <div className="px-3 py-3">
                           <div className="flex items-center gap-3">
-                            <div className="flex size-10 items-center justify-center rounded-full bg-[var(--surface-grouped)] text-[var(--text-secondary)]">
-                              <UserRound className="size-5" />
-                            </div>
+                            <Avatar className="size-10">
+                              <AvatarImage src="" />
+                              <AvatarFallback className="bg-[var(--surface-grouped)] text-[var(--text-secondary)]">
+                                <UserRound className="size-5" />
+                              </AvatarFallback>
+                            </Avatar>
                             <div className="min-w-0">
                               <div className="truncate font-semibold text-[var(--text)]">
                                 {session?.name ?? s.staffFallback}
@@ -352,23 +316,6 @@ export function AdminShell({
               s={s}
               onNavigate={() => ((v: boolean) => dispatch({ mobileOpen: v }))(false)}
             />
-          </SheetContent>
-        </Sheet>
-
-        <Sheet open={configOpen} onOpenChange={(v: boolean) => dispatch({ configOpen: v })}>
-          <SheetContent side="right" className="bg-[var(--material-thick)] text-[var(--text)]">
-            <SheetHeader title={s.settingsTitle} />
-            <div className="space-y-4 px-5 pb-5 pt-2">
-              <div className="rounded-[18px] bg-[var(--surface-grouped)]/70 p-4">
-                <div className="mb-3 text-sm font-semibold text-[var(--text)]">{s.displayMode}</div>
-                <ThemeToggle />
-              </div>
-              {setLang && (
-                <div className="rounded-[18px] bg-[var(--surface-grouped)]/70 p-4">
-                  <LanguageSwitcher currentLang={lang} onLangChange={handleLangChange} />
-                </div>
-              )}
-            </div>
           </SheetContent>
         </Sheet>
 
