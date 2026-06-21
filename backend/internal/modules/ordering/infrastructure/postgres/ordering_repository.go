@@ -21,20 +21,6 @@ func NewRepository(pool *pgxpool.Pool) *Repository { return &Repository{pool: po
 
 func (r *Repository) q(ctx context.Context) pg.Querier { return pg.QuerierFromContext(ctx, r.pool) }
 
-func (r *Repository) Save(ctx context.Context, aggregate *domain.Order) error {
-	_ = ctx
-	_ = aggregate
-	_ = r.pool
-	return apperr.ErrNotImplemented
-}
-func (r *Repository) Get(ctx context.Context, restaurantID uuid.UUID, id uuid.UUID) (*domain.Order, error) {
-	_ = ctx
-	_ = restaurantID
-	_ = id
-	_ = r.pool
-	return nil, apperr.ErrNotImplemented
-}
-
 func (r *Repository) LockSessionForOrder(ctx context.Context, restaurantID, sessionID uuid.UUID) (*domain.SessionForOrder, error) {
 	var s domain.SessionForOrder
 	err := r.q(ctx).QueryRow(ctx, `

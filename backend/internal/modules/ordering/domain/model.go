@@ -30,32 +30,6 @@ func (s OrderItemStatus) CanMoveTo(next OrderItemStatus) bool {
 	return false
 }
 
-type Order struct {
-	ID           uuid.UUID
-	RestaurantID uuid.UUID
-	SessionID    uuid.UUID
-	Items        []OrderItem
-	Version      int
-}
-
-type OrderItem struct {
-	ID               uuid.UUID
-	OrderID          uuid.UUID
-	MenuItemID       uuid.UUID
-	NameSnapshot     string
-	PriceSnapshotVND int64
-	Status           OrderItemStatus
-	Version          int
-}
-
-type CancelRequest struct {
-	ID          uuid.UUID
-	OrderItemID uuid.UUID
-	Reason      string
-	Approved    *bool
-	CreatedAt   time.Time
-}
-
 type SessionForOrder struct {
 	ID           uuid.UUID
 	RestaurantID uuid.UUID
@@ -216,28 +190,11 @@ type OrderLineOptionForEdit struct {
 	Quantity                int
 }
 
-type OrderLineUpdate struct {
-	Line OrderLineCreate
-}
-
 type CancelRequestCreate struct {
 	ID          uuid.UUID
 	OrderItemID uuid.UUID
 	Reason      string
 	Status      string
-}
-
-type Event struct {
-	ID           uuid.UUID
-	RestaurantID uuid.UUID
-	Type         string
-	Payload      any
-	OccurredAt   time.Time
-}
-
-type OrderRepository interface {
-	Save(ctx context.Context, aggregate *Order) error
-	Get(ctx context.Context, restaurantID uuid.UUID, id uuid.UUID) (*Order, error)
 }
 
 type OrderPlacementRepository interface {

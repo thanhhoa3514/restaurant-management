@@ -44,11 +44,11 @@ function lowerStatus<T extends string>(status: string): T {
 
 function optionText(item: {
   variant_name_snapshot: string | null
-  options: Array<{ name_snapshot: string; quantity: number }>
+  options: Array<{ name_snapshot: string; quantity: number }> | null
 }): string {
   const parts = [
     item.variant_name_snapshot,
-    ...item.options.map((opt) =>
+    ...(item.options ?? []).map((opt) =>
       opt.quantity > 1 ? `${opt.name_snapshot} ×${opt.quantity}` : opt.name_snapshot,
     ),
   ].filter(Boolean)

@@ -240,19 +240,21 @@ export function AdminShell({
                       open={profileOpen}
                       onOpenChange={(v: boolean) => dispatch({ profileOpen: v })}
                     >
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          className="relative h-10 w-10 rounded-full"
-                          aria-label={s.openProfileAria}
-                        >
-                          <Avatar className="size-10">
-                            <AvatarImage src="" />
-                            <AvatarFallback className="bg-[var(--staff-tint)] text-white text-sm font-bold">
-                              {(session?.name ?? s.roleLabel[role]).slice(0, 1).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                        </Button>
+                      <DropdownMenuTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            className="relative h-10 w-10 rounded-full"
+                            aria-label={s.openProfileAria}
+                          />
+                        }
+                      >
+                        <Avatar className="size-10">
+                          <AvatarImage src="" />
+                          <AvatarFallback className="bg-[var(--staff-tint)] text-white text-sm font-bold">
+                            {(session?.name ?? s.roleLabel[role]).slice(0, 1).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent
                         align="end"

@@ -1,7 +1,6 @@
 package http
 
 import (
-	"context"
 	"errors"
 	"net/http"
 
@@ -15,45 +14,29 @@ import (
 )
 
 type Handler struct {
-	PlaceOrder          *application.PlaceOrder
-	CancelOrEditItem    *application.CancelOrEditItem
-	UpdateItemStatus    *application.UpdateItemStatus
-	ReviewCancelRequest *application.ReviewCancelRequest
-	GuestPlaceOrder     *application.GuestPlaceOrder
-	GuestViewOrders     *application.GuestViewOrders
-	GuestEditOrder      *application.GuestEditOrder
-	GuestCancelOrder    *application.GuestCancelOrder
-	GuestRequestCancel  *application.GuestRequestCancel
-	StaffTables         *application.StaffTables
-	StaffRequestBill    *application.StaffRequestBill
-	StaffUpdateStatus   *application.StaffUpdateItemStatus
-	KitchenQueue        *application.KitchenQueue
+	GuestPlaceOrder    *application.GuestPlaceOrder
+	GuestViewOrders    *application.GuestViewOrders
+	GuestEditOrder     *application.GuestEditOrder
+	GuestCancelOrder   *application.GuestCancelOrder
+	GuestRequestCancel *application.GuestRequestCancel
+	StaffTables        *application.StaffTables
+	StaffRequestBill   *application.StaffRequestBill
+	StaffUpdateStatus  *application.StaffUpdateItemStatus
+	KitchenQueue       *application.KitchenQueue
 }
 
-func NewHandler(placeOrder *application.PlaceOrder, cancelOrEditItem *application.CancelOrEditItem, updateItemStatus *application.UpdateItemStatus, reviewCancelRequest *application.ReviewCancelRequest, guestPlaceOrder *application.GuestPlaceOrder, guestViewOrders *application.GuestViewOrders, guestEditOrder *application.GuestEditOrder, guestCancelOrder *application.GuestCancelOrder, guestRequestCancel *application.GuestRequestCancel, staffTables *application.StaffTables, staffRequestBill *application.StaffRequestBill, staffUpdateStatus *application.StaffUpdateItemStatus, kitchenQueue *application.KitchenQueue) *Handler {
+func NewHandler(guestPlaceOrder *application.GuestPlaceOrder, guestViewOrders *application.GuestViewOrders, guestEditOrder *application.GuestEditOrder, guestCancelOrder *application.GuestCancelOrder, guestRequestCancel *application.GuestRequestCancel, staffTables *application.StaffTables, staffRequestBill *application.StaffRequestBill, staffUpdateStatus *application.StaffUpdateItemStatus, kitchenQueue *application.KitchenQueue) *Handler {
 	return &Handler{
-		PlaceOrder:          placeOrder,
-		CancelOrEditItem:    cancelOrEditItem,
-		UpdateItemStatus:    updateItemStatus,
-		ReviewCancelRequest: reviewCancelRequest,
-		GuestPlaceOrder:     guestPlaceOrder,
-		GuestViewOrders:     guestViewOrders,
-		GuestEditOrder:      guestEditOrder,
-		GuestCancelOrder:    guestCancelOrder,
-		GuestRequestCancel:  guestRequestCancel,
-		StaffTables:         staffTables,
-		StaffRequestBill:    staffRequestBill,
-		StaffUpdateStatus:   staffUpdateStatus,
-		KitchenQueue:        kitchenQueue,
+		GuestPlaceOrder:    guestPlaceOrder,
+		GuestViewOrders:    guestViewOrders,
+		GuestEditOrder:     guestEditOrder,
+		GuestCancelOrder:   guestCancelOrder,
+		GuestRequestCancel: guestRequestCancel,
+		StaffTables:        staffTables,
+		StaffRequestBill:   staffRequestBill,
+		StaffUpdateStatus:  staffUpdateStatus,
+		KitchenQueue:       kitchenQueue,
 	}
-}
-
-func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver) {
-	g := r.Group("/ordering", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionOrderingOperate))
-	g.POST("/place-order", h.handle(h.PlaceOrder))
-	g.POST("/cancel-or-edit-item", h.handle(h.CancelOrEditItem))
-	g.POST("/update-item-status", h.handle(h.UpdateItemStatus))
-	g.POST("/review-cancel-request", h.handle(h.ReviewCancelRequest))
 }
 
 func (h *Handler) RegisterStaffRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver) {
@@ -69,24 +52,6 @@ func (h *Handler) RegisterGuestRoutes(g *gin.RouterGroup) {
 	g.PUT("/orders/:orderId/items", h.guestEditOrder)
 	g.DELETE("/orders/:orderId", h.guestCancelOrder)
 	g.POST("/orders/:orderId/cancel-requests", h.guestRequestCancel)
-}
-
-func (h *Handler) handle(fn interface {
-	Handle(context.Context, application.Input) (application.Output, error)
-}) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		var in application.Input
-		if err := c.ShouldBindJSON(&in); err != nil {
-			httpx.RespondError(c, err)
-			return
-		}
-		out, err := fn.Handle(c.Request.Context(), in)
-		if err != nil {
-			httpx.RespondError(c, err)
-			return
-		}
-		httpx.Respond(c, http.StatusOK, out, nil)
-	}
 }
 
 func (h *Handler) guestPlaceOrder(c *gin.Context) {

@@ -21,11 +21,13 @@ export const LanguageSwitcher: FC<LanguageSwitcherProps> = ({
 }) => {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className={cn("rounded-full", className)}>
-          <Languages className="h-[1.2rem] w-[1.2rem]" />
-          <span className="sr-only">Toggle language</span>
-        </Button>
+      <DropdownMenuTrigger
+        render={
+          <Button variant="ghost" size="icon" className={cn("rounded-full", className)} />
+        }
+      >
+        <Languages className="h-[1.2rem] w-[1.2rem]" />
+        <span className="sr-only">Toggle language</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => onLangChange('vi')}>
