@@ -13,8 +13,8 @@ import {
 import { CS_DICT } from '@/features/cashier/data/i18n'
 import { makeTxnId } from '@/features/cashier/helpers'
 import { closeDiningSession } from '@/features/dining/api'
-import { fetchStaffTables } from '@/features/staff/api'
-import { toCashierSessions } from '@/features/staff/mappers'
+import { fetchStaffTables } from '@/features/waiter/api'
+import { toCashierSessions } from '@/features/cashier/helpers/mappers'
 import type {
   CashierSession,
   DiscountRecord,

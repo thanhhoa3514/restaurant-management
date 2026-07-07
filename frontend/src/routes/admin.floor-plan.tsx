@@ -22,15 +22,13 @@ export const RouteComponent = () => {
   useShellConfig({
     title: t('action_floor'),
     subtitle: t('action_floor_desc'),
-    contentClassName: "bg-[var(--surface-grouped)]/45"
+    contentClassName: 'bg-[var(--surface-grouped)]/45',
   })
 
   return (
-    <>
-      <div className="mx-auto max-w-7xl">
-        <FloorBuilder />
-      </div>
-    </>
+    <div className="mx-auto max-w-7xl">
+      <FloorBuilder />
+    </div>
   )
 }
 

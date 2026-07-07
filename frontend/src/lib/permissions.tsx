@@ -2,6 +2,7 @@ import { useEffect, useMemo, useReducer, type ReactNode } from 'react'
 
 import { ApiError, apiRequest } from '@/lib/api'
 import {
+  clearStaffSession,
   getStaffSession,
   logoutStaff,
   subscribeStaffSession,
@@ -20,7 +21,6 @@ interface MeResponse {
   name: string
   role: string
   permissions: PermissionCode[]
-  restaurant_id: string
 }
 
 export function PermissionProvider({ children }: { children: ReactNode }) {
@@ -29,6 +29,13 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
     null as any,
     () => {
       const initSession = getStaffSession()
+      if (initSession && (
+        Number.isNaN(Date.parse(initSession.expiresAt)) ||
+        new Date(initSession.expiresAt).getTime() <= Date.now()
+      )) {
+        clearStaffSession()
+        return { session: null, loading: false }
+      }
       return { session: initSession, loading: Boolean(initSession?.token) }
     }
   )
@@ -53,10 +60,10 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
         })
         dispatch({ session: next, loading: false })
       })
-      .catch((error: unknown) => {
+      .catch(async (error: unknown) => {
         if (!active) return
         if (error instanceof ApiError && error.status === 401) {
-          logoutStaff()
+          await logoutStaff()
           dispatch({ session: null, loading: false })
         } else {
           dispatch({ loading: false })

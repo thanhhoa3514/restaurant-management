@@ -87,7 +87,7 @@ export const TableSheet: FC<TableSheetProps> = ({
 
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
-      <SheetContent side="right" hideClose className="w-full max-w-[31rem] rounded-l-[28px] border-l border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-950">
+      <SheetContent side="right" hideClose className="w-full max-w-[31rem] gap-0 rounded-l-[28px] border-l border-zinc-200 bg-white shadow-xl max-sm:max-w-full max-sm:rounded-none dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex items-start justify-between gap-4 border-b border-[var(--separator)] px-6 pb-4 pt-6">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -147,9 +147,9 @@ export const TableSheet: FC<TableSheetProps> = ({
         </div>
 
         {!isEmpty && (
-          <div className="border-t border-[var(--separator)] bg-white/45 px-6 py-4 backdrop-blur-xl">
-            <div className="flex items-center justify-between gap-4">
-              <div>
+          <div className="border-t border-[var(--separator)] bg-white/45 px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+              <div className="min-w-0">
                 <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--text-tertiary)]">{t('subtotal_label')}</div>
                 <div className="mt-1 text-2xl font-bold tabular-nums text-[var(--text)]">{wfFmtVND(subtotal)}</div>
                 <div className="text-xs font-medium text-[var(--text-secondary)]">
@@ -157,11 +157,14 @@ export const TableSheet: FC<TableSheetProps> = ({
                 </div>
               </div>
               {table.session?.bill_requested_at ? (
-                <Badge variant="default" className="rounded-full px-3 py-1.5">
+                <Badge variant="default" className="shrink-0 rounded-full px-3 py-1.5">
                   {t('signal_bill')}
                 </Badge>
               ) : (
-                <Button className="rounded-2xl" onClick={() => dispatch({ confirmBill: true })}>
+                <Button
+                  className="rounded-2xl max-sm:h-11 max-sm:w-full"
+                  onClick={() => dispatch({ confirmBill: true })}
+                >
                   {t('btn_request_bill')}
                 </Button>
               )}
@@ -309,18 +312,23 @@ const SignalBanner: FC<SignalBannerProps> = ({ tone, title, time, buttonLabel, o
   return (
     <div
       className={cn(
-        'flex items-center justify-between gap-3 rounded-[24px] border-2 p-4 shadow-sm',
+        'flex flex-col gap-3 rounded-[24px] border-2 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between',
         red ? 'border-red-500/30 bg-red-500/10 text-red-950 animate-pulse' : 'border-blue-500/30 bg-blue-500/10 text-blue-950',
       )}
     >
-      <div className="flex min-w-0 items-start gap-3">
-        <span className={cn('mt-2 size-3 rounded-full', red ? 'bg-red-500' : 'bg-blue-500')} />
+      <div className="flex min-w-0 items-center gap-3">
+        <span className={cn('size-3 shrink-0 rounded-full', red ? 'bg-red-500' : 'bg-blue-500')} />
         <div className="min-w-0">
           <div className="font-bold">{title}</div>
-          <div className={cn('mt-1 font-mono text-sm font-semibold tabular-nums', red ? 'text-red-700' : 'text-blue-700')}>{time}</div>
+          <div className={cn('mt-0.5 font-mono text-sm font-semibold tabular-nums', red ? 'text-red-700' : 'text-blue-700')}>{time}</div>
         </div>
       </div>
-      <Button variant={red ? 'destructive' : 'default'} size="sm" className="rounded-full" onClick={onClick}>
+      <Button
+        variant={red ? 'destructive' : 'default'}
+        size="sm"
+        className="w-full shrink-0 rounded-full sm:w-auto"
+        onClick={onClick}
+      >
         {buttonLabel}
       </Button>
     </div>

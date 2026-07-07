@@ -61,8 +61,10 @@ export const MenuScreen: FC = () => {
 
   return (
     <div className="flex min-h-dvh flex-col pb-28 bg-[var(--bg)] font-sans">
+      {/* Sticky top: header + category bar pinned together (no magic offset) */}
+      <div className="sticky top-0 z-[var(--z-sticky)]">
       {/* Premium Glass Header */}
-      <header className="sticky top-0 z-[var(--z-sticky)] bg-[var(--material-thin)]/80 backdrop-blur-2xl border-b border-[var(--separator)] shadow-sm">
+      <header className="bg-[var(--material-thin)]/80 backdrop-blur-2xl border-b border-[var(--separator)] shadow-sm">
         <div className="px-4 pt-5 pb-4 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
@@ -110,7 +112,7 @@ export const MenuScreen: FC = () => {
       </header>
 
       {/* Categories Horizontal Scroll */}
-      <div className="sticky top-[125px] z-20 bg-[var(--bg)]/90 backdrop-blur-md pt-3 pb-3 border-b border-[var(--separator)]/50">
+      <div className="bg-[var(--bg)]/90 backdrop-blur-md pt-3 pb-3 border-b border-[var(--separator)]/50">
         <div className="flex overflow-x-auto no-scrollbar px-4 gap-2 items-center">
           <button
             type="button"
@@ -140,6 +142,7 @@ export const MenuScreen: FC = () => {
             </button>
           ))}
         </div>
+      </div>
       </div>
 
       {/* Menu Grid */}
@@ -192,7 +195,7 @@ export const MenuScreen: FC = () => {
 
       {/* Floating Cart Button */}
       {cartCount > 0 && (
-        <div className="fixed bottom-6 left-0 right-0 z-[var(--z-floating)] px-4 pointer-events-none flex justify-center animate-in slide-in-from-bottom-10 fade-in duration-500">
+        <div className="fixed bottom-[max(1.5rem,calc(env(safe-area-inset-bottom)+0.5rem))] left-0 right-0 z-[var(--z-floating)] px-4 pointer-events-none flex justify-center animate-in slide-in-from-bottom-10 fade-in duration-500">
           <button
             type="button"
             className="group pointer-events-auto relative flex h-14 w-full max-w-sm items-center justify-between overflow-hidden rounded-full bg-[var(--text)] px-6 shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition-all active:scale-[0.98] cursor-pointer"

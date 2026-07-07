@@ -1,7 +1,9 @@
 import { useMemo, useState, type FC } from 'react'
+import { ChevronLeft } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
-import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { LanguageLoader } from '@/components/ui/language-loader'
 import { useShellConfig, ShellHeaderCenter, ShellHeaderActions } from '@/components/admin-shell'
 import { LanguageSwitcher } from '@/components/ui/language-switcher'
@@ -9,7 +11,7 @@ import { InvoicePanel } from '@/features/cashier/components/invoice-panel'
 import { PaymentPanel } from '@/features/cashier/components/payment-panel'
 import { ReceiptDialog } from '@/features/cashier/components/receipt-dialog'
 import { SessionList } from '@/features/cashier/components/session-list'
-import { fmtClockSec } from '@/features/cashier/helpers'
+import { fmtClockSec, fmtVND } from '@/features/cashier/helpers'
 import { CashierProvider, useCashier } from '@/features/cashier/hooks/use-cashier'
 
 export const CashierLayout: FC = () => (
@@ -22,6 +24,8 @@ const CashierWorkspace: FC = () => {
   const { state, dispatch, selectedSession, t } = useCashier()
   const [receiptSessionId, setReceiptSessionId] = useState<string | null>(null)
   const [changingLang, setChangingLang] = useState<'vi' | 'en' | null>(null)
+  const [mobilePane, setMobilePane] = useState<'list' | 'detail'>('list')
+  const [payOpen, setPayOpen] = useState(false)
 
   const receiptSession = useMemo(
     () => state.sessions.find((session) => session.id === receiptSessionId) ?? null,
@@ -75,28 +79,85 @@ const CashierWorkspace: FC = () => {
           />
         </aside>
 
-        <section className="min-h-0 overflow-hidden bg-[var(--surface-grouped)]/55">
-          <div className="border-b border-[var(--separator)] bg-[var(--material-regular)] p-3 backdrop-blur-xl lg:hidden">
-            <SessionList
-              sessions={state.sessions}
-              selectedId={state.selectedSessionId}
+        <section className="flex min-h-0 flex-col overflow-hidden bg-[var(--surface-grouped)]/55">
+          <div className="flex min-h-0 flex-1 flex-col lg:hidden">
+            {mobilePane === 'detail' && selectedSession ? (
+              <>
+                <div className="flex items-center gap-2 border-b border-[var(--separator)] bg-[var(--material-regular)] px-2 py-2 backdrop-blur-xl">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="shrink-0 gap-0.5 rounded-full pl-1.5 pr-3"
+                    onClick={() => setMobilePane('list')}
+                  >
+                    <ChevronLeft className="size-5" />
+                    {t('back')}
+                  </Button>
+                  <div className="min-w-0 flex-1 truncate text-sm font-bold text-[var(--text)]">
+                    {t('table')} {selectedSession.table_number}
+                  </div>
+                  <Badge className="shrink-0 rounded-full border-0 bg-[var(--surface-grouped)] text-[var(--text-secondary)]">
+                    {t(`status_${selectedSession.status}`)}
+                  </Badge>
+                </div>
+                <div className="min-h-0 flex-1 overflow-hidden">
+                  <InvoicePanel
+                    session={selectedSession}
+                    now={state.now}
+                    lang={state.lang}
+                    t={t}
+                    onApplyDiscount={(sessionId, amount, reason) =>
+                      dispatch({ type: 'applyDiscount', sessionId, amount, reason })
+                    }
+                    onRemoveDiscount={(sessionId) => dispatch({ type: 'removeDiscount', sessionId })}
+                    onCloseSession={(sessionId) => dispatch({ type: 'closeSession', sessionId })}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3 border-t border-[var(--separator)] bg-[var(--material-thick)] px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-2xl">
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+                      {t('total')}
+                    </div>
+                    <div className="truncate text-xl font-bold tabular-nums text-[var(--system-orange)]">
+                      {fmtVND(selectedSession.invoice.total)}
+                    </div>
+                  </div>
+                  <Button
+                    size="lg"
+                    className="shrink-0 rounded-full px-6"
+                    onClick={() => setPayOpen(true)}
+                  >
+                    {t('payment')}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <SessionList
+                sessions={state.sessions}
+                selectedId={state.selectedSessionId}
+                now={state.now}
+                lang={state.lang}
+                t={t}
+                onSelect={(id) => {
+                  dispatch({ type: 'selectSession', sessionId: id })
+                  setMobilePane('detail')
+                }}
+              />
+            )}
+          </div>
+          <div className="hidden min-h-0 flex-1 lg:block">
+            <InvoicePanel
+              session={selectedSession}
               now={state.now}
               lang={state.lang}
               t={t}
-              onSelect={(id) => dispatch({ type: 'selectSession', sessionId: id })}
+              onApplyDiscount={(sessionId, amount, reason) =>
+                dispatch({ type: 'applyDiscount', sessionId, amount, reason })
+              }
+              onRemoveDiscount={(sessionId) => dispatch({ type: 'removeDiscount', sessionId })}
+              onCloseSession={(sessionId) => dispatch({ type: 'closeSession', sessionId })}
             />
           </div>
-          <InvoicePanel
-            session={selectedSession}
-            now={state.now}
-            lang={state.lang}
-            t={t}
-            onApplyDiscount={(sessionId, amount, reason) =>
-              dispatch({ type: 'applyDiscount', sessionId, amount, reason })
-            }
-            onRemoveDiscount={(sessionId) => dispatch({ type: 'removeDiscount', sessionId })}
-            onCloseSession={(sessionId) => dispatch({ type: 'closeSession', sessionId })}
-          />
         </section>
 
         <aside className="min-h-0 overflow-hidden border-l border-[var(--separator)] bg-[var(--material-regular)] backdrop-blur-xl max-lg:hidden">
@@ -111,18 +172,25 @@ const CashierWorkspace: FC = () => {
         </aside>
       </div>
 
-      <div className="fixed inset-x-3 bottom-3 z-[var(--z-raised)] lg:hidden">
-        <Card className="border border-[var(--separator)] bg-[var(--material-thick)] shadow-xl backdrop-blur-2xl">
-          <PaymentPanel
-            session={selectedSession}
-            now={state.now}
-            lang={state.lang}
-            t={t}
-            dispatch={dispatch}
-            onReceipt={setReceiptSessionId}
-          />
-        </Card>
-      </div>
+      <Sheet open={payOpen && selectedSession !== null} onOpenChange={setPayOpen}>
+        <SheetContent
+          side="bottom"
+          hideClose
+          className="h-[88dvh] gap-0 rounded-t-[24px] border-t border-[var(--separator)] bg-[var(--material-thick)] p-0 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl lg:hidden"
+        >
+          <div className="mx-auto mt-2.5 h-1.5 w-10 shrink-0 rounded-full bg-[var(--separator)]" />
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <PaymentPanel
+              session={selectedSession}
+              now={state.now}
+              lang={state.lang}
+              t={t}
+              dispatch={dispatch}
+              onReceipt={setReceiptSessionId}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <ReceiptDialog
         open={receiptSessionId !== null}

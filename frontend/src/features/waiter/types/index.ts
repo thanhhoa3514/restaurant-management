@@ -97,3 +97,48 @@ export const STATUS_FLOW: ItemStatus[] = [
   'ready',
   'served',
 ]
+
+
+
+export type WaiterView = 'plan' | 'grid'
+
+export interface WaiterState {
+  tables: WFTable[]
+  now: Date
+  timeMultiplier: number
+  autoOn: boolean
+  lang: Lang
+  soundOn: boolean
+  view: WaiterView
+  selectedTableId: string | null
+  justChangedIds: Set<string>
+  demoOpen: boolean
+}
+
+export interface WaiterActions {
+  selectTable: (tableId: string | null) => void
+  acknowledgeCall: (tableId: string) => void
+  notifyCashier: (tableId: string) => void
+  markItemServed: (tableId: string, itemId: string) => void
+  markAllServed: (tableId: string) => void
+  requestBill: (tableId: string) => void
+  openSession: (tableId: string, guestCount: number, notes: string) => void
+  injectItemReady: () => void
+  injectCall: () => void
+  injectBill: () => void
+  injectNewSession: () => void
+  setAutoOn: (value: boolean | ((prev: boolean) => boolean)) => void
+  setTimeMultiplier: (value: number | ((prev: number) => number)) => void
+  setLang: (lang: Lang) => void
+  setSoundOn: (value: boolean | ((prev: boolean) => boolean)) => void
+  setView: (value: WaiterView | ((prev: WaiterView) => WaiterView)) => void
+  setDemoOpen: (value: boolean | ((prev: boolean) => boolean)) => void
+}
+
+export interface UseWaiterValue {
+  state: WaiterState
+  actions: WaiterActions
+  counts: WFCounts
+  selectedTable: WFTable | null
+  t: (key: string, ...args: Array<string | number>) => string
+}

@@ -1,4 +1,4 @@
-import { getStaffSession } from '@/lib/auth'
+import { getStaffSession, refreshStaffSession } from '@/lib/auth'
 
 // Base URL for the backend API.
 // - Dev: leave VITE_API_URL unset; requests go same-origin and vite.config.ts
@@ -36,41 +36,38 @@ interface RequestOptions {
   sessionToken?: string
 }
 
-export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, signal, sessionToken } = options
+// Deduplicate concurrent refresh attempts so only one refresh request is
+// in-flight at a time. All concurrent 401-triggered requests wait on the same
+// promise and share the result.
+let refreshPromise: Promise<boolean> | null = null
 
-  const headers: Record<string, string> = { Accept: 'application/json' }
-  if (body !== undefined) headers['Content-Type'] = 'application/json'
-
-  if (sessionToken) {
-    // Guest path: authenticate with the dining session token. Do not send the
-    // staff Authorization header — these endpoints expect X-Session-Token only.
-    headers['X-Session-Token'] = sessionToken
-  } else {
-    // Attach the staff JWT issued by /api/v1/identity/authenticate.
-    const session = getStaffSession()
-    if (session?.token) headers.Authorization = `Bearer ${session.token}`
-  }
-
-  let res: Response
+async function attemptRefresh(): Promise<boolean> {
+  // Don't retry if a refresh is already in progress — piggyback on it.
+  if (refreshPromise) return refreshPromise
+  refreshPromise = refreshStaffSession().then((s) => s !== null)
   try {
-    res = await fetch(`${API_BASE_URL}${path}`, {
-      method,
-      headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
-      signal,
-    })
-  } catch (err) {
-    // Network failure / aborted / DNS — no HTTP response at all.
-    if (err instanceof DOMException && err.name === 'AbortError') throw err
-    throw new ApiError(0, 'network_error', 'Không thể kết nối máy chủ')
+    return await refreshPromise
+  } finally {
+    refreshPromise = null
   }
+}
+
+async function doFetch<T>(
+  path: string,
+  options: RequestOptions,
+  headers: Record<string, string>,
+): Promise<T> {
+  const { method = 'GET', body, signal } = options
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+    signal,
+  })
 
   // 204 / empty body: nothing to parse.
   if (res.status === 204) return undefined as T
 
-  // The dev proxy or a misroute can return HTML (SPA fallback / error page).
-  // Don't blindly JSON.parse it — surface a clear error instead.
   const contentType = res.headers.get('content-type') ?? ''
   if (!contentType.includes('application/json')) {
     if (!res.ok) {
@@ -89,3 +86,45 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   return envelope.data as T
 }
+
+export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const { body, sessionToken } = options
+
+  const headers: Record<string, string> = { Accept: 'application/json' }
+  if (body !== undefined) headers['Content-Type'] = 'application/json'
+
+  let isStaffRequest = false
+  if (sessionToken) {
+    // Guest path: authenticate with the dining session token.
+    headers['X-Session-Token'] = sessionToken
+  } else {
+    // Attach the staff JWT issued by /api/v1/identity/authenticate.
+    isStaffRequest = true
+    const session = getStaffSession()
+    if (session?.token) headers.Authorization = `Bearer ${session.token}`
+  }
+
+  try {
+      return await doFetch<T>(path, options, headers)
+    } catch (err) {
+      if (
+        isStaffRequest &&
+        err instanceof ApiError &&
+        err.status === 401 &&
+        !path.includes('/identity/authenticate') &&
+        !path.includes('/identity/refresh')
+      ) {
+        const refreshed = await attemptRefresh()
+        if (refreshed) {
+          const session = getStaffSession()
+          if (session?.token) {
+            headers.Authorization = `Bearer ${session.token}`
+          }
+          return doFetch<T>(path, options, headers)
+        }
+      }
+      if (err instanceof DOMException && err.name === 'AbortError') throw err
+      if (err instanceof ApiError) throw err
+      throw new ApiError(0, 'network_error', 'Không thể kết nối máy chủ')
+    }
+  }

@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components, react-doctor/only-export-components */
 import { useNavigate } from '@tanstack/react-router'
-import { LogOut, Search, UserRound } from 'lucide-react'
+import { LogOut, Menu, Search, UserRound } from 'lucide-react'
 import {
   useMemo,
   useState,
@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { LanguageLoader } from '@/components/ui/language-loader'
 import { LanguageSwitcher } from '@/components/ui/language-switcher'
-import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet'
+import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -134,7 +134,7 @@ export function AdminShell({
     query: '',
     changingLang: null as Lang | null,
   })
-  const { mobileOpen, searchOpen, configOpen, profileOpen, query, changingLang } = state
+  const { mobileOpen, searchOpen, profileOpen, query, changingLang } = state
 
   // Merge with context config if we are hoisted
   const ctx = use(ShellContext)
@@ -149,10 +149,8 @@ export function AdminShell({
     (href?: string, view?: string) => {
       if (href === '/admin')
         navigate({ to: '/admin', search: { view: view as AdminView | undefined } })
-      else if (href)
-        navigate({ to: href })((v: boolean) => dispatch({ searchOpen: v }))(false)((v: boolean) =>
-          dispatch({ mobileOpen: v }),
-        )(false)
+      else if (href) navigate({ to: href })
+      dispatch({ searchOpen: false, mobileOpen: false })
     },
     [navigate],
   )
@@ -173,11 +171,11 @@ export function AdminShell({
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault()((v: boolean) => dispatch({ searchOpen: v }))(true)
+        event.preventDefault()
+        dispatch({ searchOpen: true })
       }
       if (event.key === 'Escape') {
-        // ((v: boolean) => dispatch({ searchOpen: v }))(false)
-        ;((v: boolean) => dispatch({ profileOpen: v }))(false)
+        dispatch({ profileOpen: false })
       }
     }
 
@@ -185,16 +183,17 @@ export function AdminShell({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
-  const handleLogout = () => {
-    logoutStaff()
+  const handleLogout = async () => {
+    await logoutStaff()
     navigate({ to: '/login' })
   }
 
   const handleLangChange = (next: Lang) => {
     if (!setLang) return
-    ;((v: Lang | null) => dispatch({ changingLang: v }))(next)
+    dispatch({ changingLang: next })
     setTimeout(() => {
-      setLang(next)((v: Lang | null) => dispatch({ changingLang: v }))(null)
+      setLang(next)
+      dispatch({ changingLang: null })
     }, 750)
   }
 
@@ -218,7 +217,35 @@ export function AdminShell({
 
           <div className="flex min-w-0 flex-1 flex-col">
             <header className="safe-top sticky top-0 z-[var(--z-sticky)] border-b border-[var(--separator)] bg-[var(--material-regular)] backdrop-blur-2xl">
-              <div className="flex min-h-16 items-center justify-end px-4 py-3 sm:px-5 lg:px-6">
+              <div className="flex min-h-16 items-center gap-3 px-3 py-2.5 sm:px-5 sm:py-3 lg:px-6">
+                {sidebar && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    aria-label={s.openNavAria}
+                    className="size-10 shrink-0 rounded-full border border-[var(--separator)] bg-[var(--surface-grouped)]/70 lg:hidden"
+                    onClick={() => dispatch({ mobileOpen: true })}
+                  >
+                    <Menu className="size-5" />
+                  </Button>
+                )}
+                <div className="min-w-0 flex-1">
+                  {eyebrow ? (
+                    <div className="truncate text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-tertiary)]">
+                      {eyebrow}
+                    </div>
+                  ) : null}
+                  <div className="truncate text-[17px] font-bold leading-tight text-[var(--text)]">
+                    {title ?? s.roleLabel[role]}
+                  </div>
+                  {subtitle ? (
+                    <div className="hidden truncate text-xs text-[var(--text-tertiary)] sm:block">
+                      {subtitle}
+                    </div>
+                  ) : null}
+                </div>
+                <div id="shell-header-center" className="hidden min-w-0 shrink-0 md:block" />
                 <div id="shell-header-actions" className="flex shrink-0 items-center gap-2">
                   <Button
                     type="button"

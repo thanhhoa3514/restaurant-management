@@ -1,0 +1,84 @@
+<mxfile host="app.diagrams.net" version="24.0.0">
+  <diagram name="Quan ly thuc don - trang thai mon" id="bp-quan-ly-menu">
+    <mxGraphModel dx="1200" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="680" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ===== SPINE ===== -->
+        <mxCell id="S0" value="[Quản lý] Mở màn quản lý thực đơn" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="40" y="290" width="170" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="S1" value="[Quản lý] Chọn thao tác trên danh mục / món / biến thể / tùy chọn / giá / trạng thái còn-hết" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="240" y="275" width="200" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="D1" value="[HT] Loại thao tác?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="480" y="280" width="180" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- ===== BRANCH 1: Them / Sua ===== -->
+        <mxCell id="A1" value="[HT] Lưu thay đổi. Đổi giá chỉ áp cho lần gọi MỚI — đơn đã đặt giữ giá đã chốt (snapshot)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="720" y="40" width="230" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- ===== BRANCH 2: Xoa mon ===== -->
+        <mxCell id="D2" value="[HT] Món đang nằm trong phiên / đơn đang hoạt động?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="720" y="270" width="190" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="X1" value="[HT] Xóa mềm (đánh dấu đã xóa), ẩn khỏi thực đơn; order_item đã chốt vẫn giữ nguyên để tính tiền" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="980" y="160" width="230" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="X2" value="[HT] Xóa mềm món khỏi thực đơn" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="980" y="300" width="230" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ===== BRANCH 3: Bat/tat con-het ===== -->
+        <mxCell id="C1" value="[HT] Cập nhật trạng thái còn / hết + ghi audit" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="720" y="510" width="200" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="C2" value="[HT] Đẩy realtime tới màn khách → cập nhật hiển thị thực đơn (ảnh hưởng ngay việc chọn món)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="980" y="505" width="230" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- ===== CONVERGE ===== -->
+        <mxCell id="M" value="[HT] Cập nhật danh sách thực đơn cho quản lý" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="285" width="190" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="E0" value="Hoàn tất cập nhật thực đơn" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="1520" y="290" width="160" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- ===== NOTE ===== -->
+        <mxCell id="NT" value="Ghi chú: chỉ vai trò Quản lý có quyền ghi (thêm / sửa / xóa). Xóa dùng xóa mềm để không phá dữ liệu đơn cũ. Đổi giá chỉ áp cho lần gọi mới; đơn đã đặt giữ giá đã chốt. Bật / tắt còn-hết đẩy realtime, ảnh hưởng ngay màn chọn món của khách (liên quan QT xem thực đơn / gọi món)." style="shape=note;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=top;fontSize=11;size=14;" vertex="1" parent="1">
+          <mxGeometry x="40" y="430" width="430" height="160" as="geometry" />
+        </mxCell>
+
+        <!-- ===== EDGES ===== -->
+        <mxCell id="e_S0_S1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="S0" target="S1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_S1_D1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="S1" target="D1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- D1 three-way -->
+        <mxCell id="e_D1_A1" value="Thêm / Sửa (gồm đổi giá)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="D1" target="A1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_D1_D2" value="Xóa món" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;" edge="1" parent="1" source="D1" target="D2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_D1_C1" value="Bật / tắt còn-hết" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="D1" target="C1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- branch 1 -> M -->
+        <mxCell id="e_A1_M" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="A1" target="M"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- branch 2 -->
+        <mxCell id="e_D2_X1" value="Có" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;" edge="1" parent="1" source="D2" target="X1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_D2_X2" value="Không" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;" edge="1" parent="1" source="D2" target="X2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_X1_M" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="X1" target="M"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_X2_M" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="X2" target="M"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- branch 3 -->
+        <mxCell id="e_C1_C2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="C1" target="C2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_C2_M" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="C2" target="M"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- finish -->
+        <mxCell id="e_M_E0" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="M" target="E0"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

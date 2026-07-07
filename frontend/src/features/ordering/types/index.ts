@@ -11,7 +11,6 @@ export interface Session {
   startedAt: Date
   sessionId?: string
   tableId?: string
-  restaurantId?: string
   status?: string
 }
 

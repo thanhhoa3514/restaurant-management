@@ -1,70 +1,20 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type Dispatch,
-  type SetStateAction,
-} from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
-import { openDiningSession } from '@/features/dining/api'
 import { WF_DICT } from '@/features/waiter/data/i18n'
-import {
-  fetchStaffTables,
-  requestSessionBill,
-  updateStaffOrderItemStatus,
-} from '@/features/staff/api'
-import { toWaiterTables } from '@/features/staff/mappers'
-import type { Lang, WFCounts, WFTable } from '@/features/waiter/types'
-
-export type WaiterView = 'plan' | 'grid'
+import type {
+  Lang,
+  WFCounts,
+  WFTable,
+  WaiterView,
+  UseWaiterValue,
+} from '@/features/waiter/types'
+import { useStaffTables } from '@/features/waiter/queries/useStaffTables'
+import { useUpdateItemStatus } from '@/features/waiter/mutations/useUpdateItemStatus'
+import { useRequestBill } from '@/features/waiter/mutations/useRequestBill'
+import { useOpenSession } from '@/features/waiter/mutations/useOpenSession'
 
 type DictArgs = Array<string | number>
-
-export interface WaiterState {
-  tables: WFTable[]
-  now: Date
-  timeMultiplier: number
-  autoOn: boolean
-  lang: Lang
-  soundOn: boolean
-  view: WaiterView
-  selectedTableId: string | null
-  justChangedIds: Set<string>
-  demoOpen: boolean
-}
-
-export interface WaiterActions {
-  selectTable: (tableId: string | null) => void
-  acknowledgeCall: (tableId: string) => void
-  notifyCashier: (tableId: string) => void
-  markItemServed: (tableId: string, itemId: string) => void
-  markAllServed: (tableId: string) => void
-  requestBill: (tableId: string) => void
-  openSession: (tableId: string, guestCount: number, notes: string) => void
-  injectItemReady: () => void
-  injectCall: () => void
-  injectBill: () => void
-  injectNewSession: () => void
-  setAutoOn: Dispatch<SetStateAction<boolean>>
-  setTimeMultiplier: Dispatch<SetStateAction<number>>
-  setLang: (lang: Lang) => void
-  setSoundOn: Dispatch<SetStateAction<boolean>>
-  setView: Dispatch<SetStateAction<WaiterView>>
-  setDemoOpen: Dispatch<SetStateAction<boolean>>
-}
-
-export interface UseWaiterValue {
-  state: WaiterState
-  actions: WaiterActions
-  counts: WFCounts
-  selectedTable: WFTable | null
-  t: (key: string, ...args: DictArgs) => string
-}
-
-const STAFF_TABLES_QUERY_KEY = ['staff', 'tables'] as const
 
 export function useWaiter(): UseWaiterValue {
   const [now, setNow] = useState<Date>(() => new Date())
@@ -74,18 +24,17 @@ export function useWaiter(): UseWaiterValue {
     () => (localStorage.getItem('rest_lang_waiter') as Lang) || 'vi',
   )
   const [soundOn, setSoundOn] = useState(true)
-  const [view, setView] = useState<WaiterView>('plan')
+  const [view, setView] = useState<WaiterView>(() =>
+    typeof window !== 'undefined' && window.innerWidth < 640 ? 'grid' : 'plan',
+  )
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null)
   const [justChangedIds, setJustChangedIds] = useState<Set<string>>(() => new Set())
   const [demoOpen, setDemoOpen] = useState(false)
 
-  const { data: tablesData, refetch: refetchTablesQuery } = useQuery({
-    queryKey: STAFF_TABLES_QUERY_KEY,
-    queryFn: fetchStaffTables,
-    refetchInterval: 8_000,
-  })
-
-  const tables = useMemo(() => toWaiterTables(tablesData?.tables ?? []), [tablesData])
+  const { tables, refetch } = useStaffTables()
+  const updateItemStatus = useUpdateItemStatus()
+  const requestBillMutation = useRequestBill()
+  const openSessionMutation = useOpenSession()
 
   const setLang = useCallback((newLang: Lang) => {
     localStorage.setItem('rest_lang_waiter', newLang)
@@ -101,6 +50,13 @@ export function useWaiter(): UseWaiterValue {
     [lang],
   )
 
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNow((current) => new Date(current.getTime() + 1000 * timeMultiplier))
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [timeMultiplier])
+
   const markJustChanged = useCallback((tableId: string) => {
     setJustChangedIds((current) => new Set(current).add(tableId))
     window.setTimeout(() => {
@@ -112,17 +68,6 @@ export function useWaiter(): UseWaiterValue {
     }, 500)
   }, [])
 
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setNow((current) => new Date(current.getTime() + 1000 * timeMultiplier))
-    }, 1000)
-    return () => window.clearInterval(timer)
-  }, [timeMultiplier])
-
-  const refetchTables = useCallback(() => {
-    void refetchTablesQuery()
-  }, [refetchTablesQuery])
-
   const selectTable = useCallback((tableId: string | null) => {
     setSelectedTableId(tableId)
   }, [])
@@ -130,18 +75,16 @@ export function useWaiter(): UseWaiterValue {
   const acknowledgeCall = useCallback(
     (tableId: string) => {
       const table = tables.find((item) => item.id === tableId)
-      if (table) toast(t('toast_acknowledged', table.code))
-      refetchTables()
+      if (table) toast(t('toast_acknowledged', table.number))
     },
-    [refetchTables, t, tables],
+    [t, tables],
   )
 
   const notifyCashier = useCallback(
     (tableId: string) => {
       toast(t('toast_bill_sent'))
-      refetchTables()
     },
-    [refetchTables, t],
+    [t],
   )
 
   const markItemServed = useCallback(
@@ -150,14 +93,13 @@ export function useWaiter(): UseWaiterValue {
       const item = table?.session?.orders
         .flatMap((order) => order.items)
         .find((i) => i.id === itemId)
-      const itemName = item ? (lang === 'vi' ? item.name_snapshot_vi : item.name_snapshot_en) : ''
-      void updateStaffOrderItemStatus(itemId, 'SERVED').then(() => {
+      const itemName = item ? (lang === 'vi' ? item.name_vi : item.name_en) : ''
+      updateItemStatus.mutateAsync({ itemId, status: 'SERVED' }).then(() => {
         markJustChanged(tableId)
-        if (table) toast(t('toast_served', itemName, table.code))
-        refetchTables()
+        if (table) toast(t('toast_served', itemName, table.number))
       })
     },
-    [markJustChanged, refetchTables, tables, t, lang],
+    [markJustChanged, updateItemStatus, tables, t, lang],
   )
 
   const markAllServed = useCallback(
@@ -168,14 +110,15 @@ export function useWaiter(): UseWaiterValue {
           order.items.filter((item) => item.status === 'ready'),
         ) ?? []
       void Promise.all(
-        readyItems.map((item) => updateStaffOrderItemStatus(item.id, 'SERVED')),
+        readyItems.map((item) =>
+          updateItemStatus.mutateAsync({ itemId: item.id, status: 'SERVED' }),
+        ),
       ).then(() => {
         markJustChanged(tableId)
-        if (table) toast(t('toast_all_served', table.code))
-        refetchTables()
+        if (table) toast(t('toast_all_served', table.number))
       })
     },
-    [markJustChanged, refetchTables, tables, t],
+    [markJustChanged, updateItemStatus, tables, t],
   )
 
   const requestBill = useCallback(
@@ -183,25 +126,23 @@ export function useWaiter(): UseWaiterValue {
       const table = tables.find((t) => t.id === tableId)
       const sessionId = table?.session?.id
       if (!sessionId) return
-      void requestSessionBill(sessionId).then(() => {
+      requestBillMutation.mutateAsync(sessionId).then(() => {
         markJustChanged(tableId)
         toast(t('toast_bill_sent'))
-        refetchTables()
       })
     },
-    [markJustChanged, refetchTables, tables, t],
+    [markJustChanged, requestBillMutation, tables, t],
   )
 
   const openSession = useCallback(
     (tableId: string) => {
       const table = tables.find((t) => t.id === tableId)
-      void openDiningSession(tableId).then(() => {
+      openSessionMutation.mutateAsync(tableId).then(() => {
         markJustChanged(tableId)
-        if (table) toast(t('toast_session_opened', table.code))
-        refetchTables()
+        if (table) toast(t('toast_session_opened', table.number))
       })
     },
-    [markJustChanged, refetchTables, tables, t],
+    [markJustChanged, openSessionMutation, tables, t],
   )
 
   const counts = useMemo<WFCounts>(() => {
@@ -248,10 +189,10 @@ export function useWaiter(): UseWaiterValue {
       markAllServed,
       requestBill,
       openSession,
-      injectItemReady: refetchTables,
-      injectCall: refetchTables,
-      injectBill: refetchTables,
-      injectNewSession: refetchTables,
+      injectItemReady: refetch,
+      injectCall: refetch,
+      injectBill: refetch,
+      injectNewSession: refetch,
       setAutoOn,
       setTimeMultiplier,
       setLang,

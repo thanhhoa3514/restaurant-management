@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { OrderPage } from '@/pages/order'
+import { OrderPage } from '@/features/ordering/components/order-page'
 
 export const Route = createFileRoute('/order')({
   validateSearch: (search: Record<string, unknown>) => ({

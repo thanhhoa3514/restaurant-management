@@ -12,8 +12,8 @@ import { useQuery } from '@tanstack/react-query'
 import { KDS_DICT } from '@/features/kitchen/data/i18n'
 import { minStatus, nextStatus, urgencyFor } from '@/features/kitchen/helpers'
 import type { ItemStatus, KDSStats, Lang, Ticket, Urgency } from '@/features/kitchen/types'
-import { fetchKitchenQueue, updateKitchenOrderItemStatus } from '@/features/staff/api'
-import { toKdsTickets } from '@/features/staff/mappers'
+import { fetchKitchenQueue, updateKitchenOrderItemStatus } from '@/features/kitchen/api'
+import { toKdsTickets } from '@/features/kitchen/helpers/mappers'
 
 type KdsDictKey = keyof (typeof KDS_DICT)['vi']
 type KdsDictFunction = (...args: Array<number | string>) => string

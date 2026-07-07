@@ -65,38 +65,6 @@ export interface StaffTablesResponse {
   tables: StaffTableDTO[]
 }
 
-export interface KitchenTicketItemDTO {
-  id: string
-  order_item_id: string
-  menu_item_id: string
-  name_snapshot: string
-  variant_name_snapshot: string | null
-  quantity: number
-  status: string
-  note: string
-  options: StaffOptionDTO[]
-  status_history: StaffStatusDTO[]
-}
-
-export interface KitchenTicketDTO {
-  id: string
-  order_id: string
-  session_id: string
-  table_id: string
-  table_code: string
-  table_name: string
-  ticket_number: string
-  station: string
-  priority: string
-  status: string
-  submitted_at: string
-  items: KitchenTicketItemDTO[]
-}
-
-export interface KitchenQueueResponse {
-  tickets: KitchenTicketDTO[]
-}
-
 export function fetchStaffTables(): Promise<StaffTablesResponse> {
   return apiRequest<StaffTablesResponse>('/api/v1/staff/tables')
 }
@@ -112,20 +80,6 @@ export function updateStaffOrderItemStatus(
   status: string,
 ): Promise<{ id: string; status: string }> {
   return apiRequest(`/api/v1/staff/order-items/${itemId}/status`, {
-    method: 'PATCH',
-    body: { status },
-  })
-}
-
-export function fetchKitchenQueue(): Promise<KitchenQueueResponse> {
-  return apiRequest<KitchenQueueResponse>('/api/v1/kitchen/queue')
-}
-
-export function updateKitchenOrderItemStatus(
-  itemId: string,
-  status: string,
-): Promise<{ id: string; status: string }> {
-  return apiRequest(`/api/v1/kitchen/items/${itemId}/status`, {
     method: 'PATCH',
     body: { status },
   })

@@ -1,0 +1,75 @@
+<mxfile host="app.diagrams.net" version="24.0.0">
+  <diagram name="Bep tiep nhan - che bien mon" id="bp-bep">
+    <mxGraphModel dx="1200" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1900" pageHeight="640" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ===== MAIN ROW (L -> R) ===== -->
+        <mxCell id="S0" value="Đơn vào hàng đợi bếp (phiếu chế biến tách theo khu)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="40" y="120" width="180" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="S1" value="[Bếp] Mở màn hình khu → xem phiếu của khu mình (món, bàn, SL, ghi chú)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="260" y="115" width="180" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="S2" value="[Bếp] Tiếp nhận phiếu&#10;(các món: Chờ → Đã nhận)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="480" y="120" width="180" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="S3" value="[Bếp] Chế biến từng món trong phiếu&#10;(Đang nấu → Sẵn sàng)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="700" y="120" width="180" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="DX" value="Món phát sinh ngoại lệ?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="920" y="115" width="170" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="D1" value="Tất cả món trong phiếu đã Sẵn sàng?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1150" y="115" width="180" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="Tn" value="[HT] Thông báo nhân viên phục vụ ra món" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1390" y="120" width="180" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="E0" value="Phiếu hoàn thành" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="1630" y="125" width="150" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ===== EXCEPTION HANDLERS (below) ===== -->
+        <mxCell id="H1" value="[Bếp] Huỷ món (khách đổi ý / sai order, món chưa Sẵn sàng) → huỷ + ghi nhật ký, món rời phiếu" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="560" y="360" width="200" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="H2" value="[Bếp] Hết nguyên liệu → đánh dấu Hết hàng + thông báo khách, món rời phiếu" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="800" y="360" width="200" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="H3" value="[Bếp] Yêu cầu làm lại (món nguội / sai yêu cầu) → chế biến lại món" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="360" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- ===== NOTE (rule) ===== -->
+        <mxCell id="NT" value="Ghi chú: trạng thái món chỉ tiến một chiều, từng bước (Chờ → Đã nhận → Đang nấu → Sẵn sàng → Đã phục vụ); mỗi lần đổi trạng thái đều được hệ thống ghi nhật ký (thời điểm + người thực hiện). Việc huỷ chỉ áp dụng khi món chưa Sẵn sàng." style="shape=note;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=top;fontSize=11;size=14;" vertex="1" parent="1">
+          <mxGeometry x="40" y="360" width="480" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- ===== EDGES main ===== -->
+        <mxCell id="e_S0_S1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="S0" target="S1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_S1_S2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="S1" target="S2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_S2_S3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="S2" target="S3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_S3_DX" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="S3" target="DX"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_DX_D1" value="Không" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;" edge="1" parent="1" source="DX" target="D1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_D1_Tn" value="Rồi" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;" edge="1" parent="1" source="D1" target="Tn"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_Tn_E0" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="Tn" target="E0"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- loop: con mon chua xong -> chế biến món tiếp theo -->
+        <mxCell id="e_D1_S3" value="Chưa — chế biến món tiếp theo" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;fontSize=10;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="D1" target="S3"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- ===== EDGES exception ===== -->
+        <mxCell id="e_DX_H1" value="Có: huỷ món" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="DX" target="H1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_DX_H2" value="Có: hết nguyên liệu" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="DX" target="H2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_DX_H3" value="Có: làm lại" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="DX" target="H3"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- handlers rejoin -->
+        <mxCell id="e_H1_D1" value="món rời phiếu" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;fontSize=10;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="H1" target="D1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_H2_D1" value="món rời phiếu" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;fontSize=10;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="H2" target="D1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_H3_S3" value="nấu lại" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;fontSize=10;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="H3" target="S3"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

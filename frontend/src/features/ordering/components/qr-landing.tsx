@@ -90,7 +90,6 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
             startedAt: new Date(),
             sessionId: joined.session_id,
             tableId: joined.table_id,
-            restaurantId: joined.restaurant_id,
             status: joined.status,
           },
         })

@@ -4,13 +4,12 @@ type BackendStaffRole = 'MANAGER' | 'CASHIER' | 'SERVER' | 'KITCHEN'
 
 export interface StaffSession {
   code: string
-  restaurantCode: string
   role: StaffRole
   backendRole: BackendStaffRole
   name: string
   token: string
+  refreshToken: string
   userId: string
-  restaurantId: string
   expiresAt: string
   permissions: PermissionCode[]
 }
@@ -34,11 +33,11 @@ interface AuthEnvelope<T> {
 
 interface AuthenticateResponse {
   token: string
+  refresh_token: string
   user_id: string
   role: string
   name: string
   permissions: PermissionCode[]
-  restaurant_id: string
   expires_at: string
 }
 
@@ -55,12 +54,12 @@ const BACKEND_TO_ROLE: Record<BackendStaffRole, StaffRole> = {
 // Seeded backend credentials from `backend/cmd/seed`.
 export const DEMO_CREDENTIALS: Record<
   StaffRole,
-  { restaurantCode: string; code: string; pass: string; name: string }
+  { code: string; pass: string; name: string }
 > = {
-  admin: { restaurantCode: 'DEMO', code: 'manager', pass: 'demo1234', name: 'Demo Manager' },
-  cashier: { restaurantCode: 'DEMO', code: 'cashier', pass: 'demo1234', name: 'Demo Cashier' },
-  waiter: { restaurantCode: 'DEMO', code: 'server', pass: 'demo1234', name: 'Demo Server' },
-  kitchen: { restaurantCode: 'DEMO', code: 'kitchen', pass: 'demo1234', name: 'Demo Kitchen' },
+  admin: { code: 'manager', pass: 'demo1234', name: 'Demo Manager' },
+  cashier: { code: 'cashier', pass: 'demo1234', name: 'Demo Cashier' },
+  waiter: { code: 'server', pass: 'demo1234', name: 'Demo Server' },
+  kitchen: { code: 'kitchen', pass: 'demo1234', name: 'Demo Kitchen' },
 }
 
 function normalizeBackendRole(role: string): BackendStaffRole | null {
@@ -84,7 +83,6 @@ function displayNameFor(username: string, backendRole: BackendStaffRole): string
 }
 
 export async function loginStaff(
-  restaurantCode: string,
   code: string,
   pass: string,
 ): Promise<StaffSession | null> {
@@ -92,7 +90,6 @@ export async function loginStaff(
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      restaurant_code: restaurantCode.trim(),
       username: code.trim(),
       password: pass,
     }),
@@ -114,13 +111,12 @@ export async function loginStaff(
 
   const session: StaffSession = {
     code: code.trim(),
-    restaurantCode: restaurantCode.trim(),
     role: BACKEND_TO_ROLE[backendRole],
     backendRole,
     name: envelope.data.name || displayNameFor(code, backendRole),
     token: envelope.data.token,
+    refreshToken: envelope.data.refresh_token,
     userId: envelope.data.user_id,
-    restaurantId: envelope.data.restaurant_id,
     expiresAt: envelope.data.expires_at,
     permissions: envelope.data.permissions ?? [],
   }
@@ -129,9 +125,29 @@ export async function loginStaff(
   return session
 }
 
-export function logoutStaff(): void {
+// clearStaffSession is the synchronous local-only cleanup (no API call).
+// Used in contexts where await is not possible (e.g. useReducer initializer).
+export function clearStaffSession(): void {
   localStorage.removeItem('staff_session:v1')
   window.dispatchEvent(new Event(STAFF_SESSION_EVENT))
+}
+
+export async function logoutStaff(): Promise<void> {
+  const session = getStaffSession()
+  if (session?.token) {
+    try {
+      await fetch(`${API_BASE_URL}/api/v1/identity/logout`, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${session.token}`,
+        },
+      })
+    } catch {
+      // Network error — still clear local state.
+    }
+  }
+  clearStaffSession()
 }
 
 export function getStaffSession(): StaffSession | null {
@@ -163,6 +179,43 @@ export function isStaffAuthenticated(): boolean {
 export function hasStaffPermission(permission: PermissionCode): boolean {
   const session = getStaffSession()
   return Boolean(session?.permissions.includes(permission))
+}
+
+// RefreshResponse matches the backend POST /api/v1/identity/refresh response.
+interface RefreshResponse {
+  token: string
+  refresh_token: string
+  expires_at: string
+}
+
+// Refresh the JWT using the stored refresh token.
+// Returns the updated session or null if the refresh failed.
+export async function refreshStaffSession(): Promise<StaffSession | null> {
+  const current = getStaffSession()
+  if (!current?.refreshToken) return null
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/identity/refresh`, {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: current.refreshToken }),
+    })
+    if (!res.ok) return null
+    const envelope = (await res.json()) as AuthEnvelope<RefreshResponse>
+    if (!envelope.data) return null
+
+    const updated: StaffSession = {
+      ...current,
+      token: envelope.data.token,
+      refreshToken: envelope.data.refresh_token,
+      expiresAt: envelope.data.expires_at,
+    }
+    localStorage.setItem('staff_session:v1', JSON.stringify(updated))
+    window.dispatchEvent(new Event(STAFF_SESSION_EVENT))
+    return updated
+  } catch {
+    return null
+  }
 }
 
 export function updateStaffSession(

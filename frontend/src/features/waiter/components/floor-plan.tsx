@@ -24,7 +24,9 @@ interface FloorPlanProps {
 
 export const FloorPlan: FC<FloorPlanProps> = ({ tables, now, lang, t, onSelectTable, justChangedIds }) => {
   return (
-    <div className="relative min-h-[620px] h-[calc(100dvh-190px)] overflow-hidden rounded-[28px] border border-zinc-200 bg-zinc-50/70 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/40">
+    <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-x-visible sm:px-0">
+      {/* ponytail: height as viewport fraction, not header-coupled magic px */}
+      <div className="relative min-h-[620px] min-w-[640px] h-[78dvh] overflow-hidden rounded-[28px] border border-zinc-200 bg-zinc-50/70 shadow-sm sm:min-w-0 dark:border-zinc-800 dark:bg-zinc-950/40">
       <div
         className="pointer-events-none absolute inset-0 opacity-70"
         style={{
@@ -112,6 +114,7 @@ export const FloorPlan: FC<FloorPlanProps> = ({ tables, now, lang, t, onSelectTa
         <Badge variant="secondary" className="h-6 rounded-full px-2 text-[11px]">
           {priorityLabel('empty', lang)}
         </Badge>
+      </div>
       </div>
     </div>
   )

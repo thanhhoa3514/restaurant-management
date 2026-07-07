@@ -7,7 +7,6 @@ import { DICT } from '../data/i18n'
 import { formatVND } from '../helpers'
 import { fetchMenuItem, type ApiOptionGroup } from '../api'
 import type { CartLine, CartOption, Lang } from '../types'
-import { Button } from '../../../components/ui/button'
 import { Sheet, SheetContent, SheetTitle } from '../../../components/ui/sheet'
 import { Skeleton } from '../../../components/ui/skeleton'
 import { Textarea } from '../../../components/ui/textarea'
@@ -55,8 +54,8 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
 
   const { data: item, isLoading: isItemLoading } = useQuery({
     queryKey: ['guest-item', sessionToken, itemId],
-    queryFn: () => fetchMenuItem(sessionToken!, itemId),
-    enabled: !!sessionToken,
+    queryFn: () => fetchMenuItem(sessionToken!, itemId!),
+    enabled: !!sessionToken && !!itemId,
   })
 
   const [form, setForm] = useState<FormState>({
@@ -124,6 +123,16 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
 
   const handleAdd = () => {
     if (!item) return
+    const missingRequired = item.option_groups.filter((g) => {
+      if (!g.is_required) return false
+      const sel = form.selections[g.id]
+      const ids = Array.isArray(sel) ? sel : sel ? [sel] : []
+      return ids.length === 0
+    })
+    if (missingRequired.length > 0) {
+      toast.error(`${t.toast_missing_required}: ${missingRequired.map((g) => g.name).join(', ')}`)
+      return
+    }
     const variant = item.variants.find((v) => v.id === form.variantId)
     const options: CartOption[] = []
     const optMap = new Map()
@@ -167,7 +176,28 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
     <Sheet open={!!itemId} onOpenChange={(open) => { if (!open) onClose() }}>
       <SheetContent side="right" hideClose className="w-full sm:max-w-md p-0 overflow-hidden flex flex-col border-none bg-[var(--bg)] shadow-2xl">
         <SheetTitle className="sr-only">{item?.name ?? 'Item Detail'}</SheetTitle>
-        
+
+        {/* Persistent navigation — stays visible while content scrolls */}
+        <div className="absolute inset-x-0 top-0 z-30 flex items-center justify-between px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pointer-events-none">
+          <button
+            type="button"
+            aria-label={t.back}
+            className="pointer-events-auto flex h-11 items-center gap-1 rounded-full bg-black/35 pl-2 pr-4 text-white backdrop-blur-xl border border-white/10 shadow-lg active:scale-95 transition-transform cursor-pointer"
+            onClick={onClose}
+          >
+            <ChevronLeft size={22} strokeWidth={2.5} />
+            <span className="text-[14px] font-bold">{t.back}</span>
+          </button>
+          <button
+            type="button"
+            aria-label={t.close}
+            className="pointer-events-auto hidden sm:flex size-11 rounded-full bg-black/35 backdrop-blur-xl border border-white/10 items-center justify-center text-white active:scale-90 transition-transform cursor-pointer shadow-lg"
+            onClick={onClose}
+          >
+            <X size={20} strokeWidth={2.5} />
+          </button>
+        </div>
+
         {isItemLoading || !item ? (
           <div className="flex flex-col gap-5 p-6 h-full">
             <Skeleton className="aspect-square sm:aspect-[4/3] rounded-2xl" />
@@ -182,7 +212,7 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
           <>
             <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col relative pb-4">
               
-              <ItemImageHeader item={item} activeImage={form.activeImage} onImageSelect={(url) => setForm((prev) => ({ ...prev, activeImage: url }))} onClose={onClose} />
+              <ItemImageHeader item={item} activeImage={form.activeImage} onImageSelect={(url: string) => setForm((prev) => ({ ...prev, activeImage: url }))} />
               
               <div className="px-5 relative z-10 flex flex-col gap-6">
                 <div className="bg-[var(--material-thin)]/50 backdrop-blur-xl border border-[var(--separator)] rounded-[24px] p-5 shadow-sm mt-2">
@@ -205,7 +235,7 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
             </div>
 
             {/* Bottom Action Bar */}
-            <div className="p-4 sm:p-5 bg-[var(--material-thin)]/80 backdrop-blur-2xl border-t border-[var(--separator)] shrink-0 z-20 shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
+            <div className="p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:p-5 bg-[var(--material-thin)]/80 backdrop-blur-2xl border-t border-[var(--separator)] shrink-0 z-20 shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
               <button
                 type="button"
                 className="group relative w-full flex h-14 sm:h-16 items-center justify-center gap-2 overflow-hidden rounded-[20px] sm:rounded-2xl bg-[var(--text)] px-8 shadow-xl transition-all active:scale-[0.98] cursor-pointer"
@@ -224,7 +254,7 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
   )
 }
 
-function ItemImageHeader({ item, activeImage, onImageSelect, onClose }: any) {
+function ItemImageHeader({ item, activeImage, onImageSelect }: any) {
   return (
     <>
       <div className="relative aspect-square sm:aspect-[4/3] bg-[var(--surface-grouped)] shrink-0">
@@ -236,22 +266,6 @@ function ItemImageHeader({ item, activeImage, onImageSelect, onClose }: any) {
         ) : (
           <div className="size-full bg-gradient-to-br from-[var(--surface-grouped)] to-[var(--separator)]/30" />
         )}
-        <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
-          <button
-            type="button"
-            className="size-11 rounded-full bg-black/30 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white active:scale-90 transition-transform cursor-pointer shadow-lg"
-            onClick={onClose}
-          >
-            <ChevronLeft size={24} strokeWidth={2.5} />
-          </button>
-          <button
-            type="button"
-            className="size-11 rounded-full bg-black/30 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white active:scale-90 transition-transform cursor-pointer shadow-lg sm:hidden"
-            onClick={onClose}
-          >
-            <X size={20} strokeWidth={2.5} />
-          </button>
-        </div>
       </div>
       {item.images.length > 1 && (
         <div className="px-5 -mt-12 relative z-10 flex gap-3 overflow-x-auto py-2 no-scrollbar shrink-0">
@@ -379,6 +393,7 @@ function ItemQtyNotesPanel({ form, setForm, t }: any) {
         <div className="flex items-center gap-4 bg-[var(--bg)] rounded-full p-1 shadow-sm border border-[var(--separator)]/50">
           <button
             type="button"
+            aria-label={t.qty_decrease}
             className="size-10 rounded-full bg-transparent flex items-center justify-center text-[var(--text)] font-medium active:scale-90 transition-all disabled:opacity-30 cursor-pointer hover:bg-[var(--surface-grouped)]"
             disabled={form.qty <= 1}
             onClick={() => setForm((prev: any) => ({ ...prev, qty: Math.max(1, prev.qty - 1) }))}
@@ -390,6 +405,7 @@ function ItemQtyNotesPanel({ form, setForm, t }: any) {
           </span>
           <button
             type="button"
+            aria-label={t.qty_increase}
             className="flex size-10 items-center justify-center rounded-full bg-[var(--bg)] text-[var(--text)] shadow-sm active:scale-90 transition-transform cursor-pointer hover:bg-[var(--surface-grouped)]"
             onClick={() => setForm((prev: any) => ({ ...prev, qty: prev.qty + 1 }))}
           >

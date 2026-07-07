@@ -1,8 +1,13 @@
 import { useMemo, lazy, Suspense, useSyncExternalStore, type FC } from 'react'
 import { Loader2 } from 'lucide-react'
 
+let cachedNow = Date.now()
+
 const subscribeTimer = (cb: () => void) => {
-  const timer = setInterval(cb, 1000)
+  const timer = setInterval(() => {
+    cachedNow = Date.now()
+    cb()
+  }, 1000)
   return () => clearInterval(timer)
 }
 
@@ -23,7 +28,7 @@ interface ReceiptDialogProps {
 }
 
 export const ReceiptDialog: FC<ReceiptDialogProps> = ({ open, session, t, lang, onOpenChange }) => {
-  const nowMs = useSyncExternalStore(subscribeTimer, () => Date.now(), () => 0)
+  const nowMs = useSyncExternalStore(subscribeTimer, () => cachedNow, () => 0)
   const now = nowMs ? new Date(nowMs) : null
 
   const methodLabel = useMemo(() => {

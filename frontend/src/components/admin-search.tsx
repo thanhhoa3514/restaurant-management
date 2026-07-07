@@ -1,4 +1,3 @@
-import type { Dispatch, SetStateAction } from 'react'
 import {
   CommandDialog,
   CommandInput,
@@ -20,9 +19,9 @@ export interface CommandEntry {
 
 interface StaffCommandDialogProps {
   open: boolean
-  onOpenChange: Dispatch<SetStateAction<boolean>>
+  onOpenChange: (open: boolean) => void
   query: string
-  setQuery: Dispatch<SetStateAction<string>>
+  setQuery: (query: string) => void
   s: ReturnType<typeof shellStrings>
   commandItems: CommandEntry[]
 }

@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
-import { LoginPage } from '@/pages/login'
+import { LoginPage } from '@/features/login/components/login-page'
 
 const searchSchema = z.object({
   redirect: z.string().optional(),

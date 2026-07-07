@@ -105,7 +105,7 @@ export const GridView: FC<GridViewProps> = ({
               <div className="mt-3 flex flex-wrap items-center gap-1.5">
                 <Badge
                   variant={visual.badge}
-                  className="rounded-full px-2 py-0.5 text-[9px] font-bold tracking-tight"
+                  className="rounded-full px-2 py-0.5 text-[10px] font-bold tracking-tight"
                 >
                   {priorityLabel(priority, lang)}
                 </Badge>
