@@ -50,6 +50,19 @@ export function deleteMenuItem(id: string, version: number): Promise<MenuItemMut
   })
 }
 
+export interface PresignResult {
+  presigned_url: string
+  public_url: string
+  object_key: string
+}
+
+export function presignUpload(extension: string, contentType: string): Promise<PresignResult> {
+  return apiRequest<PresignResult>('/api/v1/catalog/upload/presign', {
+    method: 'POST',
+    body: { extension, content_type: contentType },
+  })
+}
+
 export function toggleAvailability(
   id: string,
   isAvailable: boolean,

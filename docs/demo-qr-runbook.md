@@ -7,11 +7,10 @@ same Wi-Fi, land on the guest ordering page, and place a real order.
 
 ```bash
 # Backend (Postgres on 127.0.0.1:5440, API on :8080)
-cd backend/deployments
+cd backend
 docker compose up -d --build
 
 # Seed demo data (idempotent — safe to re-run right before the demo to reset)
-cd ..
 DATABASE_URL='postgres://postgres:postgres@127.0.0.1:5440/restaurant?sslmode=disable' go run ./cmd/seed
 
 # Frontend (listens on all interfaces — vite.config.ts has host: true)

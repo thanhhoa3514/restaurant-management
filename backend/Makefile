@@ -1,7 +1,7 @@
 .PHONY: build run migrate seed lint test vet tidy db-up dev compose-up compose-migrate
 
-COMPOSE_FILE := deployments/docker-compose.yml
-# Match deployments/docker-compose.yml default host port (5440).
+COMPOSE_FILE := docker-compose.yml
+# Match docker-compose.yml default host port (5440).
 DATABASE_URL ?= postgres://postgres:postgres@localhost:5440/restaurant?sslmode=disable
 export DATABASE_URL
 
@@ -9,7 +9,7 @@ build:
 	go build ./...
 
 db-up:
-	docker compose -f $(COMPOSE_FILE) up -d postgres
+	docker compose -f $(COMPOSE_FILE) up -d postgres minio
 
 migrate:
 	go run ./cmd/migrate

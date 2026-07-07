@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -9,6 +10,7 @@ import (
 	"restaurant-management/internal/modules/catalog/application"
 	"restaurant-management/internal/platform/auth"
 	"restaurant-management/internal/platform/httpx"
+	"restaurant-management/internal/platform/storage"
 	"restaurant-management/internal/shared/apperr"
 )
 
@@ -22,9 +24,10 @@ type Handler struct {
 	GetMenuItem        *application.GetMenuItem
 	ListAdminMenuItems *application.ListAdminMenuItems
 	GetAdminMenuItem   *application.GetAdminMenuItem
+	Storage            *storage.Client // S3-compatible storage for image uploads
 }
 
-func NewHandler(createMenuItem *application.CreateMenuItem, updateMenuItem *application.UpdateMenuItem, deleteMenuItem *application.DeleteMenuItem, toggleAvailability *application.ToggleAvailability, listCategories *application.ListCategories, listMenuItems *application.ListMenuItems, getMenuItem *application.GetMenuItem, listAdminMenuItems *application.ListAdminMenuItems, getAdminMenuItem *application.GetAdminMenuItem) *Handler {
+func NewHandler(createMenuItem *application.CreateMenuItem, updateMenuItem *application.UpdateMenuItem, deleteMenuItem *application.DeleteMenuItem, toggleAvailability *application.ToggleAvailability, listCategories *application.ListCategories, listMenuItems *application.ListMenuItems, getMenuItem *application.GetMenuItem, listAdminMenuItems *application.ListAdminMenuItems, getAdminMenuItem *application.GetAdminMenuItem, storage *storage.Client) *Handler {
 	return &Handler{
 		CreateMenuItem:     createMenuItem,
 		UpdateMenuItem:     updateMenuItem,
@@ -35,11 +38,12 @@ func NewHandler(createMenuItem *application.CreateMenuItem, updateMenuItem *appl
 		GetMenuItem:        getMenuItem,
 		ListAdminMenuItems: listAdminMenuItems,
 		GetAdminMenuItem:   getAdminMenuItem,
+		Storage:            storage,
 	}
 }
 
-func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver) {
-	g := r.Group("/catalog", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionCatalogManage))
+func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver, defaultRestaurantID uuid.UUID) {
+	g := r.Group("/catalog", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionCatalogManage, defaultRestaurantID))
 	g.GET("/categories", h.listCategories)
 	g.GET("/items", h.listAdminMenuItems)
 	g.GET("/items/:id", h.getAdminMenuItem)
@@ -47,6 +51,9 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string, resolver aut
 	g.POST("/update-menu-item", h.updateMenuItem)
 	g.POST("/delete-menu-item", h.deleteMenuItem)
 	g.POST("/toggle-availability", h.toggleAvailability)
+	if h.Storage != nil {
+		g.POST("/upload/presign", h.presignUpload)
+	}
 }
 
 func (h *Handler) RegisterGuestRoutes(g *gin.RouterGroup) {
@@ -187,6 +194,25 @@ func (h *Handler) toggleAvailability(c *gin.Context) {
 		return
 	}
 	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) presignUpload(c *gin.Context) {
+	var req struct {
+		Extension   string `json:"extension" binding:"required"`   // e.g. ".jpg", ".png"
+		ContentType string `json:"content_type" binding:"required"` // e.g. "image/jpeg"
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request", err))
+		return
+	}
+
+	result, err := h.Storage.PresignedPutURL(c.Request.Context(), req.Extension, 15*time.Minute)
+	if err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInternal, "failed to generate upload url", err))
+		return
+	}
+
+	httpx.Respond(c, http.StatusOK, result, nil)
 }
 
 func commandMetadata(c *gin.Context) application.CommandMetadata {

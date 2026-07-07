@@ -29,7 +29,7 @@ import (
 
 func main() {
 	cfg := config.Load()
-	log := logger.New(cfg.AppEnv, cfg.LogLevel)
+	log := logger.New(cfg.AppEnv, cfg.LogLevel, cfg.LogDir)
 
 	command := "up"
 	if len(os.Args) > 1 {

@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, EyeOff, Loader2, Pencil, Plus, Star, Trash2, Utensils } from 'lucide-react'
 
@@ -29,6 +29,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
+import { ImageUploader } from '@/features/catalog/components/image-uploader'
 import { makeAdminT, type AdminT } from '@/features/admin/data/i18n'
 import {
   catalogQueryKeys,
@@ -833,7 +834,11 @@ function CatalogItemForm({
                 <FormItem>
                   <FormLabel>{t('catalog_field_image')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://" {...field} />
+                    <ImageUploader
+                      value={field.value ?? ''}
+                      onChange={field.onChange}
+                      disabled={busy}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

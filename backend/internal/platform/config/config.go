@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const defaultJWTSecret = "dev-change-me"
@@ -21,6 +23,9 @@ type Config struct {
 	DBMaxConns     int
 	AllowedOrigins []string
 	PublicBaseURL  string
+	LogDir         string
+
+	DefaultRestaurantID uuid.UUID
 
 	MoMoEndpoint    string
 	MoMoPartnerCode string
@@ -33,6 +38,13 @@ type Config struct {
 	ZaloPayKey2     string
 
 	MockWebhookSecret string
+
+	S3Endpoint  string
+	S3AccessKey string
+	S3SecretKey string
+	S3Bucket    string
+	S3UseSSL    bool
+	S3PublicURL string
 }
 
 func Load() Config {
@@ -53,6 +65,7 @@ func Load() Config {
 		DBMaxConns:     intEnv("DB_MAX_CONNS", 0),
 		AllowedOrigins: csvEnv("CORS_ALLOWED_ORIGINS"),
 		PublicBaseURL:  strings.TrimRight(env("PUBLIC_BASE_URL", ""), "/"),
+		LogDir:         env("LOG_DIR", ""),
 
 		MoMoEndpoint:    strings.TrimRight(env("MOMO_ENDPOINT", ""), "/"),
 		MoMoPartnerCode: env("MOMO_PARTNER_CODE", ""),
@@ -65,10 +78,16 @@ func Load() Config {
 		ZaloPayKey2:     env("ZALOPAY_KEY2", ""),
 
 		MockWebhookSecret: mockSecret,
+
+		S3Endpoint:  env("S3_ENDPOINT", "localhost:9000"),
+		S3AccessKey: env("S3_ACCESS_KEY", "minioadmin"),
+		S3SecretKey: env("S3_SECRET_KEY", "minio-secret"),
+		S3Bucket:    env("S3_BUCKET", "restaurant-images"),
+		S3UseSSL:    env("S3_USE_SSL", "false") == "true",
+		S3PublicURL: strings.TrimRight(env("S3_PUBLIC_URL", "http://localhost:9000/restaurant-images"), "/"),
 	}
 }
 
-// Validate rejects unsafe production configuration.
 func (c Config) Validate() error {
 	if c.AppEnv == "production" && c.JWTSecret == defaultJWTSecret {
 		return errors.New("JWT_SECRET must be set in production")
@@ -83,8 +102,6 @@ func env(key, fallback string) string {
 	return fallback
 }
 
-// csvEnv parses a comma-separated env var into a trimmed, non-empty slice.
-// Empty/unset returns nil — callers treat nil as "allow all" (dev default).
 func csvEnv(key string) []string {
 	v := os.Getenv(key)
 	if v == "" {

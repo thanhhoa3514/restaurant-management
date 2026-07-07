@@ -92,7 +92,7 @@ func sessionCodeFor(tableCode string) string { return "DEMO-SESS-" + tableCode }
 func main() {
 	ctx := context.Background()
 	cfg := config.Load()
-	log := logger.New(cfg.AppEnv, cfg.LogLevel)
+	log := logger.New(cfg.AppEnv, cfg.LogLevel, cfg.LogDir)
 
 	pool, err := postgres.Connect(ctx, cfg.DatabaseURL, cfg.DBMaxConns)
 	if err != nil {
