@@ -1,6 +1,7 @@
 package httpx
 
 import (
+	"bytes"
 	"log/slog"
 	"net/http"
 	"runtime/debug"
@@ -11,6 +12,8 @@ import (
 
 	"restaurant-management/internal/platform/logger"
 )
+
+const maxBodyLogLen = 2 << 10
 
 const requestIDKey = "request_id"
 
@@ -26,15 +29,34 @@ func RequestID() gin.HandlerFunc {
 	}
 }
 
-// Logger attaches a request-scoped logger (tagged with request_id) to the
-// request context and emits one access-log line per request once it completes.
-func Logger(base *slog.Logger) gin.HandlerFunc {
+type bodyCaptureWriter struct {
+	gin.ResponseWriter
+	body bytes.Buffer
+}
+
+func (w *bodyCaptureWriter) Write(data []byte) (int, error) {
+	w.body.Write(data)
+	return w.ResponseWriter.Write(data)
+}
+
+func (w *bodyCaptureWriter) WriteString(s string) (int, error) {
+	w.body.WriteString(s)
+	return w.ResponseWriter.WriteString(s)
+}
+
+func Logger(base *slog.Logger, logResponseBody ...bool) gin.HandlerFunc {
+	captureBody := len(logResponseBody) > 0 && logResponseBody[0]
+
 	return func(c *gin.Context) {
 		start := time.Now()
 		id, _ := c.Get(requestIDKey)
 
 		reqLog := base.With(slog.Any("request_id", id))
 		c.Request = c.Request.WithContext(logger.WithContext(c.Request.Context(), reqLog))
+
+		if captureBody {
+			c.Writer = &bodyCaptureWriter{ResponseWriter: c.Writer}
+		}
 
 		c.Next()
 
@@ -44,6 +66,16 @@ func Logger(base *slog.Logger) gin.HandlerFunc {
 			slog.Int("status", c.Writer.Status()),
 			slog.Duration("latency", time.Since(start)),
 			slog.String("client_ip", c.ClientIP()),
+		}
+		if captureBody {
+			bw := c.Writer.(*bodyCaptureWriter)
+			if bw.body.Len() > 0 {
+				body := bw.body.Bytes()
+				if len(body) > maxBodyLogLen {
+					body = body[:maxBodyLogLen]
+				}
+				attrs = append(attrs, slog.String("response", string(body)))
+			}
 		}
 		switch status := c.Writer.Status(); {
 		case status >= http.StatusInternalServerError:
@@ -68,8 +100,6 @@ func Recover() gin.HandlerFunc {
 	})
 }
 
-// MaxBodyBytes caps request body size to guard against memory-exhaustion DoS.
-// Bodyless requests (GET, the /ws upgrade) are unaffected.
 func MaxBodyBytes(limit int64) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, limit)
@@ -77,10 +107,6 @@ func MaxBodyBytes(limit int64) gin.HandlerFunc {
 	}
 }
 
-// CORS sets cross-origin headers. allowedOrigins is an explicit allowlist; when
-// empty (env unset) it falls back to "*" for dev convenience. A non-empty list
-// echoes the request Origin only if it matches, otherwise sends no
-// Allow-Origin header.
 func CORS(allowedOrigins []string) gin.HandlerFunc {
 	allowed := make(map[string]struct{}, len(allowedOrigins))
 	for _, o := range allowedOrigins {

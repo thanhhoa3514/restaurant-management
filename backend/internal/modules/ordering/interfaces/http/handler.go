@@ -25,7 +25,11 @@ type Handler struct {
 	KitchenQueue       *application.KitchenQueue
 }
 
-func NewHandler(guestPlaceOrder *application.GuestPlaceOrder, guestViewOrders *application.GuestViewOrders, guestEditOrder *application.GuestEditOrder, guestCancelOrder *application.GuestCancelOrder, guestRequestCancel *application.GuestRequestCancel, staffTables *application.StaffTables, staffRequestBill *application.StaffRequestBill, staffUpdateStatus *application.StaffUpdateItemStatus, kitchenQueue *application.KitchenQueue) *Handler {
+func NewHandler(guestPlaceOrder *application.GuestPlaceOrder,
+	guestViewOrders *application.GuestViewOrders, guestEditOrder *application.GuestEditOrder,
+	guestCancelOrder *application.GuestCancelOrder, guestRequestCancel *application.GuestRequestCancel,
+	staffTables *application.StaffTables, staffRequestBill *application.StaffRequestBill,
+	staffUpdateStatus *application.StaffUpdateItemStatus, kitchenQueue *application.KitchenQueue) *Handler {
 	return &Handler{
 		GuestPlaceOrder:    guestPlaceOrder,
 		GuestViewOrders:    guestViewOrders,
@@ -39,8 +43,9 @@ func NewHandler(guestPlaceOrder *application.GuestPlaceOrder, guestViewOrders *a
 	}
 }
 
-func (h *Handler) RegisterStaffRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver) {
-	g := r.Group("/staff", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionOrderingStaff))
+func (h *Handler) RegisterStaffRoutes(r *gin.RouterGroup, secret string,
+	resolver auth.PermissionResolver, defaultRestaurantID uuid.UUID) {
+	g := r.Group("/staff", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionOrderingStaff, defaultRestaurantID))
 	g.GET("/tables", h.staffTables)
 	g.POST("/sessions/:sessionId/request-bill", h.staffRequestBill)
 	g.PATCH("/order-items/:itemId/status", h.staffUpdateItemStatus)

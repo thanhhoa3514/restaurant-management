@@ -10,12 +10,11 @@ import (
 )
 
 type SessionResponse struct {
-	UserID       uuid.UUID `json:"user_id"`
-	Username     string    `json:"username"`
-	Name         string    `json:"name"`
-	Role         string    `json:"role"`
-	Permissions  []string  `json:"permissions"`
-	RestaurantID uuid.UUID `json:"restaurant_id"`
+	UserID      uuid.UUID `json:"user_id"`
+	Username    string    `json:"username"`
+	Name        string    `json:"name"`
+	Role        string    `json:"role"`
+	Permissions []string  `json:"permissions"`
 }
 
 type GetSession struct {
@@ -37,6 +36,6 @@ func (s *GetSession) Handle(ctx context.Context, restaurantID, userID uuid.UUID)
 	}
 	return SessionResponse{
 		UserID: user.ID, Username: user.Username, Name: user.FullName,
-		Role: strings.ToUpper(user.RoleName), Permissions: permissions, RestaurantID: restaurantID,
+		Role: strings.ToUpper(user.RoleName), Permissions: permissions,
 	}, nil
 }

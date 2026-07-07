@@ -26,7 +26,6 @@ type JoinSessionResponse struct {
 	SessionToken string     `json:"session_token,omitempty"`
 	SessionID    *uuid.UUID `json:"session_id,omitempty"`
 	TableID      *uuid.UUID `json:"table_id,omitempty"`
-	RestaurantID *uuid.UUID `json:"restaurant_id,omitempty"`
 }
 
 type JoinSession struct {
@@ -75,7 +74,6 @@ func (s *JoinSession) Handle(ctx context.Context, req JoinSessionRequest) (JoinS
 			SessionToken: session.SessionToken,
 			SessionID:    &session.ID,
 			TableID:      &session.TableID,
-			RestaurantID: &session.RestaurantID,
 		}
 		return s.writeQRScanEvent(ctx, qr, session, scanOutcome(session.Status), req)
 	})

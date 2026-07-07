@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 
 	"restaurant-management/internal/modules/dining/domain"
-	"restaurant-management/internal/platform/tenant"
 )
 
 type ManageTableQRRequest struct {
@@ -30,28 +29,26 @@ type ManageTableQRResponse struct {
 }
 
 type ManageTableQR struct {
-	tx     TxRunner
-	repo   domain.DiningRepository
-	outbox domain.OutboxWriter
+	tx                  TxRunner
+	repo                domain.DiningRepository
+	outbox              domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
 }
 
-func NewManageTableQR(tx TxRunner, repo domain.DiningRepository, outbox domain.OutboxWriter) *ManageTableQR {
-	return &ManageTableQR{tx: tx, repo: repo, outbox: outbox}
+func NewManageTableQR(tx TxRunner, repo domain.DiningRepository, outbox domain.OutboxWriter, defaultRestaurantID uuid.UUID) *ManageTableQR {
+	return &ManageTableQR{tx: tx, repo: repo, outbox: outbox, defaultRestaurantID: defaultRestaurantID}
 }
 
 func (s *ManageTableQR) Handle(ctx context.Context, in ManageTableQRRequest) (ManageTableQRResponse, error) {
 	var out ManageTableQRResponse
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return out, err
-	}
+	restaurantID := s.defaultRestaurantID
 
 	var actor *uuid.UUID
 	if in.ActorID != uuid.Nil {
 		actor = &in.ActorID
 	}
 
-	err = s.tx.Run(ctx, func(ctx context.Context) error {
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
 		// Validate the table belongs to this tenant.
 		if _, err := s.repo.FindTable(ctx, restaurantID, in.TableID); err != nil {
 			return err

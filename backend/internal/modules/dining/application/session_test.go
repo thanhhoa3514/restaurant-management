@@ -9,7 +9,6 @@ import (
 
 	"restaurant-management/internal/modules/dining/domain"
 	"restaurant-management/internal/platform/outbox"
-	"restaurant-management/internal/platform/tenant"
 	"restaurant-management/internal/shared/apperr"
 )
 
@@ -107,11 +106,11 @@ func TestOpenSession(t *testing.T) {
 	rid := uuid.New()
 	tableID := uuid.New()
 	userID := uuid.New()
-	ctx := tenant.WithRestaurantID(context.Background(), rid)
+	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
 		repo := &fakeRepo{table: &domain.Table{ID: tableID, RestaurantID: rid}, activeQR: &domain.QRCode{ID: uuid.New(), RestaurantID: rid, TableID: tableID}}
-		svc := NewOpenSession(fakeTx{}, repo, nil)
+		svc := NewOpenSession(fakeTx{}, repo, nil, rid)
 		out, err := svc.Handle(ctx, OpenSessionRequest{TableID: tableID, OpenedBy: userID})
 		require.NoError(t, err)
 		require.NotEqual(t, uuid.Nil, out.SessionID)
@@ -125,14 +124,14 @@ func TestOpenSession(t *testing.T) {
 	})
 
 	t.Run("missing table", func(t *testing.T) {
-		svc := NewOpenSession(fakeTx{}, &fakeRepo{}, nil)
+		svc := NewOpenSession(fakeTx{}, &fakeRepo{}, nil, rid)
 		_, err := svc.Handle(ctx, OpenSessionRequest{TableID: tableID, OpenedBy: userID})
 		require.True(t, apperr.Is(err, apperr.CodeNotFound))
 	})
 
 	t.Run("duplicate active session conflict", func(t *testing.T) {
 		repo := &fakeRepo{table: &domain.Table{ID: tableID, RestaurantID: rid}, createErr: apperr.New(apperr.CodeConflict, "active session already exists")}
-		svc := NewOpenSession(fakeTx{}, repo, nil)
+		svc := NewOpenSession(fakeTx{}, repo, nil, rid)
 		_, err := svc.Handle(ctx, OpenSessionRequest{TableID: tableID, OpenedBy: userID})
 		require.True(t, apperr.Is(err, apperr.CodeConflict))
 	})
@@ -206,11 +205,11 @@ func TestManageTableQR(t *testing.T) {
 	rid := uuid.New()
 	tableID := uuid.New()
 	actorID := uuid.New()
-	ctx := tenant.WithRestaurantID(context.Background(), rid)
+	ctx := context.Background()
 
 	t.Run("first generate creates qr without deactivating", func(t *testing.T) {
 		repo := &fakeRepo{table: &domain.Table{ID: tableID, RestaurantID: rid}}
-		svc := NewManageTableQR(fakeTx{}, repo, nil)
+		svc := NewManageTableQR(fakeTx{}, repo, nil, rid)
 		out, err := svc.Handle(ctx, ManageTableQRRequest{TableID: tableID, ActorID: actorID})
 		require.NoError(t, err)
 		require.False(t, repo.deactivated)
@@ -224,7 +223,7 @@ func TestManageTableQR(t *testing.T) {
 	t.Run("idempotent generate returns existing qr", func(t *testing.T) {
 		existing := &domain.QRCode{ID: uuid.New(), RestaurantID: rid, TableID: tableID, Token: "keep-me"}
 		repo := &fakeRepo{table: &domain.Table{ID: tableID, RestaurantID: rid}, activeQR: existing}
-		svc := NewManageTableQR(fakeTx{}, repo, nil)
+		svc := NewManageTableQR(fakeTx{}, repo, nil, rid)
 		out, err := svc.Handle(ctx, ManageTableQRRequest{TableID: tableID, ActorID: actorID})
 		require.NoError(t, err)
 		require.False(t, repo.deactivated)
@@ -236,7 +235,7 @@ func TestManageTableQR(t *testing.T) {
 	t.Run("rotate deactivates then mints new token", func(t *testing.T) {
 		existing := &domain.QRCode{ID: uuid.New(), RestaurantID: rid, TableID: tableID, Token: "old-token"}
 		repo := &fakeRepo{table: &domain.Table{ID: tableID, RestaurantID: rid}, activeQR: existing}
-		svc := NewManageTableQR(fakeTx{}, repo, nil)
+		svc := NewManageTableQR(fakeTx{}, repo, nil, rid)
 		out, err := svc.Handle(ctx, ManageTableQRRequest{TableID: tableID, Rotate: true, ActorID: actorID})
 		require.NoError(t, err)
 		require.True(t, repo.deactivated)
@@ -246,7 +245,7 @@ func TestManageTableQR(t *testing.T) {
 	})
 
 	t.Run("missing table not found", func(t *testing.T) {
-		svc := NewManageTableQR(fakeTx{}, &fakeRepo{}, nil)
+		svc := NewManageTableQR(fakeTx{}, &fakeRepo{}, nil, rid)
 		_, err := svc.Handle(ctx, ManageTableQRRequest{TableID: tableID, ActorID: actorID})
 		require.True(t, apperr.Is(err, apperr.CodeNotFound))
 	})

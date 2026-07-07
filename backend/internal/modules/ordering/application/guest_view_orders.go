@@ -8,7 +8,6 @@ import (
 
 	"restaurant-management/internal/modules/ordering/domain"
 	"restaurant-management/internal/platform/guest"
-	"restaurant-management/internal/platform/tenant"
 	"restaurant-management/internal/shared/apperr"
 )
 
@@ -27,18 +26,18 @@ type GuestOrderDTO struct {
 	Items       []GuestOrderItemDTO `json:"items"`
 }
 
-type GuestViewOrders struct{ repo domain.OrderReadRepository }
+type GuestViewOrders struct {
+	repo                domain.OrderReadRepository
+	defaultRestaurantID uuid.UUID
+}
 
-func NewGuestViewOrders(repo domain.OrderReadRepository) *GuestViewOrders {
-	return &GuestViewOrders{repo: repo}
+func NewGuestViewOrders(repo domain.OrderReadRepository, defaultRestaurantID uuid.UUID) *GuestViewOrders {
+	return &GuestViewOrders{repo: repo, defaultRestaurantID: defaultRestaurantID}
 }
 
 func (s *GuestViewOrders) Handle(ctx context.Context) (GuestOrdersResponse, error) {
 	var out GuestOrdersResponse
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return out, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant")
-	}
+	restaurantID := s.defaultRestaurantID
 	gs, ok := guest.SessionFromContext(ctx)
 	if !ok || gs.SessionID == uuid.Nil {
 		return out, apperr.New(apperr.CodeUnauthorized, "missing guest session")

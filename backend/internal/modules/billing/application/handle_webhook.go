@@ -14,7 +14,6 @@ import (
 
 	"restaurant-management/internal/modules/billing/domain"
 	"restaurant-management/internal/platform/outbox"
-	"restaurant-management/internal/platform/tenant"
 	"restaurant-management/internal/shared/apperr"
 )
 
@@ -25,15 +24,16 @@ type WebhookResult struct {
 }
 
 type HandleWebhook struct {
-	tx         TxRunner
-	repo       domain.InvoiceRepository
-	outbox     domain.OutboxWriter
-	gateways   *domain.GatewayRegistry
-	mockSecret string
+	tx                 TxRunner
+	repo               domain.InvoiceRepository
+	outbox             domain.OutboxWriter
+	gateways           *domain.GatewayRegistry
+	mockSecret         string
+	defaultRestaurantID uuid.UUID
 }
 
-func NewHandleWebhook(tx TxRunner, repo domain.InvoiceRepository, outbox domain.OutboxWriter, gateways *domain.GatewayRegistry, mockSecret string) *HandleWebhook {
-	return &HandleWebhook{tx: tx, repo: repo, outbox: outbox, gateways: gateways, mockSecret: mockSecret}
+func NewHandleWebhook(tx TxRunner, repo domain.InvoiceRepository, outbox domain.OutboxWriter, gateways *domain.GatewayRegistry, mockSecret string, defaultRestaurantID uuid.UUID) *HandleWebhook {
+	return &HandleWebhook{tx: tx, repo: repo, outbox: outbox, gateways: gateways, mockSecret: mockSecret, defaultRestaurantID: defaultRestaurantID}
 }
 
 func (s *HandleWebhook) Handle(ctx context.Context, provider string, raw []byte, headers http.Header) (WebhookResult, error) {
@@ -56,7 +56,6 @@ func (s *HandleWebhook) Handle(ctx context.Context, provider string, raw []byte,
 			result.Ignored = true
 			return nil
 		}
-		ctx = tenant.WithRestaurantID(ctx, payment.RestaurantID)
 		eventRowID, inserted, err := s.repo.InsertWebhookEvent(ctx, payment.RestaurantID, event.Provider, event.EventID, payment.ID, event.Raw)
 		if err != nil {
 			return err

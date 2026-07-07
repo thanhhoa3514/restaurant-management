@@ -8,7 +8,7 @@ import (
 	"restaurant-management/internal/modules/ordering/domain"
 	"restaurant-management/internal/platform/guest"
 	"restaurant-management/internal/platform/outbox"
-	"restaurant-management/internal/platform/tenant"
+
 	"restaurant-management/internal/shared/apperr"
 )
 
@@ -44,13 +44,14 @@ type LineOperationError struct {
 func (e *LineOperationError) Error() string { return e.Message }
 
 type GuestEditOrder struct {
-	tx     TxRunner
-	repo   domain.OrderEditRepository
-	outbox domain.OutboxWriter
+	tx                  TxRunner
+	repo                domain.OrderEditRepository
+	outbox              domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
 }
 
-func NewGuestEditOrder(tx TxRunner, repo domain.OrderEditRepository, outbox domain.OutboxWriter) *GuestEditOrder {
-	return &GuestEditOrder{tx: tx, repo: repo, outbox: outbox}
+func NewGuestEditOrder(tx TxRunner, repo domain.OrderEditRepository, outbox domain.OutboxWriter, defaultRestaurantID uuid.UUID) *GuestEditOrder {
+	return &GuestEditOrder{tx: tx, repo: repo, outbox: outbox, defaultRestaurantID: defaultRestaurantID}
 }
 
 func (s *GuestEditOrder) Handle(ctx context.Context, req GuestEditOrderRequest) (GuestOrderMutationResponse, error) {
@@ -61,7 +62,7 @@ func (s *GuestEditOrder) Handle(ctx context.Context, req GuestEditOrderRequest) 
 	if req.Version <= 0 {
 		return out, apperr.New(apperr.CodeInvalid, "version required")
 	}
-	restaurantID, gs, err := orderingContext(ctx)
+	restaurantID, gs, err := orderingContext(ctx, s.defaultRestaurantID)
 	if err != nil {
 		return out, err
 	}
@@ -296,14 +297,10 @@ func mutationResponseFromOrder(order domain.OrderRead, version int, status strin
 	return GuestOrderMutationResponse{OrderID: order.ID, OrderNumber: order.OrderNumber, OrderType: order.OrderType, Version: version, Status: status, Items: items, SessionTotalVND: total}
 }
 
-func orderingContext(ctx context.Context) (uuid.UUID, guest.Session, error) {
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return uuid.Nil, guest.Session{}, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant")
-	}
+func orderingContext(ctx context.Context, defaultRestaurantID uuid.UUID) (uuid.UUID, guest.Session, error) {
 	gs, ok := guest.SessionFromContext(ctx)
 	if !ok || gs.SessionID == uuid.Nil {
 		return uuid.Nil, guest.Session{}, apperr.New(apperr.CodeUnauthorized, "missing guest session")
 	}
-	return restaurantID, gs, nil
+	return defaultRestaurantID, gs, nil
 }

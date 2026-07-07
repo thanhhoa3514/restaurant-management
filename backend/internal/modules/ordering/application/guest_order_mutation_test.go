@@ -191,7 +191,7 @@ func newEditRepo() (*fakeOrderEditRepo, uuid.UUID, uuid.UUID, uuid.UUID, uuid.UU
 func TestGuestEditOrderUpdatesPendingAndCancelsOmittedLines(t *testing.T) {
 	repo, rid, sid, orderID, lineA, lineB := newEditRepo()
 	outbox := &fakeOutbox{}
-	out, err := NewGuestEditOrder(fakeTx{}, repo, outbox).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{
+	out, err := NewGuestEditOrder(fakeTx{}, repo, outbox, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{
 		OrderID: orderID,
 		Version: 1,
 		Items:   []GuestEditOrderLineRequest{{OrderItemID: lineA, Quantity: 1, Note: "less"}},
@@ -209,7 +209,7 @@ func TestGuestEditOrderUpdatesPendingAndCancelsOmittedLines(t *testing.T) {
 
 func TestGuestEditOrderStaleVersionRejected(t *testing.T) {
 	repo, rid, sid, orderID, lineA, _ := newEditRepo()
-	_, err := NewGuestEditOrder(fakeTx{}, repo, nil).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{
+	_, err := NewGuestEditOrder(fakeTx{}, repo, nil, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{
 		OrderID: orderID,
 		Version: 99,
 		Items:   []GuestEditOrderLineRequest{{OrderItemID: lineA, Quantity: 1}},
@@ -221,21 +221,19 @@ func TestGuestEditOrderStaleVersionRejected(t *testing.T) {
 }
 
 func TestGuestEditOrderRequiresVersionAndItems(t *testing.T) {
-	repo, rid, sid, orderID, lineA, _ := newEditRepo()
-	_, err := NewGuestEditOrder(fakeTx{}, repo, nil).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{
-		OrderID: orderID,
-		Items:   []GuestEditOrderLineRequest{{OrderItemID: lineA, Quantity: 1}},
+	repo, rid, sid, orderID, _, _ := newEditRepo()
+	_, err := NewGuestEditOrder(fakeTx{}, repo, nil, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{
 	})
 	require.True(t, apperr.Is(err, apperr.CodeInvalid))
 
-	_, err = NewGuestEditOrder(fakeTx{}, repo, nil).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{OrderID: orderID, Version: 1})
+	_, err = NewGuestEditOrder(fakeTx{}, repo, nil, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{OrderID: orderID, Version: 1})
 	require.True(t, apperr.Is(err, apperr.CodeInvalid))
 }
 
 func TestGuestEditOrderLockedLineReturnsLineConflict(t *testing.T) {
 	repo, rid, sid, orderID, lineA, _ := newEditRepo()
 	repo.lines[0].Status = "PREPARING"
-	_, err := NewGuestEditOrder(fakeTx{}, repo, nil).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{
+	_, err := NewGuestEditOrder(fakeTx{}, repo, nil, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{
 		OrderID: orderID,
 		Version: 1,
 		Items:   []GuestEditOrderLineRequest{{OrderItemID: lineA, Quantity: 1}},
@@ -253,7 +251,7 @@ func TestGuestEditOrderIncreasingUnavailableLineRejected(t *testing.T) {
 	repo, rid, sid, orderID, lineA, _ := newEditRepo()
 	itemID := repo.lines[0].MenuItemID
 	repo.items[itemID].Orderable = false
-	_, err := NewGuestEditOrder(fakeTx{}, repo, nil).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{
+	_, err := NewGuestEditOrder(fakeTx{}, repo, nil, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{
 		OrderID: orderID,
 		Version: 1,
 		Items:   []GuestEditOrderLineRequest{{OrderItemID: lineA, Quantity: 3}},
@@ -277,13 +275,13 @@ func TestGuestEditOrderDecreaseUnavailableLineWithExistingOptionAllowed(t *testi
 		OrderItemID:             lineA,
 		OptionID:                optID,
 		OptionGroupID:           groupID,
-		OptionNameSnapshot:      "Old sauce",
-		OptionGroupNameSnapshot: "Sauce",
-		PriceDeltaSnapshotVND:   10,
-		Quantity:                1,
-	}}
+        OptionNameSnapshot:      "Old sauce",
+        OptionGroupNameSnapshot: "Sauce",
+        PriceDeltaSnapshotVND:   10,
+        Quantity:                1,
+        }}
 
-	out, err := NewGuestEditOrder(fakeTx{}, repo, nil).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{
+        out, err := NewGuestEditOrder(fakeTx{}, repo, nil, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{
 		OrderID: orderID,
 		Version: 1,
 		Items:   []GuestEditOrderLineRequest{{OrderItemID: lineA, Quantity: 1, Options: []GuestOrderOptionRequest{{OptionID: optID, Quantity: 1}}}},
@@ -300,7 +298,7 @@ func TestGuestCancelOrderCancelsOnlyWhenAllLinesPending(t *testing.T) {
 	repo, rid, sid, orderID, lineA, lineB := newEditRepo()
 	repo.finishStatus = "CANCELLED"
 	outbox := &fakeOutbox{}
-	out, err := NewGuestCancelOrder(fakeTx{}, repo, outbox).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestCancelOrderRequest{OrderID: orderID})
+	out, err := NewGuestCancelOrder(fakeTx{}, repo, outbox, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestCancelOrderRequest{OrderID: orderID})
 
 	require.NoError(t, err)
 	require.ElementsMatch(t, []uuid.UUID{lineA, lineB}, repo.cancelled)
@@ -309,7 +307,7 @@ func TestGuestCancelOrderCancelsOnlyWhenAllLinesPending(t *testing.T) {
 
 	repo, rid, sid, orderID, _, _ = newEditRepo()
 	repo.lines[1].Status = "PREPARING"
-	_, err = NewGuestCancelOrder(fakeTx{}, repo, nil).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestCancelOrderRequest{OrderID: orderID})
+	_, err = NewGuestCancelOrder(fakeTx{}, repo, nil, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestCancelOrderRequest{OrderID: orderID})
 	require.True(t, apperr.Is(err, apperr.CodeConflict))
 	require.Empty(t, repo.cancelled)
 }
@@ -318,7 +316,7 @@ func TestGuestRequestCancelPreparingLineCreatesPendingRequest(t *testing.T) {
 	repo, rid, sid, orderID, lineA, _ := newEditRepo()
 	repo.cancelLine = &domain.OrderLineForEdit{ID: lineA, OrderID: orderID, MenuItemID: repo.lines[0].MenuItemID, Status: "PREPARING", Quantity: 1}
 	outbox := &fakeOutbox{}
-	out, err := NewGuestRequestCancel(fakeTx{}, repo, outbox).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestRequestCancelRequest{OrderID: orderID, OrderItemID: lineA, Reason: "changed mind"})
+	out, err := NewGuestRequestCancel(fakeTx{}, repo, outbox, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestRequestCancelRequest{OrderID: orderID, OrderItemID: lineA, Reason: "changed mind"})
 
 	require.NoError(t, err)
 	require.NotEqual(t, uuid.Nil, out.CancelRequestID)
@@ -331,13 +329,13 @@ func TestGuestRequestCancelRejectsDuplicateAndPendingLines(t *testing.T) {
 	repo, rid, sid, orderID, lineA, _ := newEditRepo()
 	repo.cancelLine = &domain.OrderLineForEdit{ID: lineA, OrderID: orderID, MenuItemID: repo.lines[0].MenuItemID, Status: "PREPARING", Quantity: 1}
 	repo.cancelExists = true
-	_, err := NewGuestRequestCancel(fakeTx{}, repo, nil).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestRequestCancelRequest{OrderID: orderID, OrderItemID: lineA})
+	_, err := NewGuestRequestCancel(fakeTx{}, repo, nil, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestRequestCancelRequest{OrderID: orderID, OrderItemID: lineA})
 	require.True(t, apperr.Is(err, apperr.CodeConflict))
 	require.Nil(t, repo.createdCancel)
 
 	repo, rid, sid, orderID, lineA, _ = newEditRepo()
 	repo.cancelLine = &domain.OrderLineForEdit{ID: lineA, OrderID: orderID, MenuItemID: repo.lines[0].MenuItemID, Status: "PENDING", Quantity: 1}
-	_, err = NewGuestRequestCancel(fakeTx{}, repo, nil).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestRequestCancelRequest{OrderID: orderID, OrderItemID: lineA})
+	_, err = NewGuestRequestCancel(fakeTx{}, repo, nil, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestRequestCancelRequest{OrderID: orderID, OrderItemID: lineA})
 	require.True(t, apperr.Is(err, apperr.CodeConflict))
 	require.Nil(t, repo.createdCancel)
 }
@@ -345,7 +343,7 @@ func TestGuestRequestCancelRejectsDuplicateAndPendingLines(t *testing.T) {
 func TestGuestOrderMutationsRejectInactiveSession(t *testing.T) {
 	repo, rid, sid, orderID, lineA, _ := newEditRepo()
 	repo.session.Status = "AWAITING_PAYMENT"
-	_, err := NewGuestEditOrder(fakeTx{}, repo, nil).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{
+	_, err := NewGuestEditOrder(fakeTx{}, repo, nil, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{
 		OrderID: orderID,
 		Version: 1,
 		Items:   []GuestEditOrderLineRequest{{OrderItemID: lineA, Quantity: 1}},

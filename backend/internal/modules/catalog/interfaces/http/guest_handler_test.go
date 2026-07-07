@@ -47,7 +47,7 @@ func (v fakeSessionValidator) ValidateSessionToken(context.Context, string) (aut
 func guestRouter(v auth.SessionValidator) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	repo := fakeMenuReadRepo{}
-	h := NewHandler(nil, nil, nil, nil, application.NewListCategories(repo), application.NewListMenuItems(repo), application.NewGetMenuItem(repo), application.NewListAdminMenuItems(repo), application.NewGetAdminMenuItem(repo))
+	h := NewHandler(nil, nil, nil, nil, application.NewListCategories(repo, uuid.Nil), application.NewListMenuItems(repo, uuid.Nil), application.NewGetMenuItem(repo, uuid.Nil), application.NewListAdminMenuItems(repo, uuid.Nil), application.NewGetAdminMenuItem(repo, uuid.Nil))
 	r := gin.New()
 	guestGroup := r.Group("/api/v1/guest", auth.QRSessionToken(v))
 	h.RegisterGuestRoutes(guestGroup)

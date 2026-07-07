@@ -9,34 +9,43 @@ import (
 	"restaurant-management/internal/modules/identity/application"
 	"restaurant-management/internal/platform/auth"
 	"restaurant-management/internal/platform/httpx"
-	"restaurant-management/internal/platform/tenant"
 	"restaurant-management/internal/shared/apperr"
 )
 
 type Handler struct {
-	Authenticate *application.Authenticate
-	GetSession   *application.GetSession
-	ManageUsers  *application.ManageUsers
-	ListStaff    *application.ListStaff
-	ListRoles    *application.ListRoles
+	Authenticate   *application.Authenticate
+	GetSession     *application.GetSession
+	ManageUsers    *application.ManageUsers
+	ListStaff      *application.ListStaff
+	ListRoles      *application.ListRoles
+	RefreshSession *application.RefreshSession
+	Logout         *application.Logout
+	defaultRID     uuid.UUID
 }
 
-func NewHandler(authenticate *application.Authenticate, getSession *application.GetSession, manageUsers *application.ManageUsers, listStaff *application.ListStaff, listRoles *application.ListRoles) *Handler {
+func NewHandler(authenticate *application.Authenticate, getSession *application.GetSession, manageUsers *application.ManageUsers, listStaff *application.ListStaff, listRoles *application.ListRoles, refreshSession *application.RefreshSession, logout *application.Logout, defaultRID uuid.UUID) *Handler {
 	return &Handler{
-		Authenticate: authenticate,
-		GetSession:   getSession,
-		ManageUsers:  manageUsers,
-		ListStaff:    listStaff,
-		ListRoles:    listRoles,
+		Authenticate:   authenticate,
+		GetSession:     getSession,
+		ManageUsers:    manageUsers,
+		ListStaff:      listStaff,
+		ListRoles:      listRoles,
+		RefreshSession: refreshSession,
+		Logout:         logout,
+		defaultRID:     defaultRID,
 	}
 }
 
-func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver) {
+func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver, sessionChecker auth.SessionChecker, defaultRestaurantID uuid.UUID) {
+	h.defaultRID = defaultRestaurantID
 	g := r.Group("/identity")
-	g.POST("/authenticate", h.authenticate) // public: login, no token yet
-	authenticated := g.Group("", auth.JWT(secret))
+	g.POST("/authenticate", h.authenticate)    // public: login, no token yet
+	g.POST("/refresh", h.refresh)              // public: uses refresh_token, not JWT
+
+	authenticated := g.Group("", auth.JWTSession(secret, sessionChecker))
 	authenticated.GET("/me", h.me)
-	admin := authenticated.Group("", auth.RequirePermission(resolver, auth.PermissionIdentityManage))
+	authenticated.POST("/logout", h.logout)
+	admin := authenticated.Group("", auth.RequirePermission(resolver, auth.PermissionIdentityManage, defaultRestaurantID))
 	admin.POST("/manage-users", h.manageUsers)
 	admin.GET("/users", h.listStaff)
 	admin.GET("/roles", h.listRoles)
@@ -58,17 +67,12 @@ func (h *Handler) authenticate(c *gin.Context) {
 }
 
 func (h *Handler) me(c *gin.Context) {
-	restaurantID, ok := tenant.RestaurantID(c.Request.Context())
-	if !ok {
-		httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant"))
-		return
-	}
 	userID, err := uuid.Parse(c.GetString(auth.CtxUserID))
 	if err != nil || userID == uuid.Nil {
 		httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "invalid user claim"))
 		return
 	}
-	out, err := h.GetSession.Handle(c.Request.Context(), restaurantID, userID)
+	out, err := h.GetSession.Handle(c.Request.Context(), h.defaultRID, userID)
 	if err != nil {
 		httpx.RespondError(c, err)
 		return
@@ -82,16 +86,45 @@ func (h *Handler) manageUsers(c *gin.Context) {
 		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
 		return
 	}
-	restaurantID, ok := tenant.RestaurantID(c.Request.Context())
-	if !ok {
-		httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant"))
-		return
-	}
-	req.RestaurantID = restaurantID
+	req.RestaurantID = h.defaultRID
 	if actorID, err := uuid.Parse(c.GetString(auth.CtxUserID)); err == nil {
 		req.ActorID = actorID
 	}
 	out, err := h.ManageUsers.Handle(c.Request.Context(), req)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) refresh(c *gin.Context) {
+	var req application.RefreshSessionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
+		return
+	}
+	out, err := h.RefreshSession.Handle(c.Request.Context(), req)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) logout(c *gin.Context) {
+	userID, err := uuid.Parse(c.GetString(auth.CtxUserID))
+	if err != nil {
+		httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "invalid user claim"))
+		return
+	}
+	var sessionID uuid.UUID
+	if sidStr := c.GetString(auth.CtxSessionID); sidStr != "" {
+		sessionID, _ = uuid.Parse(sidStr)
+	}
+	out, err := h.Logout.Handle(c.Request.Context(), application.LogoutRequest{
+		UserID: userID, SessionID: sessionID,
+	})
 	if err != nil {
 		httpx.RespondError(c, err)
 		return

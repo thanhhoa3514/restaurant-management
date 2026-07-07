@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"restaurant-management/internal/modules/catalog/domain"
-	"restaurant-management/internal/platform/tenant"
 	"restaurant-management/internal/shared/apperr"
 )
 
@@ -47,18 +46,18 @@ func (r *fakeReadRepo) GetItemAdmin(context.Context, uuid.UUID, uuid.UUID) (*dom
 }
 
 func catalogTenantCtx() context.Context {
-	return tenant.WithRestaurantID(context.Background(), uuid.New())
+	return context.Background()
 }
 
 func TestListCategoriesReturnsOrderedRowsAndEmpty(t *testing.T) {
 	repo := &fakeReadRepo{categories: []domain.CategoryRead{{ID: uuid.New(), Name: "A", Slug: "a", DisplayOrder: 1}}}
-	out, err := NewListCategories(repo).Handle(catalogTenantCtx())
+	out, err := NewListCategories(repo, uuid.Nil).Handle(catalogTenantCtx())
 	require.NoError(t, err)
 	require.Len(t, out, 1)
 	require.Equal(t, "A", out[0].Name)
 
 	repo = &fakeReadRepo{}
-	out, err = NewListCategories(repo).Handle(catalogTenantCtx())
+	out, err = NewListCategories(repo, uuid.Nil).Handle(catalogTenantCtx())
 	require.NoError(t, err)
 	require.Empty(t, out)
 }
@@ -67,7 +66,7 @@ func TestListMenuItemsCategoryAndVariantSummary(t *testing.T) {
 	catID := uuid.New()
 	price := int64(120000)
 	repo := &fakeReadRepo{items: []domain.MenuItemSummary{{ID: uuid.New(), CategoryID: catID, Name: "Hotpot", Slug: "hotpot", BasePriceVND: 100000, AvailabilityStatus: "OUT_OF_STOCK", IsAvailable: false, HasVariants: true, PriceFromVND: &price}}}
-	out, err := NewListMenuItems(repo).Handle(catalogTenantCtx(), ListMenuItemsRequest{CategoryID: &catID})
+	out, err := NewListMenuItems(repo, uuid.Nil).Handle(catalogTenantCtx(), ListMenuItemsRequest{CategoryID: &catID})
 	require.NoError(t, err)
 	require.Equal(t, catID, *repo.gotCatID)
 	require.Len(t, out, 1)
@@ -92,7 +91,7 @@ func TestGetMenuItemDetailAndNotFound(t *testing.T) {
 		Variants:           []domain.VariantRead{{ID: uuid.New(), Name: "Large", PriceVND: 120000, IsAvailable: true}},
 		OptionGroups:       []domain.OptionGroupRead{{ID: groupID, Name: "Spice", SelectionType: "SINGLE", IsRequired: true, MinSelections: 1, MaxSelections: &max, Options: []domain.OptionRead{{ID: uuid.New(), Name: "Extra spicy", PriceDeltaVND: 0}}}},
 	}}
-	out, err := NewGetMenuItem(repo).Handle(catalogTenantCtx(), GetMenuItemRequest{ItemID: itemID})
+	out, err := NewGetMenuItem(repo, uuid.Nil).Handle(catalogTenantCtx(), GetMenuItemRequest{ItemID: itemID})
 	require.NoError(t, err)
 	require.Len(t, out.Variants, 1)
 	require.Len(t, out.OptionGroups, 1)
@@ -101,7 +100,7 @@ func TestGetMenuItemDetailAndNotFound(t *testing.T) {
 	require.Len(t, out.OptionGroups[0].Options, 1)
 
 	repo = &fakeReadRepo{err: apperr.New(apperr.CodeNotFound, "menu item not found")}
-	_, err = NewGetMenuItem(repo).Handle(catalogTenantCtx(), GetMenuItemRequest{ItemID: itemID})
+	_, err = NewGetMenuItem(repo, uuid.Nil).Handle(catalogTenantCtx(), GetMenuItemRequest{ItemID: itemID})
 	require.True(t, apperr.Is(err, apperr.CodeNotFound))
 }
 
@@ -114,7 +113,7 @@ func TestListAdminMenuItemsIncludesAdminFieldsAndHiddenRows(t *testing.T) {
 		HasVariants: true, PriceFromVND: &price, Status: "DRAFT", IsFeatured: true,
 		Station: "HOTPOT", DisplayOrder: 7, Version: 3,
 	}}}
-	out, err := NewListAdminMenuItems(repo).Handle(catalogTenantCtx(), ListMenuItemsRequest{CategoryID: &catID})
+	out, err := NewListAdminMenuItems(repo, uuid.Nil).Handle(catalogTenantCtx(), ListMenuItemsRequest{CategoryID: &catID})
 	require.NoError(t, err)
 	require.Equal(t, catID, *repo.gotCatID)
 	require.Len(t, out, 1)
@@ -138,7 +137,7 @@ func TestGetAdminMenuItemIncludesEditableFields(t *testing.T) {
 		Variants:     []domain.VariantRead{{ID: uuid.New(), Name: "Large", PriceVND: 120000}},
 		OptionGroups: []domain.OptionGroupRead{{ID: uuid.New(), Name: "Spice", SelectionType: "SINGLE", MaxSelections: &max}},
 	}}
-	out, err := NewGetAdminMenuItem(repo).Handle(catalogTenantCtx(), GetMenuItemRequest{ItemID: itemID})
+	out, err := NewGetAdminMenuItem(repo, uuid.Nil).Handle(catalogTenantCtx(), GetMenuItemRequest{ItemID: itemID})
 	require.NoError(t, err)
 	require.Equal(t, itemID, out.ID)
 	require.Equal(t, "ARCHIVED", out.Status)

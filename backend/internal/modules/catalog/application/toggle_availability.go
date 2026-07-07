@@ -7,18 +7,18 @@ import (
 	"github.com/google/uuid"
 
 	"restaurant-management/internal/modules/catalog/domain"
-	"restaurant-management/internal/platform/tenant"
 	"restaurant-management/internal/shared/apperr"
 )
 
 type ToggleAvailability struct {
-	tx     TxRunner
-	repo   domain.MenuRepository
-	outbox domain.OutboxWriter
+	tx                 TxRunner
+	repo               domain.MenuRepository
+	outbox             domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
 }
 
-func NewToggleAvailability(tx TxRunner, repo domain.MenuRepository, outbox domain.OutboxWriter) *ToggleAvailability {
-	return &ToggleAvailability{tx: tx, repo: repo, outbox: outbox}
+func NewToggleAvailability(tx TxRunner, repo domain.MenuRepository, outbox domain.OutboxWriter, defaultRestaurantID uuid.UUID) *ToggleAvailability {
+	return &ToggleAvailability{tx: tx, repo: repo, outbox: outbox, defaultRestaurantID: defaultRestaurantID}
 }
 func (s *ToggleAvailability) Handle(ctx context.Context, in ToggleAvailabilityRequest) (MenuItemCommandResponse, error) {
 	var out MenuItemCommandResponse
@@ -38,19 +38,15 @@ func (s *ToggleAvailability) Handle(ctx context.Context, in ToggleAvailabilityRe
 	if err := validateCommandMetadata(in.CommandMetadata); err != nil {
 		return out, err
 	}
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return out, err
-	}
-	err = s.tx.Run(ctx, func(ctx context.Context) error {
-		oldItem, err := s.repo.GetItemForUpdate(ctx, restaurantID, in.ID)
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
+		oldItem, err := s.repo.GetItemForUpdate(ctx, s.defaultRestaurantID, in.ID)
 		if err != nil {
 			return err
 		}
 		if oldItem.Version != in.Version {
 			return apperr.New(apperr.CodeConflict, "menu item was modified, reload")
 		}
-		updated, err := s.repo.ToggleAvailability(ctx, restaurantID, domain.MenuItemToggle{
+		updated, err := s.repo.ToggleAvailability(ctx, s.defaultRestaurantID, domain.MenuItemToggle{
 			ID:                 in.ID,
 			IsAvailable:        in.IsAvailable,
 			AvailabilityStatus: in.AvailabilityStatus,
@@ -60,10 +56,10 @@ func (s *ToggleAvailability) Handle(ctx context.Context, in ToggleAvailabilityRe
 		if err != nil {
 			return err
 		}
-		if err := writeAudit(ctx, s.repo, restaurantID, in.CommandMetadata, "catalog.item_availability_toggled", updated.ID, itemAuditValues(*oldItem), itemAuditValues(updated)); err != nil {
+		if err := writeAudit(ctx, s.repo, s.defaultRestaurantID, in.CommandMetadata, "catalog.item_availability_toggled", updated.ID, itemAuditValues(*oldItem), itemAuditValues(updated)); err != nil {
 			return err
 		}
-		if err := writeItemEvent(ctx, s.outbox, restaurantID, in.CommandMetadata, "catalog.item_availability_toggled", updated); err != nil {
+		if err := writeItemEvent(ctx, s.outbox, s.defaultRestaurantID, in.CommandMetadata, "catalog.item_availability_toggled", updated); err != nil {
 			return err
 		}
 		out = commandResponse(updated)

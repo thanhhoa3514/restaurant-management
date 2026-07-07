@@ -6,8 +6,6 @@ import (
 	"github.com/google/uuid"
 
 	"restaurant-management/internal/modules/catalog/domain"
-	"restaurant-management/internal/platform/tenant"
-	"restaurant-management/internal/shared/apperr"
 )
 
 type GetMenuItemRequest struct {
@@ -84,36 +82,36 @@ type OptionDTO struct {
 	DisplayOrder  int       `json:"display_order"`
 }
 
-type GetMenuItem struct{ repo domain.MenuReadRepository }
+type GetMenuItem struct {
+	repo               domain.MenuReadRepository
+	defaultRestaurantID uuid.UUID
+}
 
-func NewGetMenuItem(repo domain.MenuReadRepository) *GetMenuItem { return &GetMenuItem{repo: repo} }
+func NewGetMenuItem(repo domain.MenuReadRepository, defaultRestaurantID uuid.UUID) *GetMenuItem {
+	return &GetMenuItem{repo: repo, defaultRestaurantID: defaultRestaurantID}
+}
 
 func (s *GetMenuItem) Handle(ctx context.Context, req GetMenuItemRequest) (MenuItemDetailDTO, error) {
 	var out MenuItemDetailDTO
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return out, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant")
-	}
-	item, err := s.repo.GetItem(ctx, restaurantID, req.ItemID)
+	item, err := s.repo.GetItem(ctx, s.defaultRestaurantID, req.ItemID)
 	if err != nil {
 		return out, err
 	}
 	return toDetailDTO(*item), nil
 }
 
-type GetAdminMenuItem struct{ repo domain.MenuReadRepository }
+type GetAdminMenuItem struct {
+	repo               domain.MenuReadRepository
+	defaultRestaurantID uuid.UUID
+}
 
-func NewGetAdminMenuItem(repo domain.MenuReadRepository) *GetAdminMenuItem {
-	return &GetAdminMenuItem{repo: repo}
+func NewGetAdminMenuItem(repo domain.MenuReadRepository, defaultRestaurantID uuid.UUID) *GetAdminMenuItem {
+	return &GetAdminMenuItem{repo: repo, defaultRestaurantID: defaultRestaurantID}
 }
 
 func (s *GetAdminMenuItem) Handle(ctx context.Context, req GetMenuItemRequest) (AdminMenuItemDetailDTO, error) {
 	var out AdminMenuItemDetailDTO
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return out, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant")
-	}
-	item, err := s.repo.GetItemAdmin(ctx, restaurantID, req.ItemID)
+	item, err := s.repo.GetItemAdmin(ctx, s.defaultRestaurantID, req.ItemID)
 	if err != nil {
 		return out, err
 	}

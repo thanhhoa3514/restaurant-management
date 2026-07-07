@@ -7,7 +7,6 @@ import (
 
 	"restaurant-management/internal/modules/billing/domain"
 	"restaurant-management/internal/platform/outbox"
-	"restaurant-management/internal/platform/tenant"
 	"restaurant-management/internal/shared/apperr"
 )
 
@@ -18,13 +17,14 @@ type VoidInvoiceRequest struct {
 }
 
 type VoidInvoice struct {
-	tx     TxRunner
-	repo   domain.InvoiceRepository
-	outbox domain.OutboxWriter
+	tx                 TxRunner
+	repo               domain.InvoiceRepository
+	outbox             domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
 }
 
-func NewVoidInvoice(tx TxRunner, repo domain.InvoiceRepository, outbox domain.OutboxWriter) *VoidInvoice {
-	return &VoidInvoice{tx: tx, repo: repo, outbox: outbox}
+func NewVoidInvoice(tx TxRunner, repo domain.InvoiceRepository, outbox domain.OutboxWriter, defaultRestaurantID uuid.UUID) *VoidInvoice {
+	return &VoidInvoice{tx: tx, repo: repo, outbox: outbox, defaultRestaurantID: defaultRestaurantID}
 }
 
 func (s *VoidInvoice) Handle(ctx context.Context, in VoidInvoiceRequest) (InvoiceResponse, error) {
@@ -32,18 +32,14 @@ func (s *VoidInvoice) Handle(ctx context.Context, in VoidInvoiceRequest) (Invoic
 	if in.InvoiceID == uuidNil {
 		return out, apperr.New(apperr.CodeInvalid, "invoice_id is required")
 	}
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return out, err
-	}
-	err = s.tx.Run(ctx, func(ctx context.Context) error {
-		invoice, err := s.repo.VoidInvoice(ctx, restaurantID, in.InvoiceID, in.VoidReason)
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
+		invoice, err := s.repo.VoidInvoice(ctx, s.defaultRestaurantID, in.InvoiceID, in.VoidReason)
 		if err != nil {
 			return err
 		}
 		if s.outbox != nil {
 			if err := s.outbox.Write(ctx, outbox.WriteEvent{
-				RestaurantID:  restaurantID,
+				RestaurantID:  s.defaultRestaurantID,
 				AggregateType: "invoice",
 				AggregateID:   invoice.ID,
 				EventType:     "billing.invoice_voided",

@@ -10,7 +10,6 @@ import (
 
 	"restaurant-management/internal/modules/catalog/domain"
 	"restaurant-management/internal/platform/outbox"
-	"restaurant-management/internal/platform/tenant"
 	"restaurant-management/internal/shared/apperr"
 )
 
@@ -116,7 +115,7 @@ func (f *fakeCatalogOutbox) Write(_ context.Context, event any) error {
 }
 
 func catalogCommandCtx(rid uuid.UUID) context.Context {
-	return tenant.WithRestaurantID(context.Background(), rid)
+	return context.Background()
 }
 
 func catalogMeta() CommandMetadata {
@@ -139,7 +138,7 @@ func TestCreateMenuItemValidatesCategoryGeneratesSlugCodeAndWritesAuditOutbox(t 
 	repo := &fakeMenuRepo{categoryOK: true}
 	ob := &fakeCatalogOutbox{}
 
-	out, err := NewCreateMenuItem(fakeCatalogTx{}, repo, ob).Handle(catalogCommandCtx(rid), CreateMenuItemRequest{
+	out, err := NewCreateMenuItem(fakeCatalogTx{}, repo, ob, rid).Handle(catalogCommandCtx(rid), CreateMenuItemRequest{
 		CategoryID: catID, Name: "Pho Bo", BasePriceVND: 45000, IsAvailable: true,
 		AvailabilityStatus: "available", Status: "published", Station: "general", CommandMetadata: catalogMeta(),
 	})
@@ -163,7 +162,7 @@ func TestCreateMenuItemRejectsCategoryOutsideTenant(t *testing.T) {
 	rid := uuid.New()
 	repo := &fakeMenuRepo{categoryOK: false}
 
-	_, err := NewCreateMenuItem(fakeCatalogTx{}, repo, nil).Handle(catalogCommandCtx(rid), CreateMenuItemRequest{
+	_, err := NewCreateMenuItem(fakeCatalogTx{}, repo, nil, rid).Handle(catalogCommandCtx(rid), CreateMenuItemRequest{
 		CategoryID: uuid.New(), Name: "Pho Bo", BasePriceVND: 45000, IsAvailable: true,
 		AvailabilityStatus: "AVAILABLE", Status: "PUBLISHED", CommandMetadata: catalogMeta(),
 	})
@@ -180,7 +179,7 @@ func TestUpdateMenuItemGuardsVersionAndWritesAuditOutbox(t *testing.T) {
 	repo := &fakeMenuRepo{categoryOK: true, item: item}
 	ob := &fakeCatalogOutbox{}
 
-	out, err := NewUpdateMenuItem(fakeCatalogTx{}, repo, ob).Handle(catalogCommandCtx(rid), UpdateMenuItemRequest{
+	out, err := NewUpdateMenuItem(fakeCatalogTx{}, repo, ob, rid).Handle(catalogCommandCtx(rid), UpdateMenuItemRequest{
 		ID: item.ID, CategoryID: catID, Name: "New Pho", BasePriceVND: 120,
 		IsAvailable: true, AvailabilityStatus: "AVAILABLE", Status: "PUBLISHED",
 		IsFeatured: true, Station: "HOTPOT", DisplayOrder: 3, Version: 2, CommandMetadata: catalogMeta(),
@@ -195,7 +194,7 @@ func TestUpdateMenuItemGuardsVersionAndWritesAuditOutbox(t *testing.T) {
 	require.Len(t, ob.writes, 1)
 	require.Equal(t, "catalog.item_updated", ob.writes[0].EventType)
 
-	_, err = NewUpdateMenuItem(fakeCatalogTx{}, repo, nil).Handle(catalogCommandCtx(rid), UpdateMenuItemRequest{
+	_, err = NewUpdateMenuItem(fakeCatalogTx{}, repo, nil, rid).Handle(catalogCommandCtx(rid), UpdateMenuItemRequest{
 		ID: item.ID, CategoryID: catID, Name: "Stale", BasePriceVND: 120,
 		IsAvailable: true, AvailabilityStatus: "AVAILABLE", Status: "PUBLISHED", Version: 2, CommandMetadata: catalogMeta(),
 	})
@@ -209,7 +208,7 @@ func TestDeleteMenuItemSoftDeletesWithVersionAndAuditOutbox(t *testing.T) {
 	repo := &fakeMenuRepo{item: item}
 	ob := &fakeCatalogOutbox{}
 
-	out, err := NewDeleteMenuItem(fakeCatalogTx{}, repo, ob).Handle(catalogCommandCtx(rid), DeleteMenuItemRequest{ID: item.ID, Version: 2, CommandMetadata: catalogMeta()})
+	out, err := NewDeleteMenuItem(fakeCatalogTx{}, repo, ob, rid).Handle(catalogCommandCtx(rid), DeleteMenuItemRequest{ID: item.ID, Version: 2, CommandMetadata: catalogMeta()})
 
 	require.NoError(t, err)
 	require.True(t, repo.deleted)
@@ -219,7 +218,7 @@ func TestDeleteMenuItemSoftDeletesWithVersionAndAuditOutbox(t *testing.T) {
 	require.Len(t, ob.writes, 1)
 	require.Equal(t, "catalog.item_deleted", ob.writes[0].EventType)
 
-	_, err = NewDeleteMenuItem(fakeCatalogTx{}, repo, nil).Handle(catalogCommandCtx(rid), DeleteMenuItemRequest{ID: item.ID, Version: 2, CommandMetadata: catalogMeta()})
+	_, err = NewDeleteMenuItem(fakeCatalogTx{}, repo, nil, rid).Handle(catalogCommandCtx(rid), DeleteMenuItemRequest{ID: item.ID, Version: 2, CommandMetadata: catalogMeta()})
 	require.True(t, apperr.Is(err, apperr.CodeConflict))
 }
 
@@ -231,7 +230,7 @@ func TestToggleAvailabilityRequiresCurrentVersionAndKeepsPublishStatus(t *testin
 	ob := &fakeCatalogOutbox{}
 	status := "OUT_OF_STOCK"
 
-	out, err := NewToggleAvailability(fakeCatalogTx{}, repo, ob).Handle(catalogCommandCtx(rid), ToggleAvailabilityRequest{
+	out, err := NewToggleAvailability(fakeCatalogTx{}, repo, ob, rid).Handle(catalogCommandCtx(rid), ToggleAvailabilityRequest{
 		ID: item.ID, IsAvailable: false, AvailabilityStatus: &status, Version: 2, CommandMetadata: catalogMeta(),
 	})
 
@@ -247,7 +246,7 @@ func TestToggleAvailabilityRequiresCurrentVersionAndKeepsPublishStatus(t *testin
 	require.Len(t, ob.writes, 1)
 	require.Equal(t, "catalog.item_availability_toggled", ob.writes[0].EventType)
 
-	_, err = NewToggleAvailability(fakeCatalogTx{}, repo, nil).Handle(catalogCommandCtx(rid), ToggleAvailabilityRequest{
+	_, err = NewToggleAvailability(fakeCatalogTx{}, repo, nil, rid).Handle(catalogCommandCtx(rid), ToggleAvailabilityRequest{
 		ID: item.ID, IsAvailable: true, Version: 2, CommandMetadata: catalogMeta(),
 	})
 	require.True(t, apperr.Is(err, apperr.CodeConflict))

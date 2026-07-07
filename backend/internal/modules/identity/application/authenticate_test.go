@@ -27,12 +27,6 @@ type fakeRepo struct {
 	failures     int
 }
 
-func (r *fakeRepo) ResolveRestaurantIDByCode(context.Context, string) (uuid.UUID, error) {
-	if r.resolveErr != nil {
-		return uuid.Nil, r.resolveErr
-	}
-	return r.restaurantID, nil
-}
 func (r *fakeRepo) FindByUsername(context.Context, uuid.UUID, string) (*domain.User, error) {
 	if r.findErr != nil {
 		return nil, r.findErr
@@ -56,7 +50,7 @@ func (r *fakeRepo) RecordLoginFailure(context.Context, uuid.UUID, uuid.UUID) err
 	r.failures++
 	return nil
 }
-func (r *fakeRepo) ListStaff(context.Context, uuid.UUID) ([]domain.StaffUser, error) {
+func (r *fakeRepo) ListStaff(context.Context) ([]domain.StaffUser, error) {
 	return nil, nil
 }
 func (r *fakeRepo) ListRoles(context.Context) ([]domain.RoleInfo, error) { return nil, nil }
@@ -75,6 +69,19 @@ func (r *fakeRepo) SetUserStatus(context.Context, uuid.UUID, uuid.UUID, domain.U
 func (r *fakeRepo) SetUserPassword(context.Context, uuid.UUID, uuid.UUID, string) error {
 	return nil
 }
+
+type fakeSessionRepo struct{}
+
+func (fakeSessionRepo) CreateSession(context.Context, *domain.UserSession) error   { return nil }
+func (fakeSessionRepo) FindSessionByRefreshTokenHash(context.Context, string) (*domain.UserSession, error) {
+	return nil, nil
+}
+func (fakeSessionRepo) FindSessionByID(context.Context, uuid.UUID) (*domain.UserSession, error) {
+	return nil, nil
+}
+func (fakeSessionRepo) RevokeSession(context.Context, uuid.UUID) error { return nil }
+func (fakeSessionRepo) RevokeUserSessions(context.Context, uuid.UUID, uuid.UUID) error { return nil }
+func (fakeSessionRepo) IsSessionValid(context.Context, uuid.UUID) (bool, error) { return false, nil }
 
 func hashedPassword(t *testing.T, password string) string {
 	t.Helper()
@@ -98,7 +105,7 @@ func activeUser(t *testing.T, rid uuid.UUID) *domain.User {
 
 func TestAuthenticateHandle(t *testing.T) {
 	rid := uuid.New()
-	baseReq := AuthenticateRequest{RestaurantCode: "DEMO", Username: "manager", Password: "secret"}
+	baseReq := AuthenticateRequest{Username: "manager", Password: "secret"}
 
 	cases := []struct {
 		name          string
@@ -110,7 +117,7 @@ func TestAuthenticateHandle(t *testing.T) {
 	}{
 		{name: "success", wantSuccesses: 1},
 		{name: "unknown user", mutate: func(r *fakeRepo) { r.findErr = apperr.New(apperr.CodeNotFound, "missing") }, wantCode: apperr.CodeUnauthorized},
-		{name: "wrong password", req: AuthenticateRequest{RestaurantCode: "DEMO", Username: "manager", Password: "wrong"}, wantCode: apperr.CodeUnauthorized, wantFailures: 1},
+		{name: "wrong password", req: AuthenticateRequest{Username: "manager", Password: "wrong"}, wantCode: apperr.CodeUnauthorized, wantFailures: 1},
 		{name: "inactive", mutate: func(r *fakeRepo) { r.user.Status = domain.UserStatusInactive }, wantCode: apperr.CodeForbidden},
 		{name: "locked status", mutate: func(r *fakeRepo) { r.user.Status = domain.UserStatusLocked }, wantCode: apperr.CodeForbidden},
 		{name: "locked until future", mutate: func(r *fakeRepo) { until := time.Now().Add(time.Hour); r.user.LockedUntil = &until }, wantCode: apperr.CodeForbidden},
@@ -131,7 +138,7 @@ func TestAuthenticateHandle(t *testing.T) {
 			if tc.mutate != nil {
 				tc.mutate(repo)
 			}
-			svc := NewAuthenticate(fakeTx{}, repo, nil, "test-secret", time.Hour)
+			svc := NewAuthenticate(fakeTx{}, repo, &fakeSessionRepo{}, nil, "test-secret", time.Hour, rid)
 			out, err := svc.Handle(context.Background(), req)
 			if tc.wantCode != "" {
 				require.Error(t, err)
@@ -141,7 +148,6 @@ func TestAuthenticateHandle(t *testing.T) {
 				require.NoError(t, err)
 				require.NotEmpty(t, out.Token)
 				require.Equal(t, repo.user.ID, out.UserID)
-				require.Equal(t, rid, out.RestaurantID)
 				require.Equal(t, "MANAGER", out.Role)
 				require.Equal(t, repo.user.FullName, out.Name)
 				require.Equal(t, repo.permissions, out.Permissions)
@@ -153,7 +159,7 @@ func TestAuthenticateHandle(t *testing.T) {
 }
 
 func TestAuthenticateMissingFieldsInvalid(t *testing.T) {
-	svc := NewAuthenticate(fakeTx{}, &fakeRepo{}, nil, "test-secret", time.Hour)
-	_, err := svc.Handle(context.Background(), AuthenticateRequest{RestaurantCode: "DEMO", Username: "manager"})
+	svc := NewAuthenticate(fakeTx{}, &fakeRepo{}, nil, nil, "test-secret", time.Hour, uuid.New())
+	_, err := svc.Handle(context.Background(), AuthenticateRequest{Username: "manager"})
 	require.True(t, apperr.Is(err, apperr.CodeInvalid))
 }

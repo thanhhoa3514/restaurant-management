@@ -16,9 +16,12 @@ import (
 	"restaurant-management/internal/shared/apperr"
 )
 
-type Repository struct{ pool *pgxpool.Pool }
+type Repository struct {
+	pool      *pgxpool.Pool
+	defaultRID uuid.UUID
+}
 
-func NewRepository(pool *pgxpool.Pool) *Repository { return &Repository{pool: pool} }
+func NewRepository(pool *pgxpool.Pool, defaultRID uuid.UUID) *Repository { return &Repository{pool: pool, defaultRID: defaultRID} }
 
 func (r *Repository) q(ctx context.Context) pg.Querier { return pg.QuerierFromContext(ctx, r.pool) }
 

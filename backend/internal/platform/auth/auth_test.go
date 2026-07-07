@@ -10,8 +10,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-
-	"restaurant-management/internal/platform/tenant"
 )
 
 const testSecret = "test-secret"
@@ -46,75 +44,57 @@ func TestJWTMissingToken(t *testing.T) {
 }
 
 func TestJWTInvalidSignature(t *testing.T) {
-	tok := signHS256(t, Claims{RestaurantID: uuid.NewString()})
+	tok := signHS256(t, Claims{UserID: uuid.NewString()})
 	w := runJWT("other-secret", "Bearer "+tok, ok)
 	require.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
 func TestJWTRejectsNonHMACAlg(t *testing.T) {
-	// alg "none" must be refused by WithValidMethods([]string{"HS256"}).
-	tok := jwt.NewWithClaims(jwt.SigningMethodNone, Claims{RestaurantID: uuid.NewString()})
+	tok := jwt.NewWithClaims(jwt.SigningMethodNone, Claims{UserID: uuid.NewString()})
 	s, err := tok.SignedString(jwt.UnsafeAllowNoneSignatureType)
 	require.NoError(t, err)
 	w := runJWT(testSecret, "Bearer "+s, ok)
 	require.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
-func TestJWTInvalidRestaurantClaim(t *testing.T) {
-	tok := signHS256(t, Claims{UserID: "u1", Role: "MANAGER", RestaurantID: "not-a-uuid"})
-	w := runJWT(testSecret, "Bearer "+tok, ok)
-	require.Equal(t, http.StatusUnauthorized, w.Code)
-}
-
 func TestJWTValidPopulatesContext(t *testing.T) {
-	rid := uuid.New()
 	tok := signHS256(t, Claims{
 		UserID:           "user-1",
 		Role:             "MANAGER",
-		RestaurantID:     rid.String(),
 		RegisteredClaims: jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour))},
 	})
 
 	var gotRole, gotUser string
-	var gotTenant uuid.UUID
-	var tenantOK bool
 	w := runJWT(testSecret, "Bearer "+tok, func(c *gin.Context) {
 		gotRole = c.GetString(CtxRole)
 		gotUser = c.GetString(CtxUserID)
-		gotTenant, tenantOK = tenant.RestaurantID(c.Request.Context())
 		c.Status(http.StatusOK)
 	})
 
 	require.Equal(t, http.StatusOK, w.Code)
 	require.Equal(t, "MANAGER", gotRole)
 	require.Equal(t, "user-1", gotUser)
-	require.True(t, tenantOK, "tenant must reach usecase via request context")
-	require.Equal(t, rid, gotTenant)
 }
 
 func TestIssueRoundTripsThroughJWT(t *testing.T) {
-	rid := uuid.New()
 	uid := uuid.New()
-	tok, err := Issue(testSecret, Claims{UserID: uid.String(), RestaurantID: rid.String(), Role: "MANAGER"}, time.Hour)
+	tok, err := Issue(testSecret, Claims{UserID: uid.String(), Role: "MANAGER"}, time.Hour)
 	require.NoError(t, err)
 
 	var gotRole, gotUser string
-	var gotTenant uuid.UUID
 	w := runJWT(testSecret, "Bearer "+tok, func(c *gin.Context) {
 		gotRole = c.GetString(CtxRole)
 		gotUser = c.GetString(CtxUserID)
-		gotTenant, _ = tenant.RestaurantID(c.Request.Context())
 		c.Status(http.StatusOK)
 	})
 
 	require.Equal(t, http.StatusOK, w.Code)
 	require.Equal(t, "MANAGER", gotRole)
 	require.Equal(t, uid.String(), gotUser)
-	require.Equal(t, rid, gotTenant)
 }
 
 func TestIssueExpiredTokenRejected(t *testing.T) {
-	tok, err := Issue(testSecret, Claims{UserID: uuid.NewString(), RestaurantID: uuid.NewString(), Role: "MANAGER"}, -time.Hour)
+	tok, err := Issue(testSecret, Claims{UserID: uuid.NewString(), Role: "MANAGER"}, -time.Hour)
 	require.NoError(t, err)
 	w := runJWT(testSecret, "Bearer "+tok, ok)
 	require.Equal(t, http.StatusUnauthorized, w.Code)

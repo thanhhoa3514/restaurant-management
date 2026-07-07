@@ -9,7 +9,6 @@ import (
 
 	"restaurant-management/internal/modules/ordering/domain"
 	"restaurant-management/internal/platform/outbox"
-	"restaurant-management/internal/platform/tenant"
 	"restaurant-management/internal/shared/apperr"
 )
 
@@ -132,15 +131,17 @@ type StaffReadRepository interface {
 	UpdateOrderItemStatus(ctx context.Context, restaurantID, itemID uuid.UUID, status string, actorID *uuid.UUID, actorRole string) (UpdateItemStatusResponse, error)
 }
 
-type StaffTables struct{ repo StaffReadRepository }
+type StaffTables struct {
+	repo                StaffReadRepository
+	defaultRestaurantID uuid.UUID
+}
 
-func NewStaffTables(repo StaffReadRepository) *StaffTables { return &StaffTables{repo: repo} }
+func NewStaffTables(repo StaffReadRepository, defaultRestaurantID uuid.UUID) *StaffTables {
+	return &StaffTables{repo: repo, defaultRestaurantID: defaultRestaurantID}
+}
 
 func (s *StaffTables) Handle(ctx context.Context) (StaffTablesResponse, error) {
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return StaffTablesResponse{}, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant")
-	}
+	restaurantID := s.defaultRestaurantID
 	tables, err := s.repo.ListStaffTables(ctx, restaurantID)
 	if err != nil {
 		return StaffTablesResponse{}, err
@@ -148,15 +149,17 @@ func (s *StaffTables) Handle(ctx context.Context) (StaffTablesResponse, error) {
 	return StaffTablesResponse{Tables: tables}, nil
 }
 
-type KitchenQueue struct{ repo StaffReadRepository }
+type KitchenQueue struct {
+	repo                StaffReadRepository
+	defaultRestaurantID uuid.UUID
+}
 
-func NewKitchenQueue(repo StaffReadRepository) *KitchenQueue { return &KitchenQueue{repo: repo} }
+func NewKitchenQueue(repo StaffReadRepository, defaultRestaurantID uuid.UUID) *KitchenQueue {
+	return &KitchenQueue{repo: repo, defaultRestaurantID: defaultRestaurantID}
+}
 
 func (s *KitchenQueue) Handle(ctx context.Context) (KitchenQueueResponse, error) {
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return KitchenQueueResponse{}, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant")
-	}
+	restaurantID := s.defaultRestaurantID
 	tickets, err := s.repo.ListKitchenQueue(ctx, restaurantID)
 	if err != nil {
 		return KitchenQueueResponse{}, err
@@ -165,22 +168,20 @@ func (s *KitchenQueue) Handle(ctx context.Context) (KitchenQueueResponse, error)
 }
 
 type StaffRequestBill struct {
-	tx     TxRunner
-	repo   StaffReadRepository
-	outbox domain.OutboxWriter
+	tx                  TxRunner
+	repo                StaffReadRepository
+	outbox              domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
 }
 
-func NewStaffRequestBill(tx TxRunner, repo StaffReadRepository, outboxWriter domain.OutboxWriter) *StaffRequestBill {
-	return &StaffRequestBill{tx: tx, repo: repo, outbox: outboxWriter}
+func NewStaffRequestBill(tx TxRunner, repo StaffReadRepository, outboxWriter domain.OutboxWriter, defaultRestaurantID uuid.UUID) *StaffRequestBill {
+	return &StaffRequestBill{tx: tx, repo: repo, outbox: outboxWriter, defaultRestaurantID: defaultRestaurantID}
 }
 
 func (s *StaffRequestBill) Handle(ctx context.Context, sessionID uuid.UUID) (RequestBillResponse, error) {
 	var out RequestBillResponse
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return out, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant")
-	}
-	err = s.tx.Run(ctx, func(ctx context.Context) error {
+	restaurantID := s.defaultRestaurantID
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
 		var err error
 		out, err = s.repo.RequestBill(ctx, restaurantID, sessionID)
 		if err != nil {
@@ -195,13 +196,14 @@ func (s *StaffRequestBill) Handle(ctx context.Context, sessionID uuid.UUID) (Req
 }
 
 type StaffUpdateItemStatus struct {
-	tx     TxRunner
-	repo   StaffReadRepository
-	outbox domain.OutboxWriter
+	tx                  TxRunner
+	repo                StaffReadRepository
+	outbox              domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
 }
 
-func NewStaffUpdateItemStatus(tx TxRunner, repo StaffReadRepository, outboxWriter domain.OutboxWriter) *StaffUpdateItemStatus {
-	return &StaffUpdateItemStatus{tx: tx, repo: repo, outbox: outboxWriter}
+func NewStaffUpdateItemStatus(tx TxRunner, repo StaffReadRepository, outboxWriter domain.OutboxWriter, defaultRestaurantID uuid.UUID) *StaffUpdateItemStatus {
+	return &StaffUpdateItemStatus{tx: tx, repo: repo, outbox: outboxWriter, defaultRestaurantID: defaultRestaurantID}
 }
 
 func (s *StaffUpdateItemStatus) Handle(ctx context.Context, itemID uuid.UUID, status string, actorID *uuid.UUID, actorRole string) (UpdateItemStatusResponse, error) {
@@ -210,11 +212,8 @@ func (s *StaffUpdateItemStatus) Handle(ctx context.Context, itemID uuid.UUID, st
 	if !validStaffStatus(next) {
 		return out, apperr.New(apperr.CodeInvalid, "invalid item status")
 	}
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return out, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant")
-	}
-	err = s.tx.Run(ctx, func(ctx context.Context) error {
+	restaurantID := s.defaultRestaurantID
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
 		var err error
 		out, err = s.repo.UpdateOrderItemStatus(ctx, restaurantID, itemID, next, actorID, actorRole)
 		if err != nil {

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -14,7 +15,7 @@ func init() { gin.SetMode(gin.TestMode) }
 
 func TestAuthenticateMalformedJSONReturns400(t *testing.T) {
 	r := gin.New()
-	h := NewHandler(nil, nil, nil, nil, nil)
+	h := NewHandler(nil, nil, nil, nil, nil, nil, nil, uuid.Nil)
 	r.POST("/identity/authenticate", h.authenticate)
 
 	req := httptest.NewRequest(http.MethodPost, "/identity/authenticate", strings.NewReader(`{"restaurant_code":`))

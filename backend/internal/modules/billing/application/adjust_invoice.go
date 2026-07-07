@@ -4,20 +4,22 @@ import (
 	"context"
 	"strings"
 
+	"github.com/google/uuid"
+
 	"restaurant-management/internal/modules/billing/domain"
 	"restaurant-management/internal/platform/outbox"
-	"restaurant-management/internal/platform/tenant"
 	"restaurant-management/internal/shared/apperr"
 )
 
 type AdjustInvoice struct {
-	tx     TxRunner
-	repo   domain.InvoiceRepository
-	outbox domain.OutboxWriter
+	tx                 TxRunner
+	repo               domain.InvoiceRepository
+	outbox             domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
 }
 
-func NewAdjustInvoice(tx TxRunner, repo domain.InvoiceRepository, outbox domain.OutboxWriter) *AdjustInvoice {
-	return &AdjustInvoice{tx: tx, repo: repo, outbox: outbox}
+func NewAdjustInvoice(tx TxRunner, repo domain.InvoiceRepository, outbox domain.OutboxWriter, defaultRestaurantID uuid.UUID) *AdjustInvoice {
+	return &AdjustInvoice{tx: tx, repo: repo, outbox: outbox, defaultRestaurantID: defaultRestaurantID}
 }
 
 func (s *AdjustInvoice) Handle(ctx context.Context, in AdjustInvoiceRequest) (InvoiceResponse, error) {
@@ -34,18 +36,14 @@ func (s *AdjustInvoice) Handle(ctx context.Context, in AdjustInvoiceRequest) (In
 	} else if !validDiscountReason(reason) {
 		return out, apperr.New(apperr.CodeInvalid, "discount_reason must be promo, regular, or complaint")
 	}
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return out, err
-	}
-	err = s.tx.Run(ctx, func(ctx context.Context) error {
-		invoice, err := s.repo.AdjustInvoice(ctx, restaurantID, in.InvoiceID, in.DiscountAmountVND, reason)
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
+		invoice, err := s.repo.AdjustInvoice(ctx, s.defaultRestaurantID, in.InvoiceID, in.DiscountAmountVND, reason)
 		if err != nil {
 			return err
 		}
 		if s.outbox != nil {
 			if err := s.outbox.Write(ctx, outbox.WriteEvent{
-				RestaurantID:  restaurantID,
+				RestaurantID:  s.defaultRestaurantID,
 				AggregateType: "invoice",
 				AggregateID:   invoice.ID,
 				EventType:     "billing.invoice_adjusted",

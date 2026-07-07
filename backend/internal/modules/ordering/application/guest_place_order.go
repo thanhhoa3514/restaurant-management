@@ -12,7 +12,6 @@ import (
 	"restaurant-management/internal/modules/ordering/domain"
 	"restaurant-management/internal/platform/guest"
 	"restaurant-management/internal/platform/outbox"
-	"restaurant-management/internal/platform/tenant"
 	"restaurant-management/internal/shared/apperr"
 )
 
@@ -79,13 +78,14 @@ func (e *CartValidationError) AppError() *apperr.Error {
 }
 
 type GuestPlaceOrder struct {
-	tx     TxRunner
-	repo   domain.OrderPlacementRepository
-	outbox domain.OutboxWriter
+	tx                  TxRunner
+	repo                domain.OrderPlacementRepository
+	outbox              domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
 }
 
-func NewGuestPlaceOrder(tx TxRunner, repo domain.OrderPlacementRepository, outbox domain.OutboxWriter) *GuestPlaceOrder {
-	return &GuestPlaceOrder{tx: tx, repo: repo, outbox: outbox}
+func NewGuestPlaceOrder(tx TxRunner, repo domain.OrderPlacementRepository, outbox domain.OutboxWriter, defaultRestaurantID uuid.UUID) *GuestPlaceOrder {
+	return &GuestPlaceOrder{tx: tx, repo: repo, outbox: outbox, defaultRestaurantID: defaultRestaurantID}
 }
 
 func (s *GuestPlaceOrder) Handle(ctx context.Context, req GuestPlaceOrderRequest) (GuestPlaceOrderResponse, error) {
@@ -93,16 +93,13 @@ func (s *GuestPlaceOrder) Handle(ctx context.Context, req GuestPlaceOrderRequest
 	if len(req.Items) == 0 {
 		return out, apperr.New(apperr.CodeInvalid, "order must contain at least one item")
 	}
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return out, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant")
-	}
+	restaurantID := s.defaultRestaurantID
 	gs, ok := guest.SessionFromContext(ctx)
 	if !ok || gs.SessionID == uuid.Nil {
 		return out, apperr.New(apperr.CodeUnauthorized, "missing guest session")
 	}
 
-	err = s.tx.Run(ctx, func(ctx context.Context) error {
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
 		session, err := s.repo.LockSessionForOrder(ctx, restaurantID, gs.SessionID)
 		if err != nil {
 			return err

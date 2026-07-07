@@ -25,8 +25,8 @@ func NewHandler(buildInvoice *application.BuildInvoice, adjustInvoice *applicati
 	return &Handler{BuildInvoice: buildInvoice, AdjustInvoice: adjustInvoice, ProcessPayment: processPayment, HandleWebhook: handleWebhook, VoidInvoice: voidInvoice, appEnv: appEnv}
 }
 
-func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver) {
-	g := r.Group("/billing", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionBillingProcess))
+func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver, defaultRestaurantID uuid.UUID) {
+	g := r.Group("/billing", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionBillingProcess, defaultRestaurantID))
 	g.POST("/build-invoice", h.buildInvoice)
 	g.POST("/adjust-invoice", h.adjustInvoice)
 	g.POST("/void-invoice", h.voidInvoice)

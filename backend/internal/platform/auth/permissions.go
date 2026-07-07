@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 
 	"restaurant-management/internal/platform/httpx"
-	"restaurant-management/internal/platform/tenant"
 	"restaurant-management/internal/shared/apperr"
 )
 
@@ -27,21 +26,15 @@ type PermissionResolver interface {
 	ResolvePermissionCodes(ctx context.Context, restaurantID, userID uuid.UUID) ([]string, error)
 }
 
-func RequirePermission(resolver PermissionResolver, code string) gin.HandlerFunc {
+func RequirePermission(resolver PermissionResolver, code string, defaultRestaurantID uuid.UUID) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		restaurantID, ok := tenant.RestaurantID(c.Request.Context())
-		if !ok {
-			httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant"))
-			c.Abort()
-			return
-		}
 		userID, err := uuid.Parse(c.GetString(CtxUserID))
 		if err != nil || userID == uuid.Nil {
 			httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "invalid user claim"))
 			c.Abort()
 			return
 		}
-		codes, err := resolver.ResolvePermissionCodes(c.Request.Context(), restaurantID, userID)
+		codes, err := resolver.ResolvePermissionCodes(c.Request.Context(), defaultRestaurantID, userID)
 		if err != nil {
 			httpx.RespondError(c, err)
 			c.Abort()

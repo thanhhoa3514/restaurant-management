@@ -27,15 +27,15 @@ func (r fakePermissionResolver) ResolvePermissionCodes(context.Context, uuid.UUI
 func adminCatalogRouter(resolver auth.PermissionResolver, secret string) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	repo := fakeMenuReadRepo{}
-	h := NewHandler(nil, nil, nil, nil, application.NewListCategories(repo), application.NewListMenuItems(repo), application.NewGetMenuItem(repo), application.NewListAdminMenuItems(repo), application.NewGetAdminMenuItem(repo))
+	h := NewHandler(nil, nil, nil, nil, application.NewListCategories(repo, uuid.Nil), application.NewListMenuItems(repo, uuid.Nil), application.NewGetMenuItem(repo, uuid.Nil), application.NewListAdminMenuItems(repo, uuid.Nil), application.NewGetAdminMenuItem(repo, uuid.Nil))
 	r := gin.New()
-	h.RegisterRoutes(r.Group("/api/v1"), secret, resolver)
+	h.RegisterRoutes(r.Group("/api/v1"), secret, resolver, uuid.Nil)
 	return r
 }
 
 func adminToken(t *testing.T, secret string, restaurantID, userID uuid.UUID) string {
 	t.Helper()
-	token, err := auth.Issue(secret, auth.Claims{UserID: userID.String(), RestaurantID: restaurantID.String(), Role: "MANAGER"}, time.Hour)
+	token, err := auth.Issue(secret, auth.Claims{UserID: userID.String(), Role: "MANAGER"}, time.Hour)
 	require.NoError(t, err)
 	return token
 }

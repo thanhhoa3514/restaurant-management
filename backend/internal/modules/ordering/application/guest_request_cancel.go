@@ -23,18 +23,19 @@ type GuestRequestCancelResponse struct {
 }
 
 type GuestRequestCancel struct {
-	tx     TxRunner
-	repo   domain.OrderEditRepository
-	outbox domain.OutboxWriter
+	tx                  TxRunner
+	repo                domain.OrderEditRepository
+	outbox              domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
 }
 
-func NewGuestRequestCancel(tx TxRunner, repo domain.OrderEditRepository, outbox domain.OutboxWriter) *GuestRequestCancel {
-	return &GuestRequestCancel{tx: tx, repo: repo, outbox: outbox}
+func NewGuestRequestCancel(tx TxRunner, repo domain.OrderEditRepository, outbox domain.OutboxWriter, defaultRestaurantID uuid.UUID) *GuestRequestCancel {
+	return &GuestRequestCancel{tx: tx, repo: repo, outbox: outbox, defaultRestaurantID: defaultRestaurantID}
 }
 
 func (s *GuestRequestCancel) Handle(ctx context.Context, req GuestRequestCancelRequest) (GuestRequestCancelResponse, error) {
 	var out GuestRequestCancelResponse
-	restaurantID, gs, err := orderingContext(ctx)
+	restaurantID, gs, err := orderingContext(ctx, s.defaultRestaurantID)
 	if err != nil {
 		return out, err
 	}

@@ -9,8 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-
-	"restaurant-management/internal/platform/tenant"
 )
 
 type fakePermissionResolver struct {
@@ -31,10 +29,9 @@ func TestRequirePermission(t *testing.T) {
 			"/x",
 			func(c *gin.Context) {
 				c.Set(CtxUserID, userID.String())
-				c.Request = c.Request.WithContext(tenant.WithRestaurantID(c.Request.Context(), restaurantID))
 				c.Next()
 			},
-			RequirePermission(fakePermissionResolver{codes: codes}, PermissionBillingProcess),
+			RequirePermission(fakePermissionResolver{codes: codes}, PermissionBillingProcess, restaurantID),
 			ok,
 		)
 		req := httptest.NewRequest(http.MethodGet, "/x", nil)

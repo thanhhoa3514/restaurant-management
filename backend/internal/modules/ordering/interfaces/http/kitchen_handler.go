@@ -12,8 +12,8 @@ import (
 	"restaurant-management/internal/shared/apperr"
 )
 
-func (h *Handler) RegisterKitchenRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver) {
-	g := r.Group("/kitchen", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionKitchenOperate))
+func (h *Handler) RegisterKitchenRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver, defaultRestaurantID uuid.UUID) {
+	g := r.Group("/kitchen", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionKitchenOperate, defaultRestaurantID))
 	g.GET("/queue", h.kitchenQueue)
 	g.PATCH("/items/:id/status", h.kitchenUpdateItemStatus)
 }

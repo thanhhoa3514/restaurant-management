@@ -6,8 +6,6 @@ import (
 	"github.com/google/uuid"
 
 	"restaurant-management/internal/modules/catalog/domain"
-	"restaurant-management/internal/platform/tenant"
-	"restaurant-management/internal/shared/apperr"
 )
 
 type ListMenuItemsRequest struct {
@@ -47,24 +45,26 @@ type AdminMenuItemSummaryDTO struct {
 	Version            int       `json:"version"`
 }
 
-type ListMenuItems struct{ repo domain.MenuReadRepository }
-
-func NewListMenuItems(repo domain.MenuReadRepository) *ListMenuItems {
-	return &ListMenuItems{repo: repo}
+type ListMenuItems struct {
+	repo               domain.MenuReadRepository
+	defaultRestaurantID uuid.UUID
 }
 
-type ListAdminMenuItems struct{ repo domain.MenuReadRepository }
+func NewListMenuItems(repo domain.MenuReadRepository, defaultRestaurantID uuid.UUID) *ListMenuItems {
+	return &ListMenuItems{repo: repo, defaultRestaurantID: defaultRestaurantID}
+}
 
-func NewListAdminMenuItems(repo domain.MenuReadRepository) *ListAdminMenuItems {
-	return &ListAdminMenuItems{repo: repo}
+type ListAdminMenuItems struct {
+	repo               domain.MenuReadRepository
+	defaultRestaurantID uuid.UUID
+}
+
+func NewListAdminMenuItems(repo domain.MenuReadRepository, defaultRestaurantID uuid.UUID) *ListAdminMenuItems {
+	return &ListAdminMenuItems{repo: repo, defaultRestaurantID: defaultRestaurantID}
 }
 
 func (s *ListAdminMenuItems) Handle(ctx context.Context, req ListMenuItemsRequest) ([]AdminMenuItemSummaryDTO, error) {
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return nil, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant")
-	}
-	rows, err := s.repo.ListItemsAdmin(ctx, restaurantID, req.CategoryID)
+	rows, err := s.repo.ListItemsAdmin(ctx, s.defaultRestaurantID, req.CategoryID)
 	if err != nil {
 		return nil, err
 	}
@@ -76,11 +76,7 @@ func (s *ListAdminMenuItems) Handle(ctx context.Context, req ListMenuItemsReques
 }
 
 func (s *ListMenuItems) Handle(ctx context.Context, req ListMenuItemsRequest) ([]MenuItemSummaryDTO, error) {
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return nil, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant")
-	}
-	rows, err := s.repo.ListItems(ctx, restaurantID, req.CategoryID)
+	rows, err := s.repo.ListItems(ctx, s.defaultRestaurantID, req.CategoryID)
 	if err != nil {
 		return nil, err
 	}

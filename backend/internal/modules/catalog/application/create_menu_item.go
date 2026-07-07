@@ -6,18 +6,18 @@ import (
 	"github.com/google/uuid"
 
 	"restaurant-management/internal/modules/catalog/domain"
-	"restaurant-management/internal/platform/tenant"
 	"restaurant-management/internal/shared/apperr"
 )
 
 type CreateMenuItem struct {
-	tx     TxRunner
-	repo   domain.MenuRepository
-	outbox domain.OutboxWriter
+	tx                 TxRunner
+	repo               domain.MenuRepository
+	outbox             domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
 }
 
-func NewCreateMenuItem(tx TxRunner, repo domain.MenuRepository, outbox domain.OutboxWriter) *CreateMenuItem {
-	return &CreateMenuItem{tx: tx, repo: repo, outbox: outbox}
+func NewCreateMenuItem(tx TxRunner, repo domain.MenuRepository, outbox domain.OutboxWriter, defaultRestaurantID uuid.UUID) *CreateMenuItem {
+	return &CreateMenuItem{tx: tx, repo: repo, outbox: outbox, defaultRestaurantID: defaultRestaurantID}
 }
 func (s *CreateMenuItem) Handle(ctx context.Context, in CreateMenuItemRequest) (MenuItemCommandResponse, error) {
 	var out MenuItemCommandResponse
@@ -28,12 +28,8 @@ func (s *CreateMenuItem) Handle(ctx context.Context, in CreateMenuItemRequest) (
 	if err := validateMenuItemFields(in.CategoryID, in.Name, in.BasePriceVND, in.AvailabilityStatus, in.Status, in.Station); err != nil {
 		return out, err
 	}
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return out, err
-	}
-	err = s.tx.Run(ctx, func(ctx context.Context) error {
-		ok, err := s.repo.CategoryExists(ctx, restaurantID, in.CategoryID)
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
+		ok, err := s.repo.CategoryExists(ctx, s.defaultRestaurantID, in.CategoryID)
 		if err != nil {
 			return err
 		}
@@ -41,14 +37,14 @@ func (s *CreateMenuItem) Handle(ctx context.Context, in CreateMenuItemRequest) (
 			return domainCategoryNotFound()
 		}
 		itemID := uuid.New()
-		created, err := s.repo.CreateItem(ctx, restaurantID, buildWrite(in, itemID))
+		created, err := s.repo.CreateItem(ctx, s.defaultRestaurantID, buildWrite(in, itemID))
 		if err != nil {
 			return err
 		}
-		if err := writeAudit(ctx, s.repo, restaurantID, in.CommandMetadata, "catalog.item_created", created.ID, nil, itemAuditValues(created)); err != nil {
+		if err := writeAudit(ctx, s.repo, s.defaultRestaurantID, in.CommandMetadata, "catalog.item_created", created.ID, nil, itemAuditValues(created)); err != nil {
 			return err
 		}
-		if err := writeItemEvent(ctx, s.outbox, restaurantID, in.CommandMetadata, "catalog.item_created", created); err != nil {
+		if err := writeItemEvent(ctx, s.outbox, s.defaultRestaurantID, in.CommandMetadata, "catalog.item_created", created); err != nil {
 			return err
 		}
 		out = commandResponse(created)

@@ -7,8 +7,6 @@ import (
 	"github.com/google/uuid"
 
 	"restaurant-management/internal/modules/identity/domain"
-	"restaurant-management/internal/platform/tenant"
-	"restaurant-management/internal/shared/apperr"
 )
 
 type StaffUserDTO struct {
@@ -33,11 +31,8 @@ type ListStaff struct{ repo domain.UserRepository }
 func NewListStaff(repo domain.UserRepository) *ListStaff { return &ListStaff{repo: repo} }
 
 func (s *ListStaff) Handle(ctx context.Context) ([]StaffUserDTO, error) {
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return nil, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant")
-	}
-	rows, err := s.repo.ListStaff(ctx, restaurantID)
+
+	rows, err := s.repo.ListStaff(ctx)
 	if err != nil {
 		return nil, err
 	}

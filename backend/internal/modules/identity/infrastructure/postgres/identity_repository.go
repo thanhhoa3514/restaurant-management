@@ -15,28 +15,15 @@ import (
 	"restaurant-management/internal/shared/apperr"
 )
 
-type Repository struct{ pool *pgxpool.Pool }
+type Repository struct {
+	pool      *pgxpool.Pool
+	defaultRID uuid.UUID
+}
 
-func NewRepository(pool *pgxpool.Pool) *Repository { return &Repository{pool: pool} }
+func NewRepository(pool *pgxpool.Pool, defaultRID uuid.UUID) *Repository { return &Repository{pool: pool, defaultRID: defaultRID} }
 
 func (r *Repository) q(ctx context.Context) pg.Querier {
 	return pg.QuerierFromContext(ctx, r.pool)
-}
-
-func (r *Repository) ResolveRestaurantIDByCode(ctx context.Context, code string) (uuid.UUID, error) {
-	var id uuid.UUID
-	err := r.q(ctx).QueryRow(ctx, `
-		SELECT id
-		FROM restaurants
-		WHERE code = $1 AND status = 'ACTIVE' AND deleted_at IS NULL
-	`, strings.ToUpper(strings.TrimSpace(code))).Scan(&id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return uuid.Nil, apperr.New(apperr.CodeNotFound, "restaurant not found")
-	}
-	if err != nil {
-		return uuid.Nil, err
-	}
-	return id, nil
 }
 
 func (r *Repository) FindByUsername(ctx context.Context, restaurantID uuid.UUID, username string) (*domain.User, error) {
@@ -150,7 +137,7 @@ func (r *Repository) RecordLoginSuccess(ctx context.Context, restaurantID, userI
 	return nil
 }
 
-func (r *Repository) ListStaff(ctx context.Context, restaurantID uuid.UUID) ([]domain.StaffUser, error) {
+func (r *Repository) ListStaff(ctx context.Context) ([]domain.StaffUser, error) {
 	rows, err := r.q(ctx).Query(ctx, `
 		SELECT u.id, u.username, u.full_name, u.email, u.phone,
 		       COALESCE(ro.name, ''), u.status, u.last_login_at, u.created_at
@@ -158,7 +145,7 @@ func (r *Repository) ListStaff(ctx context.Context, restaurantID uuid.UUID) ([]d
 		LEFT JOIN roles ro ON ro.id = u.role_id AND ro.deleted_at IS NULL
 		WHERE u.restaurant_id = $1 AND u.deleted_at IS NULL
 		ORDER BY u.created_at, u.username
-	`, restaurantID)
+	`, r.defaultRID)
 	if err != nil {
 		return nil, err
 	}

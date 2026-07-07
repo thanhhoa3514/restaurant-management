@@ -9,7 +9,6 @@ import (
 
 	"restaurant-management/internal/modules/ordering/domain"
 	"restaurant-management/internal/platform/guest"
-	"restaurant-management/internal/platform/tenant"
 	"restaurant-management/internal/shared/apperr"
 )
 
@@ -89,7 +88,7 @@ type fakeOutbox struct{ writes int }
 func (f *fakeOutbox) Write(context.Context, any) error { f.writes++; return nil }
 
 func guestOrderCtx(rid, sid, tableID uuid.UUID) context.Context {
-	ctx := tenant.WithRestaurantID(context.Background(), rid)
+	ctx := context.Background()
 	return guest.WithSession(ctx, guest.Session{SessionID: sid, TableID: tableID})
 }
 
@@ -110,7 +109,7 @@ func TestGuestPlaceOrderMoneyMathAndInitial(t *testing.T) {
 	repo.options[optA] = &domain.OptionForOrder{ID: optA, GroupID: groupID, Name: "A", GroupName: "Toppings", PriceDeltaVND: 5000}
 	repo.options[optB] = &domain.OptionForOrder{ID: optB, GroupID: groupID, Name: "B", GroupName: "Toppings", PriceDeltaVND: 3000}
 	outbox := &fakeOutbox{}
-	svc := NewGuestPlaceOrder(fakeTx{}, repo, outbox)
+	svc := NewGuestPlaceOrder(fakeTx{}, repo, outbox, rid)
 
 	out, err := svc.Handle(guestOrderCtx(rid, sid, uuid.New()), GuestPlaceOrderRequest{Items: []GuestOrderLineRequest{{MenuItemID: itemID, Quantity: 3, Options: []GuestOrderOptionRequest{{OptionID: optA, Quantity: 2}, {OptionID: optB, Quantity: 1}}}}})
 
@@ -131,8 +130,9 @@ func TestGuestPlaceOrderAdditionalAndTickets(t *testing.T) {
 	repo.prior = true
 	second := uuid.New()
 	repo.items[second] = &domain.MenuItemForOrder{ID: second, Code: "M2", Name: "Drink", BasePriceVND: 20000, Station: "", Orderable: true}
-	svc := NewGuestPlaceOrder(fakeTx{}, repo, nil)
+	svc := NewGuestPlaceOrder(fakeTx{}, repo, nil, rid)
 	out, err := svc.Handle(guestOrderCtx(rid, sid, uuid.New()), GuestPlaceOrderRequest{Items: []GuestOrderLineRequest{{MenuItemID: itemID, Quantity: 1}, {MenuItemID: second, Quantity: 1}}})
+
 	require.NoError(t, err)
 	require.Equal(t, "ADDITIONAL", out.OrderType)
 	require.Len(t, repo.created.KitchenTickets, 2)
@@ -150,8 +150,9 @@ func TestGuestPlaceOrderValidationErrors(t *testing.T) {
 	groupID := uuid.New()
 	repo.items[requiredItem] = &domain.MenuItemForOrder{ID: requiredItem, Name: "Req", BasePriceVND: 1, Orderable: true}
 	repo.groups[requiredItem] = []domain.OptionGroupRule{{ID: groupID, Name: "Sauce", SelectionType: "SINGLE", IsRequired: true, MinSelections: 1}}
-	svc := NewGuestPlaceOrder(fakeTx{}, repo, nil)
+	svc := NewGuestPlaceOrder(fakeTx{}, repo, nil, rid)
 	_, err := svc.Handle(guestOrderCtx(rid, sid, uuid.New()), GuestPlaceOrderRequest{Items: []GuestOrderLineRequest{{MenuItemID: itemID, Quantity: 1}, {MenuItemID: badQty, Quantity: 0}, {MenuItemID: requiredItem, Quantity: 1}}})
+
 	require.Error(t, err)
 	var verr *CartValidationError
 	require.ErrorAs(t, err, &verr)
@@ -173,7 +174,7 @@ func TestGuestPlaceOrderOptionCountOutOfRange(t *testing.T) {
 	repo.groups[itemID] = []domain.OptionGroupRule{{ID: groupID, Name: "Sauce", SelectionType: "MULTIPLE", MaxSelections: ptrInt(1)}}
 	repo.options[optA] = &domain.OptionForOrder{ID: optA, GroupID: groupID, Name: "A", GroupName: "Sauce"}
 	repo.options[optB] = &domain.OptionForOrder{ID: optB, GroupID: groupID, Name: "B", GroupName: "Sauce"}
-	_, err := NewGuestPlaceOrder(fakeTx{}, repo, nil).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestPlaceOrderRequest{Items: []GuestOrderLineRequest{{MenuItemID: itemID, Quantity: 1, Options: []GuestOrderOptionRequest{{OptionID: optA, Quantity: 1}, {OptionID: optB, Quantity: 1}}}}})
+	_, err := NewGuestPlaceOrder(fakeTx{}, repo, nil, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestPlaceOrderRequest{Items: []GuestOrderLineRequest{{MenuItemID: itemID, Quantity: 1, Options: []GuestOrderOptionRequest{{OptionID: optA, Quantity: 1}, {OptionID: optB, Quantity: 1}}}}})
 	var verr *CartValidationError
 	require.ErrorAs(t, err, &verr)
 	require.Equal(t, "option_count_out_of_range", verr.LineErrors[0].Reason)
@@ -182,14 +183,14 @@ func TestGuestPlaceOrderOptionCountOutOfRange(t *testing.T) {
 func TestGuestPlaceOrderSessionGateRejectsNonActive(t *testing.T) {
 	repo, rid, sid, itemID := baseRepo()
 	repo.session.Status = "AWAITING_PAYMENT"
-	_, err := NewGuestPlaceOrder(fakeTx{}, repo, nil).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestPlaceOrderRequest{Items: []GuestOrderLineRequest{{MenuItemID: itemID, Quantity: 1}}})
+	_, err := NewGuestPlaceOrder(fakeTx{}, repo, nil, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestPlaceOrderRequest{Items: []GuestOrderLineRequest{{MenuItemID: itemID, Quantity: 1}}})
 	require.True(t, apperr.Is(err, apperr.CodeConflict))
 	require.Nil(t, repo.created)
 }
 
 func TestGuestPlaceOrderEmptyItemsInvalid(t *testing.T) {
 	repo, rid, sid, _ := baseRepo()
-	_, err := NewGuestPlaceOrder(fakeTx{}, repo, nil).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestPlaceOrderRequest{})
+	_, err := NewGuestPlaceOrder(fakeTx{}, repo, nil, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestPlaceOrderRequest{})
 	require.True(t, apperr.Is(err, apperr.CodeInvalid))
 }
 
@@ -198,14 +199,14 @@ func TestGuestViewOrders(t *testing.T) {
 	sid := uuid.New()
 	itemID := uuid.New()
 	repo := &fakeOrderRepo{view: domain.OrderView{SessionTotalVND: 123, Orders: []domain.OrderRead{{ID: uuid.New(), OrderNumber: "ORD", OrderType: "INITIAL", Status: "SUBMITTED", Items: []domain.OrderItemRead{{ID: uuid.New(), MenuItemID: itemID, NameSnapshot: "N", Quantity: 1, UnitPriceVND: 123, TotalAmountVND: 123, Status: "PENDING", Station: "GENERAL", Options: []domain.OrderOptionRead{{NameSnapshot: "O", PriceDeltaSnapshotVND: 3, Quantity: 1}}}}}}}}
-	out, err := NewGuestViewOrders(repo).Handle(guestOrderCtx(rid, sid, uuid.New()))
+	out, err := NewGuestViewOrders(repo, rid).Handle(guestOrderCtx(rid, sid, uuid.New()))
 	require.NoError(t, err)
 	require.EqualValues(t, 123, out.SessionTotalVND)
 	require.Len(t, out.Orders, 1)
 	require.Len(t, out.Orders[0].Items[0].Options, 1)
 
 	repo.view = domain.OrderView{Orders: []domain.OrderRead{}, SessionTotalVND: 0}
-	out, err = NewGuestViewOrders(repo).Handle(guestOrderCtx(rid, sid, uuid.New()))
+	out, err = NewGuestViewOrders(repo, rid).Handle(guestOrderCtx(rid, sid, uuid.New()))
 	require.NoError(t, err)
 	require.Empty(t, out.Orders)
 }

@@ -216,22 +216,14 @@ func (d *Dispatcher) processPendingEvents(ctx context.Context) error {
 			var payload any
 			if len(e.Payload) > 0 {
 				if err := json.Unmarshal(e.Payload, &payload); err != nil {
-					// A payload that won't decode is a poison message: keep it
-					// failing so it retries and eventually goes DEAD, rather
-					// than silently dropping it.
+
 					if markErr := d.markFailed(ctx, e.ID, err); markErr != nil {
 						return fmt.Errorf("decode event payload failed: %w; mark failed: %v", err, markErr)
 					}
 					continue
 				}
 			}
-			// Realtime delivery is best-effort. By this point the event row is
-			// already persisted for durable consumers and any durable side
-			// effect (e.g. the qr-scan audit above) has committed. A hub
-			// broadcast failure must NOT requeue the event — re-running the
-			// loop would re-execute those non-idempotent side effects (e.g. a
-			// duplicate audit_logs row). Clients that miss a live event recover
-			// on their next refetch.
+
 			if err := d.hub.Broadcast(
 				realtime.Topic{RestaurantID: e.RestaurantID},
 				realtime.Event{Type: e.Type, Payload: payload},

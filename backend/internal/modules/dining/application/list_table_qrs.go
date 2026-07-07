@@ -6,8 +6,6 @@ import (
 	"github.com/google/uuid"
 
 	"restaurant-management/internal/modules/dining/domain"
-	"restaurant-management/internal/platform/tenant"
-	"restaurant-management/internal/shared/apperr"
 )
 
 type TableQRDTO struct {
@@ -23,17 +21,17 @@ type TableQRDTO struct {
 	HasActiveQR bool       `json:"has_active_qr"`
 }
 
-type ListTableQRs struct{ repo domain.DiningRepository }
+type ListTableQRs struct {
+	repo                domain.DiningRepository
+	defaultRestaurantID uuid.UUID
+}
 
-func NewListTableQRs(repo domain.DiningRepository) *ListTableQRs {
-	return &ListTableQRs{repo: repo}
+func NewListTableQRs(repo domain.DiningRepository, defaultRestaurantID uuid.UUID) *ListTableQRs {
+	return &ListTableQRs{repo: repo, defaultRestaurantID: defaultRestaurantID}
 }
 
 func (s *ListTableQRs) Handle(ctx context.Context) ([]TableQRDTO, error) {
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return nil, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant")
-	}
+	restaurantID := s.defaultRestaurantID
 	rows, err := s.repo.ListTablesWithActiveQR(ctx, restaurantID)
 	if err != nil {
 		return nil, err
