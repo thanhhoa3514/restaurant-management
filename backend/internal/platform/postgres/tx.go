@@ -12,9 +12,6 @@ type txKey struct{}
 
 type TxManager struct{ pool *pgxpool.Pool }
 
-// Querier is the common SQL surface shared by pgxpool.Pool and pgx.Tx.
-// Repositories should use QuerierFromContext so writes participate in tx.Run
-// when a transaction is active, falling back to the pool for standalone reads.
 type Querier interface {
 	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)

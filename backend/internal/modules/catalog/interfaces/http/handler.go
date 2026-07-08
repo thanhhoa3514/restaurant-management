@@ -42,25 +42,24 @@ func NewHandler(createMenuItem *application.CreateMenuItem, updateMenuItem *appl
 	}
 }
 
-func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver, defaultRestaurantID uuid.UUID) {
-	g := r.Group("/catalog", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionCatalogManage, defaultRestaurantID))
+func (h *Handler) RegisterStaffRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver, defaultRestaurantID uuid.UUID) {
+	g := r.Group("/menu", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionCatalogManage, defaultRestaurantID))
 	g.GET("/categories", h.listCategories)
 	g.GET("/items", h.listAdminMenuItems)
 	g.GET("/items/:id", h.getAdminMenuItem)
-	g.POST("/create-menu-item", h.createMenuItem)
-	g.POST("/update-menu-item", h.updateMenuItem)
-	g.POST("/delete-menu-item", h.deleteMenuItem)
-	g.POST("/toggle-availability", h.toggleAvailability)
+	g.POST("/items", h.createMenuItem)
+	g.PUT("/items/:id", h.updateMenuItem)
+	g.DELETE("/items/:id", h.deleteMenuItem)
+	g.PATCH("/items/:id/availability", h.toggleAvailability)
 	if h.Storage != nil {
 		g.POST("/upload/presign", h.presignUpload)
 	}
 }
 
-func (h *Handler) RegisterGuestRoutes(g *gin.RouterGroup) {
-	menu := g.Group("/menu")
-	menu.GET("/categories", h.listCategories)
-	menu.GET("/items", h.listMenuItems)
-	menu.GET("/items/:id", h.getMenuItem)
+func (h *Handler) RegisterGuestRoutes(r *gin.RouterGroup) {
+	r.GET("/menu/categories", h.listCategories)
+	r.GET("/menu/items", h.listMenuItems)
+	r.GET("/menu/items/:id", h.getMenuItem)
 }
 
 func (h *Handler) listCategories(c *gin.Context) {
@@ -152,11 +151,17 @@ func (h *Handler) createMenuItem(c *gin.Context) {
 }
 
 func (h *Handler) updateMenuItem(c *gin.Context) {
+	itemID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid item id", err))
+		return
+	}
 	var req application.UpdateMenuItemRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
 		return
 	}
+	req.ID = itemID
 	req.CommandMetadata = commandMetadata(c)
 	out, err := h.UpdateMenuItem.Handle(c.Request.Context(), req)
 	if err != nil {
@@ -167,11 +172,17 @@ func (h *Handler) updateMenuItem(c *gin.Context) {
 }
 
 func (h *Handler) deleteMenuItem(c *gin.Context) {
+	itemID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid item id", err))
+		return
+	}
 	var req application.DeleteMenuItemRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
 		return
 	}
+	req.ID = itemID
 	req.CommandMetadata = commandMetadata(c)
 	out, err := h.DeleteMenuItem.Handle(c.Request.Context(), req)
 	if err != nil {
@@ -182,11 +193,17 @@ func (h *Handler) deleteMenuItem(c *gin.Context) {
 }
 
 func (h *Handler) toggleAvailability(c *gin.Context) {
+	itemID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid item id", err))
+		return
+	}
 	var req application.ToggleAvailabilityRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
 		return
 	}
+	req.ID = itemID
 	req.CommandMetadata = commandMetadata(c)
 	out, err := h.ToggleAvailability.Handle(c.Request.Context(), req)
 	if err != nil {

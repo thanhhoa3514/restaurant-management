@@ -45,18 +45,18 @@ func NewHandler(guestPlaceOrder *application.GuestPlaceOrder,
 
 func (h *Handler) RegisterStaffRoutes(r *gin.RouterGroup, secret string,
 	resolver auth.PermissionResolver, defaultRestaurantID uuid.UUID) {
-	g := r.Group("/staff", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionOrderingStaff, defaultRestaurantID))
+	g := r.Group("", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionOrderingStaff, defaultRestaurantID))
 	g.GET("/tables", h.staffTables)
 	g.POST("/sessions/:sessionId/request-bill", h.staffRequestBill)
 	g.PATCH("/order-items/:itemId/status", h.staffUpdateItemStatus)
 }
 
-func (h *Handler) RegisterGuestRoutes(g *gin.RouterGroup) {
-	g.POST("/orders", h.guestPlaceOrder)
-	g.GET("/orders", h.guestViewOrders)
-	g.PUT("/orders/:orderId/items", h.guestEditOrder)
-	g.DELETE("/orders/:orderId", h.guestCancelOrder)
-	g.POST("/orders/:orderId/cancel-requests", h.guestRequestCancel)
+func (h *Handler) RegisterGuestRoutes(r *gin.RouterGroup) {
+	r.POST("/orders", h.guestPlaceOrder)
+	r.GET("/orders", h.guestViewOrders)
+	r.PUT("/orders/:orderId/items", h.guestEditOrder)
+	r.DELETE("/orders/:orderId", h.guestCancelOrder)
+	r.POST("/orders/:orderId/cancel-requests", h.guestRequestCancel)
 }
 
 func (h *Handler) guestPlaceOrder(c *gin.Context) {

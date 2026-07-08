@@ -25,12 +25,12 @@ func NewHandler(buildInvoice *application.BuildInvoice, adjustInvoice *applicati
 	return &Handler{BuildInvoice: buildInvoice, AdjustInvoice: adjustInvoice, ProcessPayment: processPayment, HandleWebhook: handleWebhook, VoidInvoice: voidInvoice, appEnv: appEnv}
 }
 
-func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver, defaultRestaurantID uuid.UUID) {
-	g := r.Group("/billing", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionBillingProcess, defaultRestaurantID))
-	g.POST("/build-invoice", h.buildInvoice)
-	g.POST("/adjust-invoice", h.adjustInvoice)
-	g.POST("/void-invoice", h.voidInvoice)
-	g.POST("/process-payment", h.processPayment)
+func (h *Handler) RegisterStaffRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver, defaultRestaurantID uuid.UUID) {
+	g := r.Group("/invoices", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionBillingProcess, defaultRestaurantID))
+	g.POST("", h.buildInvoice)
+	g.POST("/:id/adjust", h.adjustInvoice)
+	g.POST("/:id/void", h.voidInvoice)
+	g.POST("/:id/pay", h.processPayment)
 }
 
 func (h *Handler) buildInvoice(c *gin.Context) {
@@ -48,11 +48,17 @@ func (h *Handler) buildInvoice(c *gin.Context) {
 }
 
 func (h *Handler) adjustInvoice(c *gin.Context) {
+	invoiceID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid invoice id", err))
+		return
+	}
 	var req application.AdjustInvoiceRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
 		return
 	}
+	req.InvoiceID = invoiceID
 	out, err := h.AdjustInvoice.Handle(c.Request.Context(), req)
 	if err != nil {
 		httpx.RespondError(c, err)
@@ -62,11 +68,17 @@ func (h *Handler) adjustInvoice(c *gin.Context) {
 }
 
 func (h *Handler) voidInvoice(c *gin.Context) {
+	invoiceID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid invoice id", err))
+		return
+	}
 	var req application.VoidInvoiceRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
 		return
 	}
+	req.InvoiceID = invoiceID
 	actorID, err := uuid.Parse(c.GetString(auth.CtxUserID))
 	if err != nil || actorID == uuid.Nil {
 		httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "invalid user claim"))
@@ -82,11 +94,17 @@ func (h *Handler) voidInvoice(c *gin.Context) {
 }
 
 func (h *Handler) processPayment(c *gin.Context) {
+	invoiceID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid invoice id", err))
+		return
+	}
 	var req application.ProcessPaymentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
 		return
 	}
+	req.InvoiceID = invoiceID
 	actorID, err := uuid.Parse(c.GetString(auth.CtxUserID))
 	if err != nil || actorID == uuid.Nil {
 		httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "invalid user claim"))

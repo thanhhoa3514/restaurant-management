@@ -17,7 +17,6 @@ import (
 	"restaurant-management/internal/shared/apperr"
 )
 
-// gin context keys for the authenticated identity.
 const (
 	CtxUserID    = "user_id"
 	CtxRole      = "role"
@@ -38,9 +37,6 @@ type SessionChecker interface {
 	IsSessionValid(ctx context.Context, sessionID uuid.UUID) (bool, error)
 }
 
-// GenerateRefreshToken produces a cryptographically random 32-byte token
-// and returns the raw token (to give to the client) and its SHA-256 hash
-// (to store in the database).
 func GenerateRefreshToken() (raw string, hash string, err error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
@@ -92,8 +88,12 @@ func parseClaims(c *gin.Context, secret string) *Claims {
 		return nil
 	}
 	var claims Claims
-	parsed, err := jwt.ParseWithClaims(token, &claims,
-		func(*jwt.Token) (any, error) { return []byte(secret), nil },
+	parsed, err := jwt.ParseWithClaims(
+		token,
+		&claims,
+		func(*jwt.Token) (any, error) {
+			return []byte(secret), nil
+		},
 		jwt.WithValidMethods([]string{"HS256"}),
 	)
 	if err != nil || !parsed.Valid {
@@ -125,7 +125,6 @@ func JWTSession(secret string, checker SessionChecker) gin.HandlerFunc {
 			return
 		}
 		if claims.SessionID == "" {
-			// Legacy token without session_id — skip session check.
 			c.Next()
 			return
 		}

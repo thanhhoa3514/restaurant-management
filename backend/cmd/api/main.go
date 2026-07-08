@@ -145,17 +145,19 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 		identityapp.NewLogout(sessionRepo, defaultRID),
 		defaultRID,
 	)
-	identityHandler.RegisterRoutes(api, secret, identityRepo, sessionRepo, defaultRID)
 
 	catalogRepo := catalogrepo.NewRepository(pool, defaultRID)
 	catalogHandler := cataloghttp.NewHandler(catalogapp.NewCreateMenuItem(tx, catalogRepo, outboxWriter, defaultRID), catalogapp.NewUpdateMenuItem(tx, catalogRepo, outboxWriter, defaultRID), catalogapp.NewDeleteMenuItem(tx, catalogRepo, outboxWriter, defaultRID), catalogapp.NewToggleAvailability(tx, catalogRepo, outboxWriter, defaultRID), catalogapp.NewListCategories(catalogRepo, defaultRID), catalogapp.NewListMenuItems(catalogRepo, defaultRID), catalogapp.NewGetMenuItem(catalogRepo, defaultRID), catalogapp.NewListAdminMenuItems(catalogRepo, defaultRID), catalogapp.NewGetAdminMenuItem(catalogRepo, defaultRID), s3Client)
-	catalogHandler.RegisterRoutes(api, secret, identityRepo, defaultRID)
 
 	diningRepo := diningrepo.NewRepository(pool, defaultRID)
-	diningHandler := dininghttp.NewHandler(diningapp.NewOpenSession(tx, diningRepo, outboxWriter, defaultRID), diningapp.NewJoinSession(tx, diningRepo, outboxWriter), diningapp.NewCloseSession(tx, diningRepo, outboxWriter, defaultRID), diningapp.NewManageTableQR(tx, diningRepo, outboxWriter, defaultRID), diningapp.NewListTableQRs(diningRepo, defaultRID))
-	diningHandler.RegisterRoutes(api, secret, identityRepo, defaultRID)
-	guestGroup := api.Group("/guest", auth.QRSessionToken(diningRepo))
-	catalogHandler.RegisterGuestRoutes(guestGroup)
+	diningHandler := dininghttp.NewHandler(
+		diningapp.NewOpenSession(tx, diningRepo, outboxWriter, defaultRID),
+		diningapp.NewJoinSession(tx, diningRepo, outboxWriter),
+		diningapp.NewCloseSession(tx, diningRepo, outboxWriter, defaultRID),
+		diningapp.NewManageTableQR(tx, diningRepo, outboxWriter, defaultRID),
+		diningapp.NewListTableQRs(diningRepo, defaultRID),
+		diningapp.NewListGuestTables(diningRepo, defaultRID),
+	)
 
 	orderingRepo := orderingrepo.NewRepository(pool, defaultRID)
 	orderingHandler := orderinghttp.NewHandler(
@@ -169,9 +171,6 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 		orderingapp.NewStaffUpdateItemStatus(tx, orderingRepo, outboxWriter, defaultRID),
 		orderingapp.NewKitchenQueue(orderingRepo, defaultRID),
 	)
-	orderingHandler.RegisterStaffRoutes(api, secret, identityRepo, defaultRID)
-	orderingHandler.RegisterGuestRoutes(guestGroup)
-	orderingHandler.RegisterKitchenRoutes(api, secret, identityRepo, defaultRID)
 
 	billingRepo := billingrepo.NewRepository(pool, defaultRID)
 	gateways := buildGatewayRegistry(cfg)
@@ -183,7 +182,31 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 		billingapp.NewVoidInvoice(tx, billingRepo, outboxWriter, defaultRID),
 		cfg.AppEnv,
 	)
-	billingHandler.RegisterRoutes(api, secret, identityRepo, defaultRID)
+
+	// ──────────────────────────────────────────────
+	// Customer-facing API — QR token or public
+	// ──────────────────────────────────────────────
+	customer := api.Group("/customer")
+	diningHandler.RegisterGuestRoutes(customer)                            // /customer/sessions/join, /customer/tables — public
+	catalogHandler.RegisterGuestRoutes(customer)                           // /customer/menu/* — public (browse menu before joining)
+
+	orders := api.Group("/customer", auth.QRSessionToken(diningRepo))
+	orderingHandler.RegisterGuestRoutes(orders)                            // /customer/orders/* — QR session token required
+
+	// ──────────────────────────────────────────────
+	// Restaurant staff API — JWT required
+	// ──────────────────────────────────────────────
+	restaurant := api.Group("/restaurant")
+	identityHandler.RegisterRoutes(restaurant, secret, identityRepo, sessionRepo, defaultRID)
+	catalogHandler.RegisterStaffRoutes(restaurant, secret, identityRepo, defaultRID)
+	diningHandler.RegisterStaffRoutes(restaurant, secret, identityRepo, defaultRID)
+	orderingHandler.RegisterStaffRoutes(restaurant, secret, identityRepo, defaultRID)
+	orderingHandler.RegisterKitchenRoutes(restaurant, secret, identityRepo, defaultRID)
+	billingHandler.RegisterStaffRoutes(restaurant, secret, identityRepo, defaultRID)
+
+	// ──────────────────────────────────────────────
+	// Webhooks — called by payment gateways, not by us
+	// ──────────────────────────────────────────────
 	billingHandler.RegisterWebhookRoutes(api)
 }
 

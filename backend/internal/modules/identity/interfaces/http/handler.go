@@ -38,17 +38,19 @@ func NewHandler(authenticate *application.Authenticate, getSession *application.
 
 func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver, sessionChecker auth.SessionChecker, defaultRestaurantID uuid.UUID) {
 	h.defaultRID = defaultRestaurantID
-	g := r.Group("/identity")
-	g.POST("/authenticate", h.authenticate)    // public: login, no token yet
-	g.POST("/refresh", h.refresh)              // public: uses refresh_token, not JWT
 
-	authenticated := g.Group("", auth.JWTSession(secret, sessionChecker))
-	authenticated.GET("/me", h.me)
-	authenticated.POST("/logout", h.logout)
+	authPublic := r.Group("/auth")
+	authPublic.POST("/login", h.authenticate)   // public: login, no token yet
+	authPublic.POST("/refresh", h.refresh)       // public: uses refresh_token, not JWT
+
+	authenticated := r.Group("", auth.JWTSession(secret, sessionChecker))
+	authenticated.GET("/auth/me", h.me)
+	authenticated.POST("/auth/logout", h.logout)
+
 	admin := authenticated.Group("", auth.RequirePermission(resolver, auth.PermissionIdentityManage, defaultRestaurantID))
-	admin.POST("/manage-users", h.manageUsers)
+	admin.POST("/users", h.manageUsers)
 	admin.GET("/users", h.listStaff)
-	admin.GET("/roles", h.listRoles)
+	admin.GET("/users/roles", h.listRoles)
 	admin.GET("/dashboard", h.dashboard)
 }
 

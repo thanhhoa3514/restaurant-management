@@ -44,9 +44,7 @@ func (w *bodyCaptureWriter) WriteString(s string) (int, error) {
 	return w.ResponseWriter.WriteString(s)
 }
 
-func Logger(base *slog.Logger, logResponseBody ...bool) gin.HandlerFunc {
-	captureBody := len(logResponseBody) > 0 && logResponseBody[0]
-
+func Logger(base *slog.Logger, _ ...bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		id, _ := c.Get(requestIDKey)
@@ -54,20 +52,25 @@ func Logger(base *slog.Logger, logResponseBody ...bool) gin.HandlerFunc {
 		reqLog := base.With(slog.Any("request_id", id))
 		c.Request = c.Request.WithContext(logger.WithContext(c.Request.Context(), reqLog))
 
-		if captureBody {
-			c.Writer = &bodyCaptureWriter{ResponseWriter: c.Writer}
-		}
+		c.Writer = &bodyCaptureWriter{ResponseWriter: c.Writer}
 
 		c.Next()
 
+		path := c.FullPath()
+		if path == "" {
+			path = c.Request.URL.Path
+		}
+
 		attrs := []any{
 			slog.String("method", c.Request.Method),
-			slog.String("path", c.FullPath()),
+			slog.String("path", path),
+			slog.String("url", c.Request.URL.RequestURI()),
 			slog.Int("status", c.Writer.Status()),
 			slog.Duration("latency", time.Since(start)),
 			slog.String("client_ip", c.ClientIP()),
 		}
-		if captureBody {
+
+		if status := c.Writer.Status(); status >= http.StatusBadRequest {
 			bw := c.Writer.(*bodyCaptureWriter)
 			if bw.body.Len() > 0 {
 				body := bw.body.Bytes()
@@ -77,6 +80,7 @@ func Logger(base *slog.Logger, logResponseBody ...bool) gin.HandlerFunc {
 				attrs = append(attrs, slog.String("response", string(body)))
 			}
 		}
+
 		switch status := c.Writer.Status(); {
 		case status >= http.StatusInternalServerError:
 			reqLog.Error("request failed", attrs...)

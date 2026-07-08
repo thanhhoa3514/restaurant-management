@@ -60,7 +60,7 @@ func guestOrderRouter() *gin.Engine {
 	repo := guestRouteRepo{}
 	h := NewHandler(application.NewGuestPlaceOrder(guestRouteTx{}, repo, nil, uuid.New()), application.NewGuestViewOrders(repo, uuid.New()), nil, nil, nil, nil, nil, nil, nil)
 	r := gin.New()
-	g := r.Group("/api/v1/guest", auth.QRSessionToken(routeSessionValidator{}))
+	g := r.Group("/api/v1/customer", auth.QRSessionToken(routeSessionValidator{}))
 	h.RegisterGuestRoutes(g)
 	return r
 }
@@ -71,10 +71,10 @@ func TestGuestOrderRoutesRequireSessionToken(t *testing.T) {
 		method string
 		path   string
 	}{
-		{http.MethodGet, "/api/v1/guest/orders"},
-		{http.MethodPut, "/api/v1/guest/orders/" + uuid.NewString() + "/items"},
-		{http.MethodDelete, "/api/v1/guest/orders/" + uuid.NewString()},
-		{http.MethodPost, "/api/v1/guest/orders/" + uuid.NewString() + "/cancel-requests"},
+		{http.MethodGet, "/api/v1/customer/orders"},
+		{http.MethodPut, "/api/v1/customer/orders/" + uuid.NewString() + "/items"},
+		{http.MethodDelete, "/api/v1/customer/orders/" + uuid.NewString()},
+		{http.MethodPost, "/api/v1/customer/orders/" + uuid.NewString() + "/cancel-requests"},
 	}
 	for _, tc := range cases {
 		req := httptest.NewRequest(tc.method, tc.path, nil)
@@ -86,7 +86,7 @@ func TestGuestOrderRoutesRequireSessionToken(t *testing.T) {
 
 func TestGuestOrderPostBindError400(t *testing.T) {
 	r := guestOrderRouter()
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/guest/orders", strings.NewReader(`{"items":`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/customer/orders", strings.NewReader(`{"items":`))
 	req.Header.Set("X-Session-Token", "valid")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)

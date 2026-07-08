@@ -15,30 +15,35 @@ import (
 )
 
 type Handler struct {
-	OpenSession   *application.OpenSession
-	JoinSession   *application.JoinSession
-	CloseSession  *application.CloseSession
-	ManageTableQR *application.ManageTableQR
-	ListTableQRs  *application.ListTableQRs
+	OpenSession    *application.OpenSession
+	JoinSession    *application.JoinSession
+	CloseSession   *application.CloseSession
+	ManageTableQR  *application.ManageTableQR
+	ListTableQRs   *application.ListTableQRs
+	ListGuestTables *application.ListGuestTables
 }
 
-func NewHandler(openSession *application.OpenSession, joinSession *application.JoinSession, closeSession *application.CloseSession, manageTableQR *application.ManageTableQR, listTableQRs *application.ListTableQRs) *Handler {
-	return &Handler{OpenSession: openSession, JoinSession: joinSession, CloseSession: closeSession, ManageTableQR: manageTableQR, ListTableQRs: listTableQRs}
+func NewHandler(openSession *application.OpenSession, joinSession *application.JoinSession, closeSession *application.CloseSession, manageTableQR *application.ManageTableQR, listTableQRs *application.ListTableQRs, listGuestTables *application.ListGuestTables) *Handler {
+	return &Handler{OpenSession: openSession, JoinSession: joinSession, CloseSession: closeSession, ManageTableQR: manageTableQR, ListTableQRs: listTableQRs, ListGuestTables: listGuestTables}
 }
 
-func (h *Handler) RegisterRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver, defaultRestaurantID uuid.UUID) {
-	g := r.Group("/dining")
-	g.POST("/join-session", h.joinSession) // public: QR guest entry bootstrap
-	staff := g.Group("", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionDiningServe, defaultRestaurantID))
-	staff.POST("/open-session", h.openSession)
-	cashier := g.Group("", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionDiningCashier, defaultRestaurantID))
-	cashier.POST("/close-session", h.closeSession)
+func (h *Handler) RegisterGuestRoutes(r *gin.RouterGroup) {
+	r.POST("/sessions/join", h.joinSession)  // public: QR guest entry bootstrap
+	r.GET("/tables", h.listGuestTables)       // public: table list with QR tokens
+}
+
+func (h *Handler) RegisterStaffRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver, defaultRestaurantID uuid.UUID) {
+	staff := r.Group("", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionDiningServe, defaultRestaurantID))
+	staff.POST("/sessions", h.openSession)
+
+	cashier := r.Group("", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionDiningCashier, defaultRestaurantID))
+	cashier.POST("/sessions/:id/close", h.closeSession)
 
 	// QR codes are tied to printed assets, so generate/rotate/listing is
 	// restricted to MANAGER. Rotation deactivates the prior token.
-	manager := g.Group("", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionDiningManage, defaultRestaurantID))
-	manager.GET("/table-qrs", h.listTableQRs)
-	manager.POST("/manage-table-qr", h.manageTableQR)
+	manager := r.Group("", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionDiningManage, defaultRestaurantID))
+	manager.GET("/tables/qrs", h.listTableQRs)
+	manager.POST("/tables/qrs", h.manageTableQR)
 }
 
 func (h *Handler) openSession(c *gin.Context) {
@@ -82,11 +87,17 @@ func (h *Handler) joinSession(c *gin.Context) {
 }
 
 func (h *Handler) closeSession(c *gin.Context) {
+	sessionID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid session id", err))
+		return
+	}
 	var req application.CloseSessionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
 		return
 	}
+	req.SessionID = sessionID
 	actorID, err := uuid.Parse(c.GetString(auth.CtxUserID))
 	if err != nil || actorID == uuid.Nil {
 		httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "invalid user claim"))
@@ -123,6 +134,15 @@ func (h *Handler) manageTableQR(c *gin.Context) {
 
 func (h *Handler) listTableQRs(c *gin.Context) {
 	out, err := h.ListTableQRs.Handle(c.Request.Context())
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) listGuestTables(c *gin.Context) {
+	out, err := h.ListGuestTables.Handle(c.Request.Context())
 	if err != nil {
 		httpx.RespondError(c, err)
 		return
