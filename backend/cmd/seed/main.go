@@ -7,6 +7,9 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -82,8 +85,17 @@ func demoAreaNames() []string {
 	return names
 }
 
-// Deterministic demo tokens so re-seeding keeps printed QR codes valid.
-func qrTokenFor(tableCode string) string { return "DEMO-" + tableCode }
+// randToken returns an opaque random token for a physical QR code.
+// Each seed run rotates tokens; the old active QR is deactivated first
+// (see the qr_codes insert) so the printed codes are the only valid ones.
+func randToken() string {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		panic(err) // crypto/rand failure is unrecoverable
+	}
+	return hex.EncodeToString(b)
+}
+
 func sessionTokenFor(tableCode string) string {
 	return "DEMO-SESSION-" + tableCode
 }
@@ -217,7 +229,9 @@ func main() {
 		os.Exit(1)
 	}
 	qrIDs := map[string]uuid.UUID{}
+	qrTokens := map[string]string{}
 	for _, t := range demoTables {
+		qrTokens[t.code] = randToken()
 		var id uuid.UUID
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO qr_codes (restaurant_id, table_id, token, is_active)
@@ -225,7 +239,7 @@ func main() {
 			ON CONFLICT (token) DO UPDATE
 			SET is_active = TRUE, activated_at = NOW(), deactivated_at = NULL, deactivated_reason = NULL
 			RETURNING id
-		`, restaurantID, tableIDs[t.code], qrTokenFor(t.code)).Scan(&id); err != nil {
+		`, restaurantID, tableIDs[t.code], qrTokens[t.code]).Scan(&id); err != nil {
 			log.Error("seed qr failed", slog.String("table", t.code), slog.Any("error", err))
 			os.Exit(1)
 		}
@@ -270,7 +284,7 @@ func main() {
 	}
 	fmt.Println("tables:")
 	for _, t := range demoTables {
-		line := fmt.Sprintf("- %-3s %-18s qr_token=%-9s guest: /order?t=%s", t.code, t.area, qrTokenFor(t.code), qrTokenFor(t.code))
+		line := fmt.Sprintf("- %-3s %-18s qr_token=%s guest: /order?t=%s", t.code, t.area, qrTokens[t.code], qrTokens[t.code])
 		if t.openSession {
 			line += fmt.Sprintf("  [ACTIVE session, X-Session-Token=%s]", sessionTokenFor(t.code))
 		}
@@ -294,6 +308,50 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 		}
 	}
 
+	// Demo photos, keyed by category name. Verified Unsplash CDN images
+	// (hotlink-friendly, free license). imageURL builds a sized/cropped URL;
+	// each item gets a main photo + a small gallery rotated from its pool.
+	imagePools := map[string][]string{
+		"Lẩu": {
+			"photo-1614104030967-5ca61a54247b", "photo-1677030137853-03a83b0bd630", "photo-1584509171119-9054d2d7d9a7",
+		},
+		"Món nướng": {
+			"photo-1555939594-58d7cb561ad1", "photo-1508615263227-c5d58c1e5821", "photo-1614119068601-483274e9dcb7",
+			"photo-1627947063935-55577ec3c2e1", "photo-1632158930341-46604b637a0f", "photo-1504564321107-4aa3efddb5bd",
+		},
+		"Hải sản": {
+			"photo-1559742811-822873691df8", "photo-1562158079-e4b9ed06b62d", "photo-1688084468401-4938b073aef2",
+			"photo-1514944288352-fffac99f0bdf", "photo-1723325697529-6e2679650b39", "photo-1709327515207-110f910e8913",
+		},
+		"Rau & Nấm": {
+			"photo-1641919062245-98117fd30791", "photo-1651326752381-c5bcaacb2ba0", "photo-1625940949493-91ac054804e7",
+			"photo-1625940947631-908aa92ef5e7", "photo-1651326710058-fd7acf9f68c5",
+		},
+		"Khai vị": {
+			"photo-1623653387945-2fd25214f8fc", "photo-1594254916028-742dedb72062",
+			"photo-1613764816537-a43baeb559c1", "photo-1485995768424-01c1ccc33f7a",
+		},
+		"Đồ uống": {
+			"photo-1461023058943-07fcbe16d735", "photo-1556679343-c7306c1976bc", "photo-1578314675249-a6910f80cc4e",
+			"photo-1533007716222-4b465613a984", "photo-1558122104-355edad709f6", "photo-1561641377-f7456d23aa9b",
+			"photo-1630184799082-05623dbdc7f7", "photo-1504753793650-d4a2b783c15e", "photo-1527678357412-ef45dfbd9ecc",
+		},
+		"Tráng miệng": {
+			"photo-1501443762994-82bd5dace89a", "photo-1597249536924-b226b1a1259d", "photo-1588685232180-8bb64cb4837a",
+			"photo-1438907046657-4ae137eb8c5e", "photo-1531917658462-73450543c9f0", "photo-1531240062960-4842b265a1ad",
+			"photo-1595275320712-24b6f2b0a984", "photo-1568464774940-a3de36f824a5", "photo-1594765877813-a5d04b0d8aa7",
+		},
+	}
+	// Photos are pre-uploaded to MinIO under menu/seed/<id>.jpg (see the
+	// seed-images step). Base matches S3_PUBLIC_URL so URLs resolve in dev.
+	s3Base := os.Getenv("S3_PUBLIC_URL")
+	if s3Base == "" {
+		s3Base = "http://localhost:9000/restaurant-images"
+	}
+	imageURL := func(id string) string {
+		return s3Base + "/menu/seed/" + id + ".jpg"
+	}
+
 	type category struct {
 		name, slug, description, icon string
 	}
@@ -309,10 +367,14 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 	catIDs := map[string]uuid.UUID{}
 	for i, c := range categories {
 		id := uuid.New()
+		var catImage string
+		if pool := imagePools[c.name]; len(pool) > 0 {
+			catImage = imageURL(pool[0])
+		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO categories (id, restaurant_id, name, slug, description, icon, display_order, is_active)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE)
-		`, id, restaurantID, c.name, c.slug, c.description, c.icon, i+1); err != nil {
+			INSERT INTO categories (id, restaurant_id, name, slug, description, icon, image_url, display_order, is_active)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE)
+		`, id, restaurantID, c.name, c.slug, c.description, c.icon, catImage, i+1); err != nil {
 			return err
 		}
 		catIDs[c.name] = id
@@ -354,10 +416,25 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 	for _, it := range items {
 		id := uuid.New()
 		displayOrders[it.category]++
+		// Pick a main photo + a 3-image gallery, rotated so items in the same
+		// category don't all show the same picture.
+		var mainImage string
+		var gallery any // nil → SQL NULL for the JSONB column
+		if pool := imagePools[it.category]; len(pool) > 0 {
+			idx := displayOrders[it.category] - 1
+			mainImage = imageURL(pool[idx%len(pool)])
+			imgs := []string{mainImage}
+			for k := 1; k <= 2 && k < len(pool); k++ {
+				imgs = append(imgs, imageURL(pool[(idx+k)%len(pool)]))
+			}
+			if b, err := json.Marshal(imgs); err == nil {
+				gallery = string(b)
+			}
+		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO menu_items (id, restaurant_id, category_id, code, name, slug, short_description, base_price_vnd, is_available, availability_status, station, status, display_order)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE, 'AVAILABLE', $9, 'PUBLISHED', $10)
-		`, id, restaurantID, catIDs[it.category], it.code, it.name, it.slug, it.description, it.priceVND, it.station, displayOrders[it.category]); err != nil {
+			INSERT INTO menu_items (id, restaurant_id, category_id, code, name, slug, short_description, base_price_vnd, image_url, images, is_available, availability_status, station, status, display_order)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, 'AVAILABLE', $11, 'PUBLISHED', $12)
+		`, id, restaurantID, catIDs[it.category], it.code, it.name, it.slug, it.description, it.priceVND, mainImage, gallery, it.station, displayOrders[it.category]); err != nil {
 			return err
 		}
 		itemIDs[it.code] = id
@@ -435,6 +512,85 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 		VALUES ($1, $2, $3, 1)
 	`, restaurantID, itemIDs["TRA-DAO"], sugarGroup); err != nil {
 		return err
+	}
+
+	// Optional multi-select add-on toppings (with real price deltas) on every
+	// hotpot set — exercises the MULTIPLE selection path + priced options.
+	toppingGroup := uuid.New()
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO option_groups (id, restaurant_id, name, selection_type, is_required, min_selections, max_selections, display_order)
+		VALUES ($1, $2, 'Topping thêm', 'MULTIPLE', FALSE, 0, 6, 3)
+	`, toppingGroup, restaurantID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO options (restaurant_id, option_group_id, name, price_delta_vnd, is_default, is_available, display_order) VALUES
+		($1, $2, 'Thịt bò Mỹ',    59000, FALSE, TRUE, 1),
+		($1, $2, 'Tôm sú',        65000, FALSE, TRUE, 2),
+		($1, $2, 'Nghêu',         45000, FALSE, TRUE, 3),
+		($1, $2, 'Nấm tổng hợp',  39000, FALSE, TRUE, 4),
+		($1, $2, 'Mì trứng',      19000, FALSE, TRUE, 5),
+		($1, $2, 'Đậu hũ non',    15000, FALSE, TRUE, 6)
+	`, restaurantID, toppingGroup); err != nil {
+		return err
+	}
+	for _, code := range []string{"LAU-THAI", "LAU-BO-MY", "LAU-GA-LA-E", "LAU-HAI-SAN"} {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO menu_item_option_groups (restaurant_id, menu_item_id, option_group_id, display_order)
+			VALUES ($1, $2, $3, 2)
+		`, restaurantID, itemIDs[code], toppingGroup); err != nil {
+			return err
+		}
+	}
+
+	// Required doneness on grilled meats (single-select, no price change).
+	donenessGroup := uuid.New()
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO option_groups (id, restaurant_id, name, selection_type, is_required, min_selections, max_selections, display_order)
+		VALUES ($1, $2, 'Độ chín', 'SINGLE', TRUE, 1, 1, 1)
+	`, donenessGroup, restaurantID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO options (restaurant_id, option_group_id, name, price_delta_vnd, is_default, is_available, display_order) VALUES
+		($1, $2, 'Tái',       0, FALSE, TRUE, 1),
+		($1, $2, 'Chín tới',  0, TRUE,  TRUE, 2),
+		($1, $2, 'Chín kỹ',   0, FALSE, TRUE, 3)
+	`, restaurantID, donenessGroup); err != nil {
+		return err
+	}
+	for _, code := range []string{"BA-CHI-BO", "SUON-NUONG", "BO-CUON-NAM"} {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO menu_item_option_groups (restaurant_id, menu_item_id, option_group_id, display_order)
+			VALUES ($1, $2, $3, 1)
+		`, restaurantID, itemIDs[code], donenessGroup); err != nil {
+			return err
+		}
+	}
+
+	// Optional ice level on cold drinks (single-select, no price change).
+	iceGroup := uuid.New()
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO option_groups (id, restaurant_id, name, selection_type, is_required, min_selections, max_selections, display_order)
+		VALUES ($1, $2, 'Mức đá', 'SINGLE', FALSE, 0, 1, 1)
+	`, iceGroup, restaurantID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO options (restaurant_id, option_group_id, name, price_delta_vnd, is_default, is_available, display_order) VALUES
+		($1, $2, '100% đá',  0, TRUE,  TRUE, 1),
+		($1, $2, 'Ít đá',    0, FALSE, TRUE, 2),
+		($1, $2, 'Không đá', 0, FALSE, TRUE, 3)
+	`, restaurantID, iceGroup); err != nil {
+		return err
+	}
+	for _, code := range []string{"TRA-DAO", "TRA-DA", "COCA"} {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO menu_item_option_groups (restaurant_id, menu_item_id, option_group_id, display_order)
+			VALUES ($1, $2, $3, 3)
+		`, restaurantID, itemIDs[code], iceGroup); err != nil {
+			return err
+		}
 	}
 
 	return nil

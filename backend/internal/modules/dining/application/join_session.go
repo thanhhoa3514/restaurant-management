@@ -26,6 +26,8 @@ type JoinSessionResponse struct {
 	SessionToken string     `json:"session_token,omitempty"`
 	SessionID    *uuid.UUID `json:"session_id,omitempty"`
 	TableID      *uuid.UUID `json:"table_id,omitempty"`
+	TableCode    string     `json:"table_code,omitempty"`
+	TableName    string     `json:"table_name,omitempty"`
 }
 
 type JoinSession struct {
@@ -74,6 +76,10 @@ func (s *JoinSession) Handle(ctx context.Context, req JoinSessionRequest) (JoinS
 			SessionToken: session.SessionToken,
 			SessionID:    &session.ID,
 			TableID:      &session.TableID,
+		}
+		if table, err := s.repo.FindTable(ctx, qr.RestaurantID, qr.TableID); err == nil && table != nil {
+			out.TableCode = table.Code
+			out.TableName = table.Name
 		}
 		return s.writeQRScanEvent(ctx, qr, session, scanOutcome(session.Status), req)
 	})

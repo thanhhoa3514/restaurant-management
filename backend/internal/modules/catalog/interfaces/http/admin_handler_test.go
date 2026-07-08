@@ -29,7 +29,7 @@ func adminCatalogRouter(resolver auth.PermissionResolver, secret string) *gin.En
 	repo := fakeMenuReadRepo{}
 	h := NewHandler(nil, nil, nil, nil, application.NewListCategories(repo, uuid.Nil), application.NewListMenuItems(repo, uuid.Nil), application.NewGetMenuItem(repo, uuid.Nil), application.NewListAdminMenuItems(repo, uuid.Nil), application.NewGetAdminMenuItem(repo, uuid.Nil))
 	r := gin.New()
-	h.RegisterRoutes(r.Group("/api/v1"), secret, resolver, uuid.Nil)
+	h.RegisterStaffRoutes(r.Group("/api/v1/restaurant"), secret, resolver, uuid.Nil)
 	return r
 }
 
@@ -51,13 +51,13 @@ func TestAdminCatalogRoutesRequireCatalogManage(t *testing.T) {
 		method string
 		path   string
 	}{
-		{http.MethodGet, "/api/v1/catalog/categories"},
-		{http.MethodGet, "/api/v1/catalog/items"},
-		{http.MethodGet, "/api/v1/catalog/items/" + uuid.NewString()},
-		{http.MethodPost, "/api/v1/catalog/create-menu-item"},
-		{http.MethodPost, "/api/v1/catalog/update-menu-item"},
-		{http.MethodPost, "/api/v1/catalog/delete-menu-item"},
-		{http.MethodPost, "/api/v1/catalog/toggle-availability"},
+		{http.MethodGet, "/api/v1/restaurant/menu/categories"},
+		{http.MethodGet, "/api/v1/restaurant/menu/items"},
+		{http.MethodGet, "/api/v1/restaurant/menu/items/" + uuid.NewString()},
+		{http.MethodPost, "/api/v1/restaurant/menu/items"},
+		{http.MethodPut, "/api/v1/restaurant/menu/items/" + uuid.NewString()},
+		{http.MethodDelete, "/api/v1/restaurant/menu/items/" + uuid.NewString()},
+		{http.MethodPatch, "/api/v1/restaurant/menu/items/" + uuid.NewString() + "/availability"},
 	} {
 		req := httptest.NewRequest(tc.method, tc.path, bytes.NewBufferString(`{}`))
 		req.Header.Set("Authorization", "Bearer "+token)
@@ -68,7 +68,7 @@ func TestAdminCatalogRoutesRequireCatalogManage(t *testing.T) {
 	}
 
 	r = adminCatalogRouter(fakePermissionResolver{permissions: []string{auth.PermissionCatalogManage}}, secret)
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/catalog/categories", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/restaurant/menu/categories", nil)
 	req.Header.Set("Authorization", "Bearer "+adminToken(t, secret, rid, uid))
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -77,7 +77,7 @@ func TestAdminCatalogRoutesRequireCatalogManage(t *testing.T) {
 
 func TestAdminCatalogItemsRequireStaffJWT(t *testing.T) {
 	r := adminCatalogRouter(fakePermissionResolver{permissions: []string{auth.PermissionCatalogManage}}, "test-secret")
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/catalog/items", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/restaurant/menu/items", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	require.Equal(t, http.StatusUnauthorized, w.Code)

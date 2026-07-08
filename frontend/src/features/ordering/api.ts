@@ -7,6 +7,8 @@ export interface JoinSessionResult {
   session_token?: string
   session_id?: string
   table_id?: string
+  table_code?: string
+  table_name?: string
 }
 
 export function joinDiningSession(qrToken: string): Promise<JoinSessionResult> {

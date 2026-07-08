@@ -1,16 +1,3 @@
-// Command migrate applies database schema migrations using goose.
-//
-// Run separately from the API server (not on boot): goose takes no
-// cross-instance lock, so auto-running on startup would race when more than
-// one API instance boots. Decoupling schema changes from app boot avoids that.
-//
-// Usage:
-//
-//	migrate            # apply all pending migrations (up)
-//	migrate up         # apply all pending migrations
-//	migrate down       # roll back the last migration
-//	migrate status     # print migration status
-//	migrate version    # print current DB version
 package main
 
 import (
@@ -19,7 +6,7 @@ import (
 	"log/slog"
 	"os"
 
-	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" database/sql driver
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 
 	"restaurant-management/internal/platform/config"

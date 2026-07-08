@@ -1,11 +1,18 @@
-import { useEffect, useMemo, useState, type FC } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type Dispatch,
+  type FC,
+  type SetStateAction,
+} from 'react'
 import { ChevronLeft, Minus, Plus, X } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useOrdering } from '../hooks/use-ordering'
-import { DICT } from '../data/i18n'
+import { DICT, type Dict } from '../data/i18n'
 import { formatVND } from '../helpers'
-import { fetchMenuItem, type ApiOptionGroup } from '../api'
+import { fetchMenuItem, type ApiMenuItemDetail, type ApiOptionGroup } from '../api'
 import type { CartLine, CartOption, Lang } from '../types'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -285,7 +292,15 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
   )
 }
 
-function ItemImageHeader({ item, activeImage, onImageSelect }: any) {
+function ItemImageHeader({
+  item,
+  activeImage,
+  onImageSelect,
+}: {
+  item: ApiMenuItemDetail
+  activeImage: string
+  onImageSelect: (url: string) => void
+}) {
   return (
     <>
       <div className="relative aspect-square sm:aspect-[4/3] bg-[var(--surface-grouped)] shrink-0">
@@ -324,7 +339,19 @@ function ItemImageHeader({ item, activeImage, onImageSelect }: any) {
   )
 }
 
-function ItemVariantSelector({ item, form, setForm, lang, t }: any) {
+function ItemVariantSelector({
+  item,
+  form,
+  setForm,
+  lang,
+  t,
+}: {
+  item: ApiMenuItemDetail
+  form: FormState
+  setForm: Dispatch<SetStateAction<FormState>>
+  lang: Lang
+  t: Dict
+}) {
   if (item.variants.length === 0) return null
   return (
     <div className="space-y-3">
@@ -337,7 +364,7 @@ function ItemVariantSelector({ item, form, setForm, lang, t }: any) {
         </span>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        {item.variants.map((v: any) => {
+        {item.variants.map((v) => {
           const isSelected = form.variantId === v.id
           return (
             <button
@@ -350,7 +377,7 @@ function ItemVariantSelector({ item, form, setForm, lang, t }: any) {
                   ? 'bg-[var(--system-blue)]/5 border-[var(--system-blue)] text-[var(--system-blue)]'
                   : 'bg-[var(--surface-grouped)] border-transparent text-[var(--text-secondary)] hover:bg-[var(--separator)]/50',
               )}
-              onClick={() => setForm((prev: any) => ({ ...prev, variantId: v.id }))}
+              onClick={() => setForm((prev) => ({ ...prev, variantId: v.id }))}
             >
               <span className="font-bold text-[15px]">
                 {v.name} {v.unit ? `(${v.unit})` : ''}
@@ -366,11 +393,21 @@ function ItemVariantSelector({ item, form, setForm, lang, t }: any) {
   )
 }
 
-function ItemOptionsSelector({ item, form, handleSelectOption, t }: any) {
+function ItemOptionsSelector({
+  item,
+  form,
+  handleSelectOption,
+  t,
+}: {
+  item: ApiMenuItemDetail
+  form: FormState
+  handleSelectOption: (group: ApiOptionGroup, optionId: string) => void
+  t: Dict
+}) {
   if (item.option_groups.length === 0) return null
   return (
     <>
-      {item.option_groups.map((group: any) => (
+      {item.option_groups.map((group) => (
         <div key={group.id} className="space-y-3">
           <div className="flex items-center gap-2">
             <span className="text-[15px] font-bold text-[var(--text)] tracking-wide">
@@ -383,7 +420,7 @@ function ItemOptionsSelector({ item, form, handleSelectOption, t }: any) {
             )}
           </div>
           <div className="flex flex-wrap gap-2.5">
-            {group.options.map((opt: any) => {
+            {group.options.map((opt) => {
               const sel = form.selections[group.id]
               const isSelected = Array.isArray(sel) ? sel.includes(opt.id) : sel === opt.id
               return (
@@ -420,7 +457,15 @@ function ItemOptionsSelector({ item, form, handleSelectOption, t }: any) {
   )
 }
 
-function ItemQtyNotesPanel({ form, setForm, t }: any) {
+function ItemQtyNotesPanel({
+  form,
+  setForm,
+  t,
+}: {
+  form: FormState
+  setForm: Dispatch<SetStateAction<FormState>>
+  t: Dict
+}) {
   return (
     <div className="bg-[var(--surface-grouped)]/50 rounded-[24px] p-5 space-y-5 border border-[var(--separator)]/50">
       <div className="flex items-center justify-between">
@@ -431,7 +476,7 @@ function ItemQtyNotesPanel({ form, setForm, t }: any) {
             aria-label={t.qty_decrease}
             className="size-10 rounded-full bg-transparent flex items-center justify-center text-[var(--text)] font-medium active:scale-90 transition-all disabled:opacity-30 cursor-pointer hover:bg-[var(--surface-grouped)]"
             disabled={form.qty <= 1}
-            onClick={() => setForm((prev: any) => ({ ...prev, qty: Math.max(1, prev.qty - 1) }))}
+            onClick={() => setForm((prev) => ({ ...prev, qty: Math.max(1, prev.qty - 1) }))}
           >
             <Minus size={18} strokeWidth={2.5} />
           </button>
@@ -442,7 +487,7 @@ function ItemQtyNotesPanel({ form, setForm, t }: any) {
             type="button"
             aria-label={t.qty_increase}
             className="flex size-10 items-center justify-center rounded-full bg-[var(--bg)] text-[var(--text)] shadow-sm active:scale-90 transition-transform cursor-pointer hover:bg-[var(--surface-grouped)]"
-            onClick={() => setForm((prev: any) => ({ ...prev, qty: prev.qty + 1 }))}
+            onClick={() => setForm((prev) => ({ ...prev, qty: prev.qty + 1 }))}
           >
             <Plus size={18} strokeWidth={2.5} />
           </button>
@@ -457,7 +502,7 @@ function ItemQtyNotesPanel({ form, setForm, t }: any) {
           placeholder={t.notes_placeholder}
           className="rounded-[16px] resize-none h-24 text-[14px] bg-[var(--bg)] border-[var(--separator)]/50 focus:bg-[var(--bg)] focus:ring-[var(--system-blue)]/20 transition-all font-medium placeholder:font-normal"
           value={form.notes}
-          onChange={(e) => setForm((prev: any) => ({ ...prev, notes: e.target.value }))}
+          onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
         />
       </div>
     </div>

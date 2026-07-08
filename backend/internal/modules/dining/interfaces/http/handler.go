@@ -15,11 +15,11 @@ import (
 )
 
 type Handler struct {
-	OpenSession    *application.OpenSession
-	JoinSession    *application.JoinSession
-	CloseSession   *application.CloseSession
-	ManageTableQR  *application.ManageTableQR
-	ListTableQRs   *application.ListTableQRs
+	OpenSession     *application.OpenSession
+	JoinSession     *application.JoinSession
+	CloseSession    *application.CloseSession
+	ManageTableQR   *application.ManageTableQR
+	ListTableQRs    *application.ListTableQRs
 	ListGuestTables *application.ListGuestTables
 }
 
@@ -28,8 +28,8 @@ func NewHandler(openSession *application.OpenSession, joinSession *application.J
 }
 
 func (h *Handler) RegisterGuestRoutes(r *gin.RouterGroup) {
-	r.POST("/sessions/join", h.joinSession)  // public: QR guest entry bootstrap
-	r.GET("/tables", h.listGuestTables)       // public: table list with QR tokens
+	r.POST("/sessions/join", h.joinSession)
+	r.GET("/tables", h.listGuestTables)
 }
 
 func (h *Handler) RegisterStaffRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver, defaultRestaurantID uuid.UUID) {
@@ -37,10 +37,8 @@ func (h *Handler) RegisterStaffRoutes(r *gin.RouterGroup, secret string, resolve
 	staff.POST("/sessions", h.openSession)
 
 	cashier := r.Group("", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionDiningCashier, defaultRestaurantID))
-	cashier.POST("/sessions/:id/close", h.closeSession)
+	cashier.POST("/sessions/:sessionId/close", h.closeSession)
 
-	// QR codes are tied to printed assets, so generate/rotate/listing is
-	// restricted to MANAGER. Rotation deactivates the prior token.
 	manager := r.Group("", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionDiningManage, defaultRestaurantID))
 	manager.GET("/tables/qrs", h.listTableQRs)
 	manager.POST("/tables/qrs", h.manageTableQR)
@@ -87,7 +85,7 @@ func (h *Handler) joinSession(c *gin.Context) {
 }
 
 func (h *Handler) closeSession(c *gin.Context) {
-	sessionID, err := uuid.Parse(c.Param("id"))
+	sessionID, err := uuid.Parse(c.Param("sessionId"))
 	if err != nil {
 		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid session id", err))
 		return

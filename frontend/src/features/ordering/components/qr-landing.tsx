@@ -2,9 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FC } from 'reac
 import { QrCode, ScanLine, Sparkles, AlertCircle, Users } from 'lucide-react'
 import QRCodeLib from 'qrcode'
 import { useQuery } from '@tanstack/react-query'
-
 import { ApiError } from '@/lib/api'
-
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
 import { joinDiningSession } from '../api'
@@ -26,7 +24,6 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
   const [joinState, setJoinState] = useState<JoinState>('idle')
   const [message, setMessage] = useState('')
 
-  // ── TanStack Query: fetch tables when no qrToken ───────────────────────────
   const {
     data: tablesData,
     isLoading: tablesLoading,
@@ -56,64 +53,30 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
       if (!active) return
       setQrDataUrls(new Map(results.map((r) => [r.id, r.dataUrl])))
     })
-    return () => { active = false }
+    return () => {
+      active = false
+    }
   }, [tablesData, qrToken])
-
-  // ── Labels ────────────────────────────────────────────────────────────────
-  const labels = useMemo(
-    () =>
-      state.lang === 'vi'
-        ? {
-            noTokenTitle: 'Chọn bàn để gọi món',
-            noTokenDesc: 'Quét mã QR tại bàn hoặc chọn bàn bên dưới để bắt đầu.',
-            scanned: 'Đã nhận mã QR',
-            joining: 'Đang xác thực mã QR...',
-            notOpened: 'Bàn chưa được mở phiên',
-            notOpenedDesc: 'Vui lòng gọi nhân viên mở phiên bàn, sau đó bấm thử lại.',
-            retry: 'Thử lại',
-            invalid: 'Mã QR không hợp lệ hoặc đã bị thay đổi. Vui lòng quét mã mới.',
-            network: 'Không thể kết nối máy chủ. Vui lòng thử lại.',
-            ready: 'Phiên đã sẵn sàng',
-            loading: 'Đang tải danh sách bàn...',
-            noData: 'Chưa có bàn nào có mã QR. Vui lòng liên hệ quản lý.',
-          }
-        : {
-            noTokenTitle: 'Select your table',
-            noTokenDesc: 'Scan the QR at your table or select one below to start.',
-            scanned: 'QR code received',
-            joining: 'Verifying QR code...',
-            notOpened: 'Table session is not open yet',
-            notOpenedDesc: 'Please ask staff to open this table, then retry.',
-            retry: 'Retry',
-            invalid: 'This QR code is invalid or has been rotated.',
-            network: 'Cannot connect to the server. Please retry.',
-            ready: 'Session ready',
-            loading: 'Loading tables...',
-            noData: 'No tables have QR codes yet. Please contact management.',
-          },
-    [state.lang],
-  )
 
   const displayToken = qrToken ? `•••${qrToken.slice(-6)}` : ''
 
-  // ── Join handler ──────────────────────────────────────────────────────────
   const handleJoin = useCallback(
     async (token: string) => {
       setJoinState('joining')
-      setMessage(labels.joining)
+      setMessage(t.qr_joining)
 
       try {
         const joined = await joinDiningSession(token)
 
         if (joined.status === 'not_opened') {
           setJoinState('not_opened')
-          setMessage(labels.notOpenedDesc)
+          setMessage(t.qr_not_opened_desc)
           return
         }
 
         if (!joined.session_token || !joined.session_id || !joined.table_id) {
           setJoinState('error')
-          setMessage(labels.invalid)
+          setMessage(t.qr_invalid)
           return
         }
 
@@ -121,7 +84,7 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
           type: 'SET_SESSION',
           payload: {
             token: joined.session_token,
-            table: joined.table_id.slice(0, 8).toUpperCase(),
+            table: joined.table_name || joined.table_code || '',
             startedAt: new Date(),
             sessionId: joined.session_id,
             tableId: joined.table_id,
@@ -129,20 +92,19 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
           },
         })
         setJoinState('ready')
-        setMessage(labels.ready)
+        setMessage(t.qr_ready)
 
         setTimeout(() => {
           dispatch({ type: 'SET_SCREEN', payload: 'menu' })
         }, 600)
       } catch (err) {
         setJoinState('error')
-        setMessage(err instanceof ApiError && err.status === 0 ? labels.network : labels.invalid)
+        setMessage(err instanceof ApiError && err.status === 0 ? t.qr_network : t.qr_invalid)
       }
     },
-    [dispatch, labels],
+    [dispatch, t],
   )
 
-  // ── Auto-join when qrToken present ────────────────────────────────────────
   useEffect(() => {
     if (!qrToken || attemptedToken.current === qrToken || state.session) return
     attemptedToken.current = qrToken
@@ -151,7 +113,6 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
 
   const canRetry = Boolean(qrToken) && joinState !== 'joining'
 
-  // ── Group tables by area ──────────────────────────────────────────────────
   const areaGroups = useMemo(() => {
     if (!tablesData?.length) return []
     const groups = new Map<string, GuestTable[]>()
@@ -164,7 +125,6 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
     return Array.from(groups.entries())
   }, [tablesData])
 
-  // ═══════════════ NO TOKEN: table picker ═══════════════════════════════════
   if (!qrToken) {
     return (
       <div className="min-h-dvh bg-[var(--bg)]">
@@ -174,19 +134,15 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
             <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--system-blue)] to-[var(--system-purple)] shadow-lg">
               <Sparkles size={26} className="text-white" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--text)]">
-              {t.restaurant}
-            </h1>
-            <p className="mt-1.5 text-sm text-[var(--text-tertiary)]">
-              {labels.noTokenDesc}
-            </p>
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--text)]">{t.restaurant}</h1>
+            <p className="mt-1.5 text-sm text-[var(--text-tertiary)]">{t.qr_desc}</p>
           </div>
 
           {/* Loading */}
           {tablesLoading && (
             <div className="flex items-center justify-center gap-2 py-12 text-sm text-[var(--text-tertiary)]">
               <ScanLine size={16} className="animate-pulse" />
-              {labels.loading}
+              {t.qr_loading}
             </div>
           )}
 
@@ -195,14 +151,14 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
             <div className="mx-auto max-w-sm rounded-xl border border-red-300/30 bg-red-50/50 p-5 text-center dark:border-red-800/30 dark:bg-red-950/20">
               <AlertCircle size={24} className="mx-auto mb-2 text-red-500" />
               <p className="mb-3 text-sm font-medium text-red-600 dark:text-red-400">
-                {tablesRawError instanceof ApiError ? tablesRawError.message : 'Failed to load tables'}
+                {tablesRawError instanceof ApiError ? tablesRawError.message : t.qr_failed_load}
               </p>
               <button
                 type="button"
                 onClick={() => window.location.reload()}
                 className="cursor-pointer text-sm font-semibold text-blue-600 hover:underline dark:text-blue-400"
               >
-                {labels.retry}
+                {t.qr_retry}
               </button>
             </div>
           )}
@@ -211,7 +167,7 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
           {!tablesLoading && !tablesError && !tablesData?.length && (
             <div className="flex flex-col items-center py-16 text-[var(--text-tertiary)]">
               <QrCode size={40} className="mb-3 opacity-30" />
-              <p className="text-sm">{labels.noData}</p>
+              <p className="text-sm">{t.qr_no_data}</p>
             </div>
           )}
 
@@ -223,7 +179,7 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
                   <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-[var(--text-tertiary)]">
                     {areaName}
                     <span className="ml-2 font-normal normal-case opacity-50">
-                      {areaTables.length} bàn
+                      {areaTables.length} {t.qr_tables_word}
                     </span>
                   </h2>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
@@ -249,19 +205,17 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
     )
   }
 
-  // ═══════════════ TOKEN PRESENT: join/status flow ══════════════════════════
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--bg)] px-6">
       <div className="flex w-full max-w-sm flex-col items-center gap-10">
         {/* Brand */}
         <div className="text-center">
-          <div className="mx-auto mb-3 flex size-20 items-center justify-center rounded-[22px] bg-gradient-to-br from-[var(--system-blue)] to-[var(--system-purple)] shadow-lg">
-            <Sparkles size={36} className="text-white" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--text)]">
-            {t.restaurant}
-          </h1>
-          <p className="mt-1 text-sm text-[var(--text-tertiary)]">{t.tagline}</p>
+          <img
+            src="/favicon.png"
+            alt={t.restaurant}
+            className="mx-auto mb-3 size-20 rounded-[22px] object-cover shadow-lg"
+          />
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--text)]">{t.restaurant}</h1>
         </div>
 
         {/* Status card */}
@@ -285,8 +239,8 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
             )}
           >
             {joinState === 'error' || joinState === 'not_opened'
-              ? 'Action Required'
-              : `${labels.scanned} ${displayToken}`}
+              ? t.qr_action_required
+              : `${t.qr_scanned} ${displayToken}`}
           </div>
 
           {/* Icon */}
@@ -308,10 +262,7 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
                 : 'text-[var(--text-secondary)]',
             )}
           >
-            {message ||
-              (qrToken
-                ? 'Phiên gọi món của bạn sẽ mở trong 3 giờ. Bạn có thể gọi thêm món bất cứ lúc nào.'
-                : labels.noTokenDesc)}
+            {message || (qrToken ? t.session_hint : t.qr_desc)}
           </p>
         </div>
 
@@ -327,9 +278,9 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
           className="flex h-14 w-full cursor-pointer items-center justify-center rounded-2xl bg-[var(--text)] text-[var(--bg)] font-semibold text-base shadow-lg transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {joinState === 'joining'
-            ? labels.joining
+            ? t.qr_joining
             : joinState === 'not_opened' || joinState === 'error'
-              ? labels.retry
+              ? t.qr_retry
               : t.start_ordering}
         </button>
       </div>

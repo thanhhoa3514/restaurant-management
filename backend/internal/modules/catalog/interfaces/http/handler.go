@@ -27,7 +27,16 @@ type Handler struct {
 	Storage            *storage.Client // S3-compatible storage for image uploads
 }
 
-func NewHandler(createMenuItem *application.CreateMenuItem, updateMenuItem *application.UpdateMenuItem, deleteMenuItem *application.DeleteMenuItem, toggleAvailability *application.ToggleAvailability, listCategories *application.ListCategories, listMenuItems *application.ListMenuItems, getMenuItem *application.GetMenuItem, listAdminMenuItems *application.ListAdminMenuItems, getAdminMenuItem *application.GetAdminMenuItem, storage *storage.Client) *Handler {
+func NewHandler(createMenuItem *application.CreateMenuItem,
+	updateMenuItem *application.UpdateMenuItem,
+	deleteMenuItem *application.DeleteMenuItem,
+	toggleAvailability *application.ToggleAvailability,
+	listCategories *application.ListCategories,
+	listMenuItems *application.ListMenuItems,
+	getMenuItem *application.GetMenuItem,
+	listAdminMenuItems *application.ListAdminMenuItems,
+	getAdminMenuItem *application.GetAdminMenuItem,
+	storage *storage.Client) *Handler {
 	return &Handler{
 		CreateMenuItem:     createMenuItem,
 		UpdateMenuItem:     updateMenuItem,
@@ -215,7 +224,7 @@ func (h *Handler) toggleAvailability(c *gin.Context) {
 
 func (h *Handler) presignUpload(c *gin.Context) {
 	var req struct {
-		Extension   string `json:"extension" binding:"required"`   // e.g. ".jpg", ".png"
+		Extension   string `json:"extension" binding:"required"`    // e.g. ".jpg", ".png"
 		ContentType string `json:"content_type" binding:"required"` // e.g. "image/jpeg"
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
