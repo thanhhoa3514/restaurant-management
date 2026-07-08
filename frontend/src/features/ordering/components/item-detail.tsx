@@ -7,10 +7,10 @@ import { DICT } from '../data/i18n'
 import { formatVND } from '../helpers'
 import { fetchMenuItem, type ApiOptionGroup } from '../api'
 import type { CartLine, CartOption, Lang } from '../types'
-import { Sheet, SheetContent, SheetTitle } from '../../../components/ui/sheet'
-import { Skeleton } from '../../../components/ui/skeleton'
-import { Textarea } from '../../../components/ui/textarea'
-import { cn } from '../../../lib/utils'
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Textarea } from '@/components/ui/textarea'
+import { cn } from '@/lib/utils'
 
 interface ItemDetailProps {
   itemId: string | null
@@ -24,9 +24,12 @@ function defaultSelections(groups: ApiOptionGroup[]): Selections {
   const sel: Selections = {}
   for (const g of groups) {
     if (g.selection_type === 'SINGLE') {
-      let def: typeof g.options[0] | undefined
+      let def: (typeof g.options)[0] | undefined
       for (const o of g.options) {
-        if (o.is_default) { def = o; break; }
+        if (o.is_default) {
+          def = o
+          break
+        }
       }
       sel[g.id] = def?.id ?? (g.is_required ? g.options[0]?.id : '') ?? ''
     } else {
@@ -40,11 +43,11 @@ function defaultSelections(groups: ApiOptionGroup[]): Selections {
 }
 
 interface FormState {
-  variantId: string;
-  selections: Selections;
-  qty: number;
-  notes: string;
-  activeImage: string;
+  variantId: string
+  selections: Selections
+  qty: number
+  notes: string
+  activeImage: string
 }
 
 export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
@@ -63,7 +66,7 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
     selections: {},
     qty: 1,
     notes: '',
-    activeImage: ''
+    activeImage: '',
   })
 
   useEffect(() => {
@@ -77,7 +80,7 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
         selections: defaultSelections(item.option_groups),
         activeImage: item.image_url,
         qty: 1,
-        notes: ''
+        notes: '',
       })
     })
     return () => {
@@ -106,7 +109,7 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
 
   const handleSelectOption = (group: ApiOptionGroup, optionId: string) => {
     setForm((prev) => {
-      let newSel: Selections;
+      let newSel: Selections
       if (group.selection_type === 'SINGLE') {
         newSel = { ...prev.selections, [group.id]: optionId }
       } else {
@@ -173,11 +176,19 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
   }
 
   return (
-    <Sheet open={!!itemId} onOpenChange={(open) => { if (!open) onClose() }}>
-      <SheetContent side="right" hideClose className="w-full sm:max-w-md p-0 overflow-hidden flex flex-col border-none bg-[var(--bg)] shadow-2xl">
+    <Sheet
+      open={!!itemId}
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
+      <SheetContent
+        side="right"
+        hideClose
+        className="w-full sm:max-w-md p-0 overflow-hidden flex flex-col border-none bg-[var(--bg)] shadow-2xl"
+      >
         <SheetTitle className="sr-only">{item?.name ?? 'Item Detail'}</SheetTitle>
 
-        {/* Persistent navigation — stays visible while content scrolls */}
         <div className="absolute inset-x-0 top-0 z-30 flex items-center justify-between px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pointer-events-none">
           <button
             type="button"
@@ -211,25 +222,41 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
         ) : (
           <>
             <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col relative pb-4">
-              
-              <ItemImageHeader item={item} activeImage={form.activeImage} onImageSelect={(url: string) => setForm((prev) => ({ ...prev, activeImage: url }))} />
-              
+              <ItemImageHeader
+                item={item}
+                activeImage={form.activeImage}
+                onImageSelect={(url: string) => setForm((prev) => ({ ...prev, activeImage: url }))}
+              />
+
               <div className="px-5 relative z-10 flex flex-col gap-6">
                 <div className="bg-[var(--material-thin)]/50 backdrop-blur-xl border border-[var(--separator)] rounded-[24px] p-5 shadow-sm mt-2">
-                  <h2 className="text-2xl font-extrabold text-[var(--text)] tracking-tight leading-tight">{item.name}</h2>
-                  {item.description && <p className="text-[14px] text-[var(--text-secondary)] mt-2 font-medium leading-relaxed">{item.description}</p>}
+                  <h2 className="text-2xl font-extrabold text-[var(--text)] tracking-tight leading-tight">
+                    {item.name}
+                  </h2>
+                  {item.description && (
+                    <p className="text-[14px] text-[var(--text-secondary)] mt-2 font-medium leading-relaxed">
+                      {item.description}
+                    </p>
+                  )}
                   <div className="mt-4 flex items-center justify-between">
                     <span className="text-[13px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider">
                       {lang === 'vi' ? 'Đơn giá' : 'Unit Price'}
                     </span>
-                    <p className="text-xl font-black text-[var(--system-blue)]">{formatVND(estUnitPrice)}</p>
+                    <p className="text-xl font-black text-[var(--system-blue)]">
+                      {formatVND(estUnitPrice)}
+                    </p>
                   </div>
                 </div>
 
                 <ItemVariantSelector item={item} form={form} setForm={setForm} lang={lang} t={t} />
-                <ItemOptionsSelector item={item} form={form} handleSelectOption={handleSelectOption} t={t} />
+                <ItemOptionsSelector
+                  item={item}
+                  form={form}
+                  handleSelectOption={handleSelectOption}
+                  t={t}
+                />
                 <ItemQtyNotesPanel form={form} setForm={setForm} t={t} />
-                
+
                 <div className="h-4" />
               </div>
             </div>
@@ -242,9 +269,13 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
                 onClick={handleAdd}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                <span className="font-bold text-[var(--bg)] text-[16px] sm:text-[18px] z-10">{t.add_to_cart}</span>
+                <span className="font-bold text-[var(--bg)] text-[16px] sm:text-[18px] z-10">
+                  {t.add_to_cart}
+                </span>
                 <span className="font-medium text-[var(--bg)]/60 mx-1 z-10">&middot;</span>
-                <span className="font-black text-[var(--bg)] text-[16px] sm:text-[18px] z-10">{formatVND(estUnitPrice * form.qty)}</span>
+                <span className="font-black text-[var(--bg)] text-[16px] sm:text-[18px] z-10">
+                  {formatVND(estUnitPrice * form.qty)}
+                </span>
               </button>
             </div>
           </>
@@ -324,7 +355,9 @@ function ItemVariantSelector({ item, form, setForm, lang, t }: any) {
               <span className="font-bold text-[15px]">
                 {v.name} {v.unit ? `(${v.unit})` : ''}
               </span>
-              <span className="text-xs font-semibold opacity-80 mt-1">{formatVND(v.price_vnd)}</span>
+              <span className="text-xs font-semibold opacity-80 mt-1">
+                {formatVND(v.price_vnd)}
+              </span>
             </button>
           )
         })}
@@ -340,7 +373,9 @@ function ItemOptionsSelector({ item, form, handleSelectOption, t }: any) {
       {item.option_groups.map((group: any) => (
         <div key={group.id} className="space-y-3">
           <div className="flex items-center gap-2">
-            <span className="text-[15px] font-bold text-[var(--text)] tracking-wide">{group.name}</span>
+            <span className="text-[15px] font-bold text-[var(--text)] tracking-wide">
+              {group.name}
+            </span>
             {group.is_required && (
               <span className="inline-flex items-center rounded-full bg-[var(--system-red)]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[var(--system-red)]">
                 {t.required}

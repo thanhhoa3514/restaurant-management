@@ -51,7 +51,7 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!session?.token) return
     let active = true
-    apiRequest<MeResponse>('/api/v1/identity/me')
+    apiRequest<MeResponse>('/api/v1/restaurant/auth/me')
       .then((me) => {
         if (!active) return
         const next = updateStaffSession({

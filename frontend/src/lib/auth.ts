@@ -86,7 +86,7 @@ export async function loginStaff(
   code: string,
   pass: string,
 ): Promise<StaffSession | null> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/identity/authenticate`, {
+  const res = await fetch(`${API_BASE_URL}/api/v1/restaurant/auth/login`, {
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -136,7 +136,7 @@ export async function logoutStaff(): Promise<void> {
   const session = getStaffSession()
   if (session?.token) {
     try {
-      await fetch(`${API_BASE_URL}/api/v1/identity/logout`, {
+      await fetch(`${API_BASE_URL}/api/v1/restaurant/auth/logout`, {
         method: 'POST',
         headers: {
           Accept: 'application/json',
@@ -181,7 +181,7 @@ export function hasStaffPermission(permission: PermissionCode): boolean {
   return Boolean(session?.permissions.includes(permission))
 }
 
-// RefreshResponse matches the backend POST /api/v1/identity/refresh response.
+// RefreshResponse matches the backend POST /api/v1/restaurant/auth/refresh response.
 interface RefreshResponse {
   token: string
   refresh_token: string
@@ -195,7 +195,7 @@ export async function refreshStaffSession(): Promise<StaffSession | null> {
   if (!current?.refreshToken) return null
 
   try {
-    const res = await fetch(`${API_BASE_URL}/api/v1/identity/refresh`, {
+    const res = await fetch(`${API_BASE_URL}/api/v1/restaurant/auth/refresh`, {
       method: 'POST',
       headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: current.refreshToken }),

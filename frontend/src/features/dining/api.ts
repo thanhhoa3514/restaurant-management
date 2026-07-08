@@ -1,8 +1,8 @@
 import { apiRequest } from '@/lib/api'
-import type { ManageTableQRResult, TableQR } from '@/features/dining/types'
+import type { GuestTable, ManageTableQRResult, TableQR } from '@/features/dining/types'
 
 export function listTableQRs(): Promise<TableQR[]> {
-  return apiRequest<TableQR[]>('/api/v1/dining/table-qrs')
+  return apiRequest<TableQR[]>('/api/v1/restaurant/tables/qrs')
 }
 
 export interface ManageTableQRArgs {
@@ -16,7 +16,7 @@ export function manageTableQR({
   tableId,
   rotate = false,
 }: ManageTableQRArgs): Promise<ManageTableQRResult> {
-  return apiRequest<ManageTableQRResult>('/api/v1/dining/manage-table-qr', {
+  return apiRequest<ManageTableQRResult>('/api/v1/restaurant/tables/qrs', {
     method: 'POST',
     body: { table_id: tableId, rotate },
   })
@@ -27,6 +27,11 @@ export function manageTableQR({
 // VITE_PUBLIC_ORIGIN overrides the encoded origin for codes scanned from
 // another device (e.g. http://<LAN-IP>:5173 when demoing on a phone while the
 // admin browses via localhost).
+// Public (no auth) — returns tables with active QR tokens for the guest ordering flow.
+export function fetchGuestTables(): Promise<GuestTable[]> {
+  return apiRequest<GuestTable[]>('/api/v1/customer/tables')
+}
+
 export function buildQROrderURL(token: string): string {
   const origin =
     (import.meta.env.VITE_PUBLIC_ORIGIN as string | undefined)?.replace(/\/$/, '') ??
@@ -43,7 +48,7 @@ export interface OpenSessionResult {
 }
 
 export function openDiningSession(tableId: string): Promise<OpenSessionResult> {
-  return apiRequest<OpenSessionResult>('/api/v1/dining/open-session', {
+  return apiRequest<OpenSessionResult>('/api/v1/restaurant/sessions', {
     method: 'POST',
     body: { table_id: tableId },
   })
@@ -55,8 +60,7 @@ export interface CloseSessionResult {
 }
 
 export function closeDiningSession(sessionId: string): Promise<CloseSessionResult> {
-  return apiRequest<CloseSessionResult>('/api/v1/dining/close-session', {
+  return apiRequest<CloseSessionResult>(`/api/v1/restaurant/sessions/${encodeURIComponent(sessionId)}/close`, {
     method: 'POST',
-    body: { session_id: sessionId },
   })
 }

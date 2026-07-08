@@ -1,3 +1,14 @@
+// Public guest-facing table info with QR token (no auth required).
+export interface GuestTable {
+  table_id: string
+  table_code: string
+  table_name: string
+  area_name: string
+  capacity: number
+  has_active_qr: boolean
+  qr_token?: string
+}
+
 // Mirror of backend dining TableQRDTO / ManageTableQRResponse envelopes.
 
 export interface TableQR {

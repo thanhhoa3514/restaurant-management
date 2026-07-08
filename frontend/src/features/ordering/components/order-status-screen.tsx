@@ -6,16 +6,9 @@ import { DICT } from '../data/i18n'
 import { formatVND, formatTime } from '../helpers'
 import { fetchGuestOrders, type OrderItemDTO } from '../api'
 import type { Lang } from '../types'
-import { Button } from '../../../components/ui/button'
-import { Badge } from '../../../components/ui/badge'
-import { Skeleton } from '../../../components/ui/skeleton'
-
-// Maps backend order-item status to a display label + colour. Unknown statuses
-// fall back to a neutral chip showing the raw value.
-const STATUS_LABELS: Record<Lang, Record<string, string>> = {
-  vi: { PENDING: 'Chờ xác nhận', CONFIRMED: 'Đã xác nhận', PREPARING: 'Đang chuẩn bị', READY: 'Sẵn sàng', SERVED: 'Đã phục vụ', CANCELLED: 'Đã huỷ' },
-  en: { PENDING: 'Pending', CONFIRMED: 'Confirmed', PREPARING: 'Preparing', READY: 'Ready', SERVED: 'Served', CANCELLED: 'Cancelled' },
-}
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: 'bg-system-orange/15 text-system-orange',
@@ -105,7 +98,9 @@ export const OrderStatusScreen: FC = () => {
 }
 
 const OrderItemRow: FC<{ item: OrderItemDTO; lang: Lang }> = ({ item, lang }) => {
-  const statusLabel = STATUS_LABELS[lang][item.status] ?? item.status
+  const t = DICT[lang]
+  const labelKey = `status_${item.status.toLowerCase()}` as keyof typeof t
+  const statusLabel = t[labelKey] ?? item.status
   const statusColor = STATUS_COLORS[item.status] ?? 'bg-tertiary/20 text-tertiary'
   const name = item.variant_name_snapshot
     ? `${item.name_snapshot} · ${item.variant_name_snapshot}`
@@ -116,7 +111,9 @@ const OrderItemRow: FC<{ item: OrderItemDTO; lang: Lang }> = ({ item, lang }) =>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-medium text-primary truncate">{name}</p>
-          <span className="text-xs text-tertiary whitespace-nowrap tabular-nums">x{item.quantity}</span>
+          <span className="text-xs text-tertiary whitespace-nowrap tabular-nums">
+            x{item.quantity}
+          </span>
         </div>
         <div className="flex items-center justify-between mt-0.5">
           <Badge className={`rounded-full text-[10px] px-2 py-0 h-5 font-medium ${statusColor}`}>

@@ -28,7 +28,7 @@ export interface AdminDashboardDTO {
 
 export function fetchAdminDashboard(): Promise<AdminDashboardDTO> {
   // Hit the backend mock endpoint for now until real aggregation is implemented
-  return apiRequest<AdminDashboardDTO>('/api/v1/identity/dashboard')
+  return apiRequest<AdminDashboardDTO>('/api/v1/restaurant/dashboard')
 }
 
 // --- Staff management (mirrors backend identity StaffUserDTO / RoleDTO) ---
@@ -76,15 +76,15 @@ export const staffQueryKeys = {
 }
 
 export function listStaffUsers(): Promise<StaffUserDTO[]> {
-  return apiRequest<StaffUserDTO[]>('/api/v1/identity/users')
+  return apiRequest<StaffUserDTO[]>('/api/v1/restaurant/users')
 }
 
 export function listRoles(): Promise<RoleDTO[]> {
-  return apiRequest<RoleDTO[]>('/api/v1/identity/roles')
+  return apiRequest<RoleDTO[]>('/api/v1/restaurant/users/roles')
 }
 
 export function manageStaffUser(body: ManageUserRequest): Promise<ManageUserResult> {
-  return apiRequest<ManageUserResult>('/api/v1/identity/manage-users', {
+  return apiRequest<ManageUserResult>('/api/v1/restaurant/users', {
     method: 'POST',
     body,
   })

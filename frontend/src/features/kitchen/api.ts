@@ -38,14 +38,14 @@ export interface KitchenQueueResponse {
 }
 
 export function fetchKitchenQueue(): Promise<KitchenQueueResponse> {
-  return apiRequest<KitchenQueueResponse>('/api/v1/kitchen/queue')
+  return apiRequest<KitchenQueueResponse>('/api/v1/restaurant/kitchen/queue')
 }
 
 export function updateKitchenOrderItemStatus(
   itemId: string,
   status: string,
 ): Promise<{ id: string; status: string }> {
-  return apiRequest(`/api/v1/kitchen/items/${itemId}/status`, {
+  return apiRequest(`/api/v1/restaurant/kitchen/items/${itemId}/status`, {
     method: 'PATCH',
     body: { status },
   })

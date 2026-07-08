@@ -54,7 +54,7 @@ export interface BillingInvoiceResponse {
 }
 
 function buildInvoice(diningSessionId: string): Promise<BillingInvoiceResponse> {
-  return apiRequest<BillingInvoiceResponse>('/api/v1/billing/build-invoice', {
+  return apiRequest<BillingInvoiceResponse>('/api/v1/restaurant/invoices', {
     method: 'POST',
     body: { dining_session_id: diningSessionId },
   })
@@ -65,10 +65,9 @@ export function adjustInvoice(
   discountAmountVND: number,
   discountReason: string,
 ): Promise<BillingInvoiceResponse> {
-  return apiRequest<BillingInvoiceResponse>('/api/v1/billing/adjust-invoice', {
+  return apiRequest<BillingInvoiceResponse>(`/api/v1/restaurant/invoices/${encodeURIComponent(invoiceId)}/adjust`, {
     method: 'POST',
     body: {
-      invoice_id: invoiceId,
       discount_amount_vnd: Math.max(0, Math.round(discountAmountVND)),
       discount_reason: discountReason,
     },
@@ -76,10 +75,9 @@ export function adjustInvoice(
 }
 
 export function voidInvoice(invoiceId: string, voidReason: string): Promise<BillingInvoiceResponse> {
-  return apiRequest<BillingInvoiceResponse>('/api/v1/billing/void-invoice', {
+  return apiRequest<BillingInvoiceResponse>(`/api/v1/restaurant/invoices/${encodeURIComponent(invoiceId)}/void`, {
     method: 'POST',
     body: {
-      invoice_id: invoiceId,
       void_reason: voidReason,
     },
   })
@@ -91,10 +89,9 @@ export function processPayment(args: {
   receivedAmountVND: number
   referenceCode?: string
 }): Promise<BillingInvoiceResponse> {
-  return apiRequest<BillingInvoiceResponse>('/api/v1/billing/process-payment', {
+  return apiRequest<BillingInvoiceResponse>(`/api/v1/restaurant/invoices/${encodeURIComponent(args.invoiceId)}/pay`, {
     method: 'POST',
     body: {
-      invoice_id: args.invoiceId,
       payment_method_code: args.paymentMethodCode,
       received_amount_vnd: Math.max(0, Math.round(args.receivedAmountVND)),
       reference_code: args.referenceCode ?? '',

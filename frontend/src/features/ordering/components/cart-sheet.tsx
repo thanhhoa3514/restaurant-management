@@ -8,8 +8,8 @@ import { formatVND, summarizeCartLine, cartTotal, totalItems } from '../helpers'
 import { placeGuestOrder, type PlaceOrderInput } from '../api'
 import { ApiError } from '@/lib/api'
 import type { CartLine, Lang } from '../types'
-import { Button } from '../../../components/ui/button'
-import { cn } from '../../../lib/utils'
+
+import { cn } from '@/lib/utils'
 
 interface CartSheetProps {
   open: boolean
@@ -23,7 +23,6 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
   const t = DICT[lang]
   const [error, setError] = useState('')
 
-  // Pre-submit estimate only — the server computes the authoritative total.
   const subtotal = cartTotal(state.cart)
   const cartCount = totalItems(state.cart)
 
@@ -52,12 +51,16 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
       dispatch({ type: 'SET_SCREEN', payload: 'order' })
     } catch (err) {
       dispatch({ type: 'PLACE_FAILED' })
-      let msg = lang === 'vi' ? 'Không thể gửi đơn. Vui lòng thử lại.' : 'Could not place the order. Please retry.'
+      let msg =
+        lang === 'vi'
+          ? 'Không thể gửi đơn. Vui lòng thử lại.'
+          : 'Could not place the order. Please retry.'
       if (err instanceof ApiError) {
         if (err.message === 'session is not accepting orders') {
-          msg = lang === 'vi' 
-            ? 'Bàn này đã yêu cầu thanh toán hoặc đã đóng, không thể đặt thêm món.' 
-            : 'This table has requested the bill or is closed.'
+          msg =
+            lang === 'vi'
+              ? 'Bàn này đã yêu cầu thanh toán hoặc đã đóng, không thể đặt thêm món.'
+              : 'This table has requested the bill or is closed.'
         } else {
           msg = err.message
         }
@@ -97,8 +100,8 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
 
       <div
         className={cn(
-          "fixed bottom-0 left-0 right-0 max-w-lg mx-auto z-[var(--z-modal)] flex flex-col bg-[var(--bg)] rounded-t-[32px] sm:rounded-[32px] sm:bottom-6 sm:max-h-[85vh] h-[90dvh] sm:h-auto shadow-2xl transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden border border-[var(--separator)]/30",
-          open ? "translate-y-0 opacity-100" : "translate-y-full sm:translate-y-[120%] opacity-0"
+          'fixed bottom-0 left-0 right-0 max-w-lg mx-auto z-[var(--z-modal)] flex flex-col bg-[var(--bg)] rounded-t-[32px] sm:rounded-[32px] sm:bottom-6 sm:max-h-[85vh] h-[90dvh] sm:h-auto shadow-2xl transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden border border-[var(--separator)]/30',
+          open ? 'translate-y-0 opacity-100' : 'translate-y-full sm:translate-y-[120%] opacity-0',
         )}
       >
         <div className="flex items-center justify-center pt-4 pb-2 bg-[var(--material-thin)]/80 backdrop-blur-xl shrink-0 z-10 border-b border-[var(--separator)]/30 relative">
@@ -108,7 +111,9 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
               {t.your_cart}
             </h2>
             <div className="bg-[var(--system-blue)]/10 text-[var(--system-blue)] px-3 py-1 rounded-full text-sm font-bold">
-              {lang === 'vi' ? `${cartCount} món` : `${cartCount} item${cartCount === 1 ? '' : 's'}`}
+              {lang === 'vi'
+                ? `${cartCount} món`
+                : `${cartCount} item${cartCount === 1 ? '' : 's'}`}
             </div>
           </div>
         </div>
@@ -119,13 +124,23 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
               <div className="size-24 rounded-full bg-[var(--surface-grouped)] flex items-center justify-center text-[var(--text-tertiary)]/60">
                 <ShoppingBag size={48} strokeWidth={1.5} />
               </div>
-              <p className="text-[16px] font-semibold text-[var(--text-secondary)]">{t.empty_cart}</p>
-              <p className="text-[14px] text-[var(--text-tertiary)] max-w-[200px] text-center">{t.empty_cart_hint}</p>
+              <p className="text-[16px] font-semibold text-[var(--text-secondary)]">
+                {t.empty_cart}
+              </p>
+              <p className="text-[14px] text-[var(--text-tertiary)] max-w-[200px] text-center">
+                {t.empty_cart_hint}
+              </p>
             </div>
           ) : (
             <div className="flex flex-col gap-4">
               {state.cart.map((line, i) => (
-                <CartLineRow key={line.id ?? `${line.menuItemId}-${i}`} line={line} index={i} onRemove={handleRemove} onQtyChange={handleQtyChange} />
+                <CartLineRow
+                  key={line.id ?? `${line.menuItemId}-${i}`}
+                  line={line}
+                  index={i}
+                  onRemove={handleRemove}
+                  onQtyChange={handleQtyChange}
+                />
               ))}
             </div>
           )}
@@ -135,7 +150,9 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
           <div className="bg-[var(--material-thin)]/90 backdrop-blur-2xl border-t border-[var(--separator)] shrink-0 z-20 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
             <div className="px-6 py-4 flex flex-col gap-1">
               <div className="flex items-center justify-between">
-                <span className="text-[15px] font-bold text-[var(--text-secondary)]">{t.subtotal}</span>
+                <span className="text-[15px] font-bold text-[var(--text-secondary)]">
+                  {t.subtotal}
+                </span>
                 <span className="text-[22px] font-black text-[var(--system-blue)] tabular-nums tracking-tight">
                   {formatVND(subtotal)}
                 </span>
@@ -162,7 +179,9 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
                 className="group relative w-full flex h-[60px] items-center justify-center gap-2 overflow-hidden rounded-[20px] bg-[var(--text)] px-8 shadow-xl transition-all active:scale-[0.98] cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                 onClick={handlePlaceOrder}
               >
-                {!state.placing && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />}
+                {!state.placing && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                )}
                 <span className="font-bold text-[var(--bg)] text-[18px] z-10 flex items-center gap-2">
                   {state.placing ? (
                     <>
@@ -172,7 +191,10 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
                   ) : (
                     <>
                       {t.place_order}
-                      <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                      <ChevronRight
+                        size={20}
+                        className="group-hover:translate-x-1 transition-transform"
+                      />
                     </>
                   )}
                 </span>
@@ -204,7 +226,7 @@ const CartLineRow: FC<CartLineRowProps> = ({ line, index, onRemove, onQtyChange 
           <div className="size-full bg-gradient-to-br from-[var(--surface-grouped)] to-[var(--separator)]/30" />
         )}
       </div>
-      
+
       <div className="flex-1 min-w-0 py-1">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 pr-6">
@@ -228,7 +250,7 @@ const CartLineRow: FC<CartLineRowProps> = ({ line, index, onRemove, onQtyChange 
           <span className="text-[15px] font-black text-[var(--text)] tabular-nums">
             {formatVND(line.estUnitPriceVnd * line.quantity)}
           </span>
-          
+
           <div className="flex items-center gap-3 bg-[var(--surface-grouped)] rounded-full p-1 shadow-inner border border-[var(--separator)]/20">
             <button
               type="button"
@@ -250,7 +272,7 @@ const CartLineRow: FC<CartLineRowProps> = ({ line, index, onRemove, onQtyChange 
           </div>
         </div>
       </div>
-      
+
       {/* Delete button positioned absolute on top right */}
       <button
         type="button"

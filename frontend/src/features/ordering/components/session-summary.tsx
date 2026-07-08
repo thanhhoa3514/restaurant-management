@@ -7,9 +7,9 @@ import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
 import { formatVND, formatTime } from '../helpers'
 import { fetchGuestOrders } from '../api'
-import { Button } from '../../../components/ui/button'
-import { Badge } from '../../../components/ui/badge'
-import { Skeleton } from '../../../components/ui/skeleton'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import { GuestPayConfirmDialog } from './guest-pay-confirm-dialog'
 
 export const SessionSummary: FC = () => {

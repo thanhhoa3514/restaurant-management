@@ -10,7 +10,7 @@ export interface JoinSessionResult {
 }
 
 export function joinDiningSession(qrToken: string): Promise<JoinSessionResult> {
-  return apiRequest<JoinSessionResult>('/api/v1/dining/join-session', {
+  return apiRequest<JoinSessionResult>('/api/v1/customer/sessions/join', {
     method: 'POST',
     body: { qr_token: qrToken },
   })
@@ -18,7 +18,7 @@ export function joinDiningSession(qrToken: string): Promise<JoinSessionResult> {
 
 // ── Menu reads (guest) ───────────────────────────────────────────────────────
 // All menu/order calls authenticate with the dining session token via
-// X-Session-Token. Endpoints live under /api/v1/guest/*.
+// X-Session-Token. Endpoints live under /api/v1/customer/*.
 
 export interface ApiCategory {
   id: string
@@ -93,7 +93,7 @@ export interface ApiMenuItemDetail {
 }
 
 export function fetchCategories(sessionToken: string): Promise<ApiCategory[]> {
-  return apiRequest<ApiCategory[]>('/api/v1/guest/menu/categories', { sessionToken })
+  return apiRequest<ApiCategory[]>('/api/v1/customer/menu/categories', { sessionToken })
 }
 
 export function fetchMenuItems(
@@ -101,11 +101,11 @@ export function fetchMenuItems(
   categoryId?: string,
 ): Promise<ApiMenuItemSummary[]> {
   const query = categoryId ? `?category_id=${encodeURIComponent(categoryId)}` : ''
-  return apiRequest<ApiMenuItemSummary[]>(`/api/v1/guest/menu/items${query}`, { sessionToken })
+  return apiRequest<ApiMenuItemSummary[]>(`/api/v1/customer/menu/items${query}`, { sessionToken })
 }
 
 export function fetchMenuItem(sessionToken: string, id: string): Promise<ApiMenuItemDetail> {
-  return apiRequest<ApiMenuItemDetail>(`/api/v1/guest/menu/items/${id}`, { sessionToken })
+  return apiRequest<ApiMenuItemDetail>(`/api/v1/customer/menu/items/${id}`, { sessionToken })
 }
 
 // ── Order mutations / reads (guest) ──────────────────────────────────────────
@@ -176,7 +176,7 @@ export function placeGuestOrder(
   sessionToken: string,
   input: PlaceOrderInput,
 ): Promise<PlaceOrderResult> {
-  return apiRequest<PlaceOrderResult>('/api/v1/guest/orders', {
+  return apiRequest<PlaceOrderResult>('/api/v1/customer/orders', {
     method: 'POST',
     body: input,
     sessionToken,
@@ -184,5 +184,5 @@ export function placeGuestOrder(
 }
 
 export function fetchGuestOrders(sessionToken: string): Promise<GuestOrdersResponse> {
-  return apiRequest<GuestOrdersResponse>('/api/v1/guest/orders', { sessionToken })
+  return apiRequest<GuestOrdersResponse>('/api/v1/customer/orders', { sessionToken })
 }

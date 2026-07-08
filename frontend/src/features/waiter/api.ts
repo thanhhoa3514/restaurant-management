@@ -66,20 +66,20 @@ export interface StaffTablesResponse {
 }
 
 export function fetchStaffTables(): Promise<StaffTablesResponse> {
-  return apiRequest<StaffTablesResponse>('/api/v1/staff/tables')
+  return apiRequest<StaffTablesResponse>('/api/v1/restaurant/tables')
 }
 
 export function requestSessionBill(
   sessionId: string,
 ): Promise<{ session_id: string; status: string; requested_at: string | null }> {
-  return apiRequest(`/api/v1/staff/sessions/${sessionId}/request-bill`, { method: 'POST' })
+  return apiRequest(`/api/v1/restaurant/sessions/${sessionId}/request-bill`, { method: 'POST' })
 }
 
 export function updateStaffOrderItemStatus(
   itemId: string,
   status: string,
 ): Promise<{ id: string; status: string }> {
-  return apiRequest(`/api/v1/staff/order-items/${itemId}/status`, {
+  return apiRequest(`/api/v1/restaurant/order-items/${itemId}/status`, {
     method: 'PATCH',
     body: { status },
   })

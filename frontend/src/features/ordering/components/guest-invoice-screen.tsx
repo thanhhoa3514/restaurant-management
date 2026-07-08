@@ -7,9 +7,9 @@ import { formatVND } from '../helpers'
 import { fetchGuestOrders } from '../api'
 import { brandNameUpper } from '@/lib/brand'
 import type { Session } from '../types'
-import { Button } from '../../../components/ui/button'
-import { Card } from '../../../components/ui/card'
-import { Separator } from '../../../components/ui/separator'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
 
 const createInvoiceNumber = (session: Session | null) => {
   const seed = session

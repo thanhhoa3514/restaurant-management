@@ -1,13 +1,6 @@
 import { getStaffSession, refreshStaffSession } from '@/lib/auth'
 
-// Base URL for the backend API.
-// - Dev: leave VITE_API_URL unset; requests go same-origin and vite.config.ts
-//   proxies /api -> the Go backend (no CORS).
-// - Prod: set VITE_API_URL to the backend origin; the backend must allow it via
-//   ALLOWED_ORIGINS (httpx.CORS).
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
-
-// Backend success/error envelope: { data, meta, error }.
 interface Envelope<T> {
   data: T | null
   meta?: unknown
@@ -30,19 +23,14 @@ interface RequestOptions {
   method?: string
   body?: unknown
   signal?: AbortSignal
-  // QR-guest session token. When set, the request authenticates as a dining
-  // guest via the X-Session-Token header (backend auth.QRSessionToken) instead
-  // of the staff JWT. Used for /api/v1/guest/* endpoints.
   sessionToken?: string
 }
 
-// Deduplicate concurrent refresh attempts so only one refresh request is
-// in-flight at a time. All concurrent 401-triggered requests wait on the same
-// promise and share the result.
+
 let refreshPromise: Promise<boolean> | null = null
 
 async function attemptRefresh(): Promise<boolean> {
-  // Don't retry if a refresh is already in progress — piggyback on it.
+
   if (refreshPromise) return refreshPromise
   refreshPromise = refreshStaffSession().then((s) => s !== null)
   try {
@@ -52,11 +40,7 @@ async function attemptRefresh(): Promise<boolean> {
   }
 }
 
-async function doFetch<T>(
-  path: string,
-  options: RequestOptions,
-  headers: Record<string, string>,
-): Promise<T> {
+async function doFetch<T>(path: string, options: RequestOptions, headers: Record<string, string>): Promise<T> {
   const { method = 'GET', body, signal } = options
   const res = await fetch(`${API_BASE_URL}${path}`, {
     method,
@@ -65,7 +49,6 @@ async function doFetch<T>(
     signal,
   })
 
-  // 204 / empty body: nothing to parse.
   if (res.status === 204) return undefined as T
 
   const contentType = res.headers.get('content-type') ?? ''
@@ -95,36 +78,35 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   let isStaffRequest = false
   if (sessionToken) {
-    // Guest path: authenticate with the dining session token.
     headers['X-Session-Token'] = sessionToken
   } else {
-    // Attach the staff JWT issued by /api/v1/identity/authenticate.
+
     isStaffRequest = true
     const session = getStaffSession()
     if (session?.token) headers.Authorization = `Bearer ${session.token}`
   }
 
   try {
-      return await doFetch<T>(path, options, headers)
-    } catch (err) {
-      if (
-        isStaffRequest &&
-        err instanceof ApiError &&
-        err.status === 401 &&
-        !path.includes('/identity/authenticate') &&
-        !path.includes('/identity/refresh')
-      ) {
-        const refreshed = await attemptRefresh()
-        if (refreshed) {
-          const session = getStaffSession()
-          if (session?.token) {
-            headers.Authorization = `Bearer ${session.token}`
-          }
-          return doFetch<T>(path, options, headers)
+    return await doFetch<T>(path, options, headers)
+  } catch (err) {
+    if (
+      isStaffRequest &&
+      err instanceof ApiError &&
+      err.status === 401 &&
+      !path.includes('/restaurant/auth/login') &&
+      !path.includes('/restaurant/auth/refresh')
+    ) {
+      const refreshed = await attemptRefresh()
+      if (refreshed) {
+        const session = getStaffSession()
+        if (session?.token) {
+          headers.Authorization = `Bearer ${session.token}`
         }
+        return doFetch<T>(path, options, headers)
       }
-      if (err instanceof DOMException && err.name === 'AbortError') throw err
-      if (err instanceof ApiError) throw err
-      throw new ApiError(0, 'network_error', 'Không thể kết nối máy chủ')
     }
+    if (err instanceof DOMException && err.name === 'AbortError') throw err
+    if (err instanceof ApiError) throw err
+    throw new ApiError(0, 'network_error', 'Không thể kết nối máy chủ')
   }
+}

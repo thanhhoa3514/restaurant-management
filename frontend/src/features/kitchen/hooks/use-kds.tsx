@@ -7,19 +7,17 @@ import {
   type Dispatch,
   type SetStateAction,
 } from 'react'
-import { useQuery } from '@tanstack/react-query'
 
 import { KDS_DICT } from '@/features/kitchen/data/i18n'
 import { minStatus, nextStatus, urgencyFor } from '@/features/kitchen/helpers'
 import type { ItemStatus, KDSStats, Lang, Ticket, Urgency } from '@/features/kitchen/types'
-import { fetchKitchenQueue, updateKitchenOrderItemStatus } from '@/features/kitchen/api'
-import { toKdsTickets } from '@/features/kitchen/helpers/mappers'
+import { updateKitchenOrderItemStatus } from '@/features/kitchen/api'
+import { useKdsQueue } from '@/features/kitchen/queries/use-kds-queue'
 
 type KdsDictKey = keyof (typeof KDS_DICT)['vi']
 type KdsDictFunction = (...args: Array<number | string>) => string
 
 const FADE_OUT_MS = 1_500
-const KITCHEN_QUEUE_QUERY_KEY = ['kitchen', 'queue'] as const
 
 function statusToastKey(status: ItemStatus): KdsDictKey | null {
   switch (status) {
@@ -75,13 +73,7 @@ export function useKds(): UseKdsValue {
   const [demoOpen, setDemoOpen] = useState(false)
   const [lastMessage, setLastMessage] = useState<string | null>(null)
 
-  const { data: queueData, refetch: refetchQueueQuery } = useQuery({
-    queryKey: KITCHEN_QUEUE_QUERY_KEY,
-    queryFn: fetchKitchenQueue,
-    refetchInterval: paused ? false : 5_000,
-  })
-
-  const tickets = useMemo(() => toKdsTickets(queueData?.tickets ?? []), [queueData])
+  const { tickets, refetch: refetchQueue } = useKdsQueue(paused)
 
   const langRef = useRef(lang)
   const soundOnRef = useRef(soundOn)
@@ -89,21 +81,10 @@ export function useKds(): UseKdsValue {
   const ticketsRef = useRef(tickets)
   const fadingIdsRef = useRef(fadingIds)
 
-  useEffect(() => {
-    langRef.current = lang
-  }, [lang])
-
-  useEffect(() => {
-    soundOnRef.current = soundOn
-  }, [soundOn])
-
-  useEffect(() => {
-    ticketsRef.current = tickets
-  }, [tickets])
-
-  useEffect(() => {
-    fadingIdsRef.current = fadingIds
-  }, [fadingIds])
+  useEffect(() => { langRef.current = lang }, [lang])
+  useEffect(() => { soundOnRef.current = soundOn }, [soundOn])
+  useEffect(() => { ticketsRef.current = tickets }, [tickets])
+  useEffect(() => { fadingIdsRef.current = fadingIds }, [fadingIds])
 
   const setLang = useCallback((newLang: Lang) => {
     localStorage.setItem('rest_lang_kds', newLang)
@@ -120,10 +101,7 @@ export function useKds(): UseKdsValue {
     setLastMessage(message)
   }, [])
 
-  const refetchQueue = useCallback(() => {
-    void refetchQueueQuery()
-  }, [refetchQueueQuery])
-
+  // ── Timer: urgency tracking ────────────────────────────────────────────────
   useEffect(() => {
     const timerId = window.setInterval(() => {
       setNow((prev) => {
@@ -159,6 +137,7 @@ export function useKds(): UseKdsValue {
     return () => window.clearInterval(timerId)
   }, [timeMultiplier, notify])
 
+  // ── Advance all items in an order ───────────────────────────────────────────
   const advanceAll = useCallback(
     (orderId: string) => {
       const ticket = tickets.find((item) => item.order_id === orderId)
@@ -174,7 +153,7 @@ export function useKds(): UseKdsValue {
             acc.push(updateKitchenOrderItemStatus(item.id, target))
           }
           return acc
-        }, [] as Promise<any>[]),
+        }, [] as Promise<unknown>[]),
       ).then(() => {
         if (toastKey) notify(t(toastKey, ticket.table_number))
         refetchQueue()
@@ -183,6 +162,7 @@ export function useKds(): UseKdsValue {
     [notify, refetchQueue, t, tickets],
   )
 
+  // ── Advance a single item ──────────────────────────────────────────────────
   const advanceItem = useCallback(
     (_orderId: string, itemId: string) => {
       const item = tickets
@@ -199,6 +179,7 @@ export function useKds(): UseKdsValue {
     [notify, refetchQueue, t, tickets],
   )
 
+  // ── Fade out fully-served tickets ──────────────────────────────────────────
   useEffect(() => {
     for (const ticket of tickets) {
       if (fadingIds.has(ticket.order_id)) continue
@@ -219,6 +200,7 @@ export function useKds(): UseKdsValue {
     }
   }, [fadingIds, refetchQueue, tickets])
 
+  // ── Derived stats ──────────────────────────────────────────────────────────
   const stats = useMemo<KDSStats>(() => {
     return tickets.reduce(
       (acc, ticket) => {
