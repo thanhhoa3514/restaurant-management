@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FC } from 'react'
-import { QrCode, ScanLine, Sparkles, AlertCircle, Users } from 'lucide-react'
+import { QrCode, ScanLine, AlertCircle, Users } from 'lucide-react'
 import QRCodeLib from 'qrcode'
 import { useQuery } from '@tanstack/react-query'
 import { ApiError } from '@/lib/api'
@@ -23,6 +23,8 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
 
   const [joinState, setJoinState] = useState<JoinState>('idle')
   const [message, setMessage] = useState('')
+  const [guestName, setGuestName] = useState('')
+  const [nameError, setNameError] = useState('')
 
   const {
     data: tablesData,
@@ -61,12 +63,12 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
   const displayToken = qrToken ? `•••${qrToken.slice(-6)}` : ''
 
   const handleJoin = useCallback(
-    async (token: string) => {
+    async (token: string, name?: string) => {
       setJoinState('joining')
       setMessage(t.qr_joining)
 
       try {
-        const joined = await joinDiningSession(token)
+        const joined = await joinDiningSession(token, name)
 
         if (joined.status === 'not_opened') {
           setJoinState('not_opened')
@@ -105,13 +107,18 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
     [dispatch, t],
   )
 
-  useEffect(() => {
-    if (!qrToken || attemptedToken.current === qrToken || state.session) return
-    attemptedToken.current = qrToken
-    void handleJoin(qrToken)
-  }, [handleJoin, qrToken, state.session])
-
   const canRetry = Boolean(qrToken) && joinState !== 'joining'
+
+  const handleJoinWithName = useCallback(() => {
+    const trimmed = guestName.trim()
+    if (!trimmed) {
+      setNameError(t.qr_name_required)
+      return
+    }
+    setNameError('')
+    attemptedToken.current = qrToken!
+    void handleJoin(qrToken!, trimmed)
+  }, [guestName, qrToken, handleJoin, t])
 
   const areaGroups = useMemo(() => {
     if (!tablesData?.length) return []
@@ -131,9 +138,6 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
         <div className="mx-auto max-w-3xl px-5 py-10">
           {/* Header */}
           <div className="mb-10 text-center">
-            <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--system-blue)] to-[var(--system-purple)] shadow-lg">
-              <Sparkles size={26} className="text-white" />
-            </div>
             <h1 className="text-2xl font-bold tracking-tight text-[var(--text)]">{t.restaurant}</h1>
             <p className="mt-1.5 text-sm text-[var(--text-tertiary)]">{t.qr_desc}</p>
           </div>
@@ -205,84 +209,127 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
     )
   }
 
+  const showNameForm = joinState === 'idle' && !state.session
+  const showStatus = joinState !== 'idle'
+
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--bg)] px-6">
       <div className="flex w-full max-w-sm flex-col items-center gap-10">
         {/* Brand */}
         <div className="text-center">
           <img
-            src="/favicon.png"
+            src="/zenith-logo-transparent.png"
             alt={t.restaurant}
             className="mx-auto mb-3 size-20 rounded-[22px] object-cover shadow-lg"
           />
           <h1 className="text-2xl font-bold tracking-tight text-[var(--text)]">{t.restaurant}</h1>
         </div>
 
-        {/* Status card */}
-        <div
-          className={cn(
-            'w-full rounded-2xl border p-8 text-center transition-all duration-500',
-            joinState === 'error' || joinState === 'not_opened'
-              ? 'border-red-200 bg-red-50/60 dark:border-red-800/30 dark:bg-red-950/15'
-              : joinState === 'joining'
-                ? 'border-blue-200 bg-blue-50/60 dark:border-blue-800/30 dark:bg-blue-950/15'
-                : 'border-[var(--separator)] bg-[var(--material-thin)]',
-          )}
-        >
-          {/* Badge */}
-          <div
-            className={cn(
-              'mb-5 inline-block rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider',
-              joinState === 'error' || joinState === 'not_opened'
-                ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-                : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+        {/* Name input (before joining) */}
+        {showNameForm && (
+          <div className="w-full rounded-2xl border border-[var(--separator)] bg-[var(--material-thin)] p-6 text-center">
+            <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--system-blue)] to-[var(--system-purple)] shadow-lg">
+              <Users size={24} className="text-white" />
+            </div>
+            <h2 className="mb-1 text-lg font-semibold text-[var(--text)]">{t.qr_name_label}</h2>
+            <p className="mb-5 text-xs text-[var(--text-tertiary)]">{t.session_hint}</p>
+            <input
+              type="text"
+              value={guestName}
+              onChange={(e) => {
+                setGuestName(e.target.value)
+                if (nameError) setNameError('')
+              }}
+              placeholder={t.qr_name_placeholder}
+              className="w-full rounded-xl border border-[var(--separator)] bg-white px-4 py-3 text-base text-[var(--text)] outline-none transition focus:border-blue-400"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleJoinWithName()
+              }}
+            />
+            {nameError && (
+              <p className="mt-2 text-xs text-red-500">{nameError}</p>
             )}
-          >
-            {joinState === 'error' || joinState === 'not_opened'
-              ? t.qr_action_required
-              : `${t.qr_scanned} ${displayToken}`}
+            <button
+              type="button"
+              onClick={handleJoinWithName}
+              className="mt-5 flex h-14 w-full cursor-pointer items-center justify-center rounded-2xl bg-[var(--text)] text-[var(--bg)] font-semibold text-base shadow-lg transition-all active:scale-[0.98]"
+            >
+              {t.qr_join_table}
+            </button>
           </div>
+        )}
 
-          {/* Icon */}
-          <div className="mx-auto mb-4 flex size-36 items-center justify-center rounded-2xl border border-[var(--separator)] bg-white">
-            {joinState === 'joining' ? (
-              <ScanLine size={60} className="animate-pulse text-blue-500" />
-            ) : joinState === 'error' || joinState === 'not_opened' ? (
-              <AlertCircle size={60} className="text-red-400" />
-            ) : (
-              <QrCode size={60} className="text-gray-300" />
-            )}
-          </div>
+        {/* Status card (after joining attempt) */}
+        {showStatus && (
+          <>
+            <div
+              className={cn(
+                'w-full rounded-2xl border p-8 text-center transition-all duration-500',
+                joinState === 'error' || joinState === 'not_opened'
+                  ? 'border-red-200 bg-red-50/60 dark:border-red-800/30 dark:bg-red-950/15'
+                  : joinState === 'joining'
+                    ? 'border-blue-200 bg-blue-50/60 dark:border-blue-800/30 dark:bg-blue-950/15'
+                    : 'border-[var(--separator)] bg-[var(--material-thin)]',
+              )}
+            >
+              {/* Badge */}
+              <div
+                className={cn(
+                  'mb-5 inline-block rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider',
+                  joinState === 'error' || joinState === 'not_opened'
+                    ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                    : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+                )}
+              >
+                {joinState === 'error' || joinState === 'not_opened'
+                  ? t.qr_action_required
+                  : `${t.qr_scanned} ${displayToken}`}
+              </div>
 
-          <p
-            className={cn(
-              'text-sm leading-relaxed',
-              joinState === 'error' || joinState === 'not_opened'
-                ? 'text-red-600 dark:text-red-400'
-                : 'text-[var(--text-secondary)]',
-            )}
-          >
-            {message || (qrToken ? t.session_hint : t.qr_desc)}
-          </p>
-        </div>
+              {/* Icon */}
+              <div className="mx-auto mb-4 flex size-36 items-center justify-center rounded-2xl border border-[var(--separator)] bg-white">
+                {joinState === 'joining' ? (
+                  <ScanLine size={60} className="animate-pulse text-blue-500" />
+                ) : joinState === 'error' || joinState === 'not_opened' ? (
+                  <AlertCircle size={60} className="text-red-400" />
+                ) : (
+                  <QrCode size={60} className="text-gray-300" />
+                )}
+              </div>
 
-        {/* Action */}
-        <button
-          type="button"
-          disabled={!canRetry}
-          onClick={() => {
-            if (!qrToken) return
-            attemptedToken.current = null
-            void handleJoin(qrToken)
-          }}
-          className="flex h-14 w-full cursor-pointer items-center justify-center rounded-2xl bg-[var(--text)] text-[var(--bg)] font-semibold text-base shadow-lg transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {joinState === 'joining'
-            ? t.qr_joining
-            : joinState === 'not_opened' || joinState === 'error'
-              ? t.qr_retry
-              : t.start_ordering}
-        </button>
+              <p
+                className={cn(
+                  'text-sm leading-relaxed',
+                  joinState === 'error' || joinState === 'not_opened'
+                    ? 'text-red-600 dark:text-red-400'
+                    : 'text-[var(--text-secondary)]',
+                )}
+              >
+                {message || (qrToken ? t.session_hint : t.qr_desc)}
+              </p>
+            </div>
+
+            {/* Action */}
+            <button
+              type="button"
+              disabled={!canRetry}
+              onClick={() => {
+                if (!qrToken) return
+                attemptedToken.current = null
+                setJoinState('idle')
+                setGuestName('')
+              }}
+              className="flex h-14 w-full cursor-pointer items-center justify-center rounded-2xl bg-[var(--text)] text-[var(--bg)] font-semibold text-base shadow-lg transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {joinState === 'joining'
+                ? t.qr_joining
+                : joinState === 'not_opened' || joinState === 'error'
+                  ? t.qr_retry
+                  : t.start_ordering}
+            </button>
+          </>
+        )}
       </div>
     </div>
   )

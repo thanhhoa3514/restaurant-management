@@ -68,6 +68,12 @@ func (r *fakeRepo) FindActiveSessionByTable(context.Context, uuid.UUID, uuid.UUI
 func (r *fakeRepo) ListTablesWithActiveQR(context.Context, uuid.UUID) ([]domain.TableWithQR, error) {
 	return r.tablesWithQR, nil
 }
+func (r *fakeRepo) UpdateSessionCustomerName(_ context.Context, sessionID uuid.UUID, name string) error {
+	if r.activeSession != nil && r.activeSession.ID == sessionID {
+		r.activeSession.CustomerName = name
+	}
+	return nil
+}
 func (r *fakeRepo) CloseSession(context.Context, uuid.UUID, uuid.UUID, *uuid.UUID) (*domain.DiningSession, bool, error) {
 	if r.activeErr != nil {
 		return nil, false, r.activeErr

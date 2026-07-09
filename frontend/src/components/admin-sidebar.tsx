@@ -81,7 +81,7 @@ export function SidebarContent({
                       type="button"
                       onClick={() => handleNavigate(item)}
                       className={cn(
-                        'group flex min-h-12 w-full items-center gap-3 rounded-[16px] px-3 text-left text-[15px] font-semibold transition-colors duration-[220ms] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--staff-tint)]/20',
+                        'group flex min-h-12 w-full cursor-pointer items-center gap-3 rounded-[16px] px-3 text-left text-[15px] font-semibold transition-colors duration-[220ms] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--staff-tint)]/20',
                         isActive(item)
                           ? 'bg-[var(--staff-tint)]/12 text-[var(--staff-tint)]'
                           : 'text-[var(--text-secondary)] hover:bg-[var(--surface-grouped)] hover:text-[var(--text)]',

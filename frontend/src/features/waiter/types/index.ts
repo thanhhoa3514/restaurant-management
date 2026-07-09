@@ -43,6 +43,7 @@ export interface WFSession {
   id: string
   started_at: Date
   guest_count: number
+  guest_name: string
   waiter_called_at: Date | null
   bill_requested_at: Date | null
   orders: WFOrder[]

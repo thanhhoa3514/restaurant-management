@@ -11,10 +11,10 @@ export interface JoinSessionResult {
   table_name?: string
 }
 
-export function joinDiningSession(qrToken: string): Promise<JoinSessionResult> {
+export function joinDiningSession(qrToken: string, guestName?: string): Promise<JoinSessionResult> {
   return apiRequest<JoinSessionResult>('/api/v1/customer/sessions/join', {
     method: 'POST',
-    body: { qr_token: qrToken },
+    body: { qr_token: qrToken, guest_name: guestName },
   })
 }
 

@@ -71,4 +71,8 @@ export const en = {
   qr_tables_word: 'tables',
   qr_action_required: 'Action Required',
   qr_failed_load: 'Failed to load tables',
+  qr_name_label: 'Your name',
+  qr_name_placeholder: 'Enter your name to start...',
+  qr_name_required: 'Please enter your name',
+  qr_join_table: 'Join table',
 } as const

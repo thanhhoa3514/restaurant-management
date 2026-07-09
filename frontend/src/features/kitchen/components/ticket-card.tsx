@@ -134,13 +134,13 @@ export const TicketCard: FC<TicketCardProps> = ({
         >
           {action.label}
         </Button>
-        <button
-          className="w-full rounded-xl py-1.5 text-center text-sm font-medium text-[var(--system-blue)] transition-colors hover:bg-[var(--system-blue)]/10"
+        <Button
+          variant="link"
+          className="w-full rounded-xl py-1.5 text-sm font-medium"
           onClick={onOpenManage}
-          type="button"
         >
           {t('btn_manage' as KdsKey)} →
-        </button>
+        </Button>
       </div>
     </Card>
   )

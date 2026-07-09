@@ -71,4 +71,8 @@ export const vi = {
   qr_tables_word: 'bàn',
   qr_action_required: 'Cần thao tác',
   qr_failed_load: 'Không tải được danh sách bàn',
+  qr_name_label: 'Tên của bạn',
+  qr_name_placeholder: 'Nhập tên để bắt đầu...',
+  qr_name_required: 'Vui lòng nhập tên của bạn',
+  qr_join_table: 'Vào bàn',
 } as const

@@ -1,5 +1,5 @@
 import { useState, type FC } from 'react'
-import { Minus, Plus, ShoppingBag, Trash2, ChevronRight, Sparkles } from 'lucide-react'
+import { Minus, Plus, ShoppingBag, Trash2, ChevronRight } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useOrdering } from '../hooks/use-ordering'
@@ -184,10 +184,7 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
                 )}
                 <span className="font-bold text-[var(--bg)] text-[18px] z-10 flex items-center gap-2">
                   {state.placing ? (
-                    <>
-                      <Sparkles size={20} className="animate-pulse" />
-                      {t.placing_order}
-                    </>
+                    t.placing_order
                   ) : (
                     <>
                       {t.place_order}

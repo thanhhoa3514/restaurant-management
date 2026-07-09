@@ -69,6 +69,7 @@ export function toCashierSessions(rows: StaffTableDTO[]): CashierSession[] {
         area_name_vi: table.area_name || 'Nhà hàng',
         area_name_en: table.area_name || 'Restaurant',
         guest_count: table.session.customer_count || table.capacity || 1,
+        guest_name: table.session.guest_name,
         started_at: new Date(table.session.opened_at),
         bill_requested_at: billRequested,
         status: table.session.status === 'AWAITING_PAYMENT' ? 'bill_requested' : 'dining',

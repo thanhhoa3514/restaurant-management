@@ -71,6 +71,15 @@ func (r *Repository) CreateSession(ctx context.Context, s *domain.DiningSession)
 	return err
 }
 
+func (r *Repository) UpdateSessionCustomerName(ctx context.Context, sessionID uuid.UUID, name string) error {
+	_, err := r.q(ctx).Exec(ctx, `
+		UPDATE dining_sessions
+		SET customer_name = $1, updated_at = NOW()
+		WHERE id = $2 AND deleted_at IS NULL
+	`, name, sessionID)
+	return err
+}
+
 func (r *Repository) FindQRByToken(ctx context.Context, qrToken string) (*domain.QRCode, error) {
 	qr := &domain.QRCode{}
 	err := r.q(ctx).QueryRow(ctx, `

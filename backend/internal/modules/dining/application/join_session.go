@@ -13,7 +13,8 @@ import (
 )
 
 type JoinSessionRequest struct {
-	QRToken string `json:"qr_token"`
+	QRToken   string `json:"qr_token"`
+	GuestName string `json:"guest_name"`
 	// Server-observed request metadata. The HTTP handler populates these
 	// fields; they are never trusted from JSON.
 	IPHash    string `json:"-"`
@@ -81,6 +82,12 @@ func (s *JoinSession) Handle(ctx context.Context, req JoinSessionRequest) (JoinS
 			out.TableCode = table.Code
 			out.TableName = table.Name
 		}
+		if name := strings.TrimSpace(req.GuestName); name != "" {
+			if err := s.repo.UpdateSessionCustomerName(ctx, session.ID, name); err != nil {
+				return err
+			}
+			session.CustomerName = name
+		}
 		return s.writeQRScanEvent(ctx, qr, session, scanOutcome(session.Status), req)
 	})
 	return out, err
@@ -106,6 +113,7 @@ func (s *JoinSession) writeQRScanEvent(ctx context.Context, qr *domain.QRCode, s
 		"qr_code_id": qr.ID,
 		"table_id":   qr.TableID,
 		"outcome":    outcome,
+		"guest_name": req.GuestName,
 	}
 	dedupeKey := "qr_scan:" + qr.ID.String() + ":" + outcome + ":" + req.IPHash
 	window := 5 * time.Minute

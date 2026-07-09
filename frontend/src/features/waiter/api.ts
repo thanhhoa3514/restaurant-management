@@ -45,6 +45,7 @@ export interface StaffSessionDTO {
   session_code: string
   status: string
   customer_count: number
+  guest_name: string
   opened_at: string
   bill_requested_at: string | null
   orders: StaffOrderDTO[]

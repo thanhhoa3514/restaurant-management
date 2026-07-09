@@ -31,6 +31,7 @@ type StaffSessionDTO struct {
 	SessionCode     string          `json:"session_code"`
 	Status          string          `json:"status"`
 	CustomerCount   int             `json:"customer_count"`
+	GuestName       string          `json:"guest_name"`
 	OpenedAt        time.Time       `json:"opened_at"`
 	BillRequestedAt *time.Time      `json:"bill_requested_at"`
 	Orders          []StaffOrderDTO `json:"orders"`

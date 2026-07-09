@@ -93,6 +93,7 @@ export function toWaiterTables(rows: StaffTableDTO[]): WFTable[] {
           id: table.session.id,
           started_at: new Date(table.session.opened_at),
           guest_count: table.session.customer_count || table.capacity || 1,
+          guest_name: table.session.guest_name,
           waiter_called_at: null,
           bill_requested_at:
             table.session.bill_requested_at || table.session.status === 'AWAITING_PAYMENT'

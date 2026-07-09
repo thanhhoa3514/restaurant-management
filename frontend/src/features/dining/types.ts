@@ -9,7 +9,6 @@ export interface GuestTable {
   qr_token?: string
 }
 
-// Mirror of backend dining TableQRDTO / ManageTableQRResponse envelopes.
 
 export interface TableQR {
   table_id: string

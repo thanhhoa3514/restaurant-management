@@ -1,5 +1,5 @@
 import { useMemo, useState, type FC } from 'react'
-import { Search, ShoppingBag, Plus, Sparkles, ChevronRight } from 'lucide-react'
+import { Search, ShoppingBag, Plus, ChevronRight } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
@@ -68,9 +68,8 @@ export const MenuScreen: FC = () => {
         <div className="px-4 pt-5 pb-4 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
-              <h1 className="text-xl font-bold text-[var(--text)] tracking-tight flex items-center gap-2">
+              <h1 className="text-xl font-bold text-[var(--text)] tracking-tight">
                 {t.restaurant}
-                <Sparkles className="size-4 text-amber-400" />
               </h1>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-xs font-medium text-[var(--text-tertiary)]">{t.floor}</span>
@@ -118,7 +117,7 @@ export const MenuScreen: FC = () => {
             type="button"
             onClick={() => setActiveCategory('all')}
             className={cn(
-              "whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 active:scale-95 border",
+              "whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 active:scale-95 border cursor-pointer",
               activeCategory === 'all'
                 ? "bg-[var(--text)] text-[var(--bg)] border-transparent shadow-md"
                 : "bg-transparent text-[var(--text-secondary)] border-[var(--separator)] hover:bg-[var(--surface-grouped)]"
@@ -132,7 +131,7 @@ export const MenuScreen: FC = () => {
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
               className={cn(
-                "whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 active:scale-95 border",
+                "whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 active:scale-95 border cursor-pointer",
                 activeCategory === cat.id
                   ? "bg-[var(--text)] text-[var(--bg)] border-transparent shadow-md"
                   : "bg-transparent text-[var(--text-secondary)] border-[var(--separator)] hover:bg-[var(--surface-grouped)]"
@@ -162,9 +161,6 @@ export const MenuScreen: FC = () => {
           </div>
         ) : isItemsError ? (
           <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
-            <div className="size-16 rounded-full bg-[var(--system-red)]/10 flex items-center justify-center text-[var(--system-red)]">
-              <Sparkles size={24} />
-            </div>
             <p className="text-sm font-medium text-[var(--text-secondary)]">
               {state.lang === 'vi' ? 'Lỗi kết nối. Không tải được thực đơn.' : 'Connection error. Could not load the menu.'}
             </p>

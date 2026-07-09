@@ -79,6 +79,7 @@ export interface CashierSession {
   area_name_vi: string
   area_name_en: string
   guest_count: number
+  guest_name: string
   started_at: Date
   bill_requested_at: Date | null
   status: SessionStatus

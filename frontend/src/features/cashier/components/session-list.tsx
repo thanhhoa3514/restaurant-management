@@ -136,6 +136,7 @@ function SessionCard({
             <div className="text-lg font-bold text-[var(--text)]">{t('table')} {session.table_number}</div>
             <div className="mt-0.5 text-xs font-normal text-[var(--text-tertiary)]">
               {lang === 'vi' ? session.area_name_vi : session.area_name_en} · {t('guests', session.guest_count)}
+              {session.guest_name && <span> · {session.guest_name}</span>}
             </div>
           </div>
           <span className="text-[var(--text-tertiary)]">›</span>

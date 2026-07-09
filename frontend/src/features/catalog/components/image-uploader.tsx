@@ -50,7 +50,7 @@ export function ImageUploader({ value, onChange, disabled }: ImageUploaderProps)
                 <button
                   type="button"
                   onClick={() => onChange('')}
-                  className="absolute right-1 top-1 flex size-5 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
+                  className="absolute right-1 top-1 flex size-5 cursor-pointer items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
                 >
                   <X className="size-3" />
                 </button>

@@ -557,7 +557,7 @@ func (r *Repository) CreateCancelRequest(ctx context.Context, restaurantID uuid.
 func (r *Repository) ListStaffTables(ctx context.Context, restaurantID uuid.UUID) ([]orderingapp.StaffTableDTO, error) {
 	rows, err := r.q(ctx).Query(ctx, `
 		SELECT t.id, t.code, t.name, t.capacity, t.status, COALESCE(a.name, ''),
-		       ds.id, ds.session_code, ds.status, COALESCE(ds.customer_count, 0), ds.opened_at, ds.updated_at
+		       ds.id, ds.session_code, ds.status, COALESCE(ds.customer_count, 0), COALESCE(ds.customer_name, ''), ds.opened_at, ds.updated_at
 		FROM tables t
 		LEFT JOIN areas a ON a.id = t.area_id AND a.restaurant_id = t.restaurant_id AND a.deleted_at IS NULL
 		LEFT JOIN dining_sessions ds
@@ -579,8 +579,9 @@ func (r *Repository) ListStaffTables(ctx context.Context, restaurantID uuid.UUID
 		var sessionID pgtype.UUID
 		var sessionCode, sessionStatus pgtype.Text
 		var customerCount pgtype.Int4
+		var customerName pgtype.Text
 		var openedAt, updatedAt pgtype.Timestamptz
-		if err := rows.Scan(&table.ID, &table.Code, &table.Name, &table.Capacity, &table.Status, &table.AreaName, &sessionID, &sessionCode, &sessionStatus, &customerCount, &openedAt, &updatedAt); err != nil {
+		if err := rows.Scan(&table.ID, &table.Code, &table.Name, &table.Capacity, &table.Status, &table.AreaName, &sessionID, &sessionCode, &sessionStatus, &customerCount, &customerName, &openedAt, &updatedAt); err != nil {
 			return nil, err
 		}
 		if sessionID.Valid {
@@ -591,6 +592,7 @@ func (r *Repository) ListStaffTables(ctx context.Context, restaurantID uuid.UUID
 				SessionCode:   sessionCode.String,
 				Status:        status,
 				CustomerCount: int(customerCount.Int32),
+				GuestName:     customerName.String,
 				OpenedAt:      openedAt.Time,
 				Orders:        []orderingapp.StaffOrderDTO{},
 			}

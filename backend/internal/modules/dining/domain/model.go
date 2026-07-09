@@ -73,6 +73,7 @@ type DiningSession struct {
 	Status       SessionStatus
 	OpenedVia    OpenedVia
 	OpenedBy     *uuid.UUID
+	CustomerName string
 	Version      int
 	ClosedAt     *time.Time
 }
@@ -95,6 +96,7 @@ type DiningRepository interface {
 	CloseSession(ctx context.Context, restaurantID, sessionID uuid.UUID, closedBy *uuid.UUID) (*DiningSession, bool, error)
 	DeactivateActiveQR(ctx context.Context, restaurantID, tableID uuid.UUID, deactivatedBy *uuid.UUID, reason string) error
 	CreateQR(ctx context.Context, qr *QRCode) error
+	UpdateSessionCustomerName(ctx context.Context, sessionID uuid.UUID, name string) error
 }
 
 type OutboxWriter interface {

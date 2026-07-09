@@ -75,7 +75,7 @@ export const ManageItemsDialog: FC<ManageItemsDialogProps> = ({
               className="pr-12"
             />
             <button
-              className="absolute right-4 top-4 z-10 size-8 rounded-full bg-[var(--surface-grouped)] text-[var(--text-secondary)]"
+              className="absolute right-4 top-4 z-10 size-8 cursor-pointer rounded-full bg-[var(--surface-grouped)] text-[var(--text-secondary)]"
               onClick={onClose}
               type="button"
             >
@@ -156,7 +156,7 @@ const ManagedItem: FC<{
       </div>
 
       <button
-        className="flex w-full items-center justify-between border-t border-[var(--separator)] px-4 py-2 text-left text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-grouped)]/70"
+        className="flex w-full cursor-pointer items-center justify-between border-t border-[var(--separator)] px-4 py-2 text-left text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-grouped)]/70"
         onClick={onToggle}
         type="button"
       >
