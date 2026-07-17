@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet'
+import { activeInvoice } from '@/features/cashier/helpers'
 import type { CashierSession } from '@/features/cashier/types'
 
 type DiscountReason = 'promo' | 'regular' | 'complaint'
@@ -28,9 +29,10 @@ export const DiscountDialog: FC<DiscountDialogProps> = ({
   onApply,
   onRemove,
 }) => {
-  const [amount, setAmount] = useState(session?.invoice.discount?.amount.toString() ?? '')
+  const invoice = session ? activeInvoice(session) : null
+  const [amount, setAmount] = useState(invoice?.discount?.amount.toString() ?? '')
   const [reason, setReason] = useState<DiscountReason>(
-    (session?.invoice.discount?.reason as DiscountReason | undefined) ?? 'promo',
+    (invoice?.discount?.reason as DiscountReason | undefined) ?? 'promo',
   )
 
   const parsedAmount = Number.parseInt(amount, 10) || 0
@@ -39,7 +41,7 @@ export const DiscountDialog: FC<DiscountDialogProps> = ({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-md bg-[var(--material-thick)]" hideClose>
-        <SheetHeader title={t('discount_dialog_title')} subtitle={session?.invoice.number} />
+        <SheetHeader title={t('discount_dialog_title')} subtitle={invoice?.number} />
         <div className="flex-1 space-y-5 overflow-y-auto px-5 pb-5">
           <Card className="border border-[var(--separator)] bg-[var(--material-regular)] p-4 shadow-sm backdrop-blur-2xl">
             <label className="text-sm font-semibold text-[var(--text)]" htmlFor="discount-amount">
@@ -84,7 +86,7 @@ export const DiscountDialog: FC<DiscountDialogProps> = ({
             </Button>
           </div>
 
-          {session?.invoice.discount ? (
+          {invoice?.discount ? (
             <Button variant="destructive" className="w-full rounded-[var(--radius-lg)]" onClick={onRemove}>
               {t('remove_discount')}
             </Button>

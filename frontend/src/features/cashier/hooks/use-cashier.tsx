@@ -3,22 +3,27 @@ import { createContext, use, useEffect, useMemo, useReducer, type ReactNode } fr
 import { toast } from 'sonner'
 
 import {
-  adjustInvoice,
-  createInvoice,
-  processPayment,
-  voidInvoice,
+  listSessionInvoices,
   type BillingInvoiceDTO,
   type BillingPaymentDTO,
 } from '@/features/billing/api'
 import { CS_DICT } from '@/features/cashier/data/i18n'
-import { makeTxnId } from '@/features/cashier/helpers'
-import { closeDiningSession } from '@/features/dining/api'
+import { activeInvoice, fmtVND, makeTxnId } from '@/features/cashier/helpers'
 import { fetchStaffTables } from '@/features/waiter/api'
-import { toCashierSessions } from '@/features/cashier/helpers/mappers'
+import { useCreateInvoice } from '@/features/cashier/mutations/useCreateInvoice'
+import { useAdjustInvoice } from '@/features/cashier/mutations/useAdjustInvoice'
+import { useProcessPayment } from '@/features/cashier/mutations/useProcessPayment'
+import { useProcessPartialPayment } from '@/features/cashier/mutations/useProcessPartialPayment'
+import { useSplitInvoice } from '@/features/cashier/mutations/useSplitInvoice'
+import { useVoidInvoice } from '@/features/cashier/mutations/useVoidInvoice'
+import { useCloseDiningSession } from '@/features/cashier/mutations/useCloseDiningSession'
+import { toCashierSessions, toInvoiceItem } from '@/features/cashier/helpers/mappers'
 import type {
   CashierSession,
   DiscountRecord,
+  Invoice,
   Lang,
+  Order,
   PaymentMethod,
   PaymentRecord,
   SubMethod,
@@ -36,6 +41,7 @@ export interface CashierState {
 export type CashierAction =
   | { type: 'replaceSessions'; sessions: CashierSession[] }
   | { type: 'selectSession'; sessionId: string | null }
+  | { type: 'selectInvoice'; sessionId: string; invoiceId: string }
   | {
       type: 'replaceInvoice'
       sessionId: string
@@ -43,6 +49,7 @@ export type CashierAction =
       discountAction?: 'applied' | 'removed'
       at?: Date
     }
+  | { type: 'replaceInvoices'; sessionId: string; invoices: BillingInvoiceDTO[]; at?: Date }
   | { type: 'injectBill'; sessionId?: string; at?: Date }
   | { type: 'resetAll'; now?: Date }
   | { type: 'applyDiscount'; sessionId: string; amount: number; reason: string; at?: Date }
@@ -69,6 +76,16 @@ export type CashierAction =
     }
   | { type: 'failPayment'; sessionId: string; at?: Date }
   | { type: 'closeSession'; sessionId: string }
+  | { type: 'splitSession'; sessionId: string; groups: { label: string; order_item_ids: string[] }[] }
+  | {
+      type: 'addPartialPayment'
+      sessionId: string
+      method: PaymentMethod
+      subMethod: SubMethod
+      amount: number
+      transactionId?: string
+      at?: Date
+    }
   | { type: 'tick'; seconds: number }
   | { type: 'setPaused'; paused: boolean }
   | { type: 'setTimeMultiplier'; value: number }
@@ -108,15 +125,23 @@ function updateSession(
   return sessions.map((session) => (session.id === sessionId ? updater(session) : session))
 }
 
+function updateActiveInvoice(
+  session: CashierSession,
+  updater: (invoice: Invoice) => Invoice,
+): CashierSession {
+  const invoice = activeInvoice(session)
+  if (!invoice) return session
+  return {
+    ...session,
+    invoices: session.invoices.map((inv) => (inv === invoice ? updater(inv) : inv)),
+  }
+}
+
 function subMethodFromCode(code: string): SubMethod {
   return (['cash', 'card', 'momo', 'zalopay', 'vnpay', 'mock'].includes(code) ? code : 'momo') as SubMethod
 }
 
-function paymentFromDTO(
-  payment: BillingPaymentDTO | null,
-  previous: PaymentRecord | null,
-): PaymentRecord | null {
-  if (!payment) return previous?.status === 'pending' ? previous : null
+function paymentRecordFromDTO(payment: BillingPaymentDTO, previous?: PaymentRecord | null): PaymentRecord {
   const method: PaymentMethod =
     payment.method_code === 'cash' ? 'cash' : payment.method_code === 'card' ? 'card' : 'ewallet'
   return {
@@ -138,57 +163,129 @@ function paymentFromDTO(
   }
 }
 
+function paymentFromDTO(
+  payment: BillingPaymentDTO | null,
+  previous: PaymentRecord | null,
+): PaymentRecord | null {
+  if (!payment) return previous?.status === 'pending' ? previous : null
+  return paymentRecordFromDTO(payment, previous)
+}
+
+function discountFromDTO(invoice: BillingInvoiceDTO, at: Date): DiscountRecord | null {
+  if (invoice.discount_amount_vnd <= 0) return null
+  return {
+    amount: invoice.discount_amount_vnd,
+    reason: invoice.discount_reason ?? '',
+    applied_by: String(CS_DICT.vi.cashier_name),
+    applied_at: at,
+    action: 'applied',
+  }
+}
+
+// isSplit: once a session has >1 invoice, each invoice's items/orders come straight from its
+// own DTO (server already partitioned them). While there's only 1 invoice we keep the existing
+// mapper-derived items/orders untouched — zero behavior change for the common unsplit case.
+function mergeInvoiceDTO(
+  existing: Invoice | undefined,
+  dto: BillingInvoiceDTO,
+  discount: DiscountRecord | null,
+  discountHistory: DiscountRecord[],
+  isSplit: boolean,
+  at: Date,
+): Invoice {
+  const items = isSplit ? dto.items.map(toInvoiceItem) : (existing?.items ?? [])
+  const orders: Order[] = isSplit
+    ? [{ id: dto.id, submitted_at: existing?.created_at ?? at, items }]
+    : (existing?.orders ?? [])
+  const allPayments: PaymentRecord[] = (dto.payments ?? []).map((p) => paymentRecordFromDTO(p))
+  const paidAmount = dto.paid_amount_vnd
+  const remaining = Math.max(0, dto.total_amount_vnd - paidAmount)
+  return {
+    id: dto.id,
+    number: dto.invoice_number,
+    created_at: existing?.created_at ?? at,
+    items,
+    orders,
+    status: dto.status,
+    subtotal: dto.subtotal_vnd,
+    service_charge_amount: dto.service_charge_amount_vnd,
+    service_charge_basis_points: dto.service_charge_basis_points,
+    vat_amount: dto.vat_amount_vnd,
+    vat_basis_points: dto.vat_basis_points,
+    discount,
+    total: dto.total_amount_vnd,
+    paid_amount: paidAmount,
+    change_amount: dto.change_amount_vnd,
+    discount_history: discountHistory,
+    payment: paymentFromDTO(dto.payment, existing?.payment ?? null),
+    payments: allPayments,
+    remaining,
+  }
+}
+
+function statusFromInvoice(invoice: Invoice, priorStatus: CashierSession['status']): CashierSession['status'] {
+  if (invoice.status === 'PAID') return 'paid'
+  if (invoice.status === 'PARTIALLY_PAID') return 'in_payment'
+  if (priorStatus === 'closed') return 'closed'
+  if (invoice.payment?.status === 'processing' || invoice.payment?.status === 'pending') return 'in_payment'
+  return 'bill_requested'
+}
+
 function applyInvoiceDTO(
   session: CashierSession,
-  invoice: BillingInvoiceDTO,
+  dto: BillingInvoiceDTO,
   discountAction: 'applied' | 'removed' | undefined,
   at: Date,
 ): CashierSession {
-  const priorDiscount = session.invoice.discount
-  const discount: DiscountRecord | null =
-    invoice.discount_amount_vnd > 0
-      ? {
-          amount: invoice.discount_amount_vnd,
-          reason: invoice.discount_reason ?? '',
-          applied_by: String(CS_DICT.vi.cashier_name),
-          applied_at: at,
-          action: 'applied',
-        }
-      : null
-  const discountHistory = [...session.invoice.discount_history]
+  // The seed invoice from the mapper has no id yet — the first real DTO replaces it in place
+  // rather than appending, so a single-invoice session stays a single-invoice session.
+  let idx = session.invoices.findIndex((inv) => inv.id === dto.id)
+  if (idx === -1 && session.invoices.length === 1 && !session.invoices[0].id) idx = 0
+  const existing = idx >= 0 ? session.invoices[idx] : undefined
+
+  const priorDiscount = existing?.discount ?? null
+  const discount = discountFromDTO(dto, at)
+  const discountHistory = [...(existing?.discount_history ?? [])]
   if (discountAction === 'applied' && discount) discountHistory.push(discount)
   if (discountAction === 'removed' && priorDiscount) {
     discountHistory.push({ ...priorDiscount, action: 'removed', applied_at: at })
   }
-  const payment = paymentFromDTO(invoice.payment, session.payment)
-  const status =
-    invoice.status === 'PAID'
-      ? 'paid'
-      : session.status === 'closed'
-        ? 'closed'
-        : payment?.status === 'processing' || payment?.status === 'pending'
-          ? 'in_payment'
-          : 'bill_requested'
+
+  const newLength = idx === -1 ? session.invoices.length + 1 : session.invoices.length
+  const merged = mergeInvoiceDTO(existing, dto, discount, discountHistory, newLength > 1, at)
+  const invoices =
+    idx === -1
+      ? [...session.invoices, merged]
+      : session.invoices.map((inv, i) => (i === idx ? merged : inv))
+
   return {
     ...session,
-    status,
-    payment,
-    invoice: {
-      ...session.invoice,
-      id: invoice.id,
-      number: invoice.invoice_number,
-      status: invoice.status,
-      subtotal: invoice.subtotal_vnd,
-      service_charge_amount: invoice.service_charge_amount_vnd,
-      service_charge_basis_points: invoice.service_charge_basis_points,
-      vat_amount: invoice.vat_amount_vnd,
-      vat_basis_points: invoice.vat_basis_points,
-      discount,
-      total: invoice.total_amount_vnd,
-      paid_amount: invoice.paid_amount_vnd,
-      change_amount: invoice.change_amount_vnd,
-      discount_history: discountHistory,
-    },
+    status: statusFromInvoice(merged, session.status),
+    invoices,
+    activeInvoiceId: merged.id ?? null,
+  }
+}
+
+function replaceInvoicesInSession(
+  session: CashierSession,
+  dtos: BillingInvoiceDTO[],
+  at: Date,
+): CashierSession {
+  if (dtos.length === 0) return session
+  const isSplit = dtos.length > 1
+  const invoices = dtos.map((dto) => {
+    const existing = session.invoices.find((inv) => inv.id === dto.id)
+    return mergeInvoiceDTO(existing, dto, discountFromDTO(dto, at), existing?.discount_history ?? [], isSplit, at)
+  })
+  const activeInvoiceId = invoices.some((inv) => inv.id === session.activeInvoiceId)
+    ? session.activeInvoiceId
+    : (invoices[0]?.id ?? null)
+  const active = invoices.find((inv) => inv.id === activeInvoiceId) ?? invoices[0]
+  return {
+    ...session,
+    status: statusFromInvoice(active, session.status),
+    invoices,
+    activeInvoiceId,
   }
 }
 
@@ -199,12 +296,13 @@ function cashierReducer(state: CashierState, action: CashierAction): CashierStat
         ...state,
         sessions: action.sessions.map((incoming) => {
           const existing = state.sessions.find((session) => session.id === incoming.id)
-          return existing?.invoice.id
+          const hasRealInvoice = existing?.invoices.some((inv) => inv.id)
+          return hasRealInvoice
             ? {
                 ...incoming,
-                invoice: existing.invoice,
-                payment: existing.payment,
-                status: existing.status,
+                invoices: existing!.invoices,
+                activeInvoiceId: existing!.activeInvoiceId,
+                status: existing!.status,
               }
             : incoming
         }),
@@ -216,11 +314,29 @@ function cashierReducer(state: CashierState, action: CashierAction): CashierStat
     case 'selectSession':
       return { ...state, selectedSessionId: action.sessionId }
 
+    case 'selectInvoice':
+      return {
+        ...state,
+        sessions: updateSession(state.sessions, action.sessionId, (session) => {
+          const invoice = session.invoices.find((inv) => inv.id === action.invoiceId)
+          if (!invoice) return session
+          return { ...session, activeInvoiceId: action.invoiceId, status: statusFromInvoice(invoice, session.status) }
+        }),
+      }
+
     case 'replaceInvoice':
       return {
         ...state,
         sessions: updateSession(state.sessions, action.sessionId, (session) =>
           applyInvoiceDTO(session, action.invoice, action.discountAction, action.at ?? state.now),
+        ),
+      }
+
+    case 'replaceInvoices':
+      return {
+        ...state,
+        sessions: updateSession(state.sessions, action.sessionId, (session) =>
+          replaceInvoicesInSession(session, action.invoices, action.at ?? state.now),
         ),
       }
 
@@ -249,27 +365,29 @@ function cashierReducer(state: CashierState, action: CashierAction): CashierStat
     case 'applyDiscount':
     case 'removeDiscount':
     case 'completePayment':
+    case 'addPartialPayment':
+    case 'splitSession':
       return state
 
     case 'startPayment': {
       const at = action.at ?? state.now
+      const payment: PaymentRecord = {
+        method: action.method,
+        sub_method: action.subMethod,
+        status: 'pending',
+        transaction_id: action.transactionId ?? makeTxnId(at),
+        initiated_at: at,
+        completed_at: null,
+        amount_tendered: null,
+        change: null,
+        last4: null,
+        bank: null,
+      }
       return {
         ...state,
         sessions: updateSession(state.sessions, action.sessionId, (session) => ({
-          ...session,
+          ...updateActiveInvoice(session, (inv) => ({ ...inv, payment })),
           status: 'in_payment',
-          payment: {
-            method: action.method,
-            sub_method: action.subMethod,
-            status: 'pending',
-            transaction_id: action.transactionId ?? makeTxnId(at),
-            initiated_at: at,
-            completed_at: null,
-            amount_tendered: null,
-            change: null,
-            last4: null,
-            bank: null,
-          },
         })),
       }
     }
@@ -278,15 +396,14 @@ function cashierReducer(state: CashierState, action: CashierAction): CashierStat
       return {
         ...state,
         sessions: updateSession(state.sessions, action.sessionId, (session) => {
-          if (!session.payment) return session
+          const invoice = activeInvoice(session)
+          if (!invoice?.payment) return session
           return {
-            ...session,
+            ...updateActiveInvoice(session, (inv) => ({
+              ...inv,
+              payment: inv.payment ? { ...inv.payment, status: 'failed', completed_at: action.at ?? state.now } : null,
+            })),
             status: 'bill_requested',
-            payment: {
-              ...session.payment,
-              status: 'failed',
-              completed_at: action.at ?? state.now,
-            },
           }
         }),
       }
@@ -325,6 +442,13 @@ const CashierContext = createContext<CashierContextValue | null>(null)
 export function CashierProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const [state, baseDispatch] = useReducer(cashierReducer, undefined, () => createInitialState())
+  const createInvoiceMutation = useCreateInvoice()
+  const adjustInvoiceMutation = useAdjustInvoice()
+  const processPaymentMutation = useProcessPayment()
+  const processPartialPaymentMutation = useProcessPartialPayment()
+  const splitInvoiceMutation = useSplitInvoice()
+  const voidInvoiceMutation = useVoidInvoice()
+  const closeDiningSessionMutation = useCloseDiningSession()
   const { data: staffTablesData } = useQuery({
     queryKey: STAFF_TABLES_QUERY_KEY,
     queryFn: fetchStaffTables,
@@ -376,10 +500,13 @@ export function CashierProvider({ children }: { children: ReactNode }) {
         switch (action.type) {
           case 'applyDiscount': {
             if (!currentSession) return
-            const invoice = currentSession.invoice.id
-              ? { id: currentSession.invoice.id }
-              : await createInvoice(currentSession.id).then((response) => response.invoice)
-            const response = await adjustInvoice(invoice.id, action.amount, action.reason)
+            const active = activeInvoice(currentSession)
+            const invoiceId: string = active?.id ?? (await createInvoiceMutation.mutateAsync(currentSession.id)).invoice.id
+            const response = await adjustInvoiceMutation.mutateAsync({
+              invoiceId,
+              discountAmountVND: action.amount,
+              discountReason: action.reason,
+            })
             baseDispatch({
               type: 'replaceInvoice',
               sessionId: currentSession.id,
@@ -392,10 +519,13 @@ export function CashierProvider({ children }: { children: ReactNode }) {
           }
           case 'removeDiscount': {
             if (!currentSession) return
-            const invoice = currentSession.invoice.id
-              ? { id: currentSession.invoice.id }
-              : await createInvoice(currentSession.id).then((response) => response.invoice)
-            const response = await adjustInvoice(invoice.id, 0, '')
+            const active = activeInvoice(currentSession)
+            const invoiceId: string = active?.id ?? (await createInvoiceMutation.mutateAsync(currentSession.id)).invoice.id
+            const response = await adjustInvoiceMutation.mutateAsync({
+              invoiceId,
+              discountAmountVND: 0,
+              discountReason: '',
+            })
             baseDispatch({
               type: 'replaceInvoice',
               sessionId: currentSession.id,
@@ -408,19 +538,19 @@ export function CashierProvider({ children }: { children: ReactNode }) {
           }
           case 'completePayment': {
             if (!currentSession) return
-            const invoice = currentSession.invoice.id
-              ? { id: currentSession.invoice.id }
-              : await createInvoice(currentSession.id).then((response) => response.invoice)
-            const methodCode = action.subMethod ?? currentSession.payment?.sub_method ?? 'cash'
+            const active = activeInvoice(currentSession)
+            const invoiceId: string = active?.id ?? (await createInvoiceMutation.mutateAsync(currentSession.id)).invoice.id
+            const methodCode = action.subMethod ?? active?.payment?.sub_method ?? 'cash'
             const received =
               action.amountTendered ??
-              currentSession.payment?.amount_tendered ??
-              currentSession.invoice.total
-            const response = await processPayment({
-              invoiceId: invoice.id,
+              active?.payment?.amount_tendered ??
+              active?.total ??
+              0
+            const response = await processPaymentMutation.mutateAsync({
+              invoiceId,
               paymentMethodCode: methodCode,
               receivedAmountVND: received,
-              referenceCode: action.transactionId ?? currentSession.payment?.transaction_id,
+              referenceCode: action.transactionId ?? active?.payment?.transaction_id,
             })
             baseDispatch({
               type: 'replaceInvoice',
@@ -428,57 +558,98 @@ export function CashierProvider({ children }: { children: ReactNode }) {
               invoice: response.invoice,
             })
             void queryClient.invalidateQueries({ queryKey: STAFF_TABLES_QUERY_KEY })
-            
+
             if (methodCode === 'cash') toast(t('toast_cash_received'))
             else if (methodCode === 'card') toast(t('toast_card_received'))
             else toast(t('toast_ewallet_paid', currentSession.table_number))
-            
+
+            break
+          }
+          case 'addPartialPayment': {
+            if (!currentSession) return
+            const active = activeInvoice(currentSession)
+            const invoiceId = active?.id
+            if (!invoiceId) {
+              toast.error(t('toast_no_invoice'))
+              break
+            }
+            const methodCode = action.subMethod ?? 'cash'
+            const response = await processPartialPaymentMutation.mutateAsync({
+              invoiceId,
+              paymentMethodCode: methodCode,
+              receivedAmountVND: action.amount,
+              referenceCode: action.transactionId ?? '',
+            })
+            baseDispatch({
+              type: 'replaceInvoice',
+              sessionId: currentSession.id,
+              invoice: response.invoice,
+            })
+            void queryClient.invalidateQueries({ queryKey: STAFF_TABLES_QUERY_KEY })
+            toast(t('toast_payment_partial', fmtVND(action.amount)))
+            break
+          }
+          case 'splitSession': {
+            if (!currentSession) return
+            const response = await splitInvoiceMutation.mutateAsync({
+              diningSessionId: currentSession.id,
+              groups: action.groups,
+            })
+            baseDispatch({
+              type: 'replaceInvoices',
+              sessionId: currentSession.id,
+              invoices: response.invoices,
+            })
+            toast(t('toast_split_done'))
             break
           }
           case 'closeSession': {
             if (!currentSession) return
             let voided = false
-            if (
-              currentSession.invoice.id &&
-              currentSession.invoice.status !== 'PAID' &&
-              currentSession.invoice.status !== 'VOID'
-            ) {
-              await voidInvoice(currentSession.invoice.id, 'void_session')
-              voided = true
+            for (const invoice of currentSession.invoices) {
+              if (invoice.id && invoice.status !== 'PAID' && invoice.status !== 'VOID') {
+                await voidInvoiceMutation.mutateAsync({ invoiceId: invoice.id, voidReason: 'void_session' })
+                voided = true
+              }
             }
-            await closeDiningSession(currentSession.id)
+            await closeDiningSessionMutation.mutateAsync(currentSession.id)
             baseDispatch(action)
             void queryClient.invalidateQueries({ queryKey: STAFF_TABLES_QUERY_KEY })
-            
+
             if (voided) toast(t('toast_session_voided', currentSession.table_number))
             else toast(t('toast_session_closed', currentSession.table_number))
-            
+
             break
           }
           default:
             baseDispatch(action)
         }
       }
-      void run().catch((error) => {
-        console.error('cashier action failed', error)
+      void run().catch(() => {
         if (action.type === 'completePayment') {
           toast(t('toast_ewallet_failed'))
           baseDispatch({ type: 'failPayment', sessionId: action.sessionId })
+        } else if (action.type === 'splitSession') {
+          toast.error(t('toast_split_failed'))
         }
       })
     },
-    [queryClient, state.sessions, t],
+    [queryClient, state.sessions, t, createInvoiceMutation, adjustInvoiceMutation, processPaymentMutation, processPartialPaymentMutation, splitInvoiceMutation, voidInvoiceMutation, closeDiningSessionMutation],
   )
 
   useEffect(() => {
-    if (!selectedSession || selectedSession.invoice.id || selectedSession.status === 'closed')
-      return
+    if (!selectedSession || selectedSession.status === 'closed') return
+    if (selectedSession.invoices.some((inv) => inv.id)) return
     const id = selectedSession.id
-    void createInvoice(id)
-      .then((response) =>
-        baseDispatch({ type: 'replaceInvoice', sessionId: id, invoice: response.invoice }),
-      )
-      .catch((error) => console.error('invoice load failed', error))
+    // Only load an invoice that already exists — building one here would flip the
+    // session to AWAITING_PAYMENT (payment lock) just from viewing the table.
+    void listSessionInvoices(id)
+      .then((response) => {
+        if (response.invoices.length > 0) {
+          baseDispatch({ type: 'replaceInvoices', sessionId: id, invoices: response.invoices })
+        }
+      })
+      .catch(() => toast.error('Không thể tải hóa đơn'))
   }, [selectedSession])
 
   const value = useMemo(

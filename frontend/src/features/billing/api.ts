@@ -47,10 +47,15 @@ export interface BillingInvoiceDTO {
   version: number
   items: BillingInvoiceItemDTO[]
   payment: BillingPaymentDTO | null
+  payments?: BillingPaymentDTO[]
 }
 
 export interface BillingInvoiceResponse {
   invoice: BillingInvoiceDTO
+}
+
+export interface BillingInvoiceListResponse {
+  invoices: BillingInvoiceDTO[]
 }
 
 function buildInvoice(diningSessionId: string): Promise<BillingInvoiceResponse> {
@@ -99,6 +104,22 @@ export function processPayment(args: {
   })
 }
 
+export function processPartialPayment(args: {
+  invoiceId: string
+  paymentMethodCode: string
+  receivedAmountVND: number
+  referenceCode?: string
+}): Promise<BillingInvoiceResponse> {
+  return apiRequest<BillingInvoiceResponse>(`/api/v1/restaurant/invoices/${encodeURIComponent(args.invoiceId)}/pay-partial`, {
+    method: 'POST',
+    body: {
+      payment_method_code: args.paymentMethodCode,
+      received_amount_vnd: Math.max(0, Math.round(args.receivedAmountVND)),
+      reference_code: args.referenceCode ?? '',
+    },
+  })
+}
+
 export function mockCompletePayment(args: {
   paymentNumber: string
   result: 'success' | 'failed'
@@ -109,6 +130,22 @@ export function mockCompletePayment(args: {
       payment_number: args.paymentNumber,
       result: args.result,
     },
+  })
+}
+
+export function listSessionInvoices(diningSessionId: string): Promise<BillingInvoiceListResponse> {
+  return apiRequest<BillingInvoiceListResponse>(
+    `/api/v1/restaurant/invoices?dining_session_id=${encodeURIComponent(diningSessionId)}`,
+  )
+}
+
+export function splitInvoice(
+  diningSessionId: string,
+  groups: { label: string; order_item_ids: string[] }[],
+): Promise<BillingInvoiceListResponse> {
+  return apiRequest<BillingInvoiceListResponse>('/api/v1/restaurant/invoices/split', {
+    method: 'POST',
+    body: { dining_session_id: diningSessionId, groups },
   })
 }
 

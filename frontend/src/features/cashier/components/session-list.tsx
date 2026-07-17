@@ -1,11 +1,11 @@
 import { useMemo, useState, type FC } from 'react'
-
+import { Search } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { fmtClock, fmtHMS, fmtVND, itemsCount, providerName } from '@/features/cashier/helpers'
+import { fmtClock, fmtHMS, fmtVND, itemsCount, providerName, sessionTotal } from '@/features/cashier/helpers'
 import type { CashierSession, Lang, SessionStatus } from '@/features/cashier/types'
 
 type SortMode = 'newest' | 'bill'
@@ -62,13 +62,16 @@ export const SessionList: FC<SessionListProps> = ({ sessions, selectedId, now, l
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="space-y-3 border-b border-[var(--separator)] p-3">
-        <Input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder={t('search_placeholder')}
-          className="h-10 rounded-[var(--radius-lg)] bg-[var(--material-regular)]"
-        />
+      <div className="space-y-3 border-b border-[var(--separator)] p-4 sm:p-6 bg-[var(--background)] z-10 sticky top-0 shadow-sm">
+        <div className="relative group">
+          <Search className="absolute left-3.5 top-1/2 size-5 -translate-y-1/2 text-[var(--text-tertiary)] transition-colors group-focus-within:text-[var(--system-orange)]" />
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={t('search_placeholder')}
+            className="h-12 w-full rounded-2xl border-[var(--separator)] bg-[var(--surface-grouped)] pl-11 text-base font-medium shadow-sm transition-all hover:border-[var(--system-orange)]/40 focus-visible:border-[var(--system-orange)] focus-visible:ring-2 focus-visible:ring-[var(--system-orange)]/20"
+          />
+        </div>
         <Tabs value={sortMode} onValueChange={(value) => setSortMode(value as SortMode)} className="w-full">
           <TabsList className="w-full bg-[var(--surface-grouped)]">
             <TabsTrigger value="newest" className="flex-1">{t('sort_newest')}</TabsTrigger>
@@ -77,23 +80,25 @@ export const SessionList: FC<SessionListProps> = ({ sessions, selectedId, now, l
         </Tabs>
       </div>
 
-      <div className="flex-1 space-y-2 overflow-y-auto p-3">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[var(--surface-grouped)]">
         {filteredSessions.length === 0 ? (
-          <Card className="border border-[var(--separator)] bg-[var(--material-regular)] p-6 text-center text-sm text-[var(--text-tertiary)]">
+          <Card className="border border-[var(--separator)] bg-[var(--material-regular)] p-10 text-center text-base text-[var(--text-tertiary)]">
             {t('no_sessions')}
           </Card>
         ) : (
-          filteredSessions.map((session) => (
-            <SessionCard
-              key={session.id}
-              session={session}
-              selected={session.id === selectedId}
-              now={now}
-              lang={lang}
-              t={t}
-              onSelect={() => onSelect(session.id)}
-            />
-          ))
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {filteredSessions.map((session) => (
+              <SessionCard
+                key={session.id}
+                session={session}
+                selected={session.id === selectedId}
+                now={now}
+                lang={lang}
+                t={t}
+                onSelect={() => onSelect(session.id)}
+              />
+            ))}
+          </div>
         )}
       </div>
     </div>
@@ -119,14 +124,15 @@ function SessionCard({
   const billAgoSeconds = session.bill_requested_at
     ? Math.max(0, Math.floor((now.getTime() - session.bill_requested_at.getTime()) / 1000))
     : null
+  const pendingInvoice = session.invoices.find((inv) => inv.payment?.status === 'pending')
 
   return (
     <Button
       variant="secondary"
-      className={`h-auto w-full justify-start rounded-[var(--radius-xl)] border p-0 text-left shadow-sm ${
+      className={`h-full w-full justify-start rounded-2xl border p-0 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-md ${
         selected
           ? 'border-[var(--system-blue)] bg-[var(--system-blue)]/10 ring-2 ring-[var(--system-blue)]/20'
-          : 'border-[var(--separator)] bg-[var(--material-regular)]'
+          : 'border-[var(--separator)] bg-[var(--background)] hover:border-[var(--system-orange)]/40'
       }`}
       onClick={onSelect}
     >
@@ -147,16 +153,16 @@ function SessionCard({
         </div>
         <div className="mt-2 flex items-center justify-between gap-2">
           <Badge className={`rounded-full border-0 ${statusTone[session.status]}`}>{t(`status_${session.status}`)}</Badge>
-          <span className="font-bold tabular-nums text-[var(--text)]">{fmtVND(session.invoice.total)}</span>
+          <span className="font-bold tabular-nums text-[var(--text)]">{fmtVND(sessionTotal(session))}</span>
         </div>
         {billAgoSeconds !== null && session.status === 'bill_requested' ? (
           <div className="mt-2 text-xs font-normal text-[var(--system-red)]">
             {t('bill_requested_ago', fmtHMS(billAgoSeconds))}
           </div>
         ) : null}
-        {session.payment?.status === 'pending' ? (
+        {pendingInvoice?.payment ? (
           <div className="mt-2 text-xs font-normal text-[var(--system-orange)]">
-            {providerName(session.payment.sub_method)} · pending
+            {providerName(pendingInvoice.payment.sub_method)} · pending
           </div>
         ) : null}
       </div>

@@ -55,6 +55,9 @@ export interface Invoice {
   paid_amount: number
   change_amount: number
   discount_history: DiscountRecord[]
+  payment: PaymentRecord | null
+  payments?: PaymentRecord[]
+  remaining?: number
 }
 
 export interface PaymentRecord {
@@ -83,8 +86,8 @@ export interface CashierSession {
   started_at: Date
   bill_requested_at: Date | null
   status: SessionStatus
-  invoice: Invoice
-  payment: PaymentRecord | null
+  invoices: Invoice[]
+  activeInvoiceId: string | null
 }
 
 export interface Provider {
@@ -94,4 +97,4 @@ export interface Provider {
   dot: string
 }
 
-export type Lang = 'vi' | 'en'
+export type { Lang } from '@/constants'

@@ -1,7 +1,7 @@
 /* eslint-disable react-doctor/prefer-dynamic-import */
 import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
 import type { CashierSession } from '@/features/cashier/types';
-import { fmtDateTime, fmtVND, providerName } from '@/features/cashier/helpers';
+import { activeInvoice, fmtDateTime, fmtVND, providerName } from '@/features/cashier/helpers';
 
 // Register fonts to support Vietnamese characters
 Font.register({
@@ -114,10 +114,10 @@ interface InvoicePDFProps {
 }
 
 export const InvoicePDF = ({ session, t, lang }: InvoicePDFProps) => {
-  const invoice = session.invoice;
+  const invoice = activeInvoice(session);
 
   const methodLabel = (() => {
-    const payment = session.payment;
+    const payment = invoice.payment;
     if (!payment) return '—';
     if (payment.method === 'cash') return t('method_cash');
     if (payment.method === 'card') return `${t('method_card')}${payment.last4 ? ` · •••• ${payment.last4}` : ''}`;
@@ -155,7 +155,7 @@ export const InvoicePDF = ({ session, t, lang }: InvoicePDFProps) => {
           <View style={[styles.metaCol, { alignItems: 'flex-end' }]}>
             <Text>
               <Text style={{ fontFamily: 'Roboto-Bold' }}>{t('receipt_date')}: </Text>
-              {session.payment?.completed_at ? fmtDateTime(session.payment.completed_at) : ''}
+              {invoice.payment?.completed_at ? fmtDateTime(invoice.payment.completed_at) : ''}
             </Text>
             <Text>
               <Text style={{ fontFamily: 'Roboto-Bold' }}>{t('receipt_method')}: </Text>

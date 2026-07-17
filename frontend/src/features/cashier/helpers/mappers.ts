@@ -1,5 +1,6 @@
 import type { CashierSession, LineItem, Order } from '@/features/cashier/types'
 import type { StaffOrderDTO, StaffOrderItemDTO, StaffTableDTO } from '@/features/waiter/api'
+import type { BillingInvoiceItemDTO } from '@/features/billing/api'
 
 function parseTableNumber(code: string, name: string): number {
   const source = code || name
@@ -33,6 +34,23 @@ function toLineItem(item: StaffOrderItemDTO): LineItem {
     unit_price_snapshot: item.unit_price_vnd,
     line_total: item.total_amount_vnd,
     _order_id: item.order_id,
+  }
+}
+
+// Split invoices come back with their own flat item list (BillingInvoiceItemDTO), not the
+// waiter-side StaffOrderItemDTO the mapper above uses. `order_item_id` is the identity that
+// matches LineItem.id elsewhere (the split payload keys off order_item_ids too).
+export function toInvoiceItem(item: BillingInvoiceItemDTO): LineItem {
+  return {
+    id: item.order_item_id ?? item.id,
+    name_snapshot_vi: item.name_snapshot,
+    name_snapshot_en: item.name_snapshot,
+    options_text_vi: '',
+    options_text_en: '',
+    notes: '',
+    qty: item.quantity,
+    unit_price_snapshot: item.unit_price_vnd,
+    line_total: item.total_amount_vnd,
   }
 }
 
@@ -73,24 +91,27 @@ export function toCashierSessions(rows: StaffTableDTO[]): CashierSession[] {
         started_at: new Date(table.session.opened_at),
         bill_requested_at: billRequested,
         status: table.session.status === 'AWAITING_PAYMENT' ? 'bill_requested' : 'dining',
-        invoice: {
-          number: table.session.session_code,
-          created_at: new Date(table.session.opened_at),
-          items,
-          orders,
-          status: 'LOCAL_DRAFT',
-          subtotal,
-          service_charge_amount: 0,
-          service_charge_basis_points: 0,
-          vat_amount: vat,
-          vat_basis_points: 800,
-          discount: null,
-          total: subtotal + vat,
-          paid_amount: 0,
-          change_amount: 0,
-          discount_history: [],
-        },
-        payment: null,
+        invoices: [
+          {
+            number: table.session.session_code,
+            created_at: new Date(table.session.opened_at),
+            items,
+            orders,
+            status: 'LOCAL_DRAFT',
+            subtotal,
+            service_charge_amount: 0,
+            service_charge_basis_points: 0,
+            vat_amount: vat,
+            vat_basis_points: 800,
+            discount: null,
+            total: subtotal + vat,
+            paid_amount: 0,
+            change_amount: 0,
+            discount_history: [],
+            payment: null,
+          },
+        ],
+        activeInvoiceId: null,
       } satisfies CashierSession,
     ]
   })
