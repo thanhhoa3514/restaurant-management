@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 
-export type Lang = 'vi' | 'en'
+import type { Lang } from '@/constants'
 
 const STORAGE_KEY = 'rest_lang'
 
@@ -16,3 +16,5 @@ export function useLang() {
 
   return { lang, setLang }
 }
+
+export type { Lang }

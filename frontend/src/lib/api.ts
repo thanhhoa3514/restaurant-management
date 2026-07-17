@@ -1,30 +1,8 @@
 import { getStaffSession, refreshStaffSession } from '@/lib/auth'
+import { ApiError, type Envelope, type RequestOptions } from '@/types/api'
+export { ApiError }
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
-interface Envelope<T> {
-  data: T | null
-  meta?: unknown
-  error?: { code: string; message: string } | null
-}
-
-export class ApiError extends Error {
-  readonly status: number
-  readonly code: string
-
-  constructor(status: number, code: string, message: string) {
-    super(message)
-    this.name = 'ApiError'
-    this.status = status
-    this.code = code
-  }
-}
-
-interface RequestOptions {
-  method?: string
-  body?: unknown
-  signal?: AbortSignal
-  sessionToken?: string
-}
 
 
 let refreshPromise: Promise<boolean> | null = null

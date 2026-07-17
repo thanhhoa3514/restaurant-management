@@ -1,7 +1,6 @@
-type Lang = 'vi' | 'en'
+import type { Lang } from '@/constants'
 
 export const BRAND = {
-
   shortName: 'ZH',
 
   name: {
@@ -10,10 +9,8 @@ export const BRAND = {
   },
 
   tagline: {
-
     en: 'Hotpot & grill — served at your table',
   },
 } as const
-
 
 export const brandNameUpper = (lang: Lang): string => BRAND.name[lang].toUpperCase()

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, type ReactNode } from 'react'
+import { createContext, useEffect, useMemo, useReducer, use, type ReactNode } from 'react'
 
 import { ApiError, apiRequest } from '@/lib/api'
 import {
@@ -7,13 +7,8 @@ import {
   logoutStaff,
   subscribeStaffSession,
   updateStaffSession,
-  type PermissionCode,
-  type StaffSession,
 } from '@/lib/auth'
-import {
-  PermissionContext,
-  type PermissionContextValue,
-} from '@/lib/permission-context'
+import type { PermissionCode, StaffSession } from '@/types/auth'
 
 interface MeResponse {
   user_id: string
@@ -23,21 +18,35 @@ interface MeResponse {
   permissions: PermissionCode[]
 }
 
+export interface PermissionContextValue {
+  permissions: ReadonlySet<PermissionCode>
+  loading: boolean
+  has: (permission: PermissionCode) => boolean
+  hasAny: (permissions: PermissionCode[]) => boolean
+}
+
+const PermissionContext = createContext<PermissionContextValue | null>(null)
+
+function initPermissionState(): { session: StaffSession | null; loading: boolean } {
+  const initSession = getStaffSession()
+  if (
+    initSession &&
+    (Number.isNaN(Date.parse(initSession.expiresAt)) ||
+      new Date(initSession.expiresAt).getTime() <= Date.now())
+  ) {
+    clearStaffSession()
+    return { session: null, loading: false }
+  }
+  return { session: initSession, loading: Boolean(initSession?.token) }
+}
+
 export function PermissionProvider({ children }: { children: ReactNode }) {
   const [{ session, loading }, dispatch] = useReducer(
-    (s: { session: StaffSession | null; loading: boolean }, a: Partial<typeof s>) => ({ ...s, ...a }),
-    null as any,
-    () => {
-      const initSession = getStaffSession()
-      if (initSession && (
-        Number.isNaN(Date.parse(initSession.expiresAt)) ||
-        new Date(initSession.expiresAt).getTime() <= Date.now()
-      )) {
-        clearStaffSession()
-        return { session: null, loading: false }
-      }
-      return { session: initSession, loading: Boolean(initSession?.token) }
-    }
+    (s: { session: StaffSession | null; loading: boolean }, a: Partial<typeof s>) => ({
+      ...s,
+      ...a,
+    }),
+    initPermissionState(),
   )
 
   useEffect(
@@ -92,4 +101,10 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
   )
 
   return <PermissionContext.Provider value={value}>{children}</PermissionContext.Provider>
+}
+
+export function usePermissions(): PermissionContextValue {
+  const value = use(PermissionContext)
+  if (!value) throw new Error('usePermissions must be used inside PermissionProvider')
+  return value
 }
