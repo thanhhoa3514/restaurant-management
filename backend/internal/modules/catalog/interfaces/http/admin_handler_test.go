@@ -27,7 +27,7 @@ func (r fakePermissionResolver) ResolvePermissionCodes(context.Context, uuid.UUI
 func adminCatalogRouter(resolver auth.PermissionResolver, secret string) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	repo := fakeMenuReadRepo{}
-	h := NewHandler(nil, nil, nil, nil, application.NewListCategories(repo, uuid.Nil), application.NewListMenuItems(repo, uuid.Nil), application.NewGetMenuItem(repo, uuid.Nil), application.NewListAdminMenuItems(repo, uuid.Nil), application.NewGetAdminMenuItem(repo, uuid.Nil))
+	h := NewHandler(nil, nil, nil, nil, application.NewListCategories(repo, uuid.Nil), application.NewListMenuItems(repo, uuid.Nil), application.NewGetMenuItem(repo, uuid.Nil), application.NewListAdminMenuItems(repo, uuid.Nil), application.NewGetAdminMenuItem(repo, uuid.Nil), nil)
 	r := gin.New()
 	h.RegisterStaffRoutes(r.Group("/api/v1/restaurant"), secret, resolver, uuid.Nil)
 	return r

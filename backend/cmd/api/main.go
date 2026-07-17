@@ -36,6 +36,7 @@ import (
 	"restaurant-management/internal/platform/logger"
 	"restaurant-management/internal/platform/outbox"
 	"restaurant-management/internal/platform/postgres"
+	"restaurant-management/internal/platform/ratelimit"
 	"restaurant-management/internal/platform/realtime"
 	"restaurant-management/internal/platform/storage"
 	"restaurant-management/internal/platform/swaggerui"
@@ -157,6 +158,8 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 		diningapp.NewManageTableQR(tx, diningRepo, outboxWriter, defaultRID),
 		diningapp.NewListTableQRs(diningRepo, defaultRID),
 		diningapp.NewListGuestTables(diningRepo, defaultRID),
+		diningapp.NewMergeSessions(tx, diningRepo, outboxWriter, defaultRID),
+		diningapp.NewSplitSessions(tx, diningRepo, outboxWriter, defaultRID),
 	)
 
 	orderingRepo := orderingrepo.NewRepository(pool, defaultRID)
@@ -168,8 +171,15 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 		orderingapp.NewGuestRequestCancel(tx, orderingRepo, outboxWriter, defaultRID),
 		orderingapp.NewStaffTables(orderingRepo, defaultRID),
 		orderingapp.NewStaffRequestBill(tx, orderingRepo, outboxWriter, defaultRID),
+		orderingapp.NewStaffReopenSession(tx, orderingRepo, outboxWriter, defaultRID),
+		orderingapp.NewGuestCallWaiter(tx, orderingRepo, outboxWriter, defaultRID),
+		orderingapp.NewStaffAckWaiterCall(tx, orderingRepo, outboxWriter, defaultRID),
 		orderingapp.NewStaffUpdateItemStatus(tx, orderingRepo, outboxWriter, defaultRID),
+		orderingapp.NewStaffMarkUnavailable(tx, orderingRepo, outboxWriter, defaultRID),
+		orderingapp.NewStaffTakeawayOrder(tx, orderingRepo, outboxWriter, defaultRID),
 		orderingapp.NewKitchenQueue(orderingRepo, defaultRID),
+		orderingapp.NewKitchenListCancelRequests(orderingRepo, defaultRID),
+		orderingapp.NewKitchenReviewCancelRequest(tx, orderingRepo, outboxWriter, defaultRID),
 	)
 
 	billingRepo := billingrepo.NewRepository(pool, defaultRID)
@@ -178,10 +188,16 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 		billingapp.NewBuildInvoice(tx, billingRepo, outboxWriter, defaultRID),
 		billingapp.NewAdjustInvoice(tx, billingRepo, outboxWriter, defaultRID),
 		billingapp.NewProcessPayment(tx, billingRepo, outboxWriter, gateways, cfg.PublicBaseURL, defaultRID),
+		billingapp.NewProcessPartialPayment(tx, billingRepo, outboxWriter, defaultRID),
 		billingapp.NewHandleWebhook(tx, billingRepo, outboxWriter, gateways, cfg.MockWebhookSecret, defaultRID),
 		billingapp.NewVoidInvoice(tx, billingRepo, outboxWriter, defaultRID),
+		billingapp.NewSplitInvoice(tx, billingRepo, outboxWriter, defaultRID),
+		billingapp.NewListSessionInvoices(billingRepo, defaultRID),
 		cfg.AppEnv,
 	)
+
+	orderRateLimiter := ratelimit.NewSlidingWindow(30, 1*time.Minute)
+	defer orderRateLimiter.Stop()
 
 	// ──────────────────────────────────────────────
 	// Customer-facing API — QR token or public
@@ -190,8 +206,8 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 	diningHandler.RegisterGuestRoutes(customer)                            // /customer/sessions/join, /customer/tables — public
 	catalogHandler.RegisterGuestRoutes(customer)                           // /customer/menu/* — public (browse menu before joining)
 
-	orders := api.Group("/customer", auth.QRSessionToken(diningRepo))
-	orderingHandler.RegisterGuestRoutes(orders)                            // /customer/orders/* — QR session token required
+	orders := api.Group("/customer", auth.QRSessionToken(diningRepo), orderRateLimiter.Middleware(ratelimit.GuestSessionKey))
+	orderingHandler.RegisterGuestRoutes(orders)
 
 	// ──────────────────────────────────────────────
 	// Restaurant staff API — JWT required

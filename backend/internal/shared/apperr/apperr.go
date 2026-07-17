@@ -11,7 +11,8 @@ const (
 	CodeForbidden      Code = "forbidden"
 	CodeNotFound       Code = "not_found"
 	CodeConflict       Code = "conflict"
-	CodeNotImplemented Code = "not_implemented"
+	CodeNotImplemented  Code = "not_implemented"
+	CodeRateLimited     Code = "rate_limited"
 )
 
 type Error struct {
