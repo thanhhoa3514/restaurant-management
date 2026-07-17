@@ -1,4 +1,5 @@
 import { useState, type FC } from 'react'
+import { ChevronDown, History } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -28,12 +29,17 @@ interface ManageItemsDialogProps {
   onAdvanceItem: (itemId: string) => void
 }
 
-const timelineTone: Record<ItemStatus, string> = {
-  pending: 'bg-[var(--surface-grouped)] text-[var(--text-secondary)]',
-  acknowledged: 'bg-[var(--system-blue)]/10 text-[var(--system-blue)]',
-  preparing: 'bg-[var(--system-orange)]/10 text-[var(--system-orange)]',
-  ready: 'bg-[var(--system-green)]/10 text-[var(--system-green)]',
-  served: 'bg-[var(--surface-grouped)] text-[var(--text-tertiary)]',
+const timelineBadgeStyle: Record<ItemStatus, string> = {
+  pending:
+    'bg-secondary text-secondary-foreground',
+  acknowledged:
+    'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-400',
+  preparing:
+    'bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400',
+  ready:
+    'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400',
+  served:
+    'bg-muted text-muted-foreground',
 }
 
 export const ManageItemsDialog: FC<ManageItemsDialogProps> = ({
@@ -66,23 +72,22 @@ export const ManageItemsDialog: FC<ManageItemsDialogProps> = ({
 
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
-      <SheetContent side="right" className="w-full max-w-3xl bg-[var(--bg-elevated)]/85" hideClose>
+      <SheetContent side="right" className="flex max-w-xl flex-col gap-0 p-0">
         {ticket && (
           <>
             <SheetHeader
               title={title}
-              subtitle={`${lang === 'vi' ? ticket.area_name_vi : ticket.area_name_en} · ${fmtTimestamp(ticket.submitted_at)}`}
+              subtitle={
+                <>
+                  {lang === 'vi' ? ticket.area_name_vi : ticket.area_name_en}
+                  <span className="mx-1.5">·</span>
+                  {fmtTimestamp(ticket.submitted_at)}
+                </>
+              }
               className="pr-12"
             />
-            <button
-              className="absolute right-4 top-4 z-10 size-8 cursor-pointer rounded-full bg-[var(--surface-grouped)] text-[var(--text-secondary)]"
-              onClick={onClose}
-              type="button"
-            >
-              ×
-            </button>
             <Separator />
-            <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
+            <div className="flex-1 space-y-3 overflow-y-auto p-4">
               {ticket.items.map((item) => (
                 <ManagedItem
                   key={item.id}
@@ -95,7 +100,7 @@ export const ManageItemsDialog: FC<ManageItemsDialogProps> = ({
                 />
               ))}
             </div>
-            <div className="border-t border-[var(--separator)] bg-[var(--surface-grouped)]/60 px-5 py-3 text-right">
+            <div className="flex items-center justify-end border-t bg-muted/30 px-4 py-3">
               <Button variant="outline" onClick={onClose}>
                 {lang === 'vi' ? 'Đóng' : 'Close'}
               </Button>
@@ -120,23 +125,35 @@ const ManagedItem: FC<{
   const options = lang === 'vi' ? item.options_text_vi : item.options_text_en
 
   return (
-    <div className="overflow-hidden rounded-[16px] border border-[var(--separator)] bg-[var(--bg-elevated)]/80">
-      <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 items-start gap-2.5">
-          <span className="mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--text)] text-sm font-bold text-[var(--bg)] tabular-nums">
-            ×{item.qty}
+    <div className="overflow-hidden rounded-xl border bg-card">
+      <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
+          <span
+            className={`mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-md text-sm font-bold tabular-nums ${
+              complete
+                ? 'bg-muted text-muted-foreground'
+                : 'bg-primary text-primary-foreground'
+            }`}
+          >
+            {item.qty}
           </span>
           <div className="min-w-0">
             <div
-              className={`text-[17px] font-semibold leading-tight ${complete ? 'text-[var(--text-tertiary)] line-through' : 'text-[var(--text)]'}`}
+              className={`text-base font-semibold leading-tight ${
+                complete
+                  ? 'text-muted-foreground line-through'
+                  : 'text-foreground'
+              }`}
             >
               {name}
             </div>
             {options && (
-              <div className="mt-0.5 text-sm text-[var(--text-secondary)]">{options}</div>
+              <div className="mt-0.5 text-sm text-muted-foreground">
+                {options}
+              </div>
             )}
             {item.notes && (
-              <div className="mt-1 text-[13px] italic text-[var(--system-orange)]">
+              <div className="mt-1 text-[13px] italic text-amber-600 dark:text-amber-400">
                 ※ {item.notes}
               </div>
             )}
@@ -156,14 +173,17 @@ const ManagedItem: FC<{
       </div>
 
       <button
-        className="flex w-full cursor-pointer items-center justify-between border-t border-[var(--separator)] px-4 py-2 text-left text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-grouped)]/70"
+        className="flex w-full cursor-pointer items-center justify-between border-t px-4 py-2.5 text-left text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/50"
         onClick={onToggle}
         type="button"
       >
-        <span>
+        <span className="flex items-center gap-1.5">
+          <History className="size-4" />
           {t('dlg_timeline')} ({item.status_history.length})
         </span>
-        <span className={`transition-transform ${expanded ? 'rotate-180' : ''}`}>⌄</span>
+        <ChevronDown
+          className={`size-4 transition-transform ${expanded ? 'rotate-180' : ''}`}
+        />
       </button>
       {expanded && <Timeline history={item.status_history} t={t} />}
     </div>
@@ -171,22 +191,19 @@ const ManagedItem: FC<{
 }
 
 const Timeline: FC<{ history: StatusHistoryEntry[]; t: Translate }> = ({ history, t }) => (
-  <ol className="space-y-3 border-t border-[var(--separator)] bg-[var(--surface-grouped)]/45 px-4 py-4">
+  <ol className="space-y-3 border-t bg-muted/30 px-4 py-4">
     {history.map((entry, index) => (
-      <li
-        key={`${entry.status}-${entry.timestamp.toISOString()}-${index}`}
-        className="flex items-start gap-3"
-      >
+      <li key={`${entry.status}-${entry.timestamp.toISOString()}-${index}`} className="flex items-start gap-3">
         <Badge
-          className={`mt-0.5 size-7 justify-center rounded-full p-0 ${timelineTone[entry.status]}`}
+          className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full p-0 ${timelineBadgeStyle[entry.status]}`}
         >
           {index + 1}
         </Badge>
         <div>
-          <div className="font-mono text-[13px] tabular-nums text-[var(--text-secondary)]">
+          <div className="font-mono text-[13px] tabular-nums text-muted-foreground">
             {fmtTimestamp(entry.timestamp)}
           </div>
-          <div className="text-[15px] font-semibold text-[var(--text)]">
+          <div className="text-sm font-semibold text-foreground">
             {t(`hist_${entry.status}` as KdsKey)}
           </div>
         </div>

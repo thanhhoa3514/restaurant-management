@@ -1,8 +1,9 @@
 import { type FC, useState } from 'react'
+import { ChefHat, Clock, Volume2, VolumeX } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { LanguageLoader } from '@/components/ui/language-loader'
 import { useShellConfig, ShellHeaderCenter, ShellHeaderActions } from '@/components/admin-shell'
@@ -11,6 +12,7 @@ import { fmtClock } from '@/features/kitchen/helpers'
 import { useKds } from '@/features/kitchen/hooks/use-kds'
 import type { Lang } from '@/features/kitchen/types'
 
+import { CancelRequestsPanel } from './cancel-requests-panel'
 import { ManageItemsDialog } from './manage-items-dialog'
 import { TicketCard } from './ticket-card'
 
@@ -21,20 +23,21 @@ export const KdsLayout: FC = () => {
   useShellConfig({
     title: kds.t('kitchen_display'),
     subtitle: kds.t('restaurant'),
-    contentClassName: "p-0"
   })
 
   return (
     <>
       <ShellHeaderCenter>
-        <div className="rounded-[18px] bg-[var(--surface-grouped)] px-5 py-2 font-mono text-3xl font-bold tracking-tight tabular-nums">
-          {fmtClock(kds.now)}
+        <div className="flex items-center gap-3 font-mono text-2xl font-bold tabular-nums tracking-tight">
+          <Clock className="size-6 text-muted-foreground" />
+          <span>{fmtClock(kds.now)}</span>
         </div>
       </ShellHeaderCenter>
+
       <ShellHeaderActions>
-        <StatPill label={kds.t('pending_count')} value={kds.stats.pending} tone="orange" />
-        <StatPill label={kds.t('preparing_count')} value={kds.stats.preparing} tone="blue" />
-        <StatPill label={kds.t('ready_count')} value={kds.stats.ready} tone="green" />
+        <StatPill label={kds.t('pending_count')} value={kds.stats.pending} variant="warning" />
+        <StatPill label={kds.t('preparing_count')} value={kds.stats.preparing} variant="secondary" />
+        <StatPill label={kds.t('ready_count')} value={kds.stats.ready} variant="success" />
         <LanguageSwitcher
           currentLang={kds.lang}
           onLangChange={(newLang) => {
@@ -50,17 +53,32 @@ export const KdsLayout: FC = () => {
           variant={kds.soundOn ? 'default' : 'secondary'}
           onClick={() => kds.setSoundOn((current) => !current)}
         >
-          {kds.soundOn ? 'Sound on' : 'Muted'}
+          {kds.soundOn ? (
+            <>
+              <Volume2 className="size-4" />
+              Sound on
+            </>
+          ) : (
+            <>
+              <VolumeX className="size-4" />
+              Muted
+            </>
+          )}
         </Button>
       </ShellHeaderActions>
 
       {kds.lastMessage && (
-        <div className="pointer-events-none fixed left-1/2 top-24 z-[360] -translate-x-1/2 rounded-full bg-[var(--text)] px-4 py-2 text-sm font-semibold text-[var(--bg)] shadow-2xl">
+        <div className="pointer-events-none fixed left-1/2 top-24 z-[360] -translate-x-1/2 rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-background shadow-lg">
           {kds.lastMessage}
         </div>
       )}
 
       <main className="mx-auto max-w-[1800px] px-4 py-6 lg:px-6">
+        <CancelRequestsPanel
+          cancelRequests={kds.cancelRequests}
+          t={kds.t}
+          onReview={kds.reviewCancel}
+        />
         {kds.sortedTickets.length === 0 ? (
           <EmptyState title={kds.t('empty_title')} hint={kds.t('empty_hint')} />
         ) : (
@@ -97,38 +115,33 @@ export const KdsLayout: FC = () => {
   )
 }
 
-const StatPill: FC<{ label: string; value: number; tone: 'orange' | 'blue' | 'green' }> = ({
-  label,
-  value,
-  tone,
-}) => {
-  const dot = {
-    orange: 'bg-[var(--system-orange)]',
-    blue: 'bg-[var(--system-blue)]',
-    green: 'bg-[var(--system-green)]',
-  }[tone]
-
-  return (
-    <Badge variant="outline" className="gap-2 rounded-full bg-[var(--bg-elevated)] px-3 py-1.5">
-      <span className={`size-2.5 rounded-full ${dot}`} />
-      <span className="text-[var(--text-secondary)]">{label}</span>
-      <span className="text-base font-bold tabular-nums text-[var(--text)]">{value}</span>
+const StatPill: FC<{
+  label: string
+  value: number
+  variant: 'warning' | 'secondary' | 'success'
+}> = ({ label, value, variant }) => (
+  <Badge variant="outline" className="gap-2 px-3 py-1.5">
+    <span className="text-muted-foreground">{label}</span>
+    <Badge variant={variant} className="min-w-5 px-1.5 text-center text-xs font-bold tabular-nums">
+      {value}
     </Badge>
-  )
-}
+  </Badge>
+)
 
 const EmptyState: FC<{ title: string; hint: string }> = ({ title, hint }) => (
-  <Card className="mx-auto mt-16 flex max-w-xl flex-col items-center justify-center border border-[var(--separator)] bg-[var(--bg-elevated)]/65 px-8 py-16 text-center backdrop-blur-xl">
-    <div className="flex size-24 items-center justify-center rounded-[28px] bg-[var(--surface-grouped)] text-5xl text-[var(--text-tertiary)]">
-      ♨
-    </div>
-    <h2 className="mt-6 text-2xl font-bold text-[var(--text)]">{title}</h2>
-    <p className="mt-2 text-base text-[var(--text-secondary)]">{hint}</p>
-    <div className="mt-8 grid w-full grid-cols-3 gap-3">
-      <Skeleton className="h-3" />
-      <Skeleton className="h-3" />
-      <Skeleton className="h-3" />
-    </div>
+  <Card className="mx-auto mt-16 max-w-md border-dashed">
+    <CardContent className="flex flex-col items-center py-16 text-center">
+      <div className="mb-4 flex size-20 items-center justify-center rounded-2xl bg-muted">
+        <ChefHat className="size-10 text-muted-foreground" />
+      </div>
+      <h2 className="text-xl font-bold">{title}</h2>
+      <p className="mt-1.5 text-sm text-muted-foreground">{hint}</p>
+      <div className="mt-8 grid w-48 grid-cols-3 gap-3">
+        <Skeleton className="h-2.5" />
+        <Skeleton className="h-2.5" />
+        <Skeleton className="h-2.5" />
+      </div>
+    </CardContent>
   </Card>
 )
 

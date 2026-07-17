@@ -1,4 +1,4 @@
-import type { ItemStatus, Urgency, KDSItem, Ticket, StatusHistoryEntry } from '../types'
+import type { ItemStatus, Urgency, KDSItem } from '../types'
 import { STATUS_FLOW } from '../types'
 
 export function nextStatus(s: ItemStatus): ItemStatus {
@@ -48,23 +48,4 @@ export function urgencyFor(waitSec: number): Urgency {
   return 'red'
 }
 
-function buildHistory(
-  currentStatus: ItemStatus,
-  submittedAt: Date,
-  now: Date = new Date(),
-): StatusHistoryEntry[] {
-  const endIdx = STATUS_FLOW.indexOf(currentStatus)
-  if (endIdx < 0) return [{ status: 'pending', timestamp: new Date(submittedAt) }]
-  const elapsed = Math.max(1, now.getTime() - submittedAt.getTime())
-  const step = elapsed / (endIdx + 1)
-  const history: StatusHistoryEntry[] = []
-  for (let i = 0; i <= endIdx; i++) {
-    const ts = new Date(submittedAt.getTime() + Math.round(step * i))
-    history.push({ status: STATUS_FLOW[i], timestamp: ts })
-  }
-  return history
-}
 
-function getDisplayTime(now: Date, ticket: Ticket): number {
-  return Math.max(0, Math.floor((now.getTime() - ticket.submitted_at.getTime()) / 1000))
-}

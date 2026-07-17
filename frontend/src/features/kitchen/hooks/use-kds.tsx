@@ -11,8 +11,14 @@ import {
 import { KDS_DICT } from '@/features/kitchen/data/i18n'
 import { minStatus, nextStatus, urgencyFor } from '@/features/kitchen/helpers'
 import type { ItemStatus, KDSStats, Lang, Ticket, Urgency } from '@/features/kitchen/types'
-import { updateKitchenOrderItemStatus } from '@/features/kitchen/api'
+import { ApiError } from '@/lib/api'
+import {
+  reviewCancelRequest,
+  updateKitchenOrderItemStatus,
+  type CancelRequestDTO,
+} from '@/features/kitchen/api'
 import { useKdsQueue } from '@/features/kitchen/queries/use-kds-queue'
+import { useCancelRequests } from '@/features/kitchen/queries/use-cancel-requests'
 
 type KdsDictKey = keyof (typeof KDS_DICT)['vi']
 type KdsDictFunction = (...args: Array<number | string>) => string
@@ -48,9 +54,11 @@ export interface UseKdsValue {
   stats: KDSStats
   manageTicket: Ticket | undefined
   lastMessage: string | null
+  cancelRequests: CancelRequestDTO[]
   t: (key: KdsDictKey, ...args: Array<number | string>) => string
   advanceAll: (orderId: string) => void
   advanceItem: (orderId: string, itemId: string) => void
+  reviewCancel: (cancelRequestId: string, action: 'approve' | 'reject') => void
   injectNewTicket: () => void
   setPaused: Dispatch<SetStateAction<boolean>>
   setTimeMultiplier: Dispatch<SetStateAction<number>>
@@ -74,6 +82,7 @@ export function useKds(): UseKdsValue {
   const [lastMessage, setLastMessage] = useState<string | null>(null)
 
   const { tickets, refetch: refetchQueue } = useKdsQueue(paused)
+  const { cancelRequests, refetch: refetchCancelRequests } = useCancelRequests(paused)
 
   const langRef = useRef(lang)
   const soundOnRef = useRef(soundOn)
@@ -154,10 +163,16 @@ export function useKds(): UseKdsValue {
           }
           return acc
         }, [] as Promise<unknown>[]),
-      ).then(() => {
-        if (toastKey) notify(t(toastKey, ticket.table_number))
-        refetchQueue()
-      })
+      )
+        .then(() => {
+          if (toastKey) notify(t(toastKey, ticket.table_number))
+          refetchQueue()
+        })
+        .catch((err) => {
+          notify(
+            err instanceof ApiError ? err.message : 'Không thể kết nối máy chủ',
+          )
+        })
     },
     [notify, refetchQueue, t, tickets],
   )
@@ -171,12 +186,34 @@ export function useKds(): UseKdsValue {
       if (!item || item.status === 'served') return
       const target = nextStatus(item.status).toUpperCase()
       const advancedName = langRef.current === 'vi' ? item.name_vi : item.name_en
-      void updateKitchenOrderItemStatus(item.id, target).then(() => {
-        notify(t('toast_item_advanced', advancedName))
-        refetchQueue()
-      })
+      void updateKitchenOrderItemStatus(item.id, target)
+        .then(() => {
+          notify(t('toast_item_advanced', advancedName))
+          refetchQueue()
+        })
+        .catch((err) => {
+          notify(
+            err instanceof ApiError ? err.message : 'Không thể kết nối máy chủ',
+          )
+        })
     },
     [notify, refetchQueue, t, tickets],
+  )
+
+  // ── Approve / reject a guest cancel request ────────────────────────────────
+  const reviewCancel = useCallback(
+    (cancelRequestId: string, action: 'approve' | 'reject') => {
+      void reviewCancelRequest(cancelRequestId, action)
+        .then(() => {
+          notify(t(action === 'approve' ? 'cancel_approved' : 'cancel_rejected'))
+          refetchCancelRequests()
+          refetchQueue()
+        })
+        .catch((err) => {
+          notify(err instanceof ApiError ? err.message : 'Không thể kết nối máy chủ')
+        })
+    },
+    [notify, refetchCancelRequests, refetchQueue, t],
   )
 
   // ── Fade out fully-served tickets ──────────────────────────────────────────
@@ -239,9 +276,11 @@ export function useKds(): UseKdsValue {
     stats,
     manageTicket,
     lastMessage,
+    cancelRequests,
     t,
     advanceAll,
     advanceItem,
+    reviewCancel,
     injectNewTicket: refetchQueue,
     setPaused,
     setTimeMultiplier,

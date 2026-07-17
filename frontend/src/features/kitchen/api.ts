@@ -50,3 +50,39 @@ export function updateKitchenOrderItemStatus(
     body: { status },
   })
 }
+
+export interface CancelRequestDTO {
+  id: string
+  order_item_id: string
+  order_id: string
+  session_id: string
+  table_code: string
+  name_snapshot: string
+  quantity: number
+  item_status: string
+  reason: string
+  status: string
+  requested_at: string
+}
+
+export function fetchPendingCancelRequests(): Promise<{
+  cancel_requests: CancelRequestDTO[]
+}> {
+  return apiRequest('/api/v1/restaurant/kitchen/cancel-requests')
+}
+
+export function reviewCancelRequest(
+  cancelRequestId: string,
+  action: 'approve' | 'reject',
+  note = '',
+): Promise<{
+  cancel_request_id: string
+  order_item_id: string
+  status: string
+  item_status: string
+}> {
+  return apiRequest(
+    `/api/v1/restaurant/kitchen/cancel-requests/${cancelRequestId}/review`,
+    { method: 'POST', body: { action, note } },
+  )
+}

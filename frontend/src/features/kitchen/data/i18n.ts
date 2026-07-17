@@ -1,5 +1,5 @@
 import type { Lang } from '../types'
-import { BRAND } from '@/lib/brand'
+import { BRAND } from '@/constants/brand'
 
 export const KDS_DICT: Record<Lang, Record<string, string | ((...args: never[]) => string)>> = {
   vi: {
@@ -30,6 +30,7 @@ export const KDS_DICT: Record<Lang, Record<string, string | ((...args: never[]) 
     btn_ready: 'Đánh dấu sẵn sàng',
     btn_served: 'Đã phục vụ',
     btn_manage: 'Quản lý từng món',
+    print_ticket: 'In phiếu bếp',
     dlg_title: (table: number, oid: string) => `Bàn ${table} — ${oid}`,
     dlg_advance: 'Chuyển trạng thái',
     dlg_timeline: 'Lịch sử trạng thái',
@@ -40,6 +41,12 @@ export const KDS_DICT: Record<Lang, Record<string, string | ((...args: never[]) 
     toast_ready: (table: number) => `Bàn ${table} sẵn sàng phục vụ`,
     toast_served: (table: number) => `Bàn ${table} đã phục vụ`,
     toast_item_advanced: (name: string) => `${name} chuyển trạng thái`,
+    cancel_requests_title: 'Yêu cầu hủy món',
+    cancel_reason: 'Lý do',
+    cancel_approve: 'Chấp nhận hủy',
+    cancel_reject: 'Từ chối',
+    cancel_approved: 'Đã chấp nhận hủy món',
+    cancel_rejected: 'Đã từ chối yêu cầu hủy',
   },
   en: {
     restaurant: BRAND.name.en,
@@ -69,6 +76,7 @@ export const KDS_DICT: Record<Lang, Record<string, string | ((...args: never[]) 
     btn_ready: 'Mark ready',
     btn_served: 'Mark served',
     btn_manage: 'Manage items individually',
+    print_ticket: 'Print Ticket',
     dlg_title: (table: number, oid: string) => `Table ${table} — ${oid}`,
     dlg_advance: 'Advance',
     dlg_timeline: 'Status history',
@@ -79,5 +87,11 @@ export const KDS_DICT: Record<Lang, Record<string, string | ((...args: never[]) 
     toast_ready: (table: number) => `Table ${table} ready for pickup`,
     toast_served: (table: number) => `Table ${table} served`,
     toast_item_advanced: (name: string) => `${name} status advanced`,
+    cancel_requests_title: 'Cancel requests',
+    cancel_reason: 'Reason',
+    cancel_approve: 'Approve cancel',
+    cancel_reject: 'Reject',
+    cancel_approved: 'Item cancellation approved',
+    cancel_rejected: 'Cancel request rejected',
   },
 }
