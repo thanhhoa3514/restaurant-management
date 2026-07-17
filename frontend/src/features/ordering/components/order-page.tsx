@@ -43,6 +43,7 @@ function OrderFlow() {
       navigate({
         to: '/order',
         search: {
+          t: undefined,
           s: state.session.token,
           table: state.session.table,
           tableId: state.session.tableId,

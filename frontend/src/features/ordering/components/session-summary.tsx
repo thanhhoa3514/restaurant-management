@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
 import { formatVND, formatTime } from '../helpers'
-import { fetchGuestOrders } from '../api'
+import { callWaiter, fetchGuestOrders, requestBill } from '../api'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -27,7 +27,7 @@ export const SessionSummary: FC = () => {
   const sessionTotal = ordersData?.session_total_vnd ?? 0
 
   const [payConfirmOpen, setPayConfirmOpen] = useState(false)
-  const [simulatingPayment, setSimulatingPayment] = useState(false)
+  const [requestingBill, setRequestingBill] = useState(false)
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -69,7 +69,6 @@ export const SessionSummary: FC = () => {
                   <span className="text-xs font-medium text-tertiary">
                     {t.submitted_at} {formatTime(new Date(order.submitted_at))}
                   </span>
-                  <span className="text-xs text-tertiary">#{order.order_number}</span>
                 </div>
                 {order.items.map((item) => {
                   const name = item.variant_name_snapshot
@@ -105,9 +104,15 @@ export const SessionSummary: FC = () => {
           <Button
             variant="secondary"
             className="flex-1 rounded-xl h-14 text-sm font-medium"
-            onClick={() => {
-              toast.success(t.toast_waiter)
-              dispatch({ type: 'SET_SCREEN', payload: 'qr' })
+            onClick={async () => {
+              if (!sessionToken) return
+              try {
+                await callWaiter(sessionToken)
+                toast.success(t.toast_waiter)
+                dispatch({ type: 'SET_SCREEN', payload: 'qr' })
+              } catch {
+                toast.error(t.toast_error || 'Yêu cầu thất bại, vui lòng thử lại')
+              }
             }}
           >
             <Phone size={18} className="mr-1.5" />
@@ -134,21 +139,25 @@ export const SessionSummary: FC = () => {
         tableName={state.session?.table ? `${state.session.table}` : ''}
         t={t}
         onOpenChange={setPayConfirmOpen}
-        onConfirm={(wantsDigitalInvoice) => {
-          toast.success(t.toast_bill)
-          if (wantsDigitalInvoice) {
-            setSimulatingPayment(true)
-            setTimeout(() => {
-              setSimulatingPayment(false)
-              dispatch({ type: 'SET_SCREEN', payload: 'invoice' })
-            }, 3000)
-          } else {
-            dispatch({ type: 'SET_SCREEN', payload: 'qr' })
+        onConfirm={async (wantsDigitalInvoice) => {
+          if (!sessionToken) return
+          setRequestingBill(true)
+          try {
+            await requestBill(sessionToken)
+            toast.success(t.toast_bill)
+            dispatch({
+              type: 'SET_SCREEN',
+              payload: wantsDigitalInvoice ? 'invoice' : 'qr',
+            })
+          } catch {
+            toast.error(t.toast_error || 'Yêu cầu thất bại, vui lòng thử lại')
+          } finally {
+            setRequestingBill(false)
           }
         }}
       />
 
-      {simulatingPayment && (
+      {requestingBill && (
         <div className="fixed inset-0 z-[600] flex flex-col items-center justify-center bg-black/60 backdrop-blur-xl text-center text-white animate-in fade-in duration-300">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="animate-spin h-10 w-10 text-system-blue" />

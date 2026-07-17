@@ -5,9 +5,9 @@ import { toast } from 'sonner'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
 import { formatVND, summarizeCartLine, cartTotal, totalItems } from '../helpers'
-import { placeGuestOrder, type PlaceOrderInput } from '../api'
+import { placeGuestOrder } from '../api'
 import { ApiError } from '@/lib/api'
-import type { CartLine, Lang } from '../types'
+import type { CartLine, Lang, PlaceOrderInput } from '../types'
 
 import { cn } from '@/lib/utils'
 

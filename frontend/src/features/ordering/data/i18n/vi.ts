@@ -1,4 +1,4 @@
-import { BRAND } from '@/lib/brand'
+import { BRAND } from '@/constants/brand'
 
 export const vi = {
   restaurant: BRAND.name.vi,
@@ -34,6 +34,8 @@ export const vi = {
   status_ready: 'Sẵn sàng',
   status_served: 'Đã phục vụ',
   status_cancelled: 'Đã huỷ',
+  status_unavailable: 'Hết nguyên liệu',
+  choose_other_dish: 'Chọn món khác',
   order_more: 'Đặt thêm món',
   request_bill: 'Yêu cầu thanh toán',
   session_summary: 'Tổng kết phiên',
@@ -47,6 +49,7 @@ export const vi = {
   toast_order_placed: 'Đã gửi đơn hàng xuống bếp',
   toast_waiter: 'Đã gửi yêu cầu đến nhân viên',
   toast_bill: 'Đã gửi yêu cầu thanh toán',
+  toast_error: 'Yêu cầu thất bại, vui lòng thử lại',
   back: 'Quay lại',
   close: 'Đóng',
   toast_missing_required: 'Vui lòng chọn',
@@ -56,6 +59,15 @@ export const vi = {
   minutes: 'phút',
   no_results: 'Không tìm thấy món phù hợp',
   confirm_order: 'Xác nhận đơn',
+
+  // Edit order
+  edit_item: 'Chỉnh sửa món',
+  save: 'Lưu',
+  delete_item: 'Xoá món',
+  toast_order_edited: 'Đã cập nhật món',
+  toast_item_removed: 'Đã xoá món',
+  delete_last_item_confirm: 'Đây là món cuối cùng. Xoá toàn bộ đơn hàng?',
+  order_modified_reload: 'Đơn hàng đã thay đổi. Đang tải lại...',
 
   // QR landing
   qr_desc: 'Quét mã QR tại bàn hoặc chọn bàn bên dưới để bắt đầu.',

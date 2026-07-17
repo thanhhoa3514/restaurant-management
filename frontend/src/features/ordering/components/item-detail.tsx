@@ -1,19 +1,12 @@
-import {
-  useEffect,
-  useMemo,
-  useState,
-  type Dispatch,
-  type FC,
-  type SetStateAction,
-} from 'react'
+import { useEffect, useMemo, useState, type Dispatch, type FC, type SetStateAction } from 'react'
 import { ChevronLeft, Minus, Plus, X } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT, type Dict } from '../data/i18n'
 import { formatVND } from '../helpers'
-import { fetchMenuItem, type ApiMenuItemDetail, type ApiOptionGroup } from '../api'
-import type { CartLine, CartOption, Lang } from '../types'
+import { fetchMenuItem } from '../api'
+import type { ApiMenuItemDetail, ApiOptionGroup, CartLine, CartOption, Lang } from '../types'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
@@ -78,21 +71,14 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
 
   useEffect(() => {
     if (!item) return
-    let cancelled = false
-    queueMicrotask(() => {
-      if (cancelled) return
-      const defVariant = item.variants.find((v) => v.is_default) ?? item.variants[0]
-      setForm({
-        variantId: defVariant?.id ?? '',
-        selections: defaultSelections(item.option_groups),
-        activeImage: item.image_url,
-        qty: 1,
-        notes: '',
-      })
+    const defVariant = item.variants.find((v) => v.is_default) ?? item.variants[0]
+    setForm({
+      variantId: defVariant?.id ?? '',
+      selections: defaultSelections(item.option_groups),
+      activeImage: item.image_url,
+      qty: 1,
+      notes: '',
     })
-    return () => {
-      cancelled = true
-    }
   }, [item])
 
   const estUnitPrice = useMemo(() => {

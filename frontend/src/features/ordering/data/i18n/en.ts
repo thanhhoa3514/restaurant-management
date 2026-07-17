@@ -1,4 +1,4 @@
-import { BRAND } from '@/lib/brand'
+import { BRAND } from '@/constants/brand'
 
 export const en = {
   restaurant: BRAND.name.en,
@@ -34,6 +34,8 @@ export const en = {
   status_ready: 'Ready',
   status_served: 'Served',
   status_cancelled: 'Cancelled',
+  status_unavailable: 'Out of stock',
+  choose_other_dish: 'Choose another dish',
   order_more: 'Order more',
   request_bill: 'Request bill',
   session_summary: 'Session summary',
@@ -47,6 +49,7 @@ export const en = {
   toast_order_placed: 'Order sent to kitchen',
   toast_waiter: 'Waiter has been called',
   toast_bill: 'Bill request sent',
+  toast_error: 'Request failed, please try again',
   back: 'Back',
   close: 'Close',
   toast_missing_required: 'Please select',
@@ -56,6 +59,15 @@ export const en = {
   minutes: 'min',
   no_results: 'No dishes match your search',
   confirm_order: 'Confirm order',
+
+  // Edit order
+  edit_item: 'Edit item',
+  save: 'Save',
+  delete_item: 'Remove item',
+  toast_order_edited: 'Order updated',
+  toast_item_removed: 'Item removed',
+  delete_last_item_confirm: 'This is the last item. Delete entire order?',
+  order_modified_reload: 'Order was modified. Reloading...',
 
   // QR landing
   qr_desc: 'Scan the QR at your table or select one below to start.',

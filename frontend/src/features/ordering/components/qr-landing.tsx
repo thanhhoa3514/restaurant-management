@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FC } from 'react'
-import { QrCode, ScanLine, AlertCircle, Users } from 'lucide-react'
+import { Loader2, QrCode, ScanLine, AlertCircle, Users } from 'lucide-react'
 import QRCodeLib from 'qrcode'
 import { useQuery } from '@tanstack/react-query'
 import { ApiError } from '@/lib/api'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
-import { joinDiningSession } from '../api'
+import { useJoinSession } from '@/features/ordering/mutations/useJoinSession'
 import { fetchGuestTables, buildQROrderURL } from '@/features/dining/api'
 import type { GuestTable } from '@/features/dining/types'
 import { cn } from '@/lib/utils'
@@ -25,6 +25,8 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
   const [message, setMessage] = useState('')
   const [guestName, setGuestName] = useState('')
   const [nameError, setNameError] = useState('')
+  const [pendingJoinToken, setPendingJoinToken] = useState<string | null>(null)
+  const joinMutation = useJoinSession()
 
   const {
     data: tablesData,
@@ -63,51 +65,55 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
   const displayToken = qrToken ? `•••${qrToken.slice(-6)}` : ''
 
   const handleJoin = useCallback(
-    async (token: string, name?: string) => {
+    (token: string, name?: string) => {
       setJoinState('joining')
       setMessage(t.qr_joining)
 
-      try {
-        const joined = await joinDiningSession(token, name)
+      joinMutation.mutate(
+        { qrToken: token, guestName: name },
+        {
+          onSuccess: (joined) => {
+            if (joined.status === 'not_opened') {
+              setJoinState('not_opened')
+              setMessage(t.qr_not_opened_desc)
+              return
+            }
 
-        if (joined.status === 'not_opened') {
-          setJoinState('not_opened')
-          setMessage(t.qr_not_opened_desc)
-          return
-        }
+            if (!joined.session_token || !joined.session_id || !joined.table_id) {
+              setJoinState('error')
+              setMessage(t.qr_invalid)
+              return
+            }
 
-        if (!joined.session_token || !joined.session_id || !joined.table_id) {
-          setJoinState('error')
-          setMessage(t.qr_invalid)
-          return
-        }
+            dispatch({
+              type: 'SET_SESSION',
+              payload: {
+                token: joined.session_token,
+                table: joined.table_name || joined.table_code || '',
+                startedAt: new Date(),
+                sessionId: joined.session_id,
+                tableId: joined.table_id,
+                status: joined.status,
+              },
+            })
+            setJoinState('ready')
+            setMessage(t.qr_ready)
 
-        dispatch({
-          type: 'SET_SESSION',
-          payload: {
-            token: joined.session_token,
-            table: joined.table_name || joined.table_code || '',
-            startedAt: new Date(),
-            sessionId: joined.session_id,
-            tableId: joined.table_id,
-            status: joined.status,
+            setTimeout(() => {
+              dispatch({ type: 'SET_SCREEN', payload: 'menu' })
+            }, 600)
           },
-        })
-        setJoinState('ready')
-        setMessage(t.qr_ready)
-
-        setTimeout(() => {
-          dispatch({ type: 'SET_SCREEN', payload: 'menu' })
-        }, 600)
-      } catch (err) {
-        setJoinState('error')
-        setMessage(err instanceof ApiError && err.status === 0 ? t.qr_network : t.qr_invalid)
-      }
+          onError: (err) => {
+            setJoinState('error')
+            setMessage(err instanceof ApiError && err.status === 0 ? t.qr_network : t.qr_invalid)
+          },
+        },
+      )
     },
-    [dispatch, t],
+    [dispatch, t, joinMutation],
   )
 
-  const canRetry = Boolean(qrToken) && joinState !== 'joining'
+  const canRetry = Boolean(qrToken) && joinState !== 'joining' && !joinMutation.isPending
 
   const handleJoinWithName = useCallback(() => {
     const trimmed = guestName.trim()
@@ -135,76 +141,141 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
   if (!qrToken) {
     return (
       <div className="min-h-dvh bg-[var(--bg)]">
-        <div className="mx-auto max-w-3xl px-5 py-10">
-          {/* Header */}
-          <div className="mb-10 text-center">
-            <h1 className="text-2xl font-bold tracking-tight text-[var(--text)]">{t.restaurant}</h1>
-            <p className="mt-1.5 text-sm text-[var(--text-tertiary)]">{t.qr_desc}</p>
+        <div className={pendingJoinToken ? 'pointer-events-none opacity-40' : ''}>
+          <div className="mx-auto max-w-3xl px-5 py-10">
+            {/* Header */}
+            <div className="mb-10 text-center">
+              <h1 className="text-2xl font-bold tracking-tight text-[var(--text)]">{t.restaurant}</h1>
+              <p className="mt-1.5 text-sm text-[var(--text-tertiary)]">{t.qr_desc}</p>
+            </div>
+
+            {/* Loading */}
+            {tablesLoading && (
+              <div className="flex items-center justify-center gap-2 py-12 text-sm text-[var(--text-tertiary)]">
+                <ScanLine size={16} className="animate-pulse" />
+                {t.qr_loading}
+              </div>
+            )}
+
+            {/* Error */}
+            {tablesError && (
+              <div className="mx-auto max-w-sm rounded-xl border border-red-300/30 bg-red-50/50 p-5 text-center dark:border-red-800/30 dark:bg-red-950/20">
+                <AlertCircle size={24} className="mx-auto mb-2 text-red-500" />
+                <p className="mb-3 text-sm font-medium text-red-600 dark:text-red-400">
+                  {tablesRawError instanceof ApiError ? tablesRawError.message : t.qr_failed_load}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="cursor-pointer text-sm font-semibold text-blue-600 hover:underline dark:text-blue-400"
+                >
+                  {t.qr_retry}
+                </button>
+              </div>
+            )}
+
+            {/* Empty */}
+            {!tablesLoading && !tablesError && !tablesData?.length && (
+              <div className="flex flex-col items-center py-16 text-[var(--text-tertiary)]">
+                <QrCode size={40} className="mb-3 opacity-30" />
+                <p className="text-sm">{t.qr_no_data}</p>
+              </div>
+            )}
+
+            {/* Table groups */}
+            {!tablesLoading && !!tablesData?.length && (
+              <div className="space-y-8">
+                {areaGroups.map(([areaName, areaTables]) => (
+                  <section key={areaName}>
+                    <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-[var(--text-tertiary)]">
+                      {areaName}
+                      <span className="ml-2 font-normal normal-case opacity-50">
+                        {areaTables.length} {t.qr_tables_word}
+                      </span>
+                    </h2>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                      {areaTables.map((table) => (
+                          <TableCard
+                            key={table.table_id}
+                            table={table}
+                            qrDataUrl={qrDataUrls.get(table.table_id) ?? null}
+                            onClick={() => {
+                              if (!table.qr_token) return
+                              attemptedToken.current = null
+                              setGuestName('')
+                              setNameError('')
+                              setPendingJoinToken(table.qr_token)
+                            }}
+                          />
+                        ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            )}
           </div>
-
-          {/* Loading */}
-          {tablesLoading && (
-            <div className="flex items-center justify-center gap-2 py-12 text-sm text-[var(--text-tertiary)]">
-              <ScanLine size={16} className="animate-pulse" />
-              {t.qr_loading}
-            </div>
-          )}
-
-          {/* Error */}
-          {tablesError && (
-            <div className="mx-auto max-w-sm rounded-xl border border-red-300/30 bg-red-50/50 p-5 text-center dark:border-red-800/30 dark:bg-red-950/20">
-              <AlertCircle size={24} className="mx-auto mb-2 text-red-500" />
-              <p className="mb-3 text-sm font-medium text-red-600 dark:text-red-400">
-                {tablesRawError instanceof ApiError ? tablesRawError.message : t.qr_failed_load}
-              </p>
-              <button
-                type="button"
-                onClick={() => window.location.reload()}
-                className="cursor-pointer text-sm font-semibold text-blue-600 hover:underline dark:text-blue-400"
-              >
-                {t.qr_retry}
-              </button>
-            </div>
-          )}
-
-          {/* Empty */}
-          {!tablesLoading && !tablesError && !tablesData?.length && (
-            <div className="flex flex-col items-center py-16 text-[var(--text-tertiary)]">
-              <QrCode size={40} className="mb-3 opacity-30" />
-              <p className="text-sm">{t.qr_no_data}</p>
-            </div>
-          )}
-
-          {/* Table groups */}
-          {!tablesLoading && !!tablesData?.length && (
-            <div className="space-y-8">
-              {areaGroups.map(([areaName, areaTables]) => (
-                <section key={areaName}>
-                  <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-[var(--text-tertiary)]">
-                    {areaName}
-                    <span className="ml-2 font-normal normal-case opacity-50">
-                      {areaTables.length} {t.qr_tables_word}
-                    </span>
-                  </h2>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                    {areaTables.map((table) => (
-                      <TableCard
-                        key={table.table_id}
-                        table={table}
-                        qrDataUrl={qrDataUrls.get(table.table_id) ?? null}
-                        onClick={() => {
-                          if (!table.qr_token) return
-                          attemptedToken.current = null
-                          void handleJoin(table.qr_token)
-                        }}
-                      />
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </div>
-          )}
         </div>
+
+        {/* ── Name prompt dialog overlay ─────────────────────────────────── */}
+        {pendingJoinToken && joinState === 'idle' && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6">
+            <div className="w-full max-w-sm rounded-2xl border border-[var(--separator)] bg-[var(--material-thick)] p-6 text-center shadow-2xl backdrop-blur-2xl">
+              <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--system-blue)] to-[var(--system-purple)] shadow-lg">
+                <Users size={24} className="text-white" />
+              </div>
+              <h2 className="mb-1 text-lg font-semibold text-[var(--text)]">{t.qr_name_label}</h2>
+              <p className="mb-5 text-xs text-[var(--text-tertiary)]">{t.session_hint}</p>
+              <input
+                type="text"
+                value={guestName}
+                onChange={(e) => {
+                  setGuestName(e.target.value)
+                  if (nameError) setNameError('')
+                }}
+                placeholder={t.qr_name_placeholder}
+                className="w-full rounded-xl border border-[var(--separator)] bg-white px-4 py-3 text-base text-[var(--text)] outline-none transition focus:border-blue-400"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const trimmed = guestName.trim()
+                    if (!trimmed) { setNameError(t.qr_name_required); return }
+                    setNameError('')
+                    void handleJoin(pendingJoinToken, trimmed)
+                  }
+                }}
+              />
+              {nameError && (
+                <p className="mt-2 text-xs text-red-500">{nameError}</p>
+              )}
+              <div className="mt-4 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setPendingJoinToken(null); setNameError('') }}
+                  className="flex-1 flex h-12 cursor-pointer items-center justify-center rounded-2xl border border-[var(--separator)] bg-[var(--material-regular)] text-[var(--text-secondary)] font-semibold text-sm transition-all active:scale-[0.98]"
+                >
+                  {t.close}
+                </button>
+                <button
+                  type="button"
+                  disabled={joinMutation.isPending}
+                  onClick={() => {
+                    const trimmed = guestName.trim()
+                    if (!trimmed) { setNameError(t.qr_name_required); return }
+                    setNameError('')
+                    void handleJoin(pendingJoinToken, trimmed)
+                  }}
+                  className="flex-1 flex h-12 cursor-pointer items-center justify-center rounded-2xl bg-[var(--text)] text-[var(--bg)] font-semibold text-sm shadow-lg transition-all active:scale-[0.98] disabled:opacity-50"
+                >
+                  {joinMutation.isPending ? (
+                    <Loader2 className="size-5 animate-spin" />
+                  ) : (
+                    t.qr_join_table
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -252,10 +323,15 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
             )}
             <button
               type="button"
+              disabled={joinMutation.isPending}
               onClick={handleJoinWithName}
-              className="mt-5 flex h-14 w-full cursor-pointer items-center justify-center rounded-2xl bg-[var(--text)] text-[var(--bg)] font-semibold text-base shadow-lg transition-all active:scale-[0.98]"
+              className="mt-5 flex h-14 w-full cursor-pointer items-center justify-center rounded-2xl bg-[var(--text)] text-[var(--bg)] font-semibold text-base shadow-lg transition-all active:scale-[0.98] disabled:opacity-50"
             >
-              {t.qr_join_table}
+              {joinMutation.isPending ? (
+                <Loader2 className="size-5 animate-spin" />
+              ) : (
+                t.qr_join_table
+              )}
             </button>
           </div>
         )}
