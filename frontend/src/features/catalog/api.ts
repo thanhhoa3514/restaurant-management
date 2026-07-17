@@ -6,7 +6,7 @@ import type {
   CreateMenuItemRequest,
   MenuItemAvailabilityStatus,
   MenuItemMutationResult,
-  ToggleAvailabilityRequest,
+  PresignResult,
   UpdateMenuItemRequest,
 } from '@/features/catalog/types'
 
@@ -48,12 +48,6 @@ export function deleteMenuItem(id: string, version: number): Promise<MenuItemMut
     method: 'DELETE',
     body: { version },
   })
-}
-
-export interface PresignResult {
-  presigned_url: string
-  public_url: string
-  object_key: string
 }
 
 export function presignUpload(extension: string, contentType: string): Promise<PresignResult> {

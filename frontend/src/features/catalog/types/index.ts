@@ -65,9 +65,6 @@ export interface AdminMenuItemSummaryDTO {
   version: number
 }
 
-// The detail endpoint carries the full editable item plus its nested
-// variants/options, but NOT the list-only rollups (has_variants/price_from_vnd
-// are computed for the summary grid). Omit them so the type matches the wire.
 export interface AdminMenuItemDetailDTO
   extends Omit<AdminMenuItemSummaryDTO, 'has_variants' | 'price_from_vnd'> {
   description?: string | null
@@ -111,4 +108,10 @@ export interface ToggleAvailabilityRequest {
   is_available: boolean
   availability_status?: MenuItemAvailabilityStatus
   version: number
+}
+
+export interface PresignResult {
+  presigned_url: string
+  public_url: string
+  object_key: string
 }

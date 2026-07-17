@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react'
 import { Loader2, Upload, X } from 'lucide-react'
 
+import { toast } from 'sonner'
+
 import { Button } from '@/components/ui/button'
 import { presignUpload } from '@/features/catalog/api'
 
@@ -30,8 +32,8 @@ export function ImageUploader({ value, onChange, disabled }: ImageUploaderProps)
       if (!resp.ok) throw new Error('Upload failed')
 
       onChange(result.public_url)
-    } catch (err) {
-      console.error('Image upload failed:', err)
+    } catch {
+      toast.error('Tải ảnh thất bại')
     } finally {
       setUploading(false)
       if (inputRef.current) inputRef.current.value = ''
