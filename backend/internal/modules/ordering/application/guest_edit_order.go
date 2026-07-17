@@ -284,9 +284,9 @@ func mutationResponseFromOrder(order domain.OrderRead, version int, status strin
 	for _, item := range order.Items {
 		options := make([]GuestOrderOptionDTO, 0, len(item.Options))
 		for _, opt := range item.Options {
-			options = append(options, GuestOrderOptionDTO{NameSnapshot: opt.NameSnapshot, PriceDeltaSnapshotVND: opt.PriceDeltaSnapshotVND, Quantity: opt.Quantity})
+			options = append(options, GuestOrderOptionDTO{OptionID: opt.OptionID, OptionGroupID: opt.OptionGroupID, NameSnapshot: opt.NameSnapshot, PriceDeltaSnapshotVND: opt.PriceDeltaSnapshotVND, Quantity: opt.Quantity})
 		}
-		items = append(items, GuestOrderItemDTO{OrderItemID: item.ID, MenuItemID: item.MenuItemID, NameSnapshot: item.NameSnapshot, VariantNameSnapshot: item.VariantNameSnapshot, Quantity: item.Quantity, UnitPriceVND: item.UnitPriceVND, OptionsTotalVND: item.OptionsTotalVND, SubtotalVND: item.SubtotalVND, TotalAmountVND: item.TotalAmountVND, Status: item.Status, Station: item.Station, Options: options})
+		items = append(items, GuestOrderItemDTO{OrderItemID: item.ID, MenuItemID: item.MenuItemID, NameSnapshot: item.NameSnapshot, VariantNameSnapshot: item.VariantNameSnapshot, Quantity: item.Quantity, UnitPriceVND: item.UnitPriceVND, OptionsTotalVND: item.OptionsTotalVND, SubtotalVND: item.SubtotalVND, TotalAmountVND: item.TotalAmountVND, Status: item.Status, Station: item.Station, Options: options, UnavailableReason: item.UnavailableReason})
 	}
 	if version == 0 {
 		version = order.Version

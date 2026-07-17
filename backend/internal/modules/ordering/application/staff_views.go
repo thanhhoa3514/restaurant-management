@@ -34,6 +34,7 @@ type StaffSessionDTO struct {
 	GuestName       string          `json:"guest_name"`
 	OpenedAt        time.Time       `json:"opened_at"`
 	BillRequestedAt *time.Time      `json:"bill_requested_at"`
+	WaiterCalledAt  *time.Time      `json:"waiter_called_at"`
 	Orders          []StaffOrderDTO `json:"orders"`
 	TotalVND        int64           `json:"total_vnd"`
 }
@@ -129,7 +130,13 @@ type StaffReadRepository interface {
 	ListStaffTables(ctx context.Context, restaurantID uuid.UUID) ([]StaffTableDTO, error)
 	ListKitchenQueue(ctx context.Context, restaurantID uuid.UUID) ([]KitchenTicketDTO, error)
 	RequestBill(ctx context.Context, restaurantID, sessionID uuid.UUID) (RequestBillResponse, error)
+	ReopenSession(ctx context.Context, restaurantID, sessionID uuid.UUID) (RequestBillResponse, error)
+	CallWaiter(ctx context.Context, restaurantID, sessionID uuid.UUID) (RequestBillResponse, error)
+	AckWaiterCall(ctx context.Context, restaurantID, sessionID uuid.UUID) (RequestBillResponse, error)
 	UpdateOrderItemStatus(ctx context.Context, restaurantID, itemID uuid.UUID, status string, actorID *uuid.UUID, actorRole string) (UpdateItemStatusResponse, error)
+	MarkItemUnavailable(ctx context.Context, restaurantID, itemID uuid.UUID, reason string, actorID *uuid.UUID) (UpdateItemStatusResponse, error)
+	ListPendingCancelRequests(ctx context.Context, restaurantID uuid.UUID) ([]CancelRequestDTO, error)
+	ReviewCancelRequest(ctx context.Context, restaurantID, cancelRequestID uuid.UUID, approve bool, reviewedBy *uuid.UUID, note string) (CancelRequestReviewResult, error)
 }
 
 type StaffTables struct {
@@ -190,6 +197,93 @@ func (s *StaffRequestBill) Handle(ctx context.Context, sessionID uuid.UUID) (Req
 		}
 		if s.outbox != nil {
 			return s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "dining_session", AggregateID: sessionID, EventType: "dining.bill_requested", Payload: map[string]any{"session_id": sessionID, "status": out.Status}})
+		}
+		return nil
+	})
+	return out, err
+}
+
+type StaffReopenSession struct {
+	tx                  TxRunner
+	repo                StaffReadRepository
+	outbox              domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
+}
+
+func NewStaffReopenSession(tx TxRunner, repo StaffReadRepository, outboxWriter domain.OutboxWriter, defaultRestaurantID uuid.UUID) *StaffReopenSession {
+	return &StaffReopenSession{tx: tx, repo: repo, outbox: outboxWriter, defaultRestaurantID: defaultRestaurantID}
+}
+
+func (s *StaffReopenSession) Handle(ctx context.Context, sessionID uuid.UUID) (RequestBillResponse, error) {
+	var out RequestBillResponse
+	restaurantID := s.defaultRestaurantID
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
+		var err error
+		out, err = s.repo.ReopenSession(ctx, restaurantID, sessionID)
+		if err != nil {
+			return err
+		}
+		if s.outbox != nil {
+			return s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "dining_session", AggregateID: sessionID, EventType: "dining.session_reopened", Payload: map[string]any{"session_id": sessionID, "status": out.Status}})
+		}
+		return nil
+	})
+	return out, err
+}
+
+// GuestCallWaiter marks a session as having called for staff attention.
+// Guest-initiated (QR token); waiter screen shows the flag and clears it via ack.
+type GuestCallWaiter struct {
+	tx                  TxRunner
+	repo                StaffReadRepository
+	outbox              domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
+}
+
+func NewGuestCallWaiter(tx TxRunner, repo StaffReadRepository, outboxWriter domain.OutboxWriter, defaultRestaurantID uuid.UUID) *GuestCallWaiter {
+	return &GuestCallWaiter{tx: tx, repo: repo, outbox: outboxWriter, defaultRestaurantID: defaultRestaurantID}
+}
+
+func (s *GuestCallWaiter) Handle(ctx context.Context, sessionID uuid.UUID) (RequestBillResponse, error) {
+	var out RequestBillResponse
+	restaurantID := s.defaultRestaurantID
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
+		var err error
+		out, err = s.repo.CallWaiter(ctx, restaurantID, sessionID)
+		if err != nil {
+			return err
+		}
+		if s.outbox != nil {
+			return s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "dining_session", AggregateID: sessionID, EventType: "dining.waiter_called", Payload: map[string]any{"session_id": sessionID}})
+		}
+		return nil
+	})
+	return out, err
+}
+
+// StaffAckWaiterCall clears the waiter-call flag once staff attends the table.
+type StaffAckWaiterCall struct {
+	tx                  TxRunner
+	repo                StaffReadRepository
+	outbox              domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
+}
+
+func NewStaffAckWaiterCall(tx TxRunner, repo StaffReadRepository, outboxWriter domain.OutboxWriter, defaultRestaurantID uuid.UUID) *StaffAckWaiterCall {
+	return &StaffAckWaiterCall{tx: tx, repo: repo, outbox: outboxWriter, defaultRestaurantID: defaultRestaurantID}
+}
+
+func (s *StaffAckWaiterCall) Handle(ctx context.Context, sessionID uuid.UUID) (RequestBillResponse, error) {
+	var out RequestBillResponse
+	restaurantID := s.defaultRestaurantID
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
+		var err error
+		out, err = s.repo.AckWaiterCall(ctx, restaurantID, sessionID)
+		if err != nil {
+			return err
+		}
+		if s.outbox != nil {
+			return s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "dining_session", AggregateID: sessionID, EventType: "dining.waiter_call_acked", Payload: map[string]any{"session_id": sessionID}})
 		}
 		return nil
 	})

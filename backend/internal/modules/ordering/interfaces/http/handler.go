@@ -9,37 +9,60 @@ import (
 
 	"restaurant-management/internal/modules/ordering/application"
 	"restaurant-management/internal/platform/auth"
+	"restaurant-management/internal/platform/guest"
 	"restaurant-management/internal/platform/httpx"
 	"restaurant-management/internal/shared/apperr"
 )
 
 type Handler struct {
-	GuestPlaceOrder    *application.GuestPlaceOrder
-	GuestViewOrders    *application.GuestViewOrders
-	GuestEditOrder     *application.GuestEditOrder
-	GuestCancelOrder   *application.GuestCancelOrder
-	GuestRequestCancel *application.GuestRequestCancel
-	StaffTables        *application.StaffTables
-	StaffRequestBill   *application.StaffRequestBill
-	StaffUpdateStatus  *application.StaffUpdateItemStatus
-	KitchenQueue       *application.KitchenQueue
+	GuestPlaceOrder       *application.GuestPlaceOrder
+	GuestViewOrders       *application.GuestViewOrders
+	GuestEditOrder        *application.GuestEditOrder
+	GuestCancelOrder      *application.GuestCancelOrder
+	GuestRequestCancel    *application.GuestRequestCancel
+	StaffTables           *application.StaffTables
+	StaffRequestBill      *application.StaffRequestBill
+	StaffReopenSession    *application.StaffReopenSession
+	GuestCallWaiter       *application.GuestCallWaiter
+	StaffAckWaiterCall    *application.StaffAckWaiterCall
+	StaffUpdateStatus     *application.StaffUpdateItemStatus
+	StaffMarkUnavailable  *application.StaffMarkUnavailable
+	StaffTakeawayOrder    *application.StaffTakeawayOrder
+	KitchenQueue          *application.KitchenQueue
+	KitchenListCancels    *application.KitchenListCancelRequests
+	KitchenReviewCancel   *application.KitchenReviewCancelRequest
 }
 
 func NewHandler(guestPlaceOrder *application.GuestPlaceOrder,
 	guestViewOrders *application.GuestViewOrders, guestEditOrder *application.GuestEditOrder,
 	guestCancelOrder *application.GuestCancelOrder, guestRequestCancel *application.GuestRequestCancel,
 	staffTables *application.StaffTables, staffRequestBill *application.StaffRequestBill,
-	staffUpdateStatus *application.StaffUpdateItemStatus, kitchenQueue *application.KitchenQueue) *Handler {
+	staffReopenSession *application.StaffReopenSession,
+	guestCallWaiter *application.GuestCallWaiter,
+	staffAckWaiterCall *application.StaffAckWaiterCall,
+	staffUpdateStatus *application.StaffUpdateItemStatus,
+	staffMarkUnavailable *application.StaffMarkUnavailable,
+	staffTakeawayOrder *application.StaffTakeawayOrder,
+	kitchenQueue *application.KitchenQueue,
+	kitchenListCancels *application.KitchenListCancelRequests,
+	kitchenReviewCancel *application.KitchenReviewCancelRequest) *Handler {
 	return &Handler{
-		GuestPlaceOrder:    guestPlaceOrder,
-		GuestViewOrders:    guestViewOrders,
-		GuestEditOrder:     guestEditOrder,
-		GuestCancelOrder:   guestCancelOrder,
-		GuestRequestCancel: guestRequestCancel,
-		StaffTables:        staffTables,
-		StaffRequestBill:   staffRequestBill,
-		StaffUpdateStatus:  staffUpdateStatus,
-		KitchenQueue:       kitchenQueue,
+		GuestPlaceOrder:       guestPlaceOrder,
+		GuestViewOrders:       guestViewOrders,
+		GuestEditOrder:        guestEditOrder,
+		GuestCancelOrder:      guestCancelOrder,
+		GuestRequestCancel:    guestRequestCancel,
+		StaffTables:           staffTables,
+		StaffRequestBill:      staffRequestBill,
+		StaffReopenSession:    staffReopenSession,
+		GuestCallWaiter:       guestCallWaiter,
+		StaffAckWaiterCall:    staffAckWaiterCall,
+		StaffUpdateStatus:     staffUpdateStatus,
+		StaffMarkUnavailable:  staffMarkUnavailable,
+		StaffTakeawayOrder:    staffTakeawayOrder,
+		KitchenQueue:          kitchenQueue,
+		KitchenListCancels:    kitchenListCancels,
+		KitchenReviewCancel:   kitchenReviewCancel,
 	}
 }
 
@@ -48,7 +71,54 @@ func (h *Handler) RegisterStaffRoutes(r *gin.RouterGroup, secret string,
 	g := r.Group("", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionOrderingStaff, defaultRestaurantID))
 	g.GET("/tables", h.staffTables)
 	g.POST("/sessions/:sessionId/request-bill", h.staffRequestBill)
+	g.POST("/sessions/:sessionId/reopen", h.staffReopenSession)
+	g.POST("/sessions/:sessionId/ack-waiter-call", h.staffAckWaiterCall)
 	g.PATCH("/order-items/:itemId/status", h.staffUpdateItemStatus)
+	g.POST("/order-items/:itemId/unavailable", h.staffMarkUnavailable)
+	g.POST("/orders/takeaway", h.staffTakeawayOrder)
+}
+
+func (h *Handler) staffTakeawayOrder(c *gin.Context) {
+	var req application.StaffTakeawayOrderRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
+		return
+	}
+	actorID := uuid.MustParse(c.GetString(auth.CtxUserID))
+	out, err := h.StaffTakeawayOrder.Handle(c.Request.Context(), req, actorID)
+	if err != nil {
+		var validationErr *application.CartValidationError
+		if errors.As(err, &validationErr) {
+			respondLineErrors(c, http.StatusBadRequest, validationErr.AppError(), validationErr.LineErrors)
+			return
+		}
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) staffMarkUnavailable(c *gin.Context) {
+	itemID, err := uuidFromParam(c, "itemId")
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	var req application.MarkUnavailableRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
+		return
+	}
+	var actorID *uuid.UUID
+	if id, err := uuid.Parse(c.GetString(auth.CtxUserID)); err == nil && id != uuid.Nil {
+		actorID = &id
+	}
+	out, err := h.StaffMarkUnavailable.Handle(c.Request.Context(), itemID, req.Reason, actorID, c.GetString(auth.CtxRole))
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
 }
 
 func (h *Handler) RegisterGuestRoutes(r *gin.RouterGroup) {
@@ -57,6 +127,8 @@ func (h *Handler) RegisterGuestRoutes(r *gin.RouterGroup) {
 	r.PUT("/orders/:orderId/items", h.guestEditOrder)
 	r.DELETE("/orders/:orderId", h.guestCancelOrder)
 	r.POST("/orders/:orderId/cancel-requests", h.guestRequestCancel)
+	r.POST("/request-bill", h.guestRequestBill)
+	r.POST("/call-waiter", h.guestCallWaiter)
 }
 
 func (h *Handler) guestPlaceOrder(c *gin.Context) {
@@ -163,6 +235,48 @@ func respondLineErrors(c *gin.Context, status int, ae *apperr.Error, lineErrors 
 	})
 }
 
+func (h *Handler) guestRequestBill(c *gin.Context) {
+	gs, ok := guest.SessionFromContext(c.Request.Context())
+	if !ok || gs.SessionID == uuid.Nil {
+		httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "missing guest session"))
+		return
+	}
+	out, err := h.StaffRequestBill.Handle(c.Request.Context(), gs.SessionID)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) guestCallWaiter(c *gin.Context) {
+	gs, ok := guest.SessionFromContext(c.Request.Context())
+	if !ok || gs.SessionID == uuid.Nil {
+		httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "missing guest session"))
+		return
+	}
+	out, err := h.GuestCallWaiter.Handle(c.Request.Context(), gs.SessionID)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) staffAckWaiterCall(c *gin.Context) {
+	sessionID, err := uuidFromParam(c, "sessionId")
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	out, err := h.StaffAckWaiterCall.Handle(c.Request.Context(), sessionID)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
 func (h *Handler) staffTables(c *gin.Context) {
 	out, err := h.StaffTables.Handle(c.Request.Context())
 	if err != nil {
@@ -179,6 +293,20 @@ func (h *Handler) staffRequestBill(c *gin.Context) {
 		return
 	}
 	out, err := h.StaffRequestBill.Handle(c.Request.Context(), sessionID)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) staffReopenSession(c *gin.Context) {
+	sessionID, err := uuidFromParam(c, "sessionId")
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	out, err := h.StaffReopenSession.Handle(c.Request.Context(), sessionID)
 	if err != nil {
 		httpx.RespondError(c, err)
 		return

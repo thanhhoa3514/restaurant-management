@@ -23,6 +23,7 @@ type GuestOrderDTO struct {
 	Status      string              `json:"status"`
 	SubmittedAt time.Time           `json:"submitted_at"`
 	Note        string              `json:"note"`
+	Version     int                 `json:"version"`
 	Items       []GuestOrderItemDTO `json:"items"`
 }
 
@@ -52,11 +53,11 @@ func (s *GuestViewOrders) Handle(ctx context.Context) (GuestOrdersResponse, erro
 		for _, item := range order.Items {
 			options := make([]GuestOrderOptionDTO, 0, len(item.Options))
 			for _, opt := range item.Options {
-				options = append(options, GuestOrderOptionDTO{NameSnapshot: opt.NameSnapshot, PriceDeltaSnapshotVND: opt.PriceDeltaSnapshotVND, Quantity: opt.Quantity})
+				options = append(options, GuestOrderOptionDTO{OptionID: opt.OptionID, OptionGroupID: opt.OptionGroupID, NameSnapshot: opt.NameSnapshot, PriceDeltaSnapshotVND: opt.PriceDeltaSnapshotVND, Quantity: opt.Quantity})
 			}
-			items = append(items, GuestOrderItemDTO{OrderItemID: item.ID, MenuItemID: item.MenuItemID, NameSnapshot: item.NameSnapshot, VariantNameSnapshot: item.VariantNameSnapshot, Quantity: item.Quantity, UnitPriceVND: item.UnitPriceVND, OptionsTotalVND: item.OptionsTotalVND, SubtotalVND: item.SubtotalVND, TotalAmountVND: item.TotalAmountVND, Status: item.Status, Station: item.Station, Options: options})
+			items = append(items, GuestOrderItemDTO{OrderItemID: item.ID, MenuItemID: item.MenuItemID, NameSnapshot: item.NameSnapshot, VariantNameSnapshot: item.VariantNameSnapshot, Quantity: item.Quantity, UnitPriceVND: item.UnitPriceVND, OptionsTotalVND: item.OptionsTotalVND, SubtotalVND: item.SubtotalVND, TotalAmountVND: item.TotalAmountVND, Status: item.Status, Station: item.Station, Options: options, UnavailableReason: item.UnavailableReason})
 		}
-		orders = append(orders, GuestOrderDTO{ID: order.ID, OrderNumber: order.OrderNumber, OrderType: order.OrderType, Status: order.Status, SubmittedAt: order.SubmittedAt, Note: order.Note, Items: items})
+		orders = append(orders, GuestOrderDTO{ID: order.ID, OrderNumber: order.OrderNumber, OrderType: order.OrderType, Status: order.Status, SubmittedAt: order.SubmittedAt, Note: order.Note, Version: order.Version, Items: items})
 	}
 	return GuestOrdersResponse{Orders: orders, SessionTotalVND: view.SessionTotalVND}, nil
 }

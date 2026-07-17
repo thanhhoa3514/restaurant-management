@@ -15,10 +15,14 @@ const (
 	StatusPreparing    OrderItemStatus = "PREPARING"
 	StatusReady        OrderItemStatus = "READY"
 	StatusServed       OrderItemStatus = "SERVED"
+	StatusUnavailable  OrderItemStatus = "UNAVAILABLE"
 )
 
 var allowedTransitions = map[OrderItemStatus][]OrderItemStatus{
-	StatusPending: {StatusAcknowledged}, StatusAcknowledged: {StatusPreparing}, StatusPreparing: {StatusReady}, StatusReady: {StatusServed},
+	StatusPending:      {StatusAcknowledged, StatusUnavailable},
+	StatusAcknowledged: {StatusPreparing, StatusUnavailable},
+	StatusPreparing:    {StatusReady},
+	StatusReady:        {StatusServed},
 }
 
 func (s OrderItemStatus) CanMoveTo(next OrderItemStatus) bool {
@@ -80,6 +84,11 @@ type OrderCreate struct {
 	OrderNumber     string
 	OrderType       string
 	Note            string
+	PlacedBy        string // GUEST or STAFF
+	PlacedByUserID  *uuid.UUID
+	CustomerName    string  // takeaway: customer name
+	CustomerPhone   string  // takeaway: customer phone
+	PickupTime      *time.Time
 	Lines           []OrderLineCreate
 	KitchenTickets  []KitchenTicketCreate
 	SessionTotalVND int64
@@ -150,10 +159,13 @@ type OrderItemRead struct {
 	Status              string
 	Station             string
 	Note                string
+	UnavailableReason   *string
 	Options             []OrderOptionRead
 }
 
 type OrderOptionRead struct {
+	OptionID                uuid.UUID
+	OptionGroupID           uuid.UUID
 	NameSnapshot            string
 	OptionGroupNameSnapshot string
 	PriceDeltaSnapshotVND   int64

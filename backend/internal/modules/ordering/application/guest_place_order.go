@@ -54,12 +54,15 @@ type GuestOrderItemDTO struct {
 	Status              string                `json:"status"`
 	Station             string                `json:"station"`
 	Options             []GuestOrderOptionDTO `json:"options"`
+	UnavailableReason   *string               `json:"unavailable_reason"`
 }
 
 type GuestOrderOptionDTO struct {
-	NameSnapshot          string `json:"name_snapshot"`
-	PriceDeltaSnapshotVND int64  `json:"price_delta_snapshot_vnd"`
-	Quantity              int    `json:"quantity"`
+	OptionID              uuid.UUID `json:"option_id"`
+	OptionGroupID         uuid.UUID `json:"option_group_id"`
+	NameSnapshot          string    `json:"name_snapshot"`
+	PriceDeltaSnapshotVND int64     `json:"price_delta_snapshot_vnd"`
+	Quantity              int       `json:"quantity"`
 }
 
 type LineError struct {
@@ -297,7 +300,7 @@ func toPlaceResponse(order *domain.OrderCreate) GuestPlaceOrderResponse {
 	for _, line := range order.Lines {
 		options := make([]GuestOrderOptionDTO, 0, len(line.Options))
 		for _, opt := range line.Options {
-			options = append(options, GuestOrderOptionDTO{NameSnapshot: opt.OptionNameSnapshot, PriceDeltaSnapshotVND: opt.PriceDeltaSnapshotVND, Quantity: opt.Quantity})
+			options = append(options, GuestOrderOptionDTO{OptionID: opt.OptionID, OptionGroupID: opt.OptionGroupID, NameSnapshot: opt.OptionNameSnapshot, PriceDeltaSnapshotVND: opt.PriceDeltaSnapshotVND, Quantity: opt.Quantity})
 		}
 		items = append(items, GuestOrderItemDTO{OrderItemID: line.ID, MenuItemID: line.MenuItemID, NameSnapshot: line.ItemNameSnapshot, VariantNameSnapshot: line.VariantNameSnapshot, Quantity: line.Quantity, UnitPriceVND: line.UnitPriceVND, OptionsTotalVND: line.OptionsTotalVND, SubtotalVND: line.SubtotalVND, TotalAmountVND: line.TotalAmountVND, Status: line.Status, Station: line.Station, Options: options})
 	}
