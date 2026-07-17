@@ -50,34 +50,20 @@ func (r *Repository) BuildInvoice(ctx context.Context, restaurantID, diningSessi
 		return nil, false, apperr.New(apperr.CodeConflict, "dining session is not billable")
 	}
 
-	var existingID uuid.UUID
-	err = r.q(ctx).QueryRow(ctx, `
-		SELECT id
-		FROM invoices
-		WHERE restaurant_id = $1
-		  AND dining_session_id = $2
-		  AND status <> 'VOID'
-		  AND deleted_at IS NULL
-		ORDER BY created_at DESC
-		LIMIT 1
-	`, restaurantID, diningSessionID).Scan(&existingID)
-	if err == nil {
-		invoice, loadErr := r.LoadInvoice(ctx, restaurantID, existingID)
-		return invoice, false, loadErr
-	}
-	if !errors.Is(err, pgx.ErrNoRows) {
+	existingIDs, err := r.nonVoidInvoiceIDs(ctx, restaurantID, diningSessionID)
+	if err != nil {
 		return nil, false, err
 	}
+	if len(existingIDs) > 1 {
+		return nil, false, apperr.New(apperr.CodeConflict, "session has split invoices")
+	}
+	if len(existingIDs) == 1 {
+		invoice, loadErr := r.LoadInvoice(ctx, restaurantID, existingIDs[0])
+		return invoice, false, loadErr
+	}
 
-	var vatBPS, serviceBPS int
-	if err := r.q(ctx).QueryRow(ctx, `
-		SELECT vat_rate_basis_points, service_charge_basis_points
-		FROM restaurants
-		WHERE id = $1 AND deleted_at IS NULL
-	`, restaurantID).Scan(&vatBPS, &serviceBPS); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, false, apperr.New(apperr.CodeNotFound, "restaurant not found")
-		}
+	vatBPS, serviceBPS, err := r.restaurantChargeRates(ctx, restaurantID)
+	if err != nil {
 		return nil, false, err
 	}
 
@@ -209,6 +195,233 @@ func (r *Repository) VoidInvoice(ctx context.Context, restaurantID, invoiceID uu
 	return r.LoadInvoice(ctx, restaurantID, invoiceID)
 }
 
+func (r *Repository) SplitInvoice(ctx context.Context, restaurantID uuid.UUID, input domain.SplitInvoiceInput) ([]*domain.Invoice, error) {
+	var status string
+	err := r.q(ctx).QueryRow(ctx, `
+		SELECT status
+		FROM dining_sessions
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+		FOR UPDATE
+	`, restaurantID, input.DiningSessionID).Scan(&status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperr.New(apperr.CodeNotFound, "dining session not found")
+	}
+	if err != nil {
+		return nil, err
+	}
+	if status != "ACTIVE" && status != "AWAITING_PAYMENT" {
+		return nil, apperr.New(apperr.CodeConflict, "dining session is not billable")
+	}
+
+	items, _, err := r.billableItems(ctx, restaurantID, input.DiningSessionID)
+	if err != nil {
+		return nil, err
+	}
+	billable := make(map[uuid.UUID]billableItem, len(items))
+	for _, item := range items {
+		billable[item.OrderItemID] = item
+	}
+	if err := validateSplitGroups(billable, input.Groups); err != nil {
+		return nil, err
+	}
+
+	existingRows, err := r.q(ctx).Query(ctx, `
+		SELECT id, status
+		FROM invoices
+		WHERE restaurant_id = $1 AND dining_session_id = $2 AND status <> 'VOID' AND deleted_at IS NULL
+		FOR UPDATE
+	`, restaurantID, input.DiningSessionID)
+	if err != nil {
+		return nil, err
+	}
+	var existingIDs []uuid.UUID
+	for existingRows.Next() {
+		var id uuid.UUID
+		var invStatus string
+		if err := existingRows.Scan(&id, &invStatus); err != nil {
+			existingRows.Close()
+			return nil, err
+		}
+		if invStatus != "PENDING" && invStatus != "DRAFT" {
+			existingRows.Close()
+			return nil, apperr.New(apperr.CodeConflict, "cannot split a session with paid invoices")
+		}
+		existingIDs = append(existingIDs, id)
+	}
+	existingRows.Close()
+	if err := existingRows.Err(); err != nil {
+		return nil, err
+	}
+	if len(existingIDs) > 0 {
+		var processing bool
+		if err := r.q(ctx).QueryRow(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM payments
+				WHERE restaurant_id = $1 AND invoice_id = ANY($2) AND status = 'PROCESSING' AND deleted_at IS NULL
+			)
+		`, restaurantID, existingIDs).Scan(&processing); err != nil {
+			return nil, err
+		}
+		if processing {
+			return nil, apperr.New(apperr.CodeConflict, "cannot split a session with paid invoices")
+		}
+		if _, err := r.q(ctx).Exec(ctx, `
+			UPDATE invoices
+			SET status = 'VOID', voided_reason = 'SPLIT', voided_at = NOW(), version = version + 1, updated_at = NOW()
+			WHERE restaurant_id = $1 AND id = ANY($2)
+		`, restaurantID, existingIDs); err != nil {
+			return nil, err
+		}
+	}
+
+	vatBPS, serviceBPS, err := r.restaurantChargeRates(ctx, restaurantID)
+	if err != nil {
+		return nil, err
+	}
+
+	invoices := make([]*domain.Invoice, 0, len(input.Groups))
+	for _, group := range input.Groups {
+		var subtotal int64
+		groupItems := make([]billableItem, 0, len(group.OrderItemIDs))
+		for _, id := range group.OrderItemIDs {
+			item := billable[id]
+			subtotal += item.TotalAmountVND
+			groupItems = append(groupItems, item)
+		}
+		serviceAmount := roundBPS(subtotal, serviceBPS)
+		vatAmount := roundBPS(subtotal+serviceAmount, vatBPS)
+		total := subtotal + serviceAmount + vatAmount
+
+		invoiceNumber, err := randomCode("INV", 12)
+		if err != nil {
+			return nil, err
+		}
+		var invoiceID uuid.UUID
+		err = r.q(ctx).QueryRow(ctx, `
+			INSERT INTO invoices (
+				restaurant_id, dining_session_id, invoice_number, invoice_type, status,
+				subtotal_vnd, discount_amount_vnd, discount_reason,
+				service_charge_basis_points, service_charge_amount_vnd,
+				vat_basis_points, vat_amount_vnd, rounding_amount_vnd, total_amount_vnd
+			)
+			VALUES ($1, $2, $3, 'STANDARD', 'PENDING', $4, 0, NULL, $5, $6, $7, $8, 0, $9)
+			RETURNING id
+		`, restaurantID, input.DiningSessionID, invoiceNumber, subtotal, serviceBPS, serviceAmount, vatBPS, vatAmount, total).Scan(&invoiceID)
+		if pg.IsUniqueViolation(err) {
+			return nil, apperr.New(apperr.CodeConflict, "invoice number already exists")
+		}
+		if err != nil {
+			return nil, err
+		}
+		for i, item := range groupItems {
+			if err := r.insertInvoiceItem(ctx, restaurantID, invoiceID, item, i+1); err != nil {
+				return nil, err
+			}
+		}
+		invoice, err := r.LoadInvoice(ctx, restaurantID, invoiceID)
+		if err != nil {
+			return nil, err
+		}
+		invoices = append(invoices, invoice)
+	}
+
+	if _, err := r.q(ctx).Exec(ctx, `
+		UPDATE dining_sessions
+		SET status = 'AWAITING_PAYMENT', version = version + 1, updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND status = 'ACTIVE' AND deleted_at IS NULL
+	`, restaurantID, input.DiningSessionID); err != nil {
+		return nil, err
+	}
+
+	return invoices, nil
+}
+
+func (r *Repository) ListSessionInvoices(ctx context.Context, restaurantID, diningSessionID uuid.UUID) ([]*domain.Invoice, error) {
+	ids, err := r.nonVoidInvoiceIDs(ctx, restaurantID, diningSessionID)
+	if err != nil {
+		return nil, err
+	}
+	invoices := make([]*domain.Invoice, 0, len(ids))
+	for _, id := range ids {
+		invoice, err := r.LoadInvoice(ctx, restaurantID, id)
+		if err != nil {
+			return nil, err
+		}
+		invoices = append(invoices, invoice)
+	}
+	return invoices, nil
+}
+
+// nonVoidInvoiceIDs returns a session's non-VOID invoice ids, oldest first.
+func (r *Repository) nonVoidInvoiceIDs(ctx context.Context, restaurantID, diningSessionID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := r.q(ctx).Query(ctx, `
+		SELECT id
+		FROM invoices
+		WHERE restaurant_id = $1 AND dining_session_id = $2 AND status <> 'VOID' AND deleted_at IS NULL
+		ORDER BY created_at ASC
+	`, restaurantID, diningSessionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var ids []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
+func (r *Repository) restaurantChargeRates(ctx context.Context, restaurantID uuid.UUID) (vatBPS, serviceBPS int, err error) {
+	err = r.q(ctx).QueryRow(ctx, `
+		SELECT vat_rate_basis_points, service_charge_basis_points
+		FROM restaurants
+		WHERE id = $1 AND deleted_at IS NULL
+	`, restaurantID).Scan(&vatBPS, &serviceBPS)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, 0, apperr.New(apperr.CodeNotFound, "restaurant not found")
+	}
+	return vatBPS, serviceBPS, err
+}
+
+// shouldCloseSession decides whether a session can close after an invoice is
+// paid: only once no other invoice for the session is still open (i.e. not
+// PAID/VOID) — split invoices must all be settled before the table frees up.
+func shouldCloseSession(openNonTerminalInvoices int) bool {
+	return openNonTerminalInvoices == 0
+}
+
+// validateSplitGroups checks that groups form an exact partition of the
+// session's billable order items: every billable id assigned exactly once,
+// no unknown ids, no empty groups, at least 2 groups.
+func validateSplitGroups(billable map[uuid.UUID]billableItem, groups []domain.SplitGroupInput) error {
+	if len(groups) < 2 {
+		return apperr.New(apperr.CodeInvalid, "split requires at least 2 groups")
+	}
+	seen := make(map[uuid.UUID]bool, len(billable))
+	for _, g := range groups {
+		if len(g.OrderItemIDs) == 0 {
+			return apperr.New(apperr.CodeInvalid, "split group must not be empty")
+		}
+		for _, id := range g.OrderItemIDs {
+			if _, ok := billable[id]; !ok {
+				return apperr.New(apperr.CodeInvalid, "order_item_id not billable: "+id.String())
+			}
+			if seen[id] {
+				return apperr.New(apperr.CodeInvalid, "order_item_id assigned to multiple groups: "+id.String())
+			}
+			seen[id] = true
+		}
+	}
+	if len(seen) != len(billable) {
+		return apperr.New(apperr.CodeInvalid, "all billable order items must be assigned to a group")
+	}
+	return nil
+}
+
 func (r *Repository) FindPaymentMethod(ctx context.Context, restaurantID uuid.UUID, code string) (*domain.PaymentMethod, error) {
 	method := &domain.PaymentMethod{}
 	err := r.q(ctx).QueryRow(ctx, `
@@ -288,6 +501,101 @@ func (r *Repository) ProcessPayment(ctx context.Context, restaurantID uuid.UUID,
 	if err := r.closeSessionAndFreeTable(ctx, restaurantID, diningSessionID, input.ProcessedBy); err != nil {
 		return nil, err
 	}
+	_ = paymentID
+	return r.LoadInvoice(ctx, restaurantID, input.InvoiceID)
+}
+
+func (r *Repository) ProcessPartialPayment(ctx context.Context, restaurantID uuid.UUID, input domain.PartialPaymentInput) (*domain.Invoice, error) {
+	diningSessionID, totalAmount, err := r.lockPayableInvoice(ctx, restaurantID, input.InvoiceID)
+	if err != nil {
+		return nil, err
+	}
+
+	method, err := r.FindPaymentMethod(ctx, restaurantID, input.PaymentMethodCode)
+	if err != nil {
+		return nil, err
+	}
+	if method.Type == "E_WALLET" {
+		return nil, apperr.New(apperr.CodeInvalid, "partial payment with e-wallet is not supported")
+	}
+	if method.RequiresReference && strings.TrimSpace(input.ReferenceCode) == "" {
+		return nil, apperr.New(apperr.CodeInvalid, "reference_code is required")
+	}
+
+	if err := r.ensureNoPaymentConflict(ctx, restaurantID, input.InvoiceID, uuid.Nil); err != nil {
+		return nil, err
+	}
+
+	var existingPaid int64
+	if err := r.q(ctx).QueryRow(ctx, `
+		SELECT COALESCE(SUM(amount_vnd), 0)
+		FROM payments
+		WHERE restaurant_id = $1 AND invoice_id = $2 AND status = 'COMPLETED' AND deleted_at IS NULL
+	`, restaurantID, input.InvoiceID).Scan(&existingPaid); err != nil {
+		return nil, err
+	}
+
+	newRunningTotal := existingPaid + input.ReceivedAmountVND
+	if newRunningTotal > totalAmount {
+		return nil, apperr.New(apperr.CodeInvalid, "total payment exceeds invoice amount")
+	}
+
+	paymentNumber, err := randomCode("PAY", 12)
+	if err != nil {
+		return nil, err
+	}
+	change := int64(0)
+	if newRunningTotal > totalAmount {
+		change = newRunningTotal - totalAmount
+	}
+	var reference any
+	if strings.TrimSpace(input.ReferenceCode) != "" {
+		reference = strings.TrimSpace(input.ReferenceCode)
+	}
+	var paymentID uuid.UUID
+	err = r.q(ctx).QueryRow(ctx, `
+		INSERT INTO payments (
+			restaurant_id, invoice_id, dining_session_id, payment_number, payment_method_id,
+			amount_vnd, status, reference_code, received_amount_vnd, change_amount_vnd,
+			processed_at, processed_by
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, 'COMPLETED', $7, $8, $9, NOW(), $10)
+		RETURNING id
+	`, restaurantID, input.InvoiceID, diningSessionID, paymentNumber, method.ID, input.ReceivedAmountVND, reference, input.ReceivedAmountVND, change, input.ProcessedBy).Scan(&paymentID)
+	if pg.IsUniqueViolation(err) {
+		return nil, apperr.New(apperr.CodeConflict, "payment number already exists")
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	newStatus := "PARTIALLY_PAID"
+	if newRunningTotal >= totalAmount {
+		newStatus = "PAID"
+	}
+
+	_, err = r.q(ctx).Exec(ctx, `
+		UPDATE invoices
+		SET status = $3,
+		    paid_amount_vnd = $4,
+		    change_amount_vnd = $5,
+		    issued_at = COALESCE(issued_at, NOW()),
+		    issued_by = COALESCE(issued_by, $6),
+		    paid_at = CASE WHEN $3 = 'PAID' THEN NOW() ELSE paid_at END,
+		    version = version + 1,
+		    updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, restaurantID, input.InvoiceID, newStatus, newRunningTotal, change, input.ProcessedBy)
+	if err != nil {
+		return nil, err
+	}
+
+	if newStatus == "PAID" {
+		if err := r.closeSessionAndFreeTable(ctx, restaurantID, diningSessionID, input.ProcessedBy); err != nil {
+			return nil, err
+		}
+	}
+
 	_ = paymentID
 	return r.LoadInvoice(ctx, restaurantID, input.InvoiceID)
 }
@@ -543,6 +851,11 @@ func (r *Repository) LoadInvoice(ctx context.Context, restaurantID, invoiceID uu
 		return nil, err
 	}
 	inv.Payment = payment
+	allPayments, err := r.loadInvoicePayments(ctx, restaurantID, invoiceID)
+	if err != nil {
+		return nil, err
+	}
+	inv.Payments = allPayments
 	return inv, nil
 }
 
@@ -644,6 +957,18 @@ func (r *Repository) lockPayment(ctx context.Context, restaurantID, paymentID uu
 }
 
 func (r *Repository) closeSessionAndFreeTable(ctx context.Context, restaurantID, diningSessionID, actorID uuid.UUID) error {
+	var openInvoices int
+	if err := r.q(ctx).QueryRow(ctx, `
+		SELECT COUNT(*) FROM invoices
+		WHERE restaurant_id = $1 AND dining_session_id = $2
+		  AND status NOT IN ('PAID', 'VOID') AND deleted_at IS NULL
+	`, restaurantID, diningSessionID).Scan(&openInvoices); err != nil {
+		return err
+	}
+	if !shouldCloseSession(openInvoices) {
+		return nil
+	}
+
 	var tableID uuid.UUID
 	err := r.q(ctx).QueryRow(ctx, `
 		SELECT table_id
@@ -785,6 +1110,45 @@ func (r *Repository) loadLatestPayment(ctx context.Context, restaurantID, invoic
 	}
 	applyPaymentNulls(payment, ref, gatewayID, raw, processed)
 	return payment, nil
+}
+
+func (r *Repository) loadInvoicePayments(ctx context.Context, restaurantID, invoiceID uuid.UUID) ([]domain.Payment, error) {
+	rows, err := r.q(ctx).Query(ctx, `
+		SELECT p.id, p.invoice_id, p.dining_session_id, p.payment_number,
+		       pm.code, pm.type, p.amount_vnd, COALESCE(p.received_amount_vnd, 0), p.change_amount_vnd,
+		       p.status, p.reference_code, p.gateway_transaction_id, COALESCE(p.transaction_data, '{}'::jsonb), p.processed_at
+		FROM payments p
+		JOIN payment_methods pm ON pm.restaurant_id = p.restaurant_id AND pm.id = p.payment_method_id
+		WHERE p.restaurant_id = $1 AND p.invoice_id = $2 AND p.deleted_at IS NULL
+		ORDER BY p.created_at ASC
+	`, restaurantID, invoiceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var payments []domain.Payment
+	for rows.Next() {
+		var payment domain.Payment
+		var ref, gatewayID pgtype.Text
+		var processed pgtype.Timestamptz
+		var raw []byte
+		if err := rows.Scan(
+			&payment.ID, &payment.InvoiceID, &payment.DiningSessionID, &payment.PaymentNumber,
+			&payment.MethodCode, &payment.MethodType, &payment.AmountVND, &payment.ReceivedAmountVND, &payment.ChangeAmountVND,
+			&payment.Status, &ref, &gatewayID, &raw, &processed,
+		); err != nil {
+			return nil, err
+		}
+		applyPaymentNulls(&payment, ref, gatewayID, raw, processed)
+		payments = append(payments, payment)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if payments == nil {
+		return []domain.Payment{}, nil
+	}
+	return payments, nil
 }
 
 func applyPaymentNulls(payment *domain.Payment, ref, gatewayID pgtype.Text, raw []byte, processed pgtype.Timestamptz) {

@@ -49,7 +49,8 @@ type Invoice struct {
 	PaidAt                   *time.Time
 	Version                  int
 	Items                    []InvoiceItem
-	Payment                  *Payment
+	Payment                  *Payment  // latest/completed payment (backward compat)
+	Payments                 []Payment // all payments (supports multi-method)
 }
 
 type InvoiceItem struct {
@@ -98,6 +99,14 @@ type PaymentInput struct {
 	ProcessedBy       uuid.UUID
 }
 
+type PartialPaymentInput struct {
+	InvoiceID         uuid.UUID
+	PaymentMethodCode string
+	ReceivedAmountVND int64
+	ReferenceCode     string
+	ProcessedBy       uuid.UUID
+}
+
 type AsyncPaymentInput struct {
 	InvoiceID         uuid.UUID
 	PaymentMethodCode string
@@ -108,6 +117,16 @@ type AsyncPaymentPreparation struct {
 	Invoice *Invoice
 	Payment *Payment
 	Created bool
+}
+
+type SplitGroupInput struct {
+	Label        string
+	OrderItemIDs []uuid.UUID
+}
+
+type SplitInvoiceInput struct {
+	DiningSessionID uuid.UUID
+	Groups          []SplitGroupInput
 }
 
 type WebhookPayment struct {
@@ -126,6 +145,7 @@ type InvoiceRepository interface {
 	VoidInvoice(ctx context.Context, restaurantID, invoiceID uuid.UUID, reason string) (*Invoice, error)
 	FindPaymentMethod(ctx context.Context, restaurantID uuid.UUID, code string) (*PaymentMethod, error)
 	ProcessPayment(ctx context.Context, restaurantID uuid.UUID, input PaymentInput) (*Invoice, error)
+	ProcessPartialPayment(ctx context.Context, restaurantID uuid.UUID, input PartialPaymentInput) (*Invoice, error)
 	PrepareAsyncPayment(ctx context.Context, restaurantID uuid.UUID, input AsyncPaymentInput) (*AsyncPaymentPreparation, error)
 	AttachGatewayResult(ctx context.Context, restaurantID, paymentID uuid.UUID, result InitiateResult) (*Invoice, error)
 	FindWebhookPayment(ctx context.Context, gatewayTransactionID, orderRef string) (*WebhookPayment, error)
@@ -135,6 +155,8 @@ type InvoiceRepository interface {
 	MarkWebhookProcessed(ctx context.Context, eventRowID uuid.UUID) error
 	MarkWebhookError(ctx context.Context, eventRowID uuid.UUID, message string) error
 	LoadInvoice(ctx context.Context, restaurantID, invoiceID uuid.UUID) (*Invoice, error)
+	SplitInvoice(ctx context.Context, restaurantID uuid.UUID, input SplitInvoiceInput) ([]*Invoice, error)
+	ListSessionInvoices(ctx context.Context, restaurantID, diningSessionID uuid.UUID) ([]*Invoice, error)
 }
 
 type OutboxWriter interface {

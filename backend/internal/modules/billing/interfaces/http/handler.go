@@ -13,24 +13,30 @@ import (
 )
 
 type Handler struct {
-	BuildInvoice   *application.BuildInvoice
-	AdjustInvoice  *application.AdjustInvoice
-	ProcessPayment *application.ProcessPayment
-	HandleWebhook  *application.HandleWebhook
-	VoidInvoice    *application.VoidInvoice
-	appEnv         string
+	BuildInvoice         *application.BuildInvoice
+	AdjustInvoice        *application.AdjustInvoice
+	ProcessPayment       *application.ProcessPayment
+	ProcessPartialPayment *application.ProcessPartialPayment
+	HandleWebhook        *application.HandleWebhook
+	VoidInvoice          *application.VoidInvoice
+	SplitInvoice         *application.SplitInvoice
+	ListSessionInvoices  *application.ListSessionInvoices
+	appEnv               string
 }
 
-func NewHandler(buildInvoice *application.BuildInvoice, adjustInvoice *application.AdjustInvoice, processPayment *application.ProcessPayment, handleWebhook *application.HandleWebhook, voidInvoice *application.VoidInvoice, appEnv string) *Handler {
-	return &Handler{BuildInvoice: buildInvoice, AdjustInvoice: adjustInvoice, ProcessPayment: processPayment, HandleWebhook: handleWebhook, VoidInvoice: voidInvoice, appEnv: appEnv}
+func NewHandler(buildInvoice *application.BuildInvoice, adjustInvoice *application.AdjustInvoice, processPayment *application.ProcessPayment, processPartialPayment *application.ProcessPartialPayment, handleWebhook *application.HandleWebhook, voidInvoice *application.VoidInvoice, splitInvoice *application.SplitInvoice, listSessionInvoices *application.ListSessionInvoices, appEnv string) *Handler {
+	return &Handler{BuildInvoice: buildInvoice, AdjustInvoice: adjustInvoice, ProcessPayment: processPayment, ProcessPartialPayment: processPartialPayment, HandleWebhook: handleWebhook, VoidInvoice: voidInvoice, SplitInvoice: splitInvoice, ListSessionInvoices: listSessionInvoices, appEnv: appEnv}
 }
 
 func (h *Handler) RegisterStaffRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver, defaultRestaurantID uuid.UUID) {
 	g := r.Group("/invoices", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionBillingProcess, defaultRestaurantID))
 	g.POST("", h.buildInvoice)
+	g.GET("", h.listSessionInvoices)
+	g.POST("/split", h.splitInvoice)
 	g.POST("/:id/adjust", h.adjustInvoice)
 	g.POST("/:id/void", h.voidInvoice)
 	g.POST("/:id/pay", h.processPayment)
+	g.POST("/:id/pay-partial", h.processPartialPayment)
 }
 
 func (h *Handler) buildInvoice(c *gin.Context) {
@@ -40,6 +46,34 @@ func (h *Handler) buildInvoice(c *gin.Context) {
 		return
 	}
 	out, err := h.BuildInvoice.Handle(c.Request.Context(), req)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) listSessionInvoices(c *gin.Context) {
+	sessionID, err := uuid.Parse(c.Query("dining_session_id"))
+	if err != nil {
+		httpx.RespondError(c, apperr.New(apperr.CodeInvalid, "dining_session_id is required"))
+		return
+	}
+	out, err := h.ListSessionInvoices.Handle(c.Request.Context(), sessionID)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) splitInvoice(c *gin.Context) {
+	var req application.SplitInvoiceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
+		return
+	}
+	out, err := h.SplitInvoice.Handle(c.Request.Context(), req)
 	if err != nil {
 		httpx.RespondError(c, err)
 		return
@@ -86,6 +120,32 @@ func (h *Handler) voidInvoice(c *gin.Context) {
 	}
 	req.ActorID = actorID
 	out, err := h.VoidInvoice.Handle(c.Request.Context(), req)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) processPartialPayment(c *gin.Context) {
+	invoiceID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid invoice id", err))
+		return
+	}
+	var req application.ProcessPartialPaymentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
+		return
+	}
+	req.InvoiceID = invoiceID
+	actorID, err := uuid.Parse(c.GetString(auth.CtxUserID))
+	if err != nil || actorID == uuid.Nil {
+		httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "invalid user claim"))
+		return
+	}
+	req.ActorID = actorID
+	out, err := h.ProcessPartialPayment.Handle(c.Request.Context(), req)
 	if err != nil {
 		httpx.RespondError(c, err)
 		return
