@@ -3,57 +3,46 @@ import { Loader2 } from 'lucide-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { Lock, User, Eye, EyeOff, AlertCircle, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
-import { loginStaff } from '@/lib/auth'
-import { BRAND } from '@/lib/brand'
+import { BRAND } from '@/constants/brand'
+import { useLogin } from '@/features/login/mutations/useLogin'
 
 export function LoginPage() {
   const { redirect } = useSearch({ from: '/login' })
   const navigate = useNavigate()
 
-  const [state, setState] = React.useReducer((s: any, a: any) => ({ ...s, ...a }), {
-    username: '',
-    password: '',
-    showPassword: false,
-    loading: false,
-    error: null as string | null,
-  })
+  const [username, setUsername] = React.useState('')
+  const [password, setPassword] = React.useState('')
+  const [showPassword, setShowPassword] = React.useState(false)
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const loginMutation = useLogin()
+
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
-    setState({ error: null })
 
-    if (!state.username.trim()) {
-      setState({ error: 'Vui lòng nhập tài khoản!' })
+    if (!username.trim()) {
+      loginMutation.error && loginMutation.reset()
+      toast.error('Vui lòng nhập tài khoản!')
       return
     }
-    if (!state.password) {
-      setState({ error: 'Vui lòng nhập mật khẩu!' })
+    if (!password) {
+      loginMutation.error && loginMutation.reset()
+      toast.error('Vui lòng nhập mật khẩu!')
       return
     }
 
-    setState({ loading: true })
-
-    try {
-      const session = await loginStaff(state.username, state.password)
-
-      if (!session) {
-        setState({ error: 'Tài khoản hoặc mật khẩu không chính xác!', loading: false })
-        return
-      }
-
-      toast.success(`Xin chào, ${session.name}!`)
-
-      if (redirect) {
-        window.location.href = redirect
-      } else {
-        navigate({ to: '/admin' })
-      }
-    } catch (err) {
-      setState({
-        error: err instanceof Error ? err.message : 'Không thể đăng nhập',
-        loading: false,
-      })
-    }
+    loginMutation.mutate(
+      { username: username.trim(), password },
+      {
+        onSuccess: (session) => {
+          toast.success(`Xin chào, ${session.name}!`)
+          if (redirect) {
+            window.location.href = redirect
+          } else {
+            navigate({ to: '/admin' })
+          }
+        },
+      },
+    )
   }
 
   return (
@@ -78,10 +67,10 @@ export function LoginPage() {
         <div className="rounded-2xl border border-stone-200 bg-white/80 p-6 shadow-lg shadow-stone-200/60 backdrop-blur-xl sm:p-8">
           <form onSubmit={handleLogin} className="space-y-5">
             {/* Error state */}
-            {state.error && (
+            {loginMutation.isError && loginMutation.error && (
               <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-600">
                 <AlertCircle size={16} className="shrink-0" />
-                <p>{state.error}</p>
+                <p>{loginMutation.error.message}</p>
               </div>
             )}
 
@@ -103,8 +92,8 @@ export function LoginPage() {
                   autoComplete="username"
                   placeholder="Nhập tài khoản"
                   className="h-11 w-full rounded-xl border border-stone-200 bg-stone-50 pl-10 pr-3.5 text-sm font-medium text-stone-800 placeholder-stone-400 transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/15 focus:bg-white outline-none"
-                  value={state.username}
-                  onChange={(e) => setState({ username: e.target.value })}
+                  value={username}
+                  onChange={(e) => { setUsername(e.target.value); loginMutation.error && loginMutation.reset() }}
                 />
               </div>
             </div>
@@ -123,20 +112,20 @@ export function LoginPage() {
                 </span>
                 <input
                   id="password"
-                  type={state.showPassword ? 'text' : 'password'}
+                  type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   placeholder="••••••••••••"
                   className="h-11 w-full rounded-xl border border-stone-200 bg-stone-50 pl-10 pr-10 text-sm font-medium tracking-widest text-stone-800 placeholder-stone-400 transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/15 focus:bg-white outline-none"
-                  value={state.password}
-                  onChange={(e) => setState({ password: e.target.value })}
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); loginMutation.error && loginMutation.reset() }}
                 />
                 <button
                   type="button"
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition cursor-pointer"
-                  onClick={() => setState({ showPassword: !state.showPassword })}
+                  onClick={() => setShowPassword(!showPassword)}
                   tabIndex={-1}
                 >
-                  {state.showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                 </button>
               </div>
             </div>
@@ -144,10 +133,10 @@ export function LoginPage() {
             {/* Submit button */}
             <button
               type="submit"
-              disabled={state.loading}
+              disabled={loginMutation.isPending}
               className="group flex h-11 w-full items-center justify-center rounded-xl bg-stone-800 text-white font-semibold text-sm shadow-lg shadow-stone-800/20 transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer hover:bg-stone-700"
             >
-              {state.loading ? (
+              {loginMutation.isPending ? (
                 <div className="flex items-center gap-2">
                   <Loader2 className="animate-spin size-[17px]" />
                   <span>Đang kiểm tra...</span>

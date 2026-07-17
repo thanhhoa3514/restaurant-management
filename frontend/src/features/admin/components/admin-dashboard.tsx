@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query'
 import React, { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import {
@@ -28,9 +27,9 @@ import {
 } from '@/components/ui/table'
 import { makeAdminT } from '@/features/admin/data/i18n'
 import { getStaffSession } from '@/lib/auth'
-import { useLang } from '@/lib/use-lang'
+import { useLang } from '@/hooks/use-lang'
 import { cn } from '@/lib/utils'
-import { fetchAdminDashboard } from '@/features/admin/api'
+import { useAdminDashboardQuery } from '@/features/admin/queries'
 
 export const AdminDashboard = () => {
   const session = getStaffSession()
@@ -39,12 +38,7 @@ export const AdminDashboard = () => {
   // Tính ngày hiện tại 1 lần lúc mount
   const now = useMemo(() => new Date(), [])
 
-  const { data: dashboard, isLoading, isError } = useQuery({
-    queryKey: ['adminDashboard'],
-    queryFn: fetchAdminDashboard,
-    refetchInterval: 30000,
-    staleTime: 60 * 1000, // Caching 60s để tránh load lại liên tục khi đổi tab
-  })
+  const { data: dashboard, isLoading, isError } = useAdminDashboardQuery()
 
   const locale = lang === 'vi' ? 'vi-VN' : 'en-US'
   const fmtDate = now.toLocaleDateString(locale, {

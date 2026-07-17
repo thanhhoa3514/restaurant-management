@@ -1,4 +1,5 @@
 import {
+  ackWaiterCall,
   fetchStaffTables,
   requestSessionBill,
   updateStaffOrderItemStatus,
@@ -17,6 +18,10 @@ export const waiterService = {
 
   requestBill(sessionId: string): Promise<{ session_id: string; status: string; requested_at: string | null }> {
     return requestSessionBill(sessionId)
+  },
+
+  ackWaiterCall(sessionId: string): Promise<{ session_id: string; status: string }> {
+    return ackWaiterCall(sessionId)
   },
 
   openSession(tableId: string): Promise<{ session_id: string; session_code: string; table_id: string; status: string; session_token: string }> {

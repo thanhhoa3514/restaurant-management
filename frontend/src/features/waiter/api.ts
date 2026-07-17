@@ -48,6 +48,7 @@ export interface StaffSessionDTO {
   guest_name: string
   opened_at: string
   bill_requested_at: string | null
+  waiter_called_at: string | null
   orders: StaffOrderDTO[]
   total_vnd: number
 }
@@ -74,6 +75,12 @@ export function requestSessionBill(
   sessionId: string,
 ): Promise<{ session_id: string; status: string; requested_at: string | null }> {
   return apiRequest(`/api/v1/restaurant/sessions/${sessionId}/request-bill`, { method: 'POST' })
+}
+
+export function ackWaiterCall(
+  sessionId: string,
+): Promise<{ session_id: string; status: string }> {
+  return apiRequest(`/api/v1/restaurant/sessions/${sessionId}/ack-waiter-call`, { method: 'POST' })
 }
 
 export function updateStaffOrderItemStatus(

@@ -1,4 +1,4 @@
-import type { Lang } from '@/lib/use-lang'
+import type { Lang } from '@/hooks/use-lang'
 
 type DictValue = string | ((...args: never[]) => string)
 
@@ -94,6 +94,12 @@ const ADMIN_DICT: Record<Lang, Record<string, DictValue>> = {
     catalog_short_placeholder: 'Một dòng mô tả hiển thị trên thẻ',
     catalog_desc_placeholder: 'Mô tả nguyên liệu, khẩu vị, ghi chú phục vụ…',
     catalog_station_placeholder: 'Chọn trạm bếp',
+    catalog_station_hotpot: 'Lẩu',
+    catalog_station_grill: 'Nướng',
+    catalog_station_noodle: 'Mì',
+    catalog_station_drink: 'Đồ uống',
+    catalog_station_dessert: 'Tráng miệng',
+    catalog_station_general: 'Tổng hợp',
     catalog_status_published: 'Đã xuất bản',
     catalog_status_draft: 'Bản nháp',
     catalog_status_archived: 'Lưu trữ',
@@ -267,6 +273,12 @@ const ADMIN_DICT: Record<Lang, Record<string, DictValue>> = {
     catalog_short_placeholder: 'One-line card description',
     catalog_desc_placeholder: 'Ingredients, taste, service notes…',
     catalog_station_placeholder: 'Choose station',
+    catalog_station_hotpot: 'Hotpot',
+    catalog_station_grill: 'Grill',
+    catalog_station_noodle: 'Noodle',
+    catalog_station_drink: 'Drink',
+    catalog_station_dessert: 'Dessert',
+    catalog_station_general: 'General',
     catalog_status_published: 'Published',
     catalog_status_draft: 'Draft',
     catalog_status_archived: 'Archived',

@@ -1,12 +1,7 @@
-import type { Lang } from '@/lib/use-lang'
+import type { Lang } from '@/hooks/use-lang'
 import type { StaffRole } from '@/lib/auth'
 
-/**
- * Chrome strings for the staff shell (sidebar nav, header, profile, command
- * palette, settings). Kept in one place so the shell is bilingual and survives
- * the future single-shell collapse. Page-specific copy lives in each feature's
- * own dict (e.g. features/admin/data/i18n.ts).
- */
+
 export interface ShellStrings {
   roleLabel: Record<StaffRole, string>
   navGroup: Record<'manage' | 'operate', string>

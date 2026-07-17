@@ -4,7 +4,7 @@ import { useShellConfig } from '@/components/admin-shell'
 import { TableQRManager } from '@/features/admin/components/table-qr-manager'
 import { makeAdminT } from '@/features/admin/data/i18n'
 import { hasStaffPermission, isStaffAuthenticated } from '@/lib/auth'
-import { useLang } from '@/lib/use-lang'
+import { useLang } from '@/hooks/use-lang'
 
 export const Route = createFileRoute('/admin/table-qrs')({
   beforeLoad: ({ location }) => {

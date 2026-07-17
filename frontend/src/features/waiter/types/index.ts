@@ -1,9 +1,6 @@
-export type ItemStatus =
-  | 'pending'
-  | 'acknowledged'
-  | 'preparing'
-  | 'ready'
-  | 'served'
+import type { ItemStatus, StatusHistoryEntry } from '@/constants'
+export type { ItemStatus, StatusHistoryEntry } from '@/constants'
+export { STATUS_FLOW } from '@/constants'
 
 export type TableOccupancy = 'empty' | 'occupied'
 
@@ -14,11 +11,6 @@ export type WFPriority =
   | 'idle'
   | 'occupied'
   | 'empty'
-
-export interface StatusHistoryEntry {
-  status: ItemStatus
-  timestamp: Date
-}
 
 export interface WFItem {
   id: string
@@ -89,17 +81,8 @@ export interface WFCounts {
   total: number
 }
 
-export type Lang = 'vi' | 'en'
-
-export const STATUS_FLOW: ItemStatus[] = [
-  'pending',
-  'acknowledged',
-  'preparing',
-  'ready',
-  'served',
-]
-
-
+import type { Lang } from '@/constants'
+export type { Lang } from '@/constants'
 
 export type WaiterView = 'plan' | 'grid'
 

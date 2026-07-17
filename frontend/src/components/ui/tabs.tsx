@@ -1,8 +1,6 @@
 /* eslint-disable react-refresh/only-export-components, react-doctor/only-export-components */
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs"
 import { cva, type VariantProps } from "class-variance-authority"
-import * as React from 'react'
-
 import { cn } from "@/lib/utils"
 
 function Tabs({

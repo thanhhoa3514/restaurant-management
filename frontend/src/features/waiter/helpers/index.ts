@@ -87,12 +87,6 @@ export function wfFmtClock(d: Date): string {
   return `${h}:${m}`
 }
 
-function wfFmtTimestamp(d: Date): string {
-  const h = String(d.getHours()).padStart(2, '0')
-  const m = String(d.getMinutes()).padStart(2, '0')
-  return `${h}:${m}`
-}
-
 export function wfFmtHMS(seconds: number | null): string {
   if (seconds == null) return ''
   seconds = Math.max(0, Math.floor(seconds))
@@ -110,10 +104,6 @@ export function wfFmtMin(seconds: number): number {
 export function wfFmtVND(amount: number): string {
   const r = Math.round(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
   return r + 'đ'
-}
-
-function makeTxnId(): string {
-  return 'TXN' + Math.random().toString(36).substr(2, 9).toUpperCase()
 }
 
 export type Signal = 'call' | 'ready' | 'bill'

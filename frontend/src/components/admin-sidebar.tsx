@@ -4,7 +4,7 @@ import type { CSSProperties } from 'react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { shellStrings } from '@/components/shell-i18n'
 import type { StaffRole } from '@/lib/auth'
-import { BRAND } from '@/lib/brand'
+import { BRAND } from '@/constants/brand'
 import { cn } from '@/lib/utils'
 import { roleTint, type NavGroup, type NavItem, type StaffView } from '@/components/admin-config'
 

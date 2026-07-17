@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components, react-doctor/only-export-components */
 import { useNavigate } from '@tanstack/react-router'
-import { LogOut, Menu, Search, UserRound } from 'lucide-react'
+import { Loader2, LogOut, Menu, Search, UserRound } from 'lucide-react'
 import {
   useMemo,
   useState,
@@ -24,11 +24,13 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { shellStrings } from '@/components/shell-i18n'
-import { getStaffSession, logoutStaff, type StaffRole } from '@/lib/auth'
-import { BRAND } from '@/lib/brand'
-import { usePermissions } from '@/lib/permission-context'
-import type { Lang } from '@/lib/use-lang'
+import { getStaffSession, type StaffRole } from '@/lib/auth'
+import { useLogout } from '@/features/login/mutations/useLogout'
+import { BRAND } from '@/constants/brand'
+import { usePermissions } from '@/contexts/permission'
+import type { Lang } from '@/hooks/use-lang'
 import { cn } from '@/lib/utils'
 import { roleTint, navItems, type StaffView, type AdminView } from './admin-config'
 import { SidebarContent } from './admin-sidebar'
@@ -183,9 +185,11 @@ export function AdminShell({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
-  const handleLogout = async () => {
-    await logoutStaff()
-    navigate({ to: '/login' })
+  const logoutMutation = useLogout()
+  const handleLogout = () => {
+    logoutMutation.mutate(undefined, {
+      onSuccess: () => navigate({ to: '/login' }),
+    })
   }
 
   const handleLangChange = (next: Lang) => {
@@ -259,6 +263,7 @@ export function AdminShell({
                       ⌘K
                     </kbd>
                   </Button>
+                  <ThemeToggle />
                   {setLang && (
                     <LanguageSwitcher currentLang={lang} onLangChange={handleLangChange} />
                   )}
@@ -307,11 +312,16 @@ export function AdminShell({
                         </div>
                         <DropdownMenuSeparator className="bg-[var(--separator)]" />
                         <DropdownMenuItem
+                          disabled={logoutMutation.isPending}
                           onClick={handleLogout}
                           className="flex min-h-11 cursor-pointer items-center gap-2 rounded-[12px] px-3 font-semibold text-[var(--system-red)] transition-colors duration-[220ms] focus:bg-[var(--system-red)]/10 focus:text-[var(--system-red)]"
                         >
-                          <LogOut className="size-4" />
-                          {s.logout}
+                          {logoutMutation.isPending ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <LogOut className="size-4" />
+                          )}
+                          {logoutMutation.isPending ? 'Đang đăng xuất...' : s.logout}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

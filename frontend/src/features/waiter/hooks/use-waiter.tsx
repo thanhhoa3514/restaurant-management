@@ -5,13 +5,13 @@ import { WF_DICT } from '@/features/waiter/data/i18n'
 import type {
   Lang,
   WFCounts,
-  WFTable,
   WaiterView,
   UseWaiterValue,
 } from '@/features/waiter/types'
 import { useStaffTables } from '@/features/waiter/queries/useStaffTables'
 import { useUpdateItemStatus } from '@/features/waiter/mutations/useUpdateItemStatus'
 import { useRequestBill } from '@/features/waiter/mutations/useRequestBill'
+import { useAckWaiterCall } from '@/features/waiter/mutations/useAckWaiterCall'
 import { useOpenSession } from '@/features/waiter/mutations/useOpenSession'
 
 type DictArgs = Array<string | number>
@@ -34,6 +34,7 @@ export function useWaiter(): UseWaiterValue {
   const { tables, refetch } = useStaffTables()
   const updateItemStatus = useUpdateItemStatus()
   const requestBillMutation = useRequestBill()
+  const ackWaiterCallMutation = useAckWaiterCall()
   const openSessionMutation = useOpenSession()
 
   const setLang = useCallback((newLang: Lang) => {
@@ -75,13 +76,18 @@ export function useWaiter(): UseWaiterValue {
   const acknowledgeCall = useCallback(
     (tableId: string) => {
       const table = tables.find((item) => item.id === tableId)
-      if (table) toast(t('toast_acknowledged', table.number))
+      const sessionId = table?.session?.id
+      if (!sessionId) return
+      ackWaiterCallMutation.mutateAsync(sessionId).then(() => {
+        markJustChanged(tableId)
+        if (table) toast(t('toast_acknowledged', table.number))
+      })
     },
-    [t, tables],
+    [ackWaiterCallMutation, markJustChanged, t, tables],
   )
 
   const notifyCashier = useCallback(
-    (tableId: string) => {
+    (_tableId: string) => {
       toast(t('toast_bill_sent'))
     },
     [t],

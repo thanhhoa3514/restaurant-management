@@ -1,7 +1,7 @@
 import { Construction, type LucideIcon } from 'lucide-react'
 
 import { useShellConfig } from '@/components/admin-shell'
-import { useLang } from '@/lib/use-lang'
+import { useLang } from '@/hooks/use-lang'
 
 interface ComingSoonProps {
   /** Localized page title, also pushed to the shell header. */

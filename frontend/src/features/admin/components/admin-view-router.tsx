@@ -3,7 +3,7 @@ import { Outlet, useLocation } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
 
 import { AdminShell, ShellProvider } from '@/components/admin-shell'
-import { usePermissions } from '@/lib/permission-context'
+import { usePermissions } from '@/contexts/permission'
 import { getStaffSession } from '@/lib/auth'
 import type { StaffView } from '@/components/admin-config'
 import { Route as adminRoute } from '@/routes/admin'

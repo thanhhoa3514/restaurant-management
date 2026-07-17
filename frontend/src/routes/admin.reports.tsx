@@ -5,7 +5,7 @@ import { BarChart3 } from 'lucide-react'
 import { ComingSoon } from '@/components/coming-soon'
 import { shellStrings } from '@/components/shell-i18n'
 import { hasStaffPermission, isStaffAuthenticated } from '@/lib/auth'
-import { useLang } from '@/lib/use-lang'
+import { useLang } from '@/hooks/use-lang'
 
 export const Route = createFileRoute('/admin/reports')({
   beforeLoad: ({ location }) => {

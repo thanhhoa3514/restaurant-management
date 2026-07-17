@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { KeyRound, Loader2, Pencil, Plus, UserCheck, UserX } from 'lucide-react'
 
 import { SecureActionDialog } from '@/components/SecureActionDialog'
@@ -26,18 +26,13 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { makeAdminT, type AdminT } from '@/features/admin/data/i18n'
-import {
-  listRoles,
-  listStaffUsers,
-  manageStaffUser,
-  staffQueryKeys,
-  type ManageUserRequest,
-  type RoleDTO,
-  type StaffUserDTO,
-} from '@/features/admin/api'
+import { useStaffRolesQuery, useStaffUsersQuery } from '@/features/admin/queries'
+import { useManageStaffMutation } from '@/features/admin/mutations'
+import { staffQueryKeys } from '@/features/admin/api'
+import type { ManageUserRequest, RoleDTO, StaffUserDTO } from '@/features/admin/types'
 import { ApiError } from '@/lib/api'
 import { getStaffSession } from '@/lib/auth'
-import { useLang } from '@/lib/use-lang'
+import { useLang } from '@/hooks/use-lang'
 import { cn } from '@/lib/utils'
 
 interface StaffForm {
@@ -84,8 +79,8 @@ export function StaffManagement() {
     isLoading,
     isError,
     error,
-  } = useQuery({ queryKey: staffQueryKeys.users, queryFn: listStaffUsers })
-  const { data: roles = [] } = useQuery({ queryKey: staffQueryKeys.roles, queryFn: listRoles })
+  } = useStaffUsersQuery()
+  const { data: roles = [] } = useStaffRolesQuery()
 
   useShellConfig({
     title: t('staff_title'),
@@ -95,13 +90,7 @@ export function StaffManagement() {
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: staffQueryKeys.users })
 
-  const statusMutation = useMutation({
-    mutationFn: manageStaffUser,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: staffQueryKeys.users })
-      setStatusTarget(null)
-    },
-  })
+  const statusMutation = useManageStaffMutation(() => setStatusTarget(null))
 
   return (
     <>
@@ -178,7 +167,7 @@ export function StaffManagement() {
           inputPlaceholder={t('staff_confirm_placeholder', statusTarget.username)}
           confirmText={t('staff_deactivate_confirm')}
           cancelText={t('staff_cancel')}
-          variant="danger"
+          variant="destructive"
           onOpenChange={(open) => !open && setStatusTarget(null)}
           onConfirm={() =>
             statusMutation.mutate({ action: 'set_status', user_id: statusTarget.id, status: 'INACTIVE' })
@@ -215,11 +204,7 @@ function StaffRow({
   onResetPassword: () => void
   statusPending: boolean
 }) {
-  const queryClient = useQueryClient()
-  const activateMutation = useMutation({
-    mutationFn: manageStaffUser,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: staffQueryKeys.users }),
-  })
+  const activateMutation = useManageStaffMutation()
 
   const statusKey =
     user.status === 'ACTIVE'
@@ -351,14 +336,9 @@ function StaffSheetBody({
   )
   const isSelf = isEdit && state.user.id === getStaffSession()?.userId
 
-  const queryClient = useQueryClient()
-  const mutation = useMutation({
-    mutationFn: manageStaffUser,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: staffQueryKeys.users })
-      onSaved()
-      onClose()
-    },
+  const mutation = useManageStaffMutation(() => {
+    onSaved()
+    onClose()
   })
 
   const updateField = <K extends keyof StaffForm>(key: K, value: StaffForm[K]) =>
@@ -426,7 +406,7 @@ function StaffSheetBody({
           <Field label={t('staff_field_role')}>
             <Select
               value={form.role}
-              onValueChange={(val) => updateField('role', val)}
+              onValueChange={(val) => updateField('role', val ?? '')}
               disabled={isSelf}
               required
             >
@@ -491,15 +471,10 @@ function ResetPasswordSheet({
 }) {
   const [password, setPassword] = useState('')
 
-  const queryClient = useQueryClient()
-  const mutation = useMutation({
-    mutationFn: manageStaffUser,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: staffQueryKeys.users })
-      onSaved()
-      setPassword('')
-      onClose()
-    },
+  const mutation = useManageStaffMutation(() => {
+    onSaved()
+    setPassword('')
+    onClose()
   })
 
   return (

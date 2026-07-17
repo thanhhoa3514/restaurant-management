@@ -1,5 +1,5 @@
 import type { Lang } from '../types'
-import { BRAND } from '@/lib/brand'
+import { BRAND } from '@/constants/brand'
 
 export const WF_DICT: Record<Lang, Record<string, string | ((...args: never[]) => string)>> = {
   vi: {

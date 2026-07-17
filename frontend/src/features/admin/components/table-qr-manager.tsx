@@ -11,7 +11,7 @@ import { SecureActionDialog } from '@/components/SecureActionDialog'
 import { ShellHeaderCenter } from '@/components/admin-shell'
 import { makeAdminT, type AdminT } from '@/features/admin/data/i18n'
 import { ApiError } from '@/lib/api'
-import { useLang } from '@/lib/use-lang'
+import { useLang } from '@/hooks/use-lang'
 import { cn } from '@/lib/utils'
 import { buildQROrderURL, listTableQRs, manageTableQR } from '@/features/dining/api'
 import type { TableQR } from '@/features/dining/types'
@@ -31,13 +31,15 @@ export function TableQRManager() {
   const areaGroups = tables.reduce<Array<{ name: string; tables: TableQR[] }>>(
     (groups, table) => {
       const name = table.area_name || t('qr_area_other')
-      const group = groups.find((g) => g.name === name)
-      if (group) {
-        group.tables.push(table)
-      } else {
-        groups.push({ name, tables: [table] })
+      const existing = groups.find((g) => g.name === name)
+      if (existing) {
+        return groups.map((g) =>
+          g.name === name
+            ? { ...g, tables: [...g.tables, table] }
+            : g,
+        )
       }
-      return groups
+      return [...groups, { name, tables: [table] }]
     },
     [],
   )

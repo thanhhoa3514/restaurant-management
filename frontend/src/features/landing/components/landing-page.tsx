@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { Shield, Smartphone, ArrowRight } from 'lucide-react'
-import { BRAND } from '@/lib/brand'
+import { BRAND } from '@/constants/brand'
 
 export function LandingPage() {
   return (
@@ -24,7 +24,7 @@ export function LandingPage() {
         <div className="space-y-4 pt-4">
           <Link
             to="/order"
-            search={{ t: undefined }}
+            search={{ t: undefined, s: undefined, table: undefined, tableId: undefined }}
             className="flex items-center justify-between rounded-3xl border border-blue-500/20 bg-blue-500/5 p-5 text-left transition active:scale-[0.98] hover:bg-blue-500/10 cursor-pointer shadow-lg"
           >
             <div className="flex items-center gap-4">

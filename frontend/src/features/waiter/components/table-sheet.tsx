@@ -99,10 +99,12 @@ export const TableSheet: FC<TableSheetProps> = ({
                   {t('empty')}
                 </Badge>
               ) : (
-                <span className="text-sm font-semibold text-[var(--text-secondary)]">• {t('guests', table.session?.guest_count ?? 0)}</span>
-                {table.session?.guest_name && (
-                  <span className="ml-2 text-sm text-[var(--text-tertiary)]">· {table.session.guest_name}</span>
-                )}
+                <>
+                  <span className="text-sm font-semibold text-[var(--text-secondary)]">• {t('guests', table.session?.guest_count ?? 0)}</span>
+                  {table.session?.guest_name && (
+                    <span className="ml-2 text-sm text-[var(--text-tertiary)]">· {table.session.guest_name}</span>
+                  )}
+                </>
               )}
             </div>
             <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">
