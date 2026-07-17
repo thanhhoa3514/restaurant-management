@@ -69,13 +69,26 @@ type DiningSession struct {
 	SessionCode  string
 	// SessionToken is stored raw because the token is a shared per-session
 	// bearer value returned by join-session. Per-guest hashed tokens are deferred.
-	SessionToken string
-	Status       SessionStatus
-	OpenedVia    OpenedVia
-	OpenedBy     *uuid.UUID
-	CustomerName string
+	SessionToken  string
+	Status        SessionStatus
+	OpenedVia     OpenedVia
+	OpenedBy      *uuid.UUID
+	CustomerName  string
+	MergeGroupID  *uuid.UUID
+	Version       int
+	ClosedAt      *time.Time
+}
+
+// MergeGroup represents a group of dining sessions merged together
+// for a single party occupying multiple tables.
+type MergeGroup struct {
+	ID           uuid.UUID
+	RestaurantID uuid.UUID
+	MergedBy     *uuid.UUID
+	Note         string
+	IsActive     bool
 	Version      int
-	ClosedAt     *time.Time
+	DeletedAt    *time.Time
 }
 
 type Event struct {
@@ -97,6 +110,15 @@ type DiningRepository interface {
 	DeactivateActiveQR(ctx context.Context, restaurantID, tableID uuid.UUID, deactivatedBy *uuid.UUID, reason string) error
 	CreateQR(ctx context.Context, qr *QRCode) error
 	UpdateSessionCustomerName(ctx context.Context, sessionID uuid.UUID, name string) error
+
+	FindSessionByID(ctx context.Context, restaurantID, sessionID uuid.UUID) (*DiningSession, error)
+
+	// Merge group operations
+	CreateMergeGroup(ctx context.Context, g *MergeGroup) error
+	DeactivateMergeGroup(ctx context.Context, restaurantID, groupID uuid.UUID) error
+	FindActiveMergeGroup(ctx context.Context, restaurantID, groupID uuid.UUID) (*MergeGroup, error)
+	FindSessionsByMergeGroup(ctx context.Context, restaurantID, groupID uuid.UUID) ([]DiningSession, error)
+	UpdateSessionMergeGroup(ctx context.Context, sessionID uuid.UUID, mergeGroupID *uuid.UUID) error
 }
 
 type OutboxWriter interface {

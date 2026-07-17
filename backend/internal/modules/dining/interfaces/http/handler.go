@@ -21,10 +21,12 @@ type Handler struct {
 	ManageTableQR   *application.ManageTableQR
 	ListTableQRs    *application.ListTableQRs
 	ListGuestTables *application.ListGuestTables
+	MergeSessions   *application.MergeSessions
+	SplitSessions   *application.SplitSessions
 }
 
-func NewHandler(openSession *application.OpenSession, joinSession *application.JoinSession, closeSession *application.CloseSession, manageTableQR *application.ManageTableQR, listTableQRs *application.ListTableQRs, listGuestTables *application.ListGuestTables) *Handler {
-	return &Handler{OpenSession: openSession, JoinSession: joinSession, CloseSession: closeSession, ManageTableQR: manageTableQR, ListTableQRs: listTableQRs, ListGuestTables: listGuestTables}
+func NewHandler(openSession *application.OpenSession, joinSession *application.JoinSession, closeSession *application.CloseSession, manageTableQR *application.ManageTableQR, listTableQRs *application.ListTableQRs, listGuestTables *application.ListGuestTables, mergeSessions *application.MergeSessions, splitSessions *application.SplitSessions) *Handler {
+	return &Handler{OpenSession: openSession, JoinSession: joinSession, CloseSession: closeSession, ManageTableQR: manageTableQR, ListTableQRs: listTableQRs, ListGuestTables: listGuestTables, MergeSessions: mergeSessions, SplitSessions: splitSessions}
 }
 
 func (h *Handler) RegisterGuestRoutes(r *gin.RouterGroup) {
@@ -42,6 +44,10 @@ func (h *Handler) RegisterStaffRoutes(r *gin.RouterGroup, secret string, resolve
 	manager := r.Group("", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionDiningManage, defaultRestaurantID))
 	manager.GET("/tables/qrs", h.listTableQRs)
 	manager.POST("/tables/qrs", h.manageTableQR)
+
+	serve := r.Group("", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionDiningServe, defaultRestaurantID))
+	serve.POST("/sessions/merge", h.mergeSessions)
+	serve.POST("/sessions/split", h.splitSessions)
 }
 
 func (h *Handler) openSession(c *gin.Context) {
@@ -90,19 +96,15 @@ func (h *Handler) closeSession(c *gin.Context) {
 		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid session id", err))
 		return
 	}
-	var req application.CloseSessionRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
-		return
-	}
-	req.SessionID = sessionID
 	actorID, err := uuid.Parse(c.GetString(auth.CtxUserID))
 	if err != nil || actorID == uuid.Nil {
 		httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "invalid user claim"))
 		return
 	}
-	req.ActorID = actorID
-	out, err := h.CloseSession.Handle(c.Request.Context(), req)
+	out, err := h.CloseSession.Handle(c.Request.Context(), application.CloseSessionRequest{
+		SessionID: sessionID,
+		ActorID:   actorID,
+	})
 	if err != nil {
 		httpx.RespondError(c, err)
 		return
@@ -141,6 +143,46 @@ func (h *Handler) listTableQRs(c *gin.Context) {
 
 func (h *Handler) listGuestTables(c *gin.Context) {
 	out, err := h.ListGuestTables.Handle(c.Request.Context())
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) mergeSessions(c *gin.Context) {
+	var req application.MergeSessionsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
+		return
+	}
+	actorID, err := uuid.Parse(c.GetString(auth.CtxUserID))
+	if err != nil || actorID == uuid.Nil {
+		httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "invalid user claim"))
+		return
+	}
+	req.ActorID = actorID
+	out, err := h.MergeSessions.Handle(c.Request.Context(), req)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) splitSessions(c *gin.Context) {
+	var req application.SplitSessionsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
+		return
+	}
+	actorID, err := uuid.Parse(c.GetString(auth.CtxUserID))
+	if err != nil || actorID == uuid.Nil {
+		httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "invalid user claim"))
+		return
+	}
+	req.ActorID = actorID
+	out, err := h.SplitSessions.Handle(c.Request.Context(), req)
 	if err != nil {
 		httpx.RespondError(c, err)
 		return

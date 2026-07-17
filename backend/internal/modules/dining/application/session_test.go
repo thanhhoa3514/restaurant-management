@@ -88,6 +88,28 @@ func (r *fakeRepo) DeactivateActiveQR(context.Context, uuid.UUID, uuid.UUID, *uu
 	r.deactivated = true
 	return nil
 }
+func (r *fakeRepo) FindSessionByID(_ context.Context, _, sessionID uuid.UUID) (*domain.DiningSession, error) {
+	if r.activeErr != nil {
+		return nil, r.activeErr
+	}
+	if r.activeSession == nil || r.activeSession.ID != sessionID {
+		return nil, apperr.New(apperr.CodeNotFound, "dining session not found")
+	}
+	return r.activeSession, nil
+}
+func (r *fakeRepo) CreateMergeGroup(_ context.Context, g *domain.MergeGroup) error {
+	g.ID = uuid.New()
+	return nil
+}
+func (r *fakeRepo) DeactivateMergeGroup(_ context.Context, _, _ uuid.UUID) error { return nil }
+func (r *fakeRepo) FindActiveMergeGroup(_ context.Context, _, _ uuid.UUID) (*domain.MergeGroup, error) {
+	return &domain.MergeGroup{ID: uuid.New(), IsActive: true}, nil
+}
+func (r *fakeRepo) FindSessionsByMergeGroup(_ context.Context, _, _ uuid.UUID) ([]domain.DiningSession, error) {
+	return nil, nil
+}
+func (r *fakeRepo) UpdateSessionMergeGroup(_ context.Context, _ uuid.UUID, _ *uuid.UUID) error { return nil }
+
 func (r *fakeRepo) CreateQR(_ context.Context, qr *domain.QRCode) error {
 	if r.createQRErr != nil {
 		return r.createQRErr
