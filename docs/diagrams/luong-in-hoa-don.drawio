@@ -1,0 +1,49 @@
+<mxfile host="app.diagrams.net" modified="2026-07-15T00:00:00.000Z" agent="claude-code" version="24.0.0">
+
+  <diagram id="flow-print-invoice" name="In hoa don (Thu ngan)">
+    <mxGraphModel dx="900" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="pr_t" value="LUỒNG: IN HÓA ĐƠN — sau thanh toán, xuất biên lai cho khách (vai trò Thu ngân)" style="text;html=1;align=center;fontSize=14;fontStyle=1;fontColor=#1F2937;" vertex="1" parent="1"><mxGeometry x="40" y="10" width="920" height="24" as="geometry"/></mxCell>
+
+        <mxCell id="pr_s" value="Bắt đầu — hóa đơn đã thanh toán đủ (PAID)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="380" y="50" width="240" height="50" as="geometry"/></mxCell>
+        <mxCell id="pr_a" value="Màn thanh toán hiện nút &quot;In hóa đơn&quot; (PaidView)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1"><mxGeometry x="380" y="130" width="240" height="60" as="geometry"/></mxCell>
+        <mxCell id="pr_open" value="Mở màn xem trước biên lai (ReceiptDialog)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1"><mxGeometry x="380" y="220" width="240" height="50" as="geometry"/></mxCell>
+        <mxCell id="pr_snap" value="Dựng biên lai từ SNAPSHOT (tên + giá món lúc đặt), không theo giá menu hiện tại" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1"><mxGeometry x="380" y="300" width="240" height="70" as="geometry"/></mxCell>
+
+        <mxCell id="pr_d1" value="Hóa đơn bị tách (split)?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1"><mxGeometry x="390" y="400" width="220" height="100" as="geometry"/></mxCell>
+        <mxCell id="pr_sp" value="In ĐÚNG hóa đơn con đang chọn — số hóa đơn + danh sách món riêng" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1"><mxGeometry x="700" y="415" width="260" height="70" as="geometry"/></mxCell>
+
+        <mxCell id="pr_m" value="Ghép thông tin thanh toán theo phương thức" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1"><mxGeometry x="380" y="540" width="240" height="60" as="geometry"/></mxCell>
+        <mxCell id="pr_mnote" value="• Tiền mặt: tiền khách đưa + tiền thối&#10;• Thẻ: 4 số cuối + ngân hàng + mã GD&#10;• Ví ĐT: Momo / ZaloPay / VNPay + mã GD" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;align=left;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=11;" vertex="1" parent="1"><mxGeometry x="700" y="530" width="260" height="80" as="geometry"/></mxCell>
+
+        <mxCell id="pr_opt" value="Thêm dòng tùy chọn nếu &gt; 0: phí phục vụ · VAT · giảm giá" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1"><mxGeometry x="380" y="640" width="240" height="60" as="geometry"/></mxCell>
+
+        <mxCell id="pr_d2" value="Chọn cách xuất?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1"><mxGeometry x="390" y="740" width="220" height="100" as="geometry"/></mxCell>
+        <mxCell id="pr_print" value="In máy in — window.print(), biên lai khổ nhiệt (bản in trên màn)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1"><mxGeometry x="90" y="755" width="250" height="70" as="geometry"/></mxCell>
+        <mxCell id="pr_pdf" value="Xuất PDF — @react-pdf/renderer khổ A5, tải file Hoa_Don_{số}.pdf" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1"><mxGeometry x="700" y="755" width="250" height="70" as="geometry"/></mxCell>
+
+        <mxCell id="pr_e" value="Kết thúc — đưa biên lai cho khách" style="ellipse;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="380" y="890" width="240" height="50" as="geometry"/></mxCell>
+
+        <mxCell id="pr_fnote" value="Gửi Email / SMS: nút có nhưng chưa bật (disabled) → hướng phát triển tương lai" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=#F5F5F5;strokeColor=#999999;fontSize=11;fontColor=#666666;" vertex="1" parent="1"><mxGeometry x="60" y="120" width="250" height="80" as="geometry"/></mxCell>
+
+        <mxCell id="pr_x1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="pr_s" target="pr_a"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pr_x2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="pr_a" target="pr_open"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pr_x3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="pr_open" target="pr_snap"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pr_x4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="pr_snap" target="pr_d1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pr_x5" value="Có" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="pr_d1" target="pr_sp"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pr_x6" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;exitX=0.5;exitY=1;entryX=1;entryY=0.5;" edge="1" parent="1" source="pr_sp" target="pr_m"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pr_x7" value="Không (in cả phiên)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="pr_d1" target="pr_m"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pr_x8" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;dashed=1;strokeColor=#D6B656;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="pr_m" target="pr_mnote"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pr_x9" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="pr_m" target="pr_opt"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pr_x10" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="pr_opt" target="pr_d2"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pr_x11" value="In máy" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="pr_d2" target="pr_print"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pr_x12" value="Xuất PDF" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="pr_d2" target="pr_pdf"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pr_x13" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;exitX=0.5;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="pr_print" target="pr_e"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pr_x14" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;exitX=0.5;exitY=1;entryX=1;entryY=0.5;" edge="1" parent="1" source="pr_pdf" target="pr_e"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="pr_x15" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;dashed=1;strokeColor=#999999;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="pr_a" target="pr_fnote"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+</mxfile>

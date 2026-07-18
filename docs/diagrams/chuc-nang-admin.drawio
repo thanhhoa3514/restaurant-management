@@ -1,0 +1,117 @@
+<mxfile host="app.diagrams.net" modified="2026-07-15T00:00:00.000Z" agent="claude-code" version="24.0.0">
+  <diagram id="admin-bfd" name="Chuc nang Admin">
+    <mxGraphModel dx="1500" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="820" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="SƠ ĐỒ CHỨC NĂNG — VAI TRÒ QUẢN TRỊ (ADMIN / MANAGER)" style="text;html=1;align=center;verticalAlign=middle;fontSize=16;fontStyle=1;fontColor=#1F2937;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="1410" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Root -->
+        <mxCell id="root" value="Quản trị (Admin / Manager)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#8B2E2E;strokeColor=#5E1D1D;fontColor=#FFFFFF;fontSize=15;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="620" y="80" width="240" height="56" as="geometry" />
+        </mxCell>
+
+        <!-- Level 1: 6 functions -->
+        <mxCell id="f1" value="Quản lý menu (món, danh mục, option)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5DEDE;strokeColor=#B84A4A;fontColor=#1F2937;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="220" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="f2" value="Quản lý trạng thái món (cập nhật realtime)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5DEDE;strokeColor=#B84A4A;fontColor=#1F2937;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="220" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="f3" value="Quản lý QR theo bàn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5DEDE;strokeColor=#B84A4A;fontColor=#1F2937;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="520" y="220" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="f4" value="Quản lý bàn / khu vực" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5DEDE;strokeColor=#B84A4A;fontColor=#1F2937;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="760" y="220" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="f5" value="Báo cáo / phân tích (KPI)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5DEDE;strokeColor=#B84A4A;fontColor=#1F2937;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="220" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="f6" value="Quản lý người dùng / phân quyền" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5DEDE;strokeColor=#B84A4A;fontColor=#1F2937;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1240" y="220" width="200" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Level 2: sub of Quan ly menu -->
+        <mxCell id="s1a" value="Thêm / sửa / xóa món" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBEEEE;strokeColor=#DDA0A0;fontColor=#1F2937;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="340" width="200" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="s1b" value="Quản lý danh mục" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBEEEE;strokeColor=#DDA0A0;fontColor=#1F2937;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="384" width="200" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="s1c" value="Quản lý option (size, topping)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBEEEE;strokeColor=#DDA0A0;fontColor=#1F2937;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="428" width="200" height="34" as="geometry" />
+        </mxCell>
+
+        <!-- Level 2: sub of Quan ly trang thai mon -->
+        <mxCell id="s2a" value="Bật / tắt món (còn / hết hàng)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBEEEE;strokeColor=#DDA0A0;fontColor=#1F2937;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="280" y="340" width="200" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="s2b" value="Đồng bộ tới mọi màn hình" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBEEEE;strokeColor=#DDA0A0;fontColor=#1F2937;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="280" y="384" width="200" height="34" as="geometry" />
+        </mxCell>
+
+        <!-- Level 2: sub of Quan ly QR -->
+        <mxCell id="s3a" value="Tạo / in mã QR" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBEEEE;strokeColor=#DDA0A0;fontColor=#1F2937;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="520" y="340" width="200" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="s3b" value="Xoay (đổi mã) QR" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBEEEE;strokeColor=#DDA0A0;fontColor=#1F2937;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="520" y="384" width="200" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="s3c" value="Vô hiệu hóa QR" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBEEEE;strokeColor=#DDA0A0;fontColor=#1F2937;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="520" y="428" width="200" height="34" as="geometry" />
+        </mxCell>
+
+        <!-- Level 2: sub of Bao cao -->
+        <mxCell id="s5a" value="Doanh thu theo ngày / bàn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBEEEE;strokeColor=#DDA0A0;fontColor=#1F2937;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="340" width="200" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="s5b" value="Món bán chạy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBEEEE;strokeColor=#DDA0A0;fontColor=#1F2937;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="384" width="200" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="s5c" value="Hiệu suất phục vụ (thời gian ra món)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBEEEE;strokeColor=#DDA0A0;fontColor=#1F2937;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="428" width="200" height="44" as="geometry" />
+        </mxCell>
+
+        <!-- Level 2: sub of Quan ly nguoi dung -->
+        <mxCell id="s6a" value="Tạo / khóa tài khoản" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBEEEE;strokeColor=#DDA0A0;fontColor=#1F2937;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1240" y="340" width="200" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="s6b" value="Gán vai trò (phục vụ, bếp, thu ngân...)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBEEEE;strokeColor=#DDA0A0;fontColor=#1F2937;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1240" y="384" width="200" height="44" as="geometry" />
+        </mxCell>
+
+        <!-- Edges root -> level1 -->
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#B84A4A;" edge="1" parent="1" source="root" target="f1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#B84A4A;" edge="1" parent="1" source="root" target="f2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#B84A4A;" edge="1" parent="1" source="root" target="f3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#B84A4A;" edge="1" parent="1" source="root" target="f4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#B84A4A;" edge="1" parent="1" source="root" target="f5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#B84A4A;" edge="1" parent="1" source="root" target="f6"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Edges level1 -> level2 -->
+        <mxCell id="e1a" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#DDA0A0;" edge="1" parent="1" source="f1" target="s1a"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e1b" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#DDA0A0;" edge="1" parent="1" source="s1a" target="s1b"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e1c" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#DDA0A0;" edge="1" parent="1" source="s1b" target="s1c"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="e2a" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#DDA0A0;" edge="1" parent="1" source="f2" target="s2a"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2b" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#DDA0A0;" edge="1" parent="1" source="s2a" target="s2b"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="e3a" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#DDA0A0;" edge="1" parent="1" source="f3" target="s3a"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3b" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#DDA0A0;" edge="1" parent="1" source="s3a" target="s3b"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3c" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#DDA0A0;" edge="1" parent="1" source="s3b" target="s3c"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="e5a" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#DDA0A0;" edge="1" parent="1" source="f5" target="s5a"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5b" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#DDA0A0;" edge="1" parent="1" source="s5a" target="s5b"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5c" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#DDA0A0;" edge="1" parent="1" source="s5b" target="s5c"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="e6a" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#DDA0A0;" edge="1" parent="1" source="f6" target="s6a"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6b" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#DDA0A0;" edge="1" parent="1" source="s6a" target="s6b"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
