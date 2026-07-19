@@ -1,11 +1,10 @@
-import { useState, type FC } from 'react'
+import { useState, type FC, useCallback } from 'react'
 import { Minus, Plus, ShoppingBag, Trash2, ChevronRight } from 'lucide-react'
-import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
 import { formatVND, summarizeCartLine, cartTotal, totalItems } from '../helpers'
-import { placeGuestOrder } from '../api'
+import { usePlaceGuestOrder } from '../mutations/usePlaceGuestOrder'
 import { ApiError } from '@/lib/api'
 import type { CartLine, Lang, PlaceOrderInput } from '../types'
 
@@ -19,15 +18,15 @@ interface CartSheetProps {
 
 export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
   const { state, dispatch } = useOrdering()
-  const queryClient = useQueryClient()
   const t = DICT[lang]
   const [error, setError] = useState('')
+  const sessionToken = state.session?.token
+  const placeOrderMutation = usePlaceGuestOrder(sessionToken)
 
   const subtotal = cartTotal(state.cart)
   const cartCount = totalItems(state.cart)
 
-  const handlePlaceOrder = async () => {
-    const sessionToken = state.session?.token
+  const handlePlaceOrder = useCallback(async () => {
     if (state.cart.length === 0 || !sessionToken) return
     setError('')
     dispatch({ type: 'PLACE_ORDER' })
@@ -44,8 +43,7 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
     }
 
     try {
-      await placeGuestOrder(sessionToken, input)
-      await queryClient.invalidateQueries({ queryKey: ['guest-orders', sessionToken] })
+      await placeOrderMutation.mutateAsync(input)
       toast.success(t.toast_order_placed)
       dispatch({ type: 'ORDER_PLACED' })
       dispatch({ type: 'SET_SCREEN', payload: 'order' })
@@ -67,7 +65,7 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
       }
       setError(msg)
     }
-  }
+  }, [state.cart, sessionToken, dispatch, placeOrderMutation, t, lang])
 
   const handleRemove = (index: number) => {
     dispatch({ type: 'REMOVE_CART_LINE', payload: index })

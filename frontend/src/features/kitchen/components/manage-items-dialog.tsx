@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet'
 import { KDS_DICT } from '@/features/kitchen/data/i18n'
-import { fmtTimestamp } from '@/features/kitchen/helpers'
+
 import type {
   ItemStatus,
   KDSItem,
@@ -30,16 +30,12 @@ interface ManageItemsDialogProps {
 }
 
 const timelineBadgeStyle: Record<ItemStatus, string> = {
-  pending:
-    'bg-secondary text-secondary-foreground',
+  pending: 'bg-secondary text-secondary-foreground',
   acknowledged:
     'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-400',
-  preparing:
-    'bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400',
-  ready:
-    'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400',
-  served:
-    'bg-muted text-muted-foreground',
+  preparing: 'bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400',
+  ready: 'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400',
+  served: 'bg-muted text-muted-foreground',
 }
 
 export const ManageItemsDialog: FC<ManageItemsDialogProps> = ({
@@ -81,7 +77,6 @@ export const ManageItemsDialog: FC<ManageItemsDialogProps> = ({
                 <>
                   {lang === 'vi' ? ticket.area_name_vi : ticket.area_name_en}
                   <span className="mx-1.5">·</span>
-                  {fmtTimestamp(ticket.submitted_at)}
                 </>
               }
               className="pr-12"
@@ -130,9 +125,7 @@ const ManagedItem: FC<{
         <div className="flex min-w-0 items-start gap-3">
           <span
             className={`mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-md text-sm font-bold tabular-nums ${
-              complete
-                ? 'bg-muted text-muted-foreground'
-                : 'bg-primary text-primary-foreground'
+              complete ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground'
             }`}
           >
             {item.qty}
@@ -140,18 +133,12 @@ const ManagedItem: FC<{
           <div className="min-w-0">
             <div
               className={`text-base font-semibold leading-tight ${
-                complete
-                  ? 'text-muted-foreground line-through'
-                  : 'text-foreground'
+                complete ? 'text-muted-foreground line-through' : 'text-foreground'
               }`}
             >
               {name}
             </div>
-            {options && (
-              <div className="mt-0.5 text-sm text-muted-foreground">
-                {options}
-              </div>
-            )}
+            {options && <div className="mt-0.5 text-sm text-muted-foreground">{options}</div>}
             {item.notes && (
               <div className="mt-1 text-[13px] italic text-amber-600 dark:text-amber-400">
                 ※ {item.notes}
@@ -181,9 +168,7 @@ const ManagedItem: FC<{
           <History className="size-4" />
           {t('dlg_timeline')} ({item.status_history.length})
         </span>
-        <ChevronDown
-          className={`size-4 transition-transform ${expanded ? 'rotate-180' : ''}`}
-        />
+        <ChevronDown className={`size-4 transition-transform ${expanded ? 'rotate-180' : ''}`} />
       </button>
       {expanded && <Timeline history={item.status_history} t={t} />}
     </div>
@@ -193,16 +178,16 @@ const ManagedItem: FC<{
 const Timeline: FC<{ history: StatusHistoryEntry[]; t: Translate }> = ({ history, t }) => (
   <ol className="space-y-3 border-t bg-muted/30 px-4 py-4">
     {history.map((entry, index) => (
-      <li key={`${entry.status}-${entry.timestamp.toISOString()}-${index}`} className="flex items-start gap-3">
+      <li
+        key={`${entry.status}-${entry.timestamp.toISOString()}-${index}`}
+        className="flex items-start gap-3"
+      >
         <Badge
           className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full p-0 ${timelineBadgeStyle[entry.status]}`}
         >
           {index + 1}
         </Badge>
         <div>
-          <div className="font-mono text-[13px] tabular-nums text-muted-foreground">
-            {fmtTimestamp(entry.timestamp)}
-          </div>
           <div className="text-sm font-semibold text-foreground">
             {t(`hist_${entry.status}` as KdsKey)}
           </div>

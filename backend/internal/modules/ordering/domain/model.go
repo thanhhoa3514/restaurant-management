@@ -110,6 +110,7 @@ type OrderLineCreate struct {
 	Status              string
 	Station             string
 	Note                string
+	IsTakeaway          bool
 	Options             []OrderOptionCreate
 }
 
@@ -159,6 +160,7 @@ type OrderItemRead struct {
 	Status              string
 	Station             string
 	Note                string
+	IsTakeaway          bool
 	UnavailableReason   *string
 	Options             []OrderOptionRead
 }

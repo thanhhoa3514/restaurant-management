@@ -30,6 +30,7 @@ import { getStaffSession } from '@/lib/auth'
 import { useLang } from '@/hooks/use-lang'
 import { cn } from '@/lib/utils'
 import { useAdminDashboardQuery } from '@/features/admin/queries'
+import { fmtDateFull, fmtTimeSec } from '@/shared/date'
 
 export const AdminDashboard = () => {
   const session = getStaffSession()
@@ -40,25 +41,18 @@ export const AdminDashboard = () => {
 
   const { data: dashboard, isLoading, isError } = useAdminDashboardQuery()
 
-  const locale = lang === 'vi' ? 'vi-VN' : 'en-US'
-  const fmtDate = now.toLocaleDateString(locale, {
-    weekday: 'long',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  })
   const navigate = useNavigate()
 
   useShellConfig({
     title: t('dashboard_title'),
-    subtitle: `${session?.name ?? 'Administrator'} · ${fmtDate}`,
-    contentClassName: "bg-[var(--surface-grouped)]/45"
+    subtitle: `${session?.name ?? 'Administrator'} · ${fmtDateFull(now, lang)}`,
+    contentClassName: 'bg-[var(--surface-grouped)]/45',
   })
 
   return (
     <>
       <ShellHeaderCenter>
-        <LiveClock locale={locale} />
+        <LiveClock />
       </ShellHeaderCenter>
       <div className="mx-auto max-w-7xl space-y-6">
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -114,17 +108,30 @@ export const AdminDashboard = () => {
                 <Table className="min-w-[640px]">
                   <TableHeader className="bg-[var(--surface-grouped)]/60 [&_tr]:border-b-0">
                     <TableRow className="hover:bg-transparent">
-                      <TableHead className="px-5 py-3 text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--text-tertiary)] h-auto">{t('col_staff')}</TableHead>
-                      <TableHead className="px-5 py-3 text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--text-tertiary)] h-auto">{t('col_code')}</TableHead>
-                      <TableHead className="px-5 py-3 text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--text-tertiary)] h-auto">{t('col_dept')}</TableHead>
-                      <TableHead className="px-5 py-3 text-center text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--text-tertiary)] h-auto">{t('col_status')}</TableHead>
-                      <TableHead className="px-5 py-3 text-right text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--text-tertiary)] h-auto">{t('col_time')}</TableHead>
+                      <TableHead className="px-5 py-3 text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--text-tertiary)] h-auto">
+                        {t('col_staff')}
+                      </TableHead>
+                      <TableHead className="px-5 py-3 text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--text-tertiary)] h-auto">
+                        {t('col_code')}
+                      </TableHead>
+                      <TableHead className="px-5 py-3 text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--text-tertiary)] h-auto">
+                        {t('col_dept')}
+                      </TableHead>
+                      <TableHead className="px-5 py-3 text-center text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--text-tertiary)] h-auto">
+                        {t('col_status')}
+                      </TableHead>
+                      <TableHead className="px-5 py-3 text-right text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--text-tertiary)] h-auto">
+                        {t('col_time')}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody className="divide-y divide-[var(--separator)]">
                     {isLoading ? (
                       <TableRow className="hover:bg-transparent">
-                        <TableCell colSpan={5} className="py-8 text-center text-[var(--text-secondary)]">
+                        <TableCell
+                          colSpan={5}
+                          className="py-8 text-center text-[var(--text-secondary)]"
+                        >
                           <div className="flex items-center justify-center gap-2">
                             <div className="size-4 animate-spin rounded-full border-2 border-[var(--system-purple)] border-t-transparent" />
                             Đang tải dữ liệu...
@@ -133,13 +140,19 @@ export const AdminDashboard = () => {
                       </TableRow>
                     ) : isError ? (
                       <TableRow className="hover:bg-transparent">
-                        <TableCell colSpan={5} className="py-8 text-center text-[var(--system-red)]">
+                        <TableCell
+                          colSpan={5}
+                          className="py-8 text-center text-[var(--system-red)]"
+                        >
                           Không thể tải dữ liệu. Vui lòng thử lại sau.
                         </TableCell>
                       </TableRow>
                     ) : dashboard?.staffs.length === 0 ? (
                       <TableRow className="hover:bg-transparent">
-                        <TableCell colSpan={5} className="py-8 text-center text-[var(--text-secondary)]">
+                        <TableCell
+                          colSpan={5}
+                          className="py-8 text-center text-[var(--text-secondary)]"
+                        >
                           Không có nhân viên nào đang trực
                         </TableCell>
                       </TableRow>
@@ -170,9 +183,24 @@ export const AdminDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <ActionButton label={t('action_report')} desc={t('action_report_desc')} icon={FileText} onClick={() => navigate({ to: '/admin/reports' })} />
-              <ActionButton label={t('action_floor')} desc={t('action_floor_desc')} icon={TrendingUp} onClick={() => navigate({ to: '/admin/floor-plan' })} />
-              <ActionButton label={t('action_menu')} desc={t('action_menu_desc')} icon={UtensilsCrossed} onClick={() => navigate({ to: '/admin/catalog' })} />
+              <ActionButton
+                label={t('action_report')}
+                desc={t('action_report_desc')}
+                icon={FileText}
+                onClick={() => navigate({ to: '/admin/reports' })}
+              />
+              <ActionButton
+                label={t('action_floor')}
+                desc={t('action_floor_desc')}
+                icon={TrendingUp}
+                onClick={() => navigate({ to: '/admin/floor-plan' })}
+              />
+              <ActionButton
+                label={t('action_menu')}
+                desc={t('action_menu_desc')}
+                icon={UtensilsCrossed}
+                onClick={() => navigate({ to: '/admin/catalog' })}
+              />
             </CardContent>
           </Card>
         </div>
@@ -210,7 +238,12 @@ const MetricCard = React.memo(function MetricCard({
           <span className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-tertiary)]">
             {title}
           </span>
-          <div className={cn('flex size-10 items-center justify-center rounded-[14px] bg-[var(--surface-grouped)]', toneClass)}>
+          <div
+            className={cn(
+              'flex size-10 items-center justify-center rounded-[14px] bg-[var(--surface-grouped)]',
+              toneClass,
+            )}
+          >
             <Icon className="size-5" />
           </div>
         </div>
@@ -218,7 +251,9 @@ const MetricCard = React.memo(function MetricCard({
           {loading ? (
             <div className="h-8 w-24 animate-pulse rounded bg-[var(--text)]/10" />
           ) : (
-            <div className="text-[28px] font-semibold tracking-tight text-[var(--text)]">{value}</div>
+            <div className="text-[28px] font-semibold tracking-tight text-[var(--text)]">
+              {value}
+            </div>
           )}
           {loading ? (
             <div className="mt-1 h-4 w-16 animate-pulse rounded bg-[var(--text)]/10" />
@@ -249,7 +284,9 @@ const StaffRow = React.memo(function StaffRow({
   return (
     <TableRow className="border-b-0 transition-colors duration-[220ms] hover:bg-[var(--surface-grouped)]/50">
       <TableCell className="px-5 py-4 font-semibold text-[var(--text)]">{name}</TableCell>
-      <TableCell className="px-5 py-4 font-mono text-xs text-[var(--text-secondary)]">{code}</TableCell>
+      <TableCell className="px-5 py-4 font-mono text-xs text-[var(--text-secondary)]">
+        {code}
+      </TableCell>
       <TableCell className="px-5 py-4">
         <Badge
           className={cn(
@@ -276,7 +313,7 @@ const StaffRow = React.memo(function StaffRow({
   )
 })
 
-function LiveClock({ locale }: { locale: string }) {
+function LiveClock() {
   const [time, setTime] = useState(() => new Date())
 
   useEffect(() => {
@@ -284,15 +321,11 @@ function LiveClock({ locale }: { locale: string }) {
     return () => clearInterval(timer)
   }, [])
 
-  const fmtTime = time.toLocaleTimeString(locale, {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  })
-
   return (
     <div className="flex items-center gap-3 rounded-full bg-[var(--surface-grouped)]/70 px-4 py-2 text-sm text-[var(--text-secondary)]">
-      <span className="font-mono font-semibold tabular-nums text-[var(--text)]">{fmtTime}</span>
+      <span className="font-mono font-semibold tabular-nums text-[var(--text)]">
+        {fmtTimeSec(time)}
+      </span>
     </div>
   )
 }
@@ -309,7 +342,11 @@ function ActionButton({
   onClick?: () => void
 }) {
   return (
-    <button type="button" onClick={onClick} className="group flex min-h-16 w-full cursor-pointer items-center justify-between rounded-[18px] bg-[var(--surface-grouped)]/70 p-3 text-left transition-colors duration-[220ms] hover:bg-[var(--system-purple)]/10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--system-purple)]/20">
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex min-h-16 w-full cursor-pointer items-center justify-between rounded-[18px] bg-[var(--surface-grouped)]/70 p-3 text-left transition-colors duration-[220ms] hover:bg-[var(--system-purple)]/10 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--system-purple)]/20"
+    >
       <span className="flex items-center gap-3">
         <span className="flex size-10 items-center justify-center rounded-[14px] bg-[var(--bg-elevated)] text-[var(--text-secondary)] group-hover:text-[var(--system-purple)]">
           <Icon className="size-5" />

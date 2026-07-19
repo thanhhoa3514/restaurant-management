@@ -53,6 +53,32 @@ services:
     entrypoint: ["/bin/restaurant-migrate"]
     restart: "no"
 
+  setup:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GO_VERSION: ${GO_VERSION:-1.26}
+        ALPINE_VERSION: ${ALPINE_VERSION:-3.22}
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:postgres@postgres:5432/restaurant?sslmode=disable}
+      APP_ENV: ${APP_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      SETUP_RESTAURANT_CODE: ${SETUP_RESTAURANT_CODE:-MAIN}
+      SETUP_RESTAURANT_NAME: ${SETUP_RESTAURANT_NAME:-Nhà hàng của tôi}
+      SETUP_RESTAURANT_ADDRESS: ${SETUP_RESTAURANT_ADDRESS:-}
+      SETUP_RESTAURANT_PHONE: ${SETUP_RESTAURANT_PHONE:-}
+      SETUP_RESTAURANT_EMAIL: ${SETUP_RESTAURANT_EMAIL:-}
+      SETUP_TAX_CODE: ${SETUP_TAX_CODE:-}
+      SETUP_VAT_RATE: ${SETUP_VAT_RATE:-800}
+      SETUP_SERVICE_CHARGE: ${SETUP_SERVICE_CHARGE:-500}
+      SETUP_ADMIN_PASSWORD: ${SETUP_ADMIN_PASSWORD:-admin1234}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["/bin/restaurant-setup"]
+    restart: "no"
+
 volumes:
   pgdata:
   miniodata:

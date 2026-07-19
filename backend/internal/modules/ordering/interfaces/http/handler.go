@@ -15,22 +15,23 @@ import (
 )
 
 type Handler struct {
-	GuestPlaceOrder       *application.GuestPlaceOrder
-	GuestViewOrders       *application.GuestViewOrders
-	GuestEditOrder        *application.GuestEditOrder
-	GuestCancelOrder      *application.GuestCancelOrder
-	GuestRequestCancel    *application.GuestRequestCancel
-	StaffTables           *application.StaffTables
-	StaffRequestBill      *application.StaffRequestBill
-	StaffReopenSession    *application.StaffReopenSession
-	GuestCallWaiter       *application.GuestCallWaiter
-	StaffAckWaiterCall    *application.StaffAckWaiterCall
-	StaffUpdateStatus     *application.StaffUpdateItemStatus
-	StaffMarkUnavailable  *application.StaffMarkUnavailable
-	StaffTakeawayOrder    *application.StaffTakeawayOrder
-	KitchenQueue          *application.KitchenQueue
-	KitchenListCancels    *application.KitchenListCancelRequests
-	KitchenReviewCancel   *application.KitchenReviewCancelRequest
+	GuestPlaceOrder        *application.GuestPlaceOrder
+	GuestViewOrders        *application.GuestViewOrders
+	GuestEditOrder         *application.GuestEditOrder
+	GuestCancelOrder       *application.GuestCancelOrder
+	GuestRequestCancel     *application.GuestRequestCancel
+	StaffTables            *application.StaffTables
+	StaffRequestBill       *application.StaffRequestBill
+	StaffReopenSession     *application.StaffReopenSession
+	GuestCallWaiter        *application.GuestCallWaiter
+	StaffAckWaiterCall     *application.StaffAckWaiterCall
+	StaffUpdateStatus      *application.StaffUpdateItemStatus
+	StaffMarkUnavailable   *application.StaffMarkUnavailable
+	StaffTakeawayOrder     *application.StaffTakeawayOrder
+	StaffAddTakeawayItems  *application.StaffAddTakeawayItems
+	KitchenQueue           *application.KitchenQueue
+	KitchenListCancels     *application.KitchenListCancelRequests
+	KitchenReviewCancel    *application.KitchenReviewCancelRequest
 }
 
 func NewHandler(guestPlaceOrder *application.GuestPlaceOrder,
@@ -43,26 +44,28 @@ func NewHandler(guestPlaceOrder *application.GuestPlaceOrder,
 	staffUpdateStatus *application.StaffUpdateItemStatus,
 	staffMarkUnavailable *application.StaffMarkUnavailable,
 	staffTakeawayOrder *application.StaffTakeawayOrder,
+	staffAddTakeawayItems *application.StaffAddTakeawayItems,
 	kitchenQueue *application.KitchenQueue,
 	kitchenListCancels *application.KitchenListCancelRequests,
 	kitchenReviewCancel *application.KitchenReviewCancelRequest) *Handler {
 	return &Handler{
-		GuestPlaceOrder:       guestPlaceOrder,
-		GuestViewOrders:       guestViewOrders,
-		GuestEditOrder:        guestEditOrder,
-		GuestCancelOrder:      guestCancelOrder,
-		GuestRequestCancel:    guestRequestCancel,
-		StaffTables:           staffTables,
-		StaffRequestBill:      staffRequestBill,
-		StaffReopenSession:    staffReopenSession,
-		GuestCallWaiter:       guestCallWaiter,
-		StaffAckWaiterCall:    staffAckWaiterCall,
-		StaffUpdateStatus:     staffUpdateStatus,
-		StaffMarkUnavailable:  staffMarkUnavailable,
-		StaffTakeawayOrder:    staffTakeawayOrder,
-		KitchenQueue:          kitchenQueue,
-		KitchenListCancels:    kitchenListCancels,
-		KitchenReviewCancel:   kitchenReviewCancel,
+		GuestPlaceOrder:        guestPlaceOrder,
+		GuestViewOrders:        guestViewOrders,
+		GuestEditOrder:         guestEditOrder,
+		GuestCancelOrder:       guestCancelOrder,
+		GuestRequestCancel:     guestRequestCancel,
+		StaffTables:            staffTables,
+		StaffRequestBill:       staffRequestBill,
+		StaffReopenSession:     staffReopenSession,
+		GuestCallWaiter:        guestCallWaiter,
+		StaffAckWaiterCall:     staffAckWaiterCall,
+		StaffUpdateStatus:      staffUpdateStatus,
+		StaffMarkUnavailable:   staffMarkUnavailable,
+		StaffTakeawayOrder:     staffTakeawayOrder,
+		StaffAddTakeawayItems:  staffAddTakeawayItems,
+		KitchenQueue:           kitchenQueue,
+		KitchenListCancels:     kitchenListCancels,
+		KitchenReviewCancel:    kitchenReviewCancel,
 	}
 }
 
@@ -76,6 +79,7 @@ func (h *Handler) RegisterStaffRoutes(r *gin.RouterGroup, secret string,
 	g.PATCH("/order-items/:itemId/status", h.staffUpdateItemStatus)
 	g.POST("/order-items/:itemId/unavailable", h.staffMarkUnavailable)
 	g.POST("/orders/takeaway", h.staffTakeawayOrder)
+	g.POST("/sessions/:sessionId/takeaway-items", h.staffAddTakeawayItems)
 }
 
 func (h *Handler) staffTakeawayOrder(c *gin.Context) {
@@ -86,6 +90,31 @@ func (h *Handler) staffTakeawayOrder(c *gin.Context) {
 	}
 	actorID := uuid.MustParse(c.GetString(auth.CtxUserID))
 	out, err := h.StaffTakeawayOrder.Handle(c.Request.Context(), req, actorID)
+	if err != nil {
+		var validationErr *application.CartValidationError
+		if errors.As(err, &validationErr) {
+			respondLineErrors(c, http.StatusBadRequest, validationErr.AppError(), validationErr.LineErrors)
+			return
+		}
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) staffAddTakeawayItems(c *gin.Context) {
+	sessionID, err := uuidFromParam(c, "sessionId")
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	var req application.StaffAddTakeawayItemsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
+		return
+	}
+	actorID := uuid.MustParse(c.GetString(auth.CtxUserID))
+	out, err := h.StaffAddTakeawayItems.Handle(c.Request.Context(), sessionID, req, actorID)
 	if err != nil {
 		var validationErr *application.CartValidationError
 		if errors.As(err, &validationErr) {

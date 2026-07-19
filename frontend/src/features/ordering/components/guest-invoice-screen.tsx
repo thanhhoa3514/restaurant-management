@@ -1,10 +1,10 @@
 import { type FC, useMemo, lazy, Suspense } from 'react'
 import { Loader2 } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
 import { formatVND } from '../helpers'
-import { fetchGuestOrders } from '../api'
+import { useGuestOrders } from '../queries/useGuestOrders'
+import { fmtDateTime } from '@/shared/date'
 import { brandNameUpper } from '@/constants/brand'
 import type { Session } from '../types'
 import { Button } from '@/components/ui/button'
@@ -31,11 +31,7 @@ export const GuestInvoiceScreen: FC = () => {
   const t = DICT[state.lang]
   const sessionToken = state.session?.token
 
-  const { data: ordersData } = useQuery({
-    queryKey: ['guest-orders', sessionToken],
-    queryFn: () => fetchGuestOrders(sessionToken!),
-    enabled: !!sessionToken,
-  })
+  const { data: ordersData } = useGuestOrders(sessionToken)
 
   const { total, vat, grandTotal, invoiceItems } = useMemo(() => {
     const itemsList: Array<{ name: string; qty: number; price: number }> = []
@@ -153,9 +149,6 @@ export const GuestInvoiceScreen: FC = () => {
   )
 }
 
-function fmtDateTime(d: Date): string {
-  const pad = (n: number) => n.toString().padStart(2, '0')
-  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
+
 
 

@@ -9,12 +9,7 @@ export function formatVND(price: number): string {
   return vndFormatter.format(price)
 }
 
-export function formatTime(date: Date): string {
-  return date.toLocaleTimeString('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
+export { fmtTime as formatTime } from '@/shared/date'
 
 // One-line summary of a cart line's variant + chosen options, for display.
 export function summarizeCartLine(line: CartLine): string {

@@ -1,12 +1,13 @@
 import { type FC } from 'react'
-import { ArrowRight, Clock, List, MessageSquare, Printer, Timer } from 'lucide-react'
+import { ArrowRight, List, MessageSquare, Printer, Timer } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { KDS_DICT } from '@/features/kitchen/data/i18n'
-import { fmtHMS, minStatus, urgencyFor } from '@/features/kitchen/helpers'
+import { minStatus, urgencyFor } from '@/features/kitchen/helpers'
+
 import type { ItemStatus, KDSItem, Lang, Ticket, Urgency } from '@/features/kitchen/types'
 
 type KdsKey = keyof (typeof KDS_DICT)['vi']
@@ -35,16 +36,12 @@ const urgencyBadgeVariant: Record<Urgency, 'success' | 'warning' | 'destructive'
 }
 
 const statusBadgeClass: Record<ItemStatus, string> = {
-  pending:
-    'bg-secondary text-secondary-foreground',
+  pending: 'bg-secondary text-secondary-foreground',
   acknowledged:
     'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-400',
-  preparing:
-    'bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400',
-  ready:
-    'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400',
-  served:
-    'border-transparent bg-muted text-muted-foreground',
+  preparing: 'bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400',
+  ready: 'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400',
+  served: 'border-transparent bg-muted text-muted-foreground',
 }
 
 function urgencyLabel(urgency: Urgency, t: TicketCardProps['t']): string {
@@ -67,11 +64,7 @@ function primaryActionLabel(status: ItemStatus, t: TicketCardProps['t']): string
 export const ColoredBadge: FC<{ status: ItemStatus; t: TicketCardProps['t'] }> = ({
   status,
   t,
-}) => (
-  <Badge className={statusBadgeClass[status]}>
-    {statusLabel(status, t)}
-  </Badge>
-)
+}) => <Badge className={statusBadgeClass[status]}>{statusLabel(status, t)}</Badge>
 
 export const TicketCard: FC<TicketCardProps> = ({
   ticket,
@@ -118,12 +111,6 @@ export const TicketCard: FC<TicketCardProps> = ({
       </CardHeader>
 
       <CardContent className="pb-0 pt-3">
-        {/* Timer */}
-        <div className="mb-3 flex items-center gap-1.5 font-mono text-xl font-semibold tabular-nums text-foreground">
-          <Clock className="size-5 text-muted-foreground" />
-          <span>{fmtHMS(waitSec)}</span>
-        </div>
-
         {/* Items */}
         <div className="space-y-0">
           {ticket.items.map((item, index) => (
@@ -145,21 +132,11 @@ export const TicketCard: FC<TicketCardProps> = ({
           {actionLabel}
           <ArrowRight className="ml-1 size-4" />
         </Button>
-        <Button
-          variant="outline"
-          className="w-full"
-          size="sm"
-          onClick={onOpenManage}
-        >
+        <Button variant="outline" className="w-full" size="sm" onClick={onOpenManage}>
           <List className="mr-1.5 size-4" />
           {t('btn_manage' as KdsKey)}
         </Button>
-        <Button
-          variant="ghost"
-          className="w-full"
-          size="sm"
-          onClick={() => window.print()}
-        >
+        <Button variant="ghost" className="w-full" size="sm" onClick={() => window.print()}>
           <Printer className="mr-1.5 size-4" />
           {t('print_ticket' as KdsKey)}
         </Button>
@@ -178,9 +155,7 @@ const ItemRow: FC<{ item: KDSItem; lang: Lang; t: TicketCardProps['t'] }> = ({ i
       <div className="flex min-w-0 items-start gap-2.5">
         <span
           className={`mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-md text-sm font-bold tabular-nums ${
-            served
-              ? 'bg-muted text-muted-foreground'
-              : 'bg-primary text-primary-foreground'
+            served ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground'
           }`}
         >
           {item.qty}
@@ -194,9 +169,7 @@ const ItemRow: FC<{ item: KDSItem; lang: Lang; t: TicketCardProps['t'] }> = ({ i
             {name}
           </div>
           {options && (
-            <div className="mt-0.5 text-sm leading-snug text-muted-foreground">
-              {options}
-            </div>
+            <div className="mt-0.5 text-sm leading-snug text-muted-foreground">{options}</div>
           )}
           {item.notes && (
             <div className="mt-1 flex items-center gap-1 text-[13px] italic text-amber-600 dark:text-amber-400">

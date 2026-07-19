@@ -38,9 +38,12 @@ Tác nhân **Bếp** giao tiếp với use-case «Cập nhật trạng thái mó
 | STT | Thực hiện bởi | Mô tả hành động | Kết quả hệ thống |
 |---|---|---|---|
 | 1a | Hệ thống | `status` không thuộc `{PENDING, ACKNOWLEDGED, PREPARING, READY, SERVED}`. | Trả `400 "invalid item status"`. |
-| 2a | Hệ thống | Trạng thái vừa đổi bởi thao tác khác (đua điều kiện). | Cập nhật theo bản khóa mới nhất; giao diện nạp lại trạng thái mới. |
+| 2a | Hệ thống | Món không tồn tại / `item_id` sai / đã bị xoá mềm. | Trả `404 "order item not found"`. |
+| 3a | Hệ thống | Chuyển trạng thái không hợp lệ (VD: `PENDING → READY` nhảy cóc, hoặc `SERVED → PREPARING` ngược). | Trả `409 "invalid item status transition"`. |
+| 4a | Hệ thống | Đua điều kiện — trạng thái vừa được thay đổi bởi thao tác khác. | Cập nhật theo bản mới nhất; giao diện nạp lại trạng thái. |
+| 5a | Hệ thống | Lỗi DB / backend 5xx / timeout. | Trả lỗi; giao diện thông báo + thử lại. |
 
-> **Ghi chú hiện trạng triển khai:** Endpoint chỉ nhận **một `item_id`**; "cả đơn" do giao diện lặp gọi cho từng món (không có route bulk theo đơn). Impl kiểm **giá trị trạng thái hợp lệ** + khóa dòng + `version`; việc ép đúng thứ tự chuyển tiếp phụ thuộc SQL cập nhật, không có bước từ chối "nhảy cóc" tường minh ở tầng application.
+> **Ghi chú hiện trạng triển khai:** Endpoint chỉ nhận **một `item_id`**; "cả đơn" do giao diện lặp gọi cho từng món (không có route bulk theo đơn). Impl kiểm **giá trị trạng thái hợp lệ** + khóa dòng + `version` + ràng buộc `allowedTransitions` ở tầng domain; việc ép đúng thứ tự chuyển tiếp đã có kiểm tường minh trước khi UPDATE.
 
 **Hậu điều kiện**
 
@@ -54,6 +57,11 @@ Tác nhân **Bếp** giao tiếp với use-case «Cập nhật trạng thái mó
 ```plantuml
 @startuml
 hide footbox
+skinparam lifelineStrategy solid
+skinparam lifeline {
+ BorderColor Gray
+ BorderThickness 1
+}
 skinparam participant {
  BackgroundColor White
  BorderColor Black
@@ -76,14 +84,20 @@ database "Database" as DB
 A -> UI : Chọn món (hoặc bấm nhanh "cả đơn")
 A -> UI : Chuyển sang trạng thái kế tiếp
 UI ->> BE : Cập nhật trạng thái chế biến món
-BE ->> DB : Kiểm trạng thái hợp lệ + khóa dòng + version
 
-alt Version đã đổi (đua điều kiện)
- DB --> BE : Trả về Version cũ
- BE --> UI : Trả về Báo, nạp lại trạng thái mới nhất
+alt Món không tồn tại (2a)
+ BE --> UI : 404 order item not found
+ UI --> A : Báo lỗi món không tồn tại
+else Chuyển tiếp không hợp lệ (3a)
+ BE --> UI : 409 invalid item status transition
+ UI --> A : Báo lỗi không thể chuyển
+else Đua điều kiện (4a)
+ BE ->> DB : Khóa dòng FOR UPDATE + kiểm version
+ DB --> BE : Version cũ
+ BE --> UI : Nạp lại trạng thái mới nhất
  UI --> A : Cập nhật lại
 else Hợp lệ
- BE ->> DB : Ghi trạng thái mới + order_item_status_history
+ BE ->> DB : Ghi trạng thái mới +\norder_item_status_history
  DB --> BE : Trả về OK
  BE --> UI : Trả về Xác nhận
  UI --> A : Cập nhật hàng đợi

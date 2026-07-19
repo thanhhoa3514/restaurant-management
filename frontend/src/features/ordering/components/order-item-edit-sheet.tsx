@@ -1,11 +1,11 @@
 import { useState, type FC } from 'react'
 import { Minus, Plus, Trash2, UtensilsCrossed } from 'lucide-react'
 import { toast } from 'sonner'
-import { useQueryClient } from '@tanstack/react-query'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
 import { formatVND } from '../helpers'
-import { editGuestOrder, cancelGuestOrder } from '../api'
+import { useEditGuestOrder } from '../mutations/useEditGuestOrder'
+import { useCancelGuestOrder } from '../mutations/useCancelGuestOrder'
 import { ApiError } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import type { Lang, OrderItemDTO, EditOrderInput, EditOrderLineInput } from '../types'
@@ -30,9 +30,10 @@ export const OrderItemEditSheet: FC<OrderItemEditSheetProps> = ({
   onClose,
 }) => {
   const { state } = useOrdering()
-  const queryClient = useQueryClient()
   const t = DICT[lang]
   const sessionToken = state.session?.token
+  const editMutation = useEditGuestOrder(sessionToken)
+  const cancelMutation = useCancelGuestOrder(sessionToken)
   const [qty, setQty] = useState(item.quantity)
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
@@ -74,8 +75,7 @@ export const OrderItemEditSheet: FC<OrderItemEditSheetProps> = ({
     )
     const input: EditOrderInput = { version: orderVersion, items: lines }
     try {
-      await editGuestOrder(sessionToken, orderId, input)
-      await queryClient.invalidateQueries({ queryKey: ['guest-orders', sessionToken] })
+      await editMutation.mutateAsync({ orderId, input })
       toast.success(t.toast_order_edited)
       onClose()
     } catch (err) {
@@ -83,7 +83,6 @@ export const OrderItemEditSheet: FC<OrderItemEditSheetProps> = ({
       if (err instanceof ApiError) {
         if (err.message?.includes('conflict') || err.message?.includes('modified')) {
           msg = t.order_modified_reload
-          await queryClient.invalidateQueries({ queryKey: ['guest-orders', sessionToken] })
         } else {
           msg = err.message
         }
@@ -101,8 +100,7 @@ export const OrderItemEditSheet: FC<OrderItemEditSheetProps> = ({
       if (!confirmed) return
       setSaving(true)
       try {
-        await cancelGuestOrder(sessionToken, orderId)
-        await queryClient.invalidateQueries({ queryKey: ['guest-orders', sessionToken] })
+        await cancelMutation.mutateAsync(orderId)
         toast.success(t.toast_item_removed)
         onClose()
       } catch (err) {
@@ -124,8 +122,7 @@ export const OrderItemEditSheet: FC<OrderItemEditSheetProps> = ({
       .map(toEditLine)
     const input: EditOrderInput = { version: orderVersion, items: lines }
     try {
-      await editGuestOrder(sessionToken, orderId, input)
-      await queryClient.invalidateQueries({ queryKey: ['guest-orders', sessionToken] })
+      await editMutation.mutateAsync({ orderId, input })
       toast.success(t.toast_item_removed)
       onClose()
     } catch (err) {
@@ -133,7 +130,6 @@ export const OrderItemEditSheet: FC<OrderItemEditSheetProps> = ({
       if (err instanceof ApiError) {
         if (err.message?.includes('conflict') || err.message?.includes('modified')) {
           msg = t.order_modified_reload
-          await queryClient.invalidateQueries({ queryKey: ['guest-orders', sessionToken] })
         } else {
           msg = err.message
         }

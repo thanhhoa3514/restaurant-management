@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState, type Dispatch, type FC, type SetStateAction } from 'react'
 import { ChevronLeft, Minus, Plus, X } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT, type Dict } from '../data/i18n'
 import { formatVND } from '../helpers'
-import { fetchMenuItem } from '../api'
+import { useGuestItemDetail } from '../queries/useGuestItemDetail'
 import type { ApiMenuItemDetail, ApiOptionGroup, CartLine, CartOption, Lang } from '../types'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -55,11 +54,7 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
   const t = DICT[lang]
   const sessionToken = state.session?.token
 
-  const { data: item, isLoading: isItemLoading } = useQuery({
-    queryKey: ['guest-item', sessionToken, itemId],
-    queryFn: () => fetchMenuItem(sessionToken!, itemId!),
-    enabled: !!sessionToken && !!itemId,
-  })
+  const { data: item, isLoading: isItemLoading } = useGuestItemDetail(sessionToken, itemId)
 
   const [form, setForm] = useState<FormState>({
     variantId: '',

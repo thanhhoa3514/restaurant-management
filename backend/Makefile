@@ -31,6 +31,12 @@ run: migrate
 seed:
 	go run ./cmd/seed
 
+setup:
+	go run ./cmd/setup
+
+compose-setup:
+	docker compose -f $(COMPOSE_FILE) run --rm setup
+
 lint:
 	go vet ./...
 

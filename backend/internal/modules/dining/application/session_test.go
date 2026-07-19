@@ -110,6 +110,20 @@ func (r *fakeRepo) FindSessionsByMergeGroup(_ context.Context, _, _ uuid.UUID) (
 }
 func (r *fakeRepo) UpdateSessionMergeGroup(_ context.Context, _ uuid.UUID, _ *uuid.UUID) error { return nil }
 
+func (r *fakeRepo) FindSessionsPendingVerification(_ context.Context, _ uuid.UUID) ([]domain.DiningSession, error) {
+	return nil, nil
+}
+func (r *fakeRepo) VerifySession(_ context.Context, _, _ uuid.UUID, _ *uuid.UUID) error {
+	if r.activeErr != nil {
+		return r.activeErr
+	}
+	if r.activeSession == nil {
+		return apperr.New(apperr.CodeNotFound, "dining session not found")
+	}
+	r.activeSession.Status = domain.SessionActive
+	return nil
+}
+
 func (r *fakeRepo) CreateQR(_ context.Context, qr *domain.QRCode) error {
 	if r.createQRErr != nil {
 		return r.createQRErr
@@ -197,17 +211,28 @@ func TestJoinSession(t *testing.T) {
 		require.Equal(t, *first.SessionID, *second.SessionID)
 	})
 
-	t.Run("no active session is not_opened", func(t *testing.T) {
+	t.Run("no active session creates PENDING_VERIFICATION", func(t *testing.T) {
+		repo := &fakeRepo{
+			activeQR: qr,
+			activeErr: apperr.New(apperr.CodeNotFound, "none"),
+			table:    &domain.Table{ID: tableID, RestaurantID: rid, Code: "T01", Name: "Bàn 1"},
+		}
 		outbox := &fakeDiningOutbox{}
-		svc := NewJoinSession(fakeTx{}, &fakeRepo{activeQR: qr, activeErr: apperr.New(apperr.CodeNotFound, "none")}, outbox)
-		out, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "qr", IPHash: "ip1"})
+		svc := NewJoinSession(fakeTx{}, repo, outbox)
+		out, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "qr", GuestName: "Nguyen Van A", IPHash: "ip1"})
 		require.NoError(t, err)
-		require.Equal(t, "not_opened", out.Status)
-		require.Empty(t, out.SessionToken)
-		require.Nil(t, out.SessionID)
+		require.Equal(t, "PENDING_VERIFICATION", out.Status)
+		require.NotEmpty(t, out.SessionToken)
+		require.NotNil(t, out.SessionID)
+		require.NotNil(t, out.TableID)
+		require.Equal(t, "T01", out.TableCode)
+		require.Equal(t, "Bàn 1", out.TableName)
+		require.NotNil(t, repo.created)
+		require.Equal(t, domain.SessionPendingVerification, repo.created.Status)
+		require.Equal(t, "Nguyen Van A", repo.created.CustomerName)
 		require.Len(t, outbox.writes, 1)
 		require.Equal(t, "dining.qr_scanned", outbox.writes[0].EventType)
-		require.Equal(t, "qr_scan:"+qr.ID.String()+":not_opened:ip1", outbox.writes[0].DedupeKey)
+		require.Equal(t, "pending_verification", outbox.writes[0].Payload.(map[string]any)["outcome"])
 	})
 
 	t.Run("revoked qr unauthorized but logs outcome", func(t *testing.T) {

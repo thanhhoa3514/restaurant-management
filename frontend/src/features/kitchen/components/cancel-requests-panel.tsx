@@ -21,48 +21,52 @@ export const CancelRequestsPanel: FC<CancelRequestsPanelProps> = ({
   t,
   onReview,
 }) => {
-  if (cancelRequests.length === 0) return null
-
   return (
     <Card className="mb-4 border-amber-500/40 bg-amber-500/5">
       <CardContent className="py-4">
         <div className="mb-3 flex items-center gap-2 font-semibold">
           <Ban className="size-4 text-amber-600" />
           <span>{t('cancel_requests_title')}</span>
-          <Badge variant="warning" className="min-w-5 px-1.5 text-center tabular-nums">
-            {cancelRequests.length}
-          </Badge>
+          {cancelRequests.length > 0 && (
+            <Badge variant="warning" className="min-w-5 px-1.5 text-center tabular-nums">
+              {cancelRequests.length}
+            </Badge>
+          )}
         </div>
-        <ul className="flex flex-col gap-2">
-          {cancelRequests.map((cr) => (
-            <li
-              key={cr.id}
-              className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border bg-card px-3 py-2"
-            >
-              <Badge variant="outline" className="font-mono">
-                {t('table')} {cr.table_code}
-              </Badge>
-              <span className="font-medium">
-                {cr.name_snapshot} × {cr.quantity}
-              </span>
-              {cr.reason && (
-                <span className="text-sm text-muted-foreground">
-                  {t('cancel_reason')}: {cr.reason}
+        {cancelRequests.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t('no_cancel_requests')}</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {cancelRequests.map((cr) => (
+              <li
+                key={cr.id}
+                className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border bg-card px-3 py-2"
+              >
+                <Badge variant="outline" className="font-mono">
+                  {t('table')} {cr.table_code}
+                </Badge>
+                <span className="font-medium">
+                  {cr.name_snapshot} × {cr.quantity}
                 </span>
-              )}
-              <div className="ml-auto flex gap-2">
-                <Button size="sm" variant="destructive" onClick={() => onReview(cr.id, 'approve')}>
-                  <Check className="size-4" />
-                  {t('cancel_approve')}
-                </Button>
-                <Button size="sm" variant="secondary" onClick={() => onReview(cr.id, 'reject')}>
-                  <X className="size-4" />
-                  {t('cancel_reject')}
-                </Button>
-              </div>
-            </li>
-          ))}
-        </ul>
+                {cr.reason && (
+                  <span className="text-sm text-muted-foreground">
+                    {t('cancel_reason')}: {cr.reason}
+                  </span>
+                )}
+                <div className="ml-auto flex gap-2">
+                  <Button size="sm" variant="destructive" onClick={() => onReview(cr.id, 'approve')}>
+                    <Check className="size-4" />
+                    {t('cancel_approve')}
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={() => onReview(cr.id, 'reject')}>
+                    <X className="size-4" />
+                    {t('cancel_reject')}
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </CardContent>
     </Card>
   )

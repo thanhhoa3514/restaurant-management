@@ -36,13 +36,15 @@ Tác nhân **Bếp** giao tiếp với use-case «Báo hết món»; đánh dấ
 | STT | Thực hiện bởi | Mô tả hành động | Kết quả hệ thống |
 |---|---|---|---|
 | 1a | Hệ thống | `itemId` không hợp lệ / món không tồn tại. | Trả lỗi `400/404`; không đổi trạng thái. |
+| 2a | Hệ thống | Món ở trạng thái không hợp lệ (chỉ cho phép `PENDING`/`ACKNOWLEDGED`). | Trả lỗi `409 Conflict`; không đổi trạng thái. |
+| 3a | Hệ thống | Lỗi DB / 5xx / timeout. | Trả lỗi `500`; trạng thái giữ nguyên. |
 
 **Hậu điều kiện**
 
 | | |
 |---|---|
 | **Thành công** | `order_item` ở `UNAVAILABLE`; sự kiện `ordering.item_unavailable` phát realtime; khách/Phục vụ biết để đổi món. |
-| **Thất bại** | Món không tồn tại → báo lỗi; trạng thái giữ nguyên. |
+| **Thất bại** | Lỗi `404` (không tìm thấy), `409` (trạng thái không hợp lệ) hoặc `500` (lỗi hệ thống); trạng thái giữ nguyên. |
 
 ### 3) Sơ đồ tuần tự (Sequence)
 
@@ -70,11 +72,20 @@ database "Database" as DB
 actor "Khách/Phục vụ" as G
 
 A -> UI : Chọn món trong hàng đợi, "Hết món" + lý do
-UI ->> BE : Báo món đã hết (kèm lý do)
-BE ->> DB : Chuyển order_item ->> UNAVAILABLE
-DB --> BE : Trả về OK
-BE --> UI : Trả về Xác nhận
-BE --> G : Trả về Sự kiện món hết (realtime)
-G --> A : Phục vụ hỗ trợ khách đổi món
+UI -> BE : Báo món đã hết (kèm lý do)
+alt Thành công
+  BE -> DB : Chuyển order_item → UNAVAILABLE
+  DB --> BE : OK
+  BE --> UI : Xác nhận thành công
+  BE -> G : Sự kiện món hết (realtime)
+  note right: ordering.item_unavailable\n{ item_id, status, reason }
+  G --> A : Phục vụ hỗ trợ khách đổi món
+else 1a — Món không tồn tại
+  BE --> UI : Lỗi 404
+else 2a — Trạng thái không hợp lệ
+  BE --> UI : Lỗi 409
+else 3a — Lỗi DB / 5xx
+  BE --> UI : Lỗi 500
+end
 @enduml
 ```

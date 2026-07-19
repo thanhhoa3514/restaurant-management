@@ -24,7 +24,7 @@ interface InvoicePanelProps {
   onCloseSession: (sessionId: string) => void
   onSelectInvoice: (sessionId: string, invoiceId: string) => void
   onSplit: (sessionId: string, groups: { label: string; order_item_ids: string[] }[]) => void
-  onSessionReopened: () => void
+  onSessionReopened?: () => void
 }
 
 export const InvoicePanel: FC<InvoicePanelProps> = ({

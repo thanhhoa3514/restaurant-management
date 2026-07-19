@@ -48,7 +48,13 @@ export function LoginPage() {
   return (
     <div className="relative flex min-h-dvh items-center justify-center bg-gradient-to-br from-stone-50 via-white to-stone-100 px-4 py-12 font-sans overflow-hidden">
       {/* Subtle background texture */}
-      <div className="pointer-events-none absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 25% 25%, #c084fc 0%, transparent 50%), radial-gradient(circle at 75% 75%, #f59e0b 0%, transparent 50%)' }} />
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.03]"
+        style={{
+          backgroundImage:
+            'radial-gradient(circle at 25% 25%, #c084fc 0%, transparent 50%), radial-gradient(circle at 75% 75%, #f59e0b 0%, transparent 50%)',
+        }}
+      />
       <div className="pointer-events-none absolute left-1/2 top-0 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-amber-100/40 blur-[120px]" />
 
       <div className="relative w-full max-w-sm">
@@ -93,7 +99,10 @@ export function LoginPage() {
                   placeholder="Nhập tài khoản"
                   className="h-11 w-full rounded-xl border border-stone-200 bg-stone-50 pl-10 pr-3.5 text-sm font-medium text-stone-800 placeholder-stone-400 transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/15 focus:bg-white outline-none"
                   value={username}
-                  onChange={(e) => { setUsername(e.target.value); loginMutation.error && loginMutation.reset() }}
+                  onChange={(e) => {
+                    setUsername(e.target.value)
+                    loginMutation.error && loginMutation.reset()
+                  }}
                 />
               </div>
             </div>
@@ -117,7 +126,10 @@ export function LoginPage() {
                   placeholder="••••••••••••"
                   className="h-11 w-full rounded-xl border border-stone-200 bg-stone-50 pl-10 pr-10 text-sm font-medium tracking-widest text-stone-800 placeholder-stone-400 transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/15 focus:bg-white outline-none"
                   value={password}
-                  onChange={(e) => { setPassword(e.target.value); loginMutation.error && loginMutation.reset() }}
+                  onChange={(e) => {
+                    setPassword(e.target.value)
+                    loginMutation.error && loginMutation.reset()
+                  }}
                 />
                 <button
                   type="button"

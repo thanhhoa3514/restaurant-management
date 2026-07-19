@@ -10,9 +10,10 @@ import (
 type SessionStatus string
 
 const (
-	SessionActive          SessionStatus = "ACTIVE"
-	SessionAwaitingPayment SessionStatus = "AWAITING_PAYMENT"
-	SessionClosed          SessionStatus = "CLOSED"
+	SessionPendingVerification SessionStatus = "PENDING_VERIFICATION"
+	SessionActive              SessionStatus = "ACTIVE"
+	SessionAwaitingPayment     SessionStatus = "AWAITING_PAYMENT"
+	SessionClosed              SessionStatus = "CLOSED"
 )
 
 type OpenedVia string
@@ -112,6 +113,8 @@ type DiningRepository interface {
 	UpdateSessionCustomerName(ctx context.Context, sessionID uuid.UUID, name string) error
 
 	FindSessionByID(ctx context.Context, restaurantID, sessionID uuid.UUID) (*DiningSession, error)
+	FindSessionsPendingVerification(ctx context.Context, restaurantID uuid.UUID) ([]DiningSession, error)
+	VerifySession(ctx context.Context, restaurantID, sessionID uuid.UUID, verifiedBy *uuid.UUID) error
 
 	// Merge group operations
 	CreateMergeGroup(ctx context.Context, g *MergeGroup) error

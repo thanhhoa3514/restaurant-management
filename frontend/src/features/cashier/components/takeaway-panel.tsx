@@ -18,6 +18,7 @@ import { fmtVND } from '@/features/cashier/helpers'
 interface TakeawayPanelProps {
   lang: 'vi' | 'en'
   t: (key: string, ...args: Array<string | number>) => string
+  compact?: boolean
 }
 
 interface CartLine {
@@ -29,7 +30,7 @@ interface CartLine {
   options: { option_id: string; quantity: number }[]
 }
 
-export const TakeawayPanel: FC<TakeawayPanelProps> = ({ lang: _lang, t }) => {
+export const TakeawayPanel: FC<TakeawayPanelProps> = ({ lang: _lang, t, compact }) => {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [categoryId, setCategoryId] = useState<string | undefined>(undefined)
@@ -139,10 +140,12 @@ export const TakeawayPanel: FC<TakeawayPanelProps> = ({ lang: _lang, t }) => {
   return (
     <>
       <Button
-        className="w-full rounded-2xl gap-2 font-semibold h-12 shadow-sm transition-all hover:shadow-md bg-[var(--system-orange)] hover:bg-[var(--system-orange)]/90 text-white"
+        className={compact
+          ? 'rounded-xl gap-1.5 font-semibold h-9 px-3 text-xs shadow-sm transition-all hover:shadow-md bg-[var(--system-orange)] hover:bg-[var(--system-orange)]/90 text-white shrink-0'
+          : 'w-full rounded-2xl gap-2 font-semibold h-12 shadow-sm transition-all hover:shadow-md bg-[var(--system-orange)] hover:bg-[var(--system-orange)]/90 text-white'}
         onClick={() => setOpen(true)}
       >
-        <ShoppingCart className="size-5" />
+        <ShoppingCart className={compact ? 'size-4' : 'size-5'} />
         {t('takeaway_order')}
       </Button>
 

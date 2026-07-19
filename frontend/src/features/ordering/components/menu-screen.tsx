@@ -1,11 +1,11 @@
 import { useMemo, useState, type FC } from 'react'
 import { Search, ShoppingBag, Plus, ChevronRight } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
 import { formatVND, totalItems } from '../helpers'
-import { fetchCategories, fetchMenuItems } from '../api'
 import type { ApiMenuItemSummary, Lang } from '../types'
+import { useGuestCategories } from '../queries/useGuestCategories'
+import { useGuestItems } from '../queries/useGuestItems'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -25,22 +25,14 @@ export const MenuScreen: FC = () => {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [changingLang, setChangingLang] = useState<'vi' | 'en' | null>(null)
 
-  const { data: categoriesData } = useQuery({
-    queryKey: ['guest-categories', sessionToken],
-    queryFn: () => fetchCategories(sessionToken!),
-    enabled: !!sessionToken,
-  })
+  const { data: categoriesData } = useGuestCategories(sessionToken)
 
   const {
     data: itemsData,
     isLoading: isItemsLoading,
     isError: isItemsError,
     refetch: refetchItems,
-  } = useQuery({
-    queryKey: ['guest-items', sessionToken],
-    queryFn: () => fetchMenuItems(sessionToken!),
-    enabled: !!sessionToken,
-  })
+  } = useGuestItems(sessionToken)
 
   const filtered = useMemo(
     () => {

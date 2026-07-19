@@ -163,6 +163,7 @@ export interface OrderItemDTO {
   total_amount_vnd: number
   status: string
   station: string
+  is_takeaway: boolean
   options: OrderOptionDTO[]
   unavailable_reason?: string | null
 }

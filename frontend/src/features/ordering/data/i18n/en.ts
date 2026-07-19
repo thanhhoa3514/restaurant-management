@@ -87,4 +87,7 @@ export const en = {
   qr_name_placeholder: 'Enter your name to start...',
   qr_name_required: 'Please enter your name',
   qr_join_table: 'Join table',
+  qr_pending_verification: 'Waiting for staff to confirm...',
+  qr_pending_badge: 'PENDING APPROVAL',
+  qr_please_wait: 'Please wait...',
 } as const

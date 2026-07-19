@@ -5,6 +5,7 @@ import {
   catalogQueryKeys,
   createMenuItem,
   deleteMenuItem,
+  presignUpload,
   toggleAvailability,
   updateMenuItem,
 } from '@/features/catalog/api'
@@ -110,6 +111,22 @@ export function useUpdateItemMutation(
       if (error instanceof ApiError && error.status === 409) {
         await queryClient.invalidateQueries({ queryKey: CATALOG_KEY })
       }
+    },
+  })
+}
+
+export function useImageUploadMutation() {
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const ext = file.name.substring(file.name.lastIndexOf('.')) || '.jpg'
+      const result = await presignUpload(ext, file.type)
+      const resp = await fetch(result.presigned_url, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type },
+      })
+      if (!resp.ok) throw new Error('Upload failed')
+      return result.public_url
     },
   })
 }

@@ -1,10 +1,10 @@
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import { Loader2, Upload, X } from 'lucide-react'
 
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
-import { presignUpload } from '@/features/catalog/api'
+import { useImageUploadMutation } from '@/features/catalog/mutations'
 
 interface ImageUploaderProps {
   value: string
@@ -14,28 +14,16 @@ interface ImageUploaderProps {
 
 export function ImageUploader({ value, onChange, disabled }: ImageUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null)
-  const [uploading, setUploading] = useState(false)
+  const uploadMutation = useImageUploadMutation()
 
   const handleFile = async (file: File) => {
     if (!file.type.startsWith('image/')) return
-
-    setUploading(true)
     try {
-      const ext = file.name.substring(file.name.lastIndexOf('.')) || '.jpg'
-      const result = await presignUpload(ext, file.type)
-
-      const resp = await fetch(result.presigned_url, {
-        method: 'PUT',
-        body: file,
-        headers: { 'Content-Type': file.type },
-      })
-      if (!resp.ok) throw new Error('Upload failed')
-
-      onChange(result.public_url)
+      const publicUrl = await uploadMutation.mutateAsync(file)
+      onChange(publicUrl)
     } catch {
       toast.error('Tải ảnh thất bại')
     } finally {
-      setUploading(false)
       if (inputRef.current) inputRef.current.value = ''
     }
   }
@@ -76,16 +64,16 @@ export function ImageUploader({ value, onChange, disabled }: ImageUploaderProps)
               const file = e.target.files?.[0]
               if (file) void handleFile(file)
             }}
-            disabled={disabled || uploading}
+            disabled={disabled || uploadMutation.isPending}
           />
           <Button
             type="button"
             variant="secondary"
             className="rounded-[12px]"
-            disabled={disabled || uploading}
+            disabled={disabled || uploadMutation.isPending}
             onClick={() => inputRef.current?.click()}
           >
-            {uploading ? (
+            {uploadMutation.isPending ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
                 Đang tải...

@@ -1,11 +1,11 @@
 import { type FC, useMemo, useState } from 'react'
 import { Plus, Pencil, ShoppingBag, UtensilsCrossed, RefreshCw } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
 import { formatTime } from '../helpers'
-import { fetchGuestOrders, fetchMenuItems } from '../api'
 import type { Lang, OrderItemDTO, GuestOrderDTO } from '../types'
+import { useGuestOrders } from '../queries/useGuestOrders'
+import { useGuestItems } from '../queries/useGuestItems'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -26,17 +26,9 @@ export const OrderStatusScreen: FC = () => {
   const t = DICT[state.lang]
   const sessionToken = state.session?.token
 
-  const { data: ordersData, isLoading: isOrdersLoading } = useQuery({
-    queryKey: ['guest-orders', sessionToken],
-    queryFn: () => fetchGuestOrders(sessionToken!),
-    enabled: !!sessionToken,
-  })
+  const { data: ordersData, isLoading: isOrdersLoading } = useGuestOrders(sessionToken)
 
-  const { data: menuItems } = useQuery({
-    queryKey: ['guest-items', sessionToken],
-    queryFn: () => fetchMenuItems(sessionToken!),
-    enabled: !!sessionToken,
-  })
+  const { data: menuItems } = useGuestItems(sessionToken)
 
   const imageByItemId = useMemo(() => {
     const map: Record<string, string> = {}

@@ -47,9 +47,6 @@ function orderingReducer(state: OrderingState, action: Action): OrderingState {
 
     case 'PLACE_ORDER':
       return { ...state, placing: true }
-
-    // Server is the source of truth for placed orders; on success we just clear
-    // the local cart and let the order screens refetch.
     case 'ORDER_PLACED':
       return { ...state, cart: [], placing: false, cartOpen: false }
 
@@ -99,11 +96,7 @@ export function OrderingProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(() => ({ state, dispatch }), [state, dispatch])
 
-  return (
-    <OrderingContext.Provider value={value}>
-      {children}
-    </OrderingContext.Provider>
-  )
+  return <OrderingContext.Provider value={value}>{children}</OrderingContext.Provider>
 }
 
 export function useOrdering(): OrderingContextValue {

@@ -14,12 +14,12 @@ const AdminDashboard = lazy(() =>
   })),
 )
 const CashierLayout = lazy(() =>
-  import('@/features/cashier/components/cashier-layout').then((m) => ({
+  import('@/features/cashier/pages/cashier-page').then((m) => ({
     default: m.CashierLayout,
   })),
 )
 const KdsLayout = lazy(() =>
-  import('@/features/kitchen/components/kds-layout').then((m) => ({
+  import('@/features/kitchen/pages/kds-page').then((m) => ({
     default: m.KdsLayout,
   })),
 )

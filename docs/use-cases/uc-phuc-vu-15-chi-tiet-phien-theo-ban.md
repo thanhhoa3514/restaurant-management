@@ -28,18 +28,17 @@ Tác nhân **Phục vụ** giao tiếp với use-case «Xem chi tiết phiên/đ
 **Luồng sự kiện chính (Thành công)**
 
 | STT | Thực hiện bởi | Mô tả hành động | Kết quả hệ thống |
-|---|---|---|---|
-| 1 | Phục vụ | Chọn một bàn. | Giao diện lấy chi tiết bàn từ `GET /restaurant/tables` (drill-down client-side). |
-| 2 | Hệ thống | Truy vấn đơn + `order_item` + trạng thái (+ lịch sử). | Trả chi tiết phiên trong payload lồng. |
-| 3 | Phục vụ | Xem chi tiết. | Hiển thị món, trạng thái, các đơn trong phiên. |
+|---|---|---|---|---|
+| 1 | Phục vụ | Chọn một bàn từ lưới bàn. | Giao diện lọc dữ liệu từ payload `GET /restaurant/tables` đã tải ở UC-P10 (client-side), không gọi thêm API. |
+| 2 | Phục vụ | Xem chi tiết. | Hiển thị món, trạng thái, các đơn trong phiên. |
 
 **Luồng sự kiện thay thế**
 
 | STT | Thực hiện bởi | Mô tả hành động | Kết quả hệ thống |
-|---|---|---|---|
-| 1a | Hệ thống | Bàn chưa có phiên. | Hiển thị bàn trống, không có đơn. |
+|---|---|---|---|---|
+| 1a | Giao diện | Bàn chưa có phiên. | Hiển thị bàn trống, không có đơn. |
 
-> **Ghi chú hiện trạng triển khai:** Không có endpoint "chi tiết phiên theo bàn" riêng. `GET /restaurant/tables` (StaffTables) đã trả lồng `orders → items → status_history` cho từng bàn; giao diện phục vụ mở chi tiết từ dữ liệu này (client-side), không gọi thêm API.
+> **Ghi chú hiện trạng triển khai:** UC-P15 hoàn toàn là client-side drill-down từ payload `GET /restaurant/tables` (StaffTables) đã tải ở UC-P10. Không gọi thêm API, không có lỗi backend riêng. Các lỗi "bàn không tồn tại" / "lỗi hệ thống" đã được xử lý ở UC-P10 khi tải lưới bàn.
 
 **Hậu điều kiện**
 
@@ -61,22 +60,12 @@ skinparam actor {
  BackgroundColor White
  BorderColor Black
 }
-skinparam database {
- BackgroundColor White
- BorderColor Black
-}
-skinparam sequenceGroupBorderThickness 1
-skinparam sequenceGroupBorderColor Gray
 actor "Phục vụ" as A
 participant "Giao diện" as UI
-participant "Backend" as BE
-database "Database" as DB
+
+note over UI : Dữ liệu lưới bàn đã được tải ở UC-P10\nvà lưu ở client (state)
 
 A -> UI : Chọn một bàn
-UI ->> BE : Lấy chi tiết phiên và đơn của bàn
-BE ->> DB : Truy vấn đơn + order_item + trạng thái
-DB --> BE : Trả về Chi tiết phiên
-BE --> UI : Trả về Trả dữ liệu (payload lồng)
-UI --> A : Hiển thị món, trạng thái, các đơn trong phiên
+UI --> A : Hiển thị món, trạng thái, các đơn trong phiên\n(lọc từ payload đã có)
 @enduml
 ```

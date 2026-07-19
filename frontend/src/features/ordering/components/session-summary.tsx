@@ -1,12 +1,12 @@
 import { type FC, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { Phone, ShoppingBag } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
 import { formatVND, formatTime } from '../helpers'
-import { callWaiter, fetchGuestOrders, requestBill } from '../api'
+import { callWaiter, requestBill } from '../api'
+import { useGuestOrders } from '../queries/useGuestOrders'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -17,11 +17,7 @@ export const SessionSummary: FC = () => {
   const t = DICT[state.lang]
   const sessionToken = state.session?.token
 
-  const { data: ordersData, isLoading: isOrdersLoading } = useQuery({
-    queryKey: ['guest-orders', sessionToken],
-    queryFn: () => fetchGuestOrders(sessionToken!),
-    enabled: !!sessionToken,
-  })
+  const { data: ordersData, isLoading: isOrdersLoading } = useGuestOrders(sessionToken)
 
   const orders = ordersData?.orders ?? []
   const sessionTotal = ordersData?.session_total_vnd ?? 0

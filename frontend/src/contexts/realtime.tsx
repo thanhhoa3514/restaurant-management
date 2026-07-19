@@ -78,7 +78,10 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       socket.onmessage = (message) => {
         try {
           const event = JSON.parse(message.data) as RealtimeEvent
-          if (event.type) invalidateFor(event)
+          if (event.type) {
+            invalidateFor(event)
+            window.dispatchEvent(new CustomEvent(event.type, { detail: event.payload }))
+          }
         } catch {
           // Ignore malformed realtime messages; REST polling remains fallback.
         }

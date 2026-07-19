@@ -13,6 +13,8 @@ import { cn } from '@/lib/utils'
 import { FloorPlan } from './floor-plan'
 import { GridView } from './grid-view'
 import { TableSheet } from './table-sheet'
+import { PendingSessionsPanel } from './pending-sessions-panel'
+import { TakeawayPanel } from '@/features/cashier/components/takeaway-panel'
 
 export const WaiterLayout: FC = () => {
   const { state, actions, counts, selectedTable, t } = useWaiter()
@@ -69,6 +71,12 @@ export const WaiterLayout: FC = () => {
                 </TabsTrigger>
               </TabsList>
             </Tabs>
+            <div className="hidden sm:block">
+              <PendingSessionsPanel />
+            </div>
+            <div className="hidden sm:block">
+              <TakeawayPanel compact lang={state.lang} t={t} />
+            </div>
             <Badge
               variant="secondary"
               className="shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold tabular-nums max-sm:hidden"
@@ -86,6 +94,14 @@ export const WaiterLayout: FC = () => {
               >
                 {t('occupied_summary', counts.occupied, counts.total)}
               </Badge>
+              <TakeawayPanel compact lang={state.lang} t={t} />
+              <PendingSessionsPanel />
+            </div>
+          )}
+          {counts.calls === 0 && counts.ready === 0 && counts.occupied === 0 && (
+            <div className="mt-2 flex sm:hidden gap-2">
+              <TakeawayPanel compact lang={state.lang} t={t} />
+              <PendingSessionsPanel />
             </div>
           )}
         </div>

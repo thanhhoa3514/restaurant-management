@@ -64,3 +64,27 @@ export function closeDiningSession(sessionId: string): Promise<CloseSessionResul
     method: 'POST',
   })
 }
+
+export interface PendingSessionDTO {
+  session_id: string
+  table_id: string
+  table_name: string
+  table_code: string
+  guest_name: string
+  requested_at: string
+}
+
+export interface PendingSessionsResponse {
+  sessions: PendingSessionDTO[]
+}
+
+export function fetchPendingSessions(): Promise<PendingSessionsResponse> {
+  return apiRequest<PendingSessionsResponse>('/api/v1/restaurant/sessions/pending-verification')
+}
+
+export function verifySession(sessionId: string, action: 'approve' | 'reject'): Promise<void> {
+  return apiRequest<void>(`/api/v1/restaurant/sessions/${encodeURIComponent(sessionId)}/verify`, {
+    method: 'POST',
+    body: { action },
+  })
+}

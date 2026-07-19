@@ -118,7 +118,7 @@ func (r *Repository) ValidateSessionToken(ctx context.Context, token string) (au
 		SELECT restaurant_id, id, table_id
 		FROM dining_sessions
 		WHERE session_token = $1
-		  AND status IN ('ACTIVE', 'AWAITING_PAYMENT')
+		  AND status IN ('PENDING_VERIFICATION', 'ACTIVE', 'AWAITING_PAYMENT')
 		  AND deleted_at IS NULL
 	`, strings.TrimSpace(token)).Scan(&out.RestaurantID, &out.SessionID, &out.TableID)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -265,7 +265,7 @@ func activeSessionSelect(where string) string {
 		SELECT id, restaurant_id, table_id, qr_code_id, session_code, session_token, status, opened_via, opened_by, merge_group_id, version, closed_at
 		FROM dining_sessions
 		WHERE ` + where + `
-		  AND status IN ('ACTIVE', 'AWAITING_PAYMENT')
+		  AND status IN ('PENDING_VERIFICATION', 'ACTIVE', 'AWAITING_PAYMENT')
 		  AND deleted_at IS NULL
 		ORDER BY opened_at DESC
 		LIMIT 1
@@ -378,4 +378,50 @@ func (r *Repository) UpdateSessionMergeGroup(ctx context.Context, sessionID uuid
 		WHERE id = $1 AND deleted_at IS NULL
 	`, sessionID, mergeGroupID)
 	return err
+}
+
+func (r *Repository) FindSessionsPendingVerification(ctx context.Context, restaurantID uuid.UUID) ([]domain.DiningSession, error) {
+	rows, err := r.q(ctx).Query(ctx, `
+		SELECT id, restaurant_id, table_id, qr_code_id, session_code, session_token, status, opened_via, opened_by, merge_group_id, version, closed_at
+		FROM dining_sessions
+		WHERE restaurant_id = $1 AND status = 'PENDING_VERIFICATION' AND deleted_at IS NULL
+		ORDER BY opened_at
+	`, restaurantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []domain.DiningSession
+	for rows.Next() {
+		var s domain.DiningSession
+		var qrCodeID, openedBy, mergeGroupID pgtype.UUID
+		if err := rows.Scan(&s.ID, &s.RestaurantID, &s.TableID, &qrCodeID, &s.SessionCode, &s.SessionToken, &s.Status, &s.OpenedVia, &openedBy, &mergeGroupID, &s.Version, &s.ClosedAt); err != nil {
+			return nil, err
+		}
+		fullSessionRow(&s, &qrCodeID, &openedBy, &mergeGroupID)
+		out = append(out, s)
+	}
+	return out, rows.Err()
+}
+
+func (r *Repository) VerifySession(ctx context.Context, restaurantID, sessionID uuid.UUID, verifiedBy *uuid.UUID) error {
+	tag, err := r.q(ctx).Exec(ctx, `
+		UPDATE dining_sessions
+		SET status = 'ACTIVE',
+		    opened_by = $3,
+		    version = version + 1,
+		    updated_at = NOW()
+		WHERE restaurant_id = $1
+		  AND id = $2
+		  AND status = 'PENDING_VERIFICATION'
+		  AND deleted_at IS NULL
+	`, restaurantID, sessionID, verifiedBy)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return apperr.New(apperr.CodeNotFound, "pending session not found")
+	}
+	return nil
 }

@@ -161,10 +161,11 @@ func (r *Repository) CreateOrderGraph(ctx context.Context, order *domain.OrderCr
 		err := r.q(ctx).QueryRow(ctx, `
 			INSERT INTO order_items (restaurant_id, order_id, dining_session_id, menu_item_id, menu_item_variant_id,
 			 item_name_snapshot, item_code_snapshot, variant_name_snapshot, unit_price_vnd, quantity,
-			 options_total_vnd, subtotal_vnd, discount_amount_vnd, total_amount_vnd, status, station, note)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'PENDING', $15, $16)
+			 options_total_vnd, subtotal_vnd, discount_amount_vnd, total_amount_vnd, status, station, note,
+			 is_takeaway)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'PENDING', $15, $16, $17)
 			RETURNING id
-		`, order.RestaurantID, order.ID, sessionID, line.MenuItemID, line.VariantID, line.ItemNameSnapshot, nullString(line.ItemCodeSnapshot), line.VariantNameSnapshot, line.UnitPriceVND, line.Quantity, line.OptionsTotalVND, line.SubtotalVND, line.DiscountAmountVND, line.TotalAmountVND, line.Station, nullString(line.Note)).Scan(&line.ID)
+		`, order.RestaurantID, order.ID, sessionID, line.MenuItemID, line.VariantID, line.ItemNameSnapshot, nullString(line.ItemCodeSnapshot), line.VariantNameSnapshot, line.UnitPriceVND, line.Quantity, line.OptionsTotalVND, line.SubtotalVND, line.DiscountAmountVND, line.TotalAmountVND, line.Station, nullString(line.Note), line.IsTakeaway).Scan(&line.ID)
 		if err != nil {
 			return err
 		}
@@ -291,7 +292,7 @@ func (r *Repository) fetchItems(ctx context.Context, restaurantID, sessionID uui
 	rows, err := r.q(ctx).Query(ctx, `
 		SELECT id, order_id, menu_item_id, item_name_snapshot, variant_name_snapshot, quantity, unit_price_vnd,
 		       options_total_vnd, subtotal_vnd, total_amount_vnd, status, COALESCE(station, 'GENERAL'), COALESCE(note, ''),
-		       unavailable_reason
+		       is_takeaway, unavailable_reason
 		FROM order_items
 		WHERE restaurant_id = $1 AND dining_session_id = $2 AND order_id = ANY($3) AND deleted_at IS NULL
 		ORDER BY created_at, id
@@ -305,7 +306,7 @@ func (r *Repository) fetchItems(ctx context.Context, restaurantID, sessionID uui
 		var row domain.OrderItemRead
 		var variant pgtype.Text
 		var reason pgtype.Text
-		if err := rows.Scan(&row.ID, &row.OrderID, &row.MenuItemID, &row.NameSnapshot, &variant, &row.Quantity, &row.UnitPriceVND, &row.OptionsTotalVND, &row.SubtotalVND, &row.TotalAmountVND, &row.Status, &row.Station, &row.Note, &reason); err != nil {
+		if err := rows.Scan(&row.ID, &row.OrderID, &row.MenuItemID, &row.NameSnapshot, &variant, &row.Quantity, &row.UnitPriceVND, &row.OptionsTotalVND, &row.SubtotalVND, &row.TotalAmountVND, &row.Status, &row.Station, &row.Note, &row.IsTakeaway, &reason); err != nil {
 			return nil, err
 		}
 		if variant.Valid {
@@ -1079,7 +1080,7 @@ func toStaffOrders(orders []domain.OrderRead) []orderingapp.StaffOrderDTO {
 			for _, opt := range item.Options {
 				options = append(options, orderingapp.StaffOptionDTO{NameSnapshot: opt.NameSnapshot, OptionGroupNameSnapshot: opt.OptionGroupNameSnapshot, PriceDeltaSnapshotVND: opt.PriceDeltaSnapshotVND, Quantity: opt.Quantity})
 			}
-			items = append(items, orderingapp.StaffOrderItemDTO{ID: item.ID, OrderID: item.OrderID, MenuItemID: item.MenuItemID, NameSnapshot: item.NameSnapshot, VariantNameSnapshot: item.VariantNameSnapshot, Quantity: item.Quantity, UnitPriceVND: item.UnitPriceVND, OptionsTotalVND: item.OptionsTotalVND, SubtotalVND: item.SubtotalVND, TotalAmountVND: item.TotalAmountVND, Status: item.Status, Station: item.Station, Note: item.Note, Options: options, StatusHistory: []orderingapp.StaffStatusDTO{{Status: item.Status, Timestamp: order.SubmittedAt}}})
+			items = append(items, orderingapp.StaffOrderItemDTO{ID: item.ID, OrderID: item.OrderID, MenuItemID: item.MenuItemID, NameSnapshot: item.NameSnapshot, VariantNameSnapshot: item.VariantNameSnapshot, Quantity: item.Quantity, UnitPriceVND: item.UnitPriceVND, OptionsTotalVND: item.OptionsTotalVND, SubtotalVND: item.SubtotalVND, TotalAmountVND: item.TotalAmountVND, Status: item.Status, Station: item.Station, Note: item.Note, IsTakeaway: item.IsTakeaway, Options: options, StatusHistory: []orderingapp.StaffStatusDTO{{Status: item.Status, Timestamp: order.SubmittedAt}}})
 		}
 		out = append(out, orderingapp.StaffOrderDTO{ID: order.ID, OrderNumber: order.OrderNumber, OrderType: order.OrderType, Status: order.Status, SubmittedAt: order.SubmittedAt, Note: order.Note, Items: items})
 	}

@@ -37,8 +37,10 @@ Tác nhân **Bếp** giao tiếp với use-case «Xem lịch sử trạng thái 
 | STT | Thực hiện bởi | Mô tả hành động | Kết quả hệ thống |
 |---|---|---|---|
 | 1a | Hệ thống | Món chưa có mốc lịch sử (mới `PENDING`). | Hiển thị timeline chỉ có mốc tạo. |
+| 2a | Hệ thống | Món không tồn tại / `item_id` sai / đã xoá mềm. | Trả `404 "order item not found"`. |
+| 3a | Hệ thống | Lỗi DB / backend 5xx / timeout khi load hàng đợi. | Trả lỗi; giao diện thông báo + thử lại. |
 
-> **Ghi chú hiện trạng triển khai:** Không có endpoint "lịch sử món" riêng. `order_item_status_history` được nhúng sẵn dưới `items[].status_history` trong payload `GET /restaurant/kitchen/queue` (và `GET /restaurant/tables`); giao diện hiển thị timeline từ dữ liệu này (client-side).
+> **Ghi chú hiện trạng triển khai:** Không có endpoint "lịch sử món" riêng. `order_item_status_history` được nhúng sẵn dưới `items[].status_history` trong payload `GET /restaurant/kitchen/queue` (và `GET /restaurant/tables`); giao diện hiển thị timeline từ dữ liệu này (client-side). Vì là drill-down client-side, lỗi chủ yếu xảy ra ở bước tải hàng đợi (UC-K16), không phải lúc xem lịch sử.
 
 **Hậu điều kiện**
 
@@ -73,9 +75,20 @@ database "Database" as DB
 
 A -> UI : Mở chi tiết một món
 UI ->> BE : Lấy lịch sử trạng thái món
-BE ->> DB : Truy vấn order_item_status_history
-DB --> BE : Trả về Các mốc trạng thái theo thời gian
-BE --> UI : Trả về Trả timeline
-UI --> A : Hiển thị dòng thời gian
+
+alt Món không tồn tại (2a)
+ BE --> UI : 404 order item not found
+ UI --> A : Báo món không tồn tại
+else Lỗi DB / timeout (3a)
+ BE ->> DB : Truy vấn order_item_status_history
+ DB --> BE : Lỗi truy vấn / timeout
+ BE --> UI : Trả lỗi
+ UI --> A : Thông báo + thử lại
+else Thành công
+ BE ->> DB : Truy vấn order_item_status_history
+ DB --> BE : Các mốc trạng thái theo thời gian
+ BE --> UI : Trả timeline
+ UI --> A : Hiển thị dòng thời gian
+end
 @enduml
 ```

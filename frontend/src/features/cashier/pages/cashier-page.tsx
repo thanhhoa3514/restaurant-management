@@ -12,7 +12,6 @@ import { PaymentPanel } from '@/features/cashier/components/payment-panel'
 import { ReceiptDialog } from '@/features/cashier/components/receipt-dialog'
 import { SessionList } from '@/features/cashier/components/session-list'
 import { TakeawayPanel } from '@/features/cashier/components/takeaway-panel'
-import { useQueryClient } from '@tanstack/react-query'
 import { fmtClockSec } from '@/features/cashier/helpers'
 import { CashierProvider, useCashier } from '@/features/cashier/hooks/use-cashier'
 
@@ -24,13 +23,8 @@ export const CashierLayout: FC = () => (
 
 const CashierWorkspace: FC = () => {
   const { state, dispatch, selectedSession, t } = useCashier()
-  const queryClient = useQueryClient()
   const [receiptSessionId, setReceiptSessionId] = useState<string | null>(null)
   const [changingLang, setChangingLang] = useState<'vi' | 'en' | null>(null)
-
-  const handleSessionReopened = () => {
-    void queryClient.invalidateQueries({ queryKey: ['staff', 'tables'] })
-  }
 
   const receiptSession = useMemo(
     () => state.sessions.find((session) => session.id === receiptSessionId) ?? null,
@@ -124,7 +118,7 @@ const CashierWorkspace: FC = () => {
                     onCloseSession={(sessionId) => dispatch({ type: 'closeSession', sessionId })}
                     onSelectInvoice={(sessionId, invoiceId) => dispatch({ type: 'selectInvoice', sessionId, invoiceId })}
                     onSplit={(sessionId, groups) => dispatch({ type: 'splitSession', sessionId, groups })}
-                    onSessionReopened={handleSessionReopened}
+                    onSessionReopened={undefined}
                   />
                 </div>
                 

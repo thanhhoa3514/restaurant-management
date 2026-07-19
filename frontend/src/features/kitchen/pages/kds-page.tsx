@@ -8,13 +8,13 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { LanguageLoader } from '@/components/ui/language-loader'
 import { useShellConfig, ShellHeaderCenter, ShellHeaderActions } from '@/components/admin-shell'
 import { LanguageSwitcher } from '@/components/ui/language-switcher'
-import { fmtClock } from '@/features/kitchen/helpers'
+import { fmtTimeSec } from '@/shared/date'
 import { useKds } from '@/features/kitchen/hooks/use-kds'
 import type { Lang } from '@/features/kitchen/types'
 
-import { CancelRequestsPanel } from './cancel-requests-panel'
-import { ManageItemsDialog } from './manage-items-dialog'
-import { TicketCard } from './ticket-card'
+import { CancelRequestsPanel } from '../components/cancel-requests-panel'
+import { ManageItemsDialog } from '../components/manage-items-dialog'
+import { TicketCard } from '../components/ticket-card'
 
 export const KdsLayout: FC = () => {
   const kds = useKds()
@@ -30,7 +30,7 @@ export const KdsLayout: FC = () => {
       <ShellHeaderCenter>
         <div className="flex items-center gap-3 font-mono text-2xl font-bold tabular-nums tracking-tight">
           <Clock className="size-6 text-muted-foreground" />
-          <span>{fmtClock(kds.now)}</span>
+          <span>{fmtTimeSec(kds.now)}</span>
         </div>
       </ShellHeaderCenter>
 

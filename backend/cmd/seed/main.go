@@ -3,6 +3,9 @@
 // methods, and a few open dining sessions so the guest QR flow can be
 // demonstrated end to end. Re-running is safe (idempotent upserts; demo
 // transactional data is cleared first).
+//
+// DEPENDENCY: cmd/setup must have been run at least once (or seed must find
+// an existing restaurant by code "DEMO"). See cmd/setup for production use.
 package main
 
 import (
@@ -16,11 +19,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"golang.org/x/crypto/bcrypt"
 
 	"restaurant-management/internal/platform/config"
 	"restaurant-management/internal/platform/logger"
 	"restaurant-management/internal/platform/postgres"
+	"restaurant-management/internal/platform/setup"
 )
 
 const (
@@ -29,77 +32,43 @@ const (
 	demoPasswordEnvVarName = "DEMO_SEED_PASSWORD"
 )
 
-var demoUsers = []struct {
-	username string
-	fullName string
-	role     string
-}{
-	{username: "manager", fullName: "Demo Manager", role: "manager"},
-	{username: "cashier", fullName: "Demo Cashier", role: "cashier"},
-	{username: "server", fullName: "Demo Server", role: "server"},
-	{username: "kitchen", fullName: "Demo Kitchen", role: "kitchen"},
+var demoUsers = []setup.UserConfig{
+	{Username: "manager", FullName: "Demo Manager", Role: "manager", Password: defaultDemoPassword},
+	{Username: "cashier", FullName: "Demo Cashier", Role: "cashier", Password: defaultDemoPassword},
+	{Username: "server", FullName: "Demo Server", Role: "server", Password: defaultDemoPassword},
+	{Username: "kitchen", FullName: "Demo Kitchen", Role: "kitchen", Password: defaultDemoPassword},
 }
 
-type demoArea struct {
-	name         string
-	description  string
-	displayOrder int
+var demoAreas = []setup.AreaConfig{
+	{Name: "Tầng trệt", Description: "Khu vực chính, gần quầy", DisplayOrder: 1},
+	{Name: "Tầng 2 - Sân vườn", Description: "Khu sân vườn thoáng mát", DisplayOrder: 2},
+	{Name: "Phòng VIP", Description: "Phòng riêng có máy lạnh", DisplayOrder: 3},
 }
 
-type demoTable struct {
-	area     string
-	code     string
-	name     string
-	capacity int
-	// openSession opens an ACTIVE dining session bound to the fixed token
-	// below so guests joining via QR land straight in the menu.
-	openSession bool
+var demoTables = []setup.TableConfig{
+	{AreaName: "Tầng trệt", Code: "T01", Name: "Bàn 01", Capacity: 4},
+	{AreaName: "Tầng trệt", Code: "T02", Name: "Bàn 02", Capacity: 4},
+	{AreaName: "Tầng trệt", Code: "T03", Name: "Bàn 03", Capacity: 6},
+	{AreaName: "Tầng trệt", Code: "T04", Name: "Bàn 04", Capacity: 4},
+	{AreaName: "Tầng trệt", Code: "T05", Name: "Bàn 05", Capacity: 2},
+	{AreaName: "Tầng trệt", Code: "T06", Name: "Bàn 06", Capacity: 6},
+	{AreaName: "Tầng 2 - Sân vườn", Code: "T07", Name: "Bàn 07", Capacity: 4},
+	{AreaName: "Tầng 2 - Sân vườn", Code: "T08", Name: "Bàn 08", Capacity: 4},
+	{AreaName: "Tầng 2 - Sân vườn", Code: "T09", Name: "Bàn 09", Capacity: 8},
+	{AreaName: "Tầng 2 - Sân vườn", Code: "T10", Name: "Bàn 10", Capacity: 6},
+	{AreaName: "Phòng VIP", Code: "V01", Name: "VIP 01", Capacity: 10},
+	{AreaName: "Phòng VIP", Code: "V02", Name: "VIP 02", Capacity: 12},
 }
 
-var demoAreas = []demoArea{
-	{name: "Tầng trệt", description: "Khu vực chính, gần quầy", displayOrder: 1},
-	{name: "Tầng 2 - Sân vườn", description: "Khu sân vườn thoáng mát", displayOrder: 2},
-	{name: "Phòng VIP", description: "Phòng riêng có máy lạnh", displayOrder: 3},
+// Tables that get an open demo dining session.
+var demoSessions = map[string]bool{
+	"T01": true,
+	"T03": true,
+	"V01": true,
 }
 
-var demoTables = []demoTable{
-	{area: "Tầng trệt", code: "T01", name: "Bàn 01", capacity: 4, openSession: true},
-	{area: "Tầng trệt", code: "T02", name: "Bàn 02", capacity: 4},
-	{area: "Tầng trệt", code: "T03", name: "Bàn 03", capacity: 6, openSession: true},
-	{area: "Tầng trệt", code: "T04", name: "Bàn 04", capacity: 4},
-	{area: "Tầng trệt", code: "T05", name: "Bàn 05", capacity: 2},
-	{area: "Tầng trệt", code: "T06", name: "Bàn 06", capacity: 6},
-	{area: "Tầng 2 - Sân vườn", code: "T07", name: "Bàn 07", capacity: 4},
-	{area: "Tầng 2 - Sân vườn", code: "T08", name: "Bàn 08", capacity: 4},
-	{area: "Tầng 2 - Sân vườn", code: "T09", name: "Bàn 09", capacity: 8},
-	{area: "Tầng 2 - Sân vườn", code: "T10", name: "Bàn 10", capacity: 6},
-	{area: "Phòng VIP", code: "V01", name: "VIP 01", capacity: 10, openSession: true},
-	{area: "Phòng VIP", code: "V02", name: "VIP 02", capacity: 12},
-}
-
-func demoAreaNames() []string {
-	names := make([]string, 0, len(demoAreas))
-	for _, a := range demoAreas {
-		names = append(names, a.name)
-	}
-	return names
-}
-
-// randToken returns an opaque random token for a physical QR code.
-// Each seed run rotates tokens; the old active QR is deactivated first
-// (see the qr_codes insert) so the printed codes are the only valid ones.
-func randToken() string {
-	b := make([]byte, 16)
-	if _, err := rand.Read(b); err != nil {
-		panic(err) // crypto/rand failure is unrecoverable
-	}
-	return hex.EncodeToString(b)
-}
-
-func sessionTokenFor(tableCode string) string {
-	return "DEMO-SESSION-" + tableCode
-}
-func sessionCodeFor(tableCode string) string { return "DEMO-SESS-" + tableCode }
+func sessionTokenFor(tableCode string) string { return "DEMO-SESSION-" + tableCode }
+func sessionCodeFor(tableCode string) string  { return "DEMO-SESS-" + tableCode }
 
 func main() {
 	ctx := context.Background()
@@ -120,153 +89,104 @@ func main() {
 	}
 	defer tx.Rollback(ctx)
 
-	var restaurantID uuid.UUID
-	if err := tx.QueryRow(ctx, `
-		INSERT INTO restaurants (name, code, address, phone, email, vat_rate_basis_points, service_charge_basis_points, status)
-		VALUES ('Zenith Lẩu Nướng', $1, '86 Lê Lợi, Quận 1, TP. Hồ Chí Minh', '+84000000000', 'demo@example.com', 800, 500, 'ACTIVE')
-		ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, address = EXCLUDED.address, updated_at = NOW()
-		RETURNING id
-	`, demoRestaurantCode).Scan(&restaurantID); err != nil {
+	// ── Restaurant ──────────────────────────────────────────────
+	password := os.Getenv(demoPasswordEnvVarName)
+	if password == "" {
+		password = defaultDemoPassword
+	}
+	// Use the shared password from env for all demo users.
+	for i := range demoUsers {
+		demoUsers[i].Password = password
+	}
+
+	rid, err := setup.EnsureRestaurant(ctx, tx, setup.RestaurantConfig{
+		Code:                     demoRestaurantCode,
+		Name:                     "Zenith Lẩu Nướng",
+		Address:                  "86 Lê Lợi, Quận 1, TP. Hồ Chí Minh",
+		Phone:                    "+84000000000",
+		Email:                    "demo@example.com",
+		VatRateBasisPoints:       800,
+		ServiceChargeBasisPoints: 500,
+	})
+	if err != nil {
 		log.Error("seed restaurant failed", slog.Any("error", err))
 		os.Exit(1)
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(demoPassword()), bcrypt.DefaultCost)
+	// ── Users ──────────────────────────────────────────────────
+	if err := setup.EnsureUsers(ctx, tx, rid, demoUsers); err != nil {
+		log.Error("seed users failed", slog.Any("error", err))
+		os.Exit(1)
+	}
+
+	// ── Clear demo transactional data ─────────────────────────
+	// This must happen BEFORE seeding menu items so that the FK on
+	// order_items.menu_item_id (which has no ON DELETE CASCADE) doesn't
+	// block menu re-creation.
+	if err := setup.ClearTransactionalData(ctx, tx, rid); err != nil {
+		log.Error("clear demo data failed", slog.Any("error", err))
+		os.Exit(1)
+	}
+
+	// ── Areas & Tables ─────────────────────────────────────────
+	// Mark demo session tables as OCCUPIED so the initial table state is
+	// realistic.
+	_, tableIDs, err := setup.EnsureAreasAndTables(ctx, tx, rid, demoAreas, demoTables)
 	if err != nil {
-		log.Error("hash demo password failed", slog.Any("error", err))
+		log.Error("seed areas/tables failed", slog.Any("error", err))
 		os.Exit(1)
 	}
 
-	for _, u := range demoUsers {
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO users (restaurant_id, username, email, password_hash, full_name, role_id, status)
-			SELECT $1, $2, $3, $4, $5, r.id, 'ACTIVE'
-			FROM roles r
-			WHERE r.name = $6 AND r.deleted_at IS NULL
-			ON CONFLICT (restaurant_id, username) DO NOTHING
-		`, restaurantID, u.username, u.username+"@demo.local", string(hash), u.fullName, u.role); err != nil {
-			log.Error("seed user failed", slog.String("username", u.username), slog.Any("error", err))
+	// Override table status for demo sessions.
+	for code, open := range demoSessions {
+		if !open {
+			continue
+		}
+		id, ok := tableIDs[code]
+		if !ok {
+			continue
+		}
+		if _, err := tx.Exec(ctx, `UPDATE tables SET status = 'OCCUPIED' WHERE id = $1`, id); err != nil {
+			log.Error("mark table occupied failed", slog.String("table", code), slog.Any("error", err))
 			os.Exit(1)
 		}
 	}
 
-	// Clear demo transactional data first. Deleting dining_sessions cascades
-	// orders -> order_items -> kitchen tickets, which also unblocks replacing
-	// menu_items (order_items.menu_item_id has no ON DELETE clause).
-	for _, q := range []string{
-		`DELETE FROM payments WHERE restaurant_id = $1`,
-		`DELETE FROM invoice_items WHERE restaurant_id = $1`,
-		`DELETE FROM invoices WHERE restaurant_id = $1`,
-		`DELETE FROM dining_sessions WHERE restaurant_id = $1`,
-	} {
-		if _, err := tx.Exec(ctx, q, restaurantID); err != nil {
-			log.Error("clear demo data failed", slog.String("query", q), slog.Any("error", err))
-			os.Exit(1)
-		}
-	}
-
-	areaIDs := map[string]uuid.UUID{}
-	for _, a := range demoAreas {
-		var id uuid.UUID
-		if err := tx.QueryRow(ctx, `
-			INSERT INTO areas (restaurant_id, name, description, display_order, is_active)
-			VALUES ($1, $2, $3, $4, TRUE)
-			ON CONFLICT (restaurant_id, name) DO UPDATE SET description = EXCLUDED.description, display_order = EXCLUDED.display_order, updated_at = NOW()
-			RETURNING id
-		`, restaurantID, a.name, a.description, a.displayOrder).Scan(&id); err != nil {
-			log.Error("seed area failed", slog.String("area", a.name), slog.Any("error", err))
-			os.Exit(1)
-		}
-		areaIDs[a.name] = id
-	}
-
-	// Tables: occupied when a demo session is opened below, otherwise free.
-	tableIDs := map[string]uuid.UUID{}
-	for _, t := range demoTables {
-		status := "AVAILABLE"
-		if t.openSession {
-			status = "OCCUPIED"
-		}
-		var id uuid.UUID
-		if err := tx.QueryRow(ctx, `
-			INSERT INTO tables (restaurant_id, area_id, code, name, capacity, status)
-			VALUES ($1, $2, $3, $4, $5, $6)
-			ON CONFLICT (restaurant_id, code) DO UPDATE
-			SET area_id = EXCLUDED.area_id, name = EXCLUDED.name, capacity = EXCLUDED.capacity, status = EXCLUDED.status, updated_at = NOW()
-			RETURNING id
-		`, restaurantID, areaIDs[t.area], t.code, t.name, t.capacity, status).Scan(&id); err != nil {
-			log.Error("seed table failed", slog.String("table", t.code), slog.Any("error", err))
-			os.Exit(1)
-		}
-		tableIDs[t.code] = id
-	}
-
-	// Drop leftover areas from older seeds (e.g. "Main Floor") so the floor
-	// list shows exactly the demo areas. Only areas with no tables are safe
-	// to delete; anything still referenced is left alone.
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM areas a
-		WHERE a.restaurant_id = $1
-		  AND a.name <> ALL($2)
-		  AND NOT EXISTS (
-			SELECT 1 FROM tables t
-			WHERE t.area_id = a.id AND t.deleted_at IS NULL
-		  )
-	`, restaurantID, demoAreaNames()); err != nil {
-		log.Error("delete stale areas failed", slog.Any("error", err))
+	// ── QR Codes ───────────────────────────────────────────────
+	qrTokens, err := setup.EnsureQRCodes(ctx, tx, rid, tableIDs)
+	if err != nil {
+		log.Error("seed qr codes failed", slog.Any("error", err))
 		os.Exit(1)
 	}
 
-	// One active QR per table with a deterministic token. Deactivate whatever
-	// is active first so the partial unique index (one active QR per table)
-	// never trips when a token was rotated from the UI between seed runs.
-	if _, err := tx.Exec(ctx, `
-		UPDATE qr_codes
-		SET is_active = FALSE, deactivated_at = NOW(), deactivated_reason = 'reseeded'
-		WHERE restaurant_id = $1 AND is_active = TRUE
-	`, restaurantID); err != nil {
-		log.Error("deactivate old qr codes failed", slog.Any("error", err))
-		os.Exit(1)
-	}
-	qrIDs := map[string]uuid.UUID{}
-	qrTokens := map[string]string{}
-	for _, t := range demoTables {
-		qrTokens[t.code] = randToken()
-		var id uuid.UUID
-		if err := tx.QueryRow(ctx, `
-			INSERT INTO qr_codes (restaurant_id, table_id, token, is_active)
-			VALUES ($1, $2, $3, TRUE)
-			ON CONFLICT (token) DO UPDATE
-			SET is_active = TRUE, activated_at = NOW(), deactivated_at = NULL, deactivated_reason = NULL
-			RETURNING id
-		`, restaurantID, tableIDs[t.code], qrTokens[t.code]).Scan(&id); err != nil {
-			log.Error("seed qr failed", slog.String("table", t.code), slog.Any("error", err))
-			os.Exit(1)
-		}
-		qrIDs[t.code] = id
-	}
-
-	if err := seedMenu(ctx, tx, restaurantID); err != nil {
+	// ── Menu ───────────────────────────────────────────────────
+	if err := seedMenu(ctx, tx, rid); err != nil {
 		log.Error("seed menu failed", slog.Any("error", err))
 		os.Exit(1)
 	}
-	if err := seedPaymentMethods(ctx, tx, restaurantID, cfg.AppEnv); err != nil {
+
+	// ── Payment Methods ────────────────────────────────────────
+	if err := setup.SeedPaymentMethods(ctx, tx, rid, false); err != nil {
 		log.Error("seed payment methods failed", slog.Any("error", err))
 		os.Exit(1)
 	}
 
-	// Open ACTIVE dining sessions bound to fixed guest session tokens so the
-	// guest menu/order endpoints (behind X-Session-Token) can be exercised
-	// without wiring real staff auth. Demo only.
+	// ── Demo Dining Sessions ───────────────────────────────────
+	// Open ACTIVE sessions bound to deterministic guest session tokens so
+	// demo guests can jump straight into the menu without real staff auth.
 	for _, t := range demoTables {
-		if !t.openSession {
+		if !demoSessions[t.Code] {
 			continue
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO dining_sessions (restaurant_id, table_id, qr_code_id, session_code, status, opened_via, session_token)
-			VALUES ($1, $2, $3, $4, 'ACTIVE', 'QR_SCAN', $5)
-		`, restaurantID, tableIDs[t.code], qrIDs[t.code], sessionCodeFor(t.code), sessionTokenFor(t.code)); err != nil {
-			log.Error("seed dining session failed", slog.String("table", t.code), slog.Any("error", err))
+			INSERT INTO dining_sessions (restaurant_id, table_id, session_code, status, opened_via, session_token)
+			VALUES ($1, (SELECT id FROM tables WHERE restaurant_id = $1 AND code = $2 LIMIT 1),
+			        $3, 'ACTIVE', 'QR_SCAN', $4)
+		`, rid, t.Code, sessionCodeFor(t.Code), sessionTokenFor(t.Code)); err != nil {
+			log.Error("seed dining session failed",
+				slog.String("table", t.Code),
+				slog.Any("error", err),
+			)
 			os.Exit(1)
 		}
 	}
@@ -276,36 +196,36 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Println("Seed complete")
-	fmt.Printf("restaurant_code: %s\n", demoRestaurantCode)
-	fmt.Println("usernames (password: demo1234 unless DEMO_SEED_PASSWORD set):")
+	fmt.Println()
+	fmt.Println("══════════════════════════════════════════════")
+	fmt.Println("  SEED COMPLETE (DEMO MODE)")
+	fmt.Println("══════════════════════════════════════════════")
+	fmt.Printf("  Restaurant:   %s (code: %s)\n", "Zenith Lẩu Nướng", demoRestaurantCode)
+	fmt.Println("  Usernames (password:", password, "):")
 	for _, u := range demoUsers {
-		fmt.Printf("- %s\n", u.username)
+		fmt.Printf("    - %s  (%s)\n", u.Username, u.FullName)
 	}
-	fmt.Println("tables:")
+	fmt.Printf("  Tables:       %d\n", len(demoTables))
+	fmt.Printf("  QR codes:     %d\n", len(qrTokens))
+	fmt.Println()
+	fmt.Println("  Table QR tokens:")
 	for _, t := range demoTables {
-		line := fmt.Sprintf("- %-3s %-18s qr_token=%s guest: /order?t=%s", t.code, t.area, qrTokens[t.code], qrTokens[t.code])
-		if t.openSession {
-			line += fmt.Sprintf("  [ACTIVE session, X-Session-Token=%s]", sessionTokenFor(t.code))
+		line := fmt.Sprintf("    %-4s  %-16s  token=%s", t.Code, t.Name, qrTokens[t.Code])
+		if demoSessions[t.Code] {
+			line += fmt.Sprintf("  [ACTIVE session, X-Session-Token=%s]", sessionTokenFor(t.Code))
 		}
 		fmt.Println(line)
 	}
+	fmt.Println("══════════════════════════════════════════════")
 }
 
-// seedMenu replaces the demo restaurant's hotpot & grill menu (categories,
-// items, variants, option groups) idempotently so re-running is safe.
+// ──────────────────────────────────────────────
+// Demo menu seeding (unchanged from original)
+// ──────────────────────────────────────────────
+
 func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
-	for _, q := range []string{
-		`DELETE FROM menu_item_option_groups WHERE restaurant_id = $1`,
-		`DELETE FROM options WHERE restaurant_id = $1`,
-		`DELETE FROM option_groups WHERE restaurant_id = $1`,
-		`DELETE FROM menu_item_variants WHERE restaurant_id = $1`,
-		`DELETE FROM menu_items WHERE restaurant_id = $1`,
-		`DELETE FROM categories WHERE restaurant_id = $1`,
-	} {
-		if _, err := tx.Exec(ctx, q, restaurantID); err != nil {
-			return err
-		}
+	if err := setup.ClearMenuData(ctx, tx, restaurantID); err != nil {
+		return err
 	}
 
 	// Demo photos, keyed by category name. Verified Unsplash CDN images
@@ -342,8 +262,6 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 			"photo-1595275320712-24b6f2b0a984", "photo-1568464774940-a3de36f824a5", "photo-1594765877813-a5d04b0d8aa7",
 		},
 	}
-	// Photos are pre-uploaded to MinIO under menu/seed/<id>.jpg (see the
-	// seed-images step). Base matches S3_PUBLIC_URL so URLs resolve in dev.
 	s3Base := os.Getenv("S3_PUBLIC_URL")
 	if s3Base == "" {
 		s3Base = "http://localhost:9000/restaurant-images"
@@ -416,10 +334,8 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 	for _, it := range items {
 		id := uuid.New()
 		displayOrders[it.category]++
-		// Pick a main photo + a 3-image gallery, rotated so items in the same
-		// category don't all show the same picture.
 		var mainImage string
-		var gallery any // nil → SQL NULL for the JSONB column
+		var gallery any
 		if pool := imagePools[it.category]; len(pool) > 0 {
 			idx := displayOrders[it.category] - 1
 			mainImage = imageURL(pool[idx%len(pool)])
@@ -440,7 +356,7 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 		itemIDs[it.code] = id
 	}
 
-	// Size variants on the hotpot sets (default = small) and the oysters.
+	// Size variants
 	type variant struct {
 		itemCode, name, sku, unit string
 		priceVND                  int64
@@ -466,7 +382,7 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 		}
 	}
 
-	// Required single-select spice level on every hotpot set.
+	// Spice level (required, single)
 	spiceGroup := uuid.New()
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO option_groups (id, restaurant_id, name, selection_type, is_required, min_selections, max_selections, display_order)
@@ -476,9 +392,9 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO options (restaurant_id, option_group_id, name, price_delta_vnd, is_default, is_available, display_order) VALUES
-		($1, $2, 'Không cay',  0, FALSE, TRUE, 1),
-		($1, $2, 'Cay vừa',    0, TRUE,  TRUE, 2),
-		($1, $2, 'Cay nhiều',  0, FALSE, TRUE, 3)
+		($1, $2, 'Không cay', 0, FALSE, TRUE, 1),
+		($1, $2, 'Cay vừa', 0, TRUE, TRUE, 2),
+		($1, $2, 'Cay nhiều', 0, FALSE, TRUE, 3)
 	`, restaurantID, spiceGroup); err != nil {
 		return err
 	}
@@ -491,7 +407,7 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 		}
 	}
 
-	// Optional sweetness level on the peach tea.
+	// Sweetness (optional, single)
 	sugarGroup := uuid.New()
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO option_groups (id, restaurant_id, name, selection_type, is_required, min_selections, max_selections, display_order)
@@ -501,8 +417,8 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO options (restaurant_id, option_group_id, name, price_delta_vnd, is_default, is_available, display_order) VALUES
-		($1, $2, 'Bình thường', 0, TRUE,  TRUE, 1),
-		($1, $2, 'Ít đường',    0, FALSE, TRUE, 2),
+		($1, $2, 'Bình thường', 0, TRUE, TRUE, 1),
+		($1, $2, 'Ít đường', 0, FALSE, TRUE, 2),
 		($1, $2, 'Nhiều đường', 0, FALSE, TRUE, 3)
 	`, restaurantID, sugarGroup); err != nil {
 		return err
@@ -514,8 +430,7 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 		return err
 	}
 
-	// Optional multi-select add-on toppings (with real price deltas) on every
-	// hotpot set — exercises the MULTIPLE selection path + priced options.
+	// Toppings (optional, multi)
 	toppingGroup := uuid.New()
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO option_groups (id, restaurant_id, name, selection_type, is_required, min_selections, max_selections, display_order)
@@ -525,12 +440,12 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO options (restaurant_id, option_group_id, name, price_delta_vnd, is_default, is_available, display_order) VALUES
-		($1, $2, 'Thịt bò Mỹ',    59000, FALSE, TRUE, 1),
-		($1, $2, 'Tôm sú',        65000, FALSE, TRUE, 2),
-		($1, $2, 'Nghêu',         45000, FALSE, TRUE, 3),
-		($1, $2, 'Nấm tổng hợp',  39000, FALSE, TRUE, 4),
-		($1, $2, 'Mì trứng',      19000, FALSE, TRUE, 5),
-		($1, $2, 'Đậu hũ non',    15000, FALSE, TRUE, 6)
+		($1, $2, 'Thịt bò Mỹ', 59000, FALSE, TRUE, 1),
+		($1, $2, 'Tôm sú', 65000, FALSE, TRUE, 2),
+		($1, $2, 'Nghêu', 45000, FALSE, TRUE, 3),
+		($1, $2, 'Nấm tổng hợp', 39000, FALSE, TRUE, 4),
+		($1, $2, 'Mì trứng', 19000, FALSE, TRUE, 5),
+		($1, $2, 'Đậu hũ non', 15000, FALSE, TRUE, 6)
 	`, restaurantID, toppingGroup); err != nil {
 		return err
 	}
@@ -543,7 +458,7 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 		}
 	}
 
-	// Required doneness on grilled meats (single-select, no price change).
+	// Doneness (required, single)
 	donenessGroup := uuid.New()
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO option_groups (id, restaurant_id, name, selection_type, is_required, min_selections, max_selections, display_order)
@@ -553,9 +468,9 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO options (restaurant_id, option_group_id, name, price_delta_vnd, is_default, is_available, display_order) VALUES
-		($1, $2, 'Tái',       0, FALSE, TRUE, 1),
-		($1, $2, 'Chín tới',  0, TRUE,  TRUE, 2),
-		($1, $2, 'Chín kỹ',   0, FALSE, TRUE, 3)
+		($1, $2, 'Tái', 0, FALSE, TRUE, 1),
+		($1, $2, 'Chín tới', 0, TRUE, TRUE, 2),
+		($1, $2, 'Chín kỹ', 0, FALSE, TRUE, 3)
 	`, restaurantID, donenessGroup); err != nil {
 		return err
 	}
@@ -568,7 +483,7 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 		}
 	}
 
-	// Optional ice level on cold drinks (single-select, no price change).
+	// Ice level (optional, single)
 	iceGroup := uuid.New()
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO option_groups (id, restaurant_id, name, selection_type, is_required, min_selections, max_selections, display_order)
@@ -578,8 +493,8 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO options (restaurant_id, option_group_id, name, price_delta_vnd, is_default, is_available, display_order) VALUES
-		($1, $2, '100% đá',  0, TRUE,  TRUE, 1),
-		($1, $2, 'Ít đá',    0, FALSE, TRUE, 2),
+		($1, $2, '100% đá', 0, TRUE, TRUE, 1),
+		($1, $2, 'Ít đá', 0, FALSE, TRUE, 2),
 		($1, $2, 'Không đá', 0, FALSE, TRUE, 3)
 	`, restaurantID, iceGroup); err != nil {
 		return err
@@ -596,47 +511,11 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 	return nil
 }
 
-func seedPaymentMethods(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID, appEnv string) error {
-	methods := []struct {
-		code         string
-		name         string
-		methodType   string
-		displayOrder int
-	}{
-		{code: "cash", name: "Cash", methodType: "CASH", displayOrder: 1},
-		{code: "card", name: "Card", methodType: "CARD", displayOrder: 2},
-		{code: "momo", name: "MoMo", methodType: "E_WALLET", displayOrder: 3},
-		{code: "zalopay", name: "ZaloPay", methodType: "E_WALLET", displayOrder: 4},
-		{code: "vnpay", name: "VNPay", methodType: "E_WALLET", displayOrder: 5},
+// randToken is kept for compatibility; setup.EnsureQRCodes uses its own.
+func randToken() string {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		panic(err)
 	}
-	if appEnv != "production" {
-		methods = append(methods, struct {
-			code         string
-			name         string
-			methodType   string
-			displayOrder int
-		}{code: "mock", name: "Mock Wallet", methodType: "E_WALLET", displayOrder: 6})
-	}
-	for _, method := range methods {
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO payment_methods (restaurant_id, code, name, type, is_active, display_order)
-			VALUES ($1, $2, $3, $4, TRUE, $5)
-			ON CONFLICT (restaurant_id, code) DO UPDATE
-			SET name = EXCLUDED.name,
-			    type = EXCLUDED.type,
-			    is_active = TRUE,
-			    display_order = EXCLUDED.display_order,
-			    updated_at = NOW()
-		`, restaurantID, method.code, method.name, method.methodType, method.displayOrder); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func demoPassword() string {
-	if v := os.Getenv(demoPasswordEnvVarName); v != "" {
-		return v
-	}
-	return defaultDemoPassword
+	return hex.EncodeToString(b)
 }

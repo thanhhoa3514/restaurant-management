@@ -87,4 +87,7 @@ export const vi = {
   qr_name_placeholder: 'Nhập tên để bắt đầu...',
   qr_name_required: 'Vui lòng nhập tên của bạn',
   qr_join_table: 'Vào bàn',
+  qr_pending_verification: 'Đang chờ phục vụ xác nhận...',
+  qr_pending_badge: 'ĐANG CHỜ DUYỆT',
+  qr_please_wait: 'Vui lòng chờ...',
 } as const

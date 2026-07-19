@@ -30,3 +30,16 @@ export interface ManageTableQRResult {
   status: string
   rotated: boolean
 }
+
+export interface PendingSession {
+  session_id: string
+  table_id: string
+  table_name: string
+  table_code: string
+  guest_name: string
+  requested_at: string
+}
+
+export interface PendingSessionsResponse {
+  sessions: PendingSession[]
+}

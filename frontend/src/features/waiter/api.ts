@@ -26,6 +26,7 @@ export interface StaffOrderItemDTO {
   status: string
   station: string
   note: string
+  is_takeaway: boolean
   options: StaffOptionDTO[]
   status_history: StaffStatusDTO[]
 }
@@ -92,3 +93,24 @@ export function updateStaffOrderItemStatus(
     body: { status },
   })
 }
+
+export interface PendingSessionDTO {
+  session_id: string
+  table_id: string
+  table_name: string
+  table_code: string
+  guest_name: string
+  requested_at: string
+}
+
+export function fetchPendingSessions(): Promise<{ sessions: PendingSessionDTO[] }> {
+  return apiRequest('/api/v1/restaurant/sessions/pending-verification')
+}
+
+export function verifyPendingSession(sessionId: string, action: 'approve' | 'reject'): Promise<void> {
+  return apiRequest(`/api/v1/restaurant/sessions/${sessionId}/verify`, {
+    method: 'POST',
+    body: { action }
+  })
+}
+

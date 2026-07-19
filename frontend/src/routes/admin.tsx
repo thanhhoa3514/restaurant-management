@@ -3,7 +3,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { z } from 'zod'
 import { Loader2 } from 'lucide-react'
 import { isStaffAuthenticated } from '@/lib/auth'
-import { AdminViewRouter } from '@/features/admin/components/admin-view-router'
+import { AdminViewRouter } from '@/features/admin/pages/admin-page'
 
 const searchSchema = z.object({
   view: z.enum(['dashboard', 'cashier', 'waiter', 'kitchen']).optional(),

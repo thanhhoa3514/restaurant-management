@@ -120,6 +120,7 @@ func (s *StaffTakeawayOrder) Handle(ctx context.Context, req StaffTakeawayOrderR
 				TotalAmountVND: line.TotalAmountVND,
 				Status:         line.Status,
 				Station:        line.Station,
+				IsTakeaway:     true,
 			})
 		}
 		out = StaffTakeawayOrderResponse{OrderID: order.ID, OrderNumber: order.OrderNumber, OrderType: "TAKEAWAY", Items: items, TotalVND: totalVND}

@@ -63,6 +63,7 @@ type StaffOrderItemDTO struct {
 	Status              string           `json:"status"`
 	Station             string           `json:"station"`
 	Note                string           `json:"note"`
+	IsTakeaway          bool             `json:"is_takeaway"`
 	Options             []StaffOptionDTO `json:"options"`
 	StatusHistory       []StaffStatusDTO `json:"status_history"`
 }

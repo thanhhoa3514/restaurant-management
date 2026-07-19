@@ -160,6 +160,8 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 		diningapp.NewListGuestTables(diningRepo, defaultRID),
 		diningapp.NewMergeSessions(tx, diningRepo, outboxWriter, defaultRID),
 		diningapp.NewSplitSessions(tx, diningRepo, outboxWriter, defaultRID),
+		diningapp.NewListPendingSessions(diningRepo, defaultRID),
+		diningapp.NewStaffVerifySession(tx, diningRepo, outboxWriter, defaultRID),
 	)
 
 	orderingRepo := orderingrepo.NewRepository(pool, defaultRID)
@@ -177,6 +179,7 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 		orderingapp.NewStaffUpdateItemStatus(tx, orderingRepo, outboxWriter, defaultRID),
 		orderingapp.NewStaffMarkUnavailable(tx, orderingRepo, outboxWriter, defaultRID),
 		orderingapp.NewStaffTakeawayOrder(tx, orderingRepo, outboxWriter, defaultRID),
+		orderingapp.NewStaffAddTakeawayItems(tx, orderingRepo, outboxWriter, defaultRID),
 		orderingapp.NewKitchenQueue(orderingRepo, defaultRID),
 		orderingapp.NewKitchenListCancelRequests(orderingRepo, defaultRID),
 		orderingapp.NewKitchenReviewCancelRequest(tx, orderingRepo, outboxWriter, defaultRID),

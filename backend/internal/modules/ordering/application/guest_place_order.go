@@ -53,6 +53,7 @@ type GuestOrderItemDTO struct {
 	TotalAmountVND      int64                 `json:"total_amount_vnd"`
 	Status              string                `json:"status"`
 	Station             string                `json:"station"`
+	IsTakeaway          bool                  `json:"is_takeaway"`
 	Options             []GuestOrderOptionDTO `json:"options"`
 	UnavailableReason   *string               `json:"unavailable_reason"`
 }
@@ -302,7 +303,7 @@ func toPlaceResponse(order *domain.OrderCreate) GuestPlaceOrderResponse {
 		for _, opt := range line.Options {
 			options = append(options, GuestOrderOptionDTO{OptionID: opt.OptionID, OptionGroupID: opt.OptionGroupID, NameSnapshot: opt.OptionNameSnapshot, PriceDeltaSnapshotVND: opt.PriceDeltaSnapshotVND, Quantity: opt.Quantity})
 		}
-		items = append(items, GuestOrderItemDTO{OrderItemID: line.ID, MenuItemID: line.MenuItemID, NameSnapshot: line.ItemNameSnapshot, VariantNameSnapshot: line.VariantNameSnapshot, Quantity: line.Quantity, UnitPriceVND: line.UnitPriceVND, OptionsTotalVND: line.OptionsTotalVND, SubtotalVND: line.SubtotalVND, TotalAmountVND: line.TotalAmountVND, Status: line.Status, Station: line.Station, Options: options})
+		items = append(items, GuestOrderItemDTO{OrderItemID: line.ID, MenuItemID: line.MenuItemID, NameSnapshot: line.ItemNameSnapshot, VariantNameSnapshot: line.VariantNameSnapshot, Quantity: line.Quantity, UnitPriceVND: line.UnitPriceVND, OptionsTotalVND: line.OptionsTotalVND, SubtotalVND: line.SubtotalVND, TotalAmountVND: line.TotalAmountVND, Status: line.Status, Station: line.Station, IsTakeaway: line.IsTakeaway, Options: options})
 	}
 	return GuestPlaceOrderResponse{OrderID: order.ID, OrderNumber: order.OrderNumber, OrderType: order.OrderType, Items: items, SessionTotalVND: order.SessionTotalVND}
 }
