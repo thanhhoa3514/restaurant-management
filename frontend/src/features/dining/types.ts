@@ -34,12 +34,7 @@ export interface ManageTableQRResult {
 export interface PendingSession {
   session_id: string
   table_id: string
-  table_name: string
   table_code: string
-  guest_name: string
-  requested_at: string
-}
-
-export interface PendingSessionsResponse {
-  sessions: PendingSession[]
+  table_name: string
+  customer_name: string
 }

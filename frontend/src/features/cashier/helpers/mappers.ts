@@ -37,9 +37,6 @@ function toLineItem(item: StaffOrderItemDTO): LineItem {
   }
 }
 
-// Split invoices come back with their own flat item list (BillingInvoiceItemDTO), not the
-// waiter-side StaffOrderItemDTO the mapper above uses. `order_item_id` is the identity that
-// matches LineItem.id elsewhere (the split payload keys off order_item_ids too).
 export function toInvoiceItem(item: BillingInvoiceItemDTO): LineItem {
   return {
     id: item.order_item_id ?? item.id,

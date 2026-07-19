@@ -17,8 +17,6 @@ import { CategoryFilter } from './category-filter'
 import { ItemCard } from './item-card'
 import { CatalogItemSheet } from './catalog-form'
 
-
-
 export function CatalogManagement() {
   const { lang } = useLang()
   const t = makeAdminT(lang)
@@ -98,21 +96,14 @@ export function CatalogManagement() {
                 {t('catalog_items_heading')}
               </h2>
             </div>
-            <Button
-              variant="secondary"
-              className="rounded-full"
-              onClick={() => refetchItems()}
-            >
+            <Button variant="secondary" className="rounded-full" onClick={() => refetchItems()}>
               {isItemsFetching && <Loader2 className="size-4 animate-spin" />}
               {t('catalog_refresh')}
             </Button>
           </div>
 
           {(isCategoriesError || isItemsError) && (
-            <ErrorCard
-              error={categoriesError ?? itemsError}
-              fallback={t('catalog_load_error')}
-            />
+            <ErrorCard error={categoriesError ?? itemsError} fallback={t('catalog_load_error')} />
           )}
 
           {isItemsLoading && (
@@ -225,20 +216,5 @@ export function CatalogManagement() {
     </>
   )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 export default CatalogManagement

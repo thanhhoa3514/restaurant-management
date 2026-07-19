@@ -8,13 +8,13 @@ export const PendingSessionsPanel: FC = () => {
   const { data, isLoading } = usePendingSessions()
   const verifyMutation = useVerifySession()
 
-  if (isLoading || !data || data.sessions.length === 0) {
+  if (isLoading || !data || data.length === 0) {
     return null
   }
 
   return (
     <div className="flex gap-2">
-      {data.sessions.map((session) => (
+      {data.map((session) => (
         <div 
           key={session.session_id} 
           className="flex items-center gap-3 rounded-full bg-orange-50/80 pl-4 pr-1.5 py-1.5 border border-orange-200 shadow-sm dark:bg-orange-900/20 dark:border-orange-800"
@@ -24,7 +24,7 @@ export const PendingSessionsPanel: FC = () => {
               {session.table_name}
             </span>
             <span className="text-[10px] font-medium text-orange-700 dark:text-orange-300">
-              {session.guest_name}
+              {session.customer_name}
             </span>
           </div>
           

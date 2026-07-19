@@ -18,10 +18,11 @@ export function useCategoriesQuery() {
   })
 }
 
-export function useMenuItemsQuery(categoryId?: string) {
+export function useMenuItemsQuery(categoryId?: string, options?: { enabled?: boolean }) {
   return useQuery<AdminMenuItemSummaryDTO[]>({
     queryKey: catalogQueryKeys.items(categoryId),
     queryFn: () => listAdminMenuItems(categoryId),
+    enabled: options?.enabled ?? true,
   })
 }
 

@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useState, type FC } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { Loader2, Plus, Search, ShoppingCart, X, Minus, Trash2, User, Phone, ShoppingBag, UtensilsCrossed, ImageOff } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -9,7 +8,7 @@ import { Card } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
-import { listAdminMenuItems, listAdminCategories } from '@/features/catalog/api'
+import { useCategoriesQuery, useMenuItemsQuery } from '@/features/catalog/queries'
 import type { AdminMenuItemSummaryDTO, AdminCategoryDTO } from '@/features/catalog/types'
 import type { StaffTakeawayInput } from '@/features/cashier/api'
 import { usePlaceTakeawayOrder } from '@/features/cashier/mutations/usePlaceTakeawayOrder'
@@ -39,16 +38,8 @@ export const TakeawayPanel: FC<TakeawayPanelProps> = ({ lang: _lang, t, compact 
   const [customerPhone, setCustomerPhone] = useState('')
   const takeawayMutation = usePlaceTakeawayOrder()
 
-  const { data: categories = [] } = useQuery({
-    queryKey: ['catalog', 'categories'],
-    queryFn: listAdminCategories,
-  })
-
-  const { data: items = [], isLoading: itemsLoading } = useQuery({
-    queryKey: ['catalog', 'items', categoryId],
-    queryFn: () => listAdminMenuItems(categoryId),
-    enabled: open,
-  })
+  const { data: categories = [] } = useCategoriesQuery()
+  const { data: items = [], isLoading: itemsLoading } = useMenuItemsQuery(categoryId, { enabled: open })
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()

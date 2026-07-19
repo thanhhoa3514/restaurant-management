@@ -1,5 +1,5 @@
 import { apiRequest } from '@/lib/api'
-import type { GuestTable, ManageTableQRResult, TableQR } from '@/features/dining/types'
+import type { GuestTable, ManageTableQRResult, PendingSession, TableQR } from '@/features/dining/types'
 
 export function listTableQRs(): Promise<TableQR[]> {
   return apiRequest<TableQR[]>('/api/v1/restaurant/tables/qrs')
@@ -65,21 +65,8 @@ export function closeDiningSession(sessionId: string): Promise<CloseSessionResul
   })
 }
 
-export interface PendingSessionDTO {
-  session_id: string
-  table_id: string
-  table_name: string
-  table_code: string
-  guest_name: string
-  requested_at: string
-}
-
-export interface PendingSessionsResponse {
-  sessions: PendingSessionDTO[]
-}
-
-export function fetchPendingSessions(): Promise<PendingSessionsResponse> {
-  return apiRequest<PendingSessionsResponse>('/api/v1/restaurant/sessions/pending-verification')
+export function fetchPendingSessions(): Promise<PendingSession[]> {
+  return apiRequest<PendingSession[]>('/api/v1/restaurant/sessions/pending-verification')
 }
 
 export function verifySession(sessionId: string, action: 'approve' | 'reject'): Promise<void> {
