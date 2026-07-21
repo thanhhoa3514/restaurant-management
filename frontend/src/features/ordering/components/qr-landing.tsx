@@ -580,6 +580,7 @@ function WaitingForStaff() {
 function TableCard({ table, onClick, t }: { table: GuestTable; onClick: () => void; t: Dict }) {
   const isActive = table.has_active_qr
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+  const [showQrModal, setShowQrModal] = useState(false)
 
   useEffect(() => {
     if (!table.qr_token) return
@@ -592,42 +593,91 @@ function TableCard({ table, onClick, t }: { table: GuestTable; onClick: () => vo
     }
   }, [table.qr_token])
 
+  const [bigQr, setBigQr] = useState<string | null>(null)
+  useEffect(() => {
+    if (!showQrModal || !table.qr_token) return
+    let active = true
+    QRCodeLib.toDataURL(buildQROrderURL(table.qr_token), { width: 800, margin: 4 }).then((dataUrl) => {
+      if (active) setBigQr(dataUrl)
+    })
+    return () => { active = false }
+  }, [showQrModal, table.qr_token])
+
   return (
-    <button
-      type="button"
-      disabled={!isActive}
-      onClick={isActive ? onClick : undefined}
-      className={cn(
-        'group relative flex flex-col items-center gap-2 rounded-xl border border-[var(--separator)] bg-[var(--material-thin)] p-4 transition-all',
-        isActive
-          ? 'cursor-pointer hover:border-blue-300 hover:shadow-sm active:scale-[0.97] dark:hover:border-blue-700'
-          : 'cursor-not-allowed'
-      )}
-    >
-      <div className="relative flex size-28 items-center justify-center rounded-lg bg-white p-2 shadow-sm">
-        {qrDataUrl ? (
-          <img
-            src={qrDataUrl}
-            alt=""
-            className={cn('size-full object-contain', !isActive && 'opacity-25 blur-[2px] grayscale')}
-          />
-        ) : (
-          <QrCode size={36} className="text-gray-300" />
+    <>
+      <button
+        type="button"
+        disabled={!isActive}
+        onClick={isActive ? onClick : undefined}
+        className={cn(
+          'group relative flex flex-col items-center gap-2 rounded-xl border border-[var(--separator)] bg-[var(--material-thin)] p-4 transition-all',
+          isActive
+            ? 'cursor-pointer hover:border-blue-300 hover:shadow-sm active:scale-[0.97] dark:hover:border-blue-700'
+            : 'cursor-not-allowed'
         )}
-        {!isActive && (
-          <span className="absolute inset-x-1 top-1/2 -translate-y-1/2 rounded-md bg-[var(--text)]/75 px-1.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--bg)]">
-            {t.qr_inactive}
-          </span>
-        )}
-      </div>
-      <div className={cn('text-center', !isActive && 'opacity-45')}>
-        <div className="text-sm font-semibold text-[var(--text)]">{table.table_name}</div>
-        <div className="mt-0.5 flex items-center justify-center gap-1 text-[11px] text-[var(--text-tertiary)]">
-          <Users size={11} />
-          <span>{table.capacity}</span>
-          <span className="ml-1 font-mono opacity-50">{table.table_code}</span>
+      >
+        <div
+          className="relative flex size-28 items-center justify-center rounded-lg bg-white p-2 shadow-sm"
+          onClick={(e) => {
+            if (!isActive || !qrDataUrl) return
+            e.stopPropagation()
+            setShowQrModal(true)
+          }}
+        >
+          {qrDataUrl ? (
+            <img
+              src={qrDataUrl}
+              alt=""
+              className={cn(
+                'size-full object-contain',
+                !isActive && 'opacity-25 blur-[2px] grayscale',
+                isActive && 'cursor-zoom-in',
+              )}
+            />
+          ) : (
+            <QrCode size={36} className="text-gray-300" />
+          )}
+          {!isActive && (
+            <span className="absolute inset-x-1 top-1/2 -translate-y-1/2 rounded-md bg-[var(--text)]/75 px-1.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--bg)]">
+              {t.qr_inactive}
+            </span>
+          )}
         </div>
-      </div>
-    </button>
+        <div className={cn('text-center', !isActive && 'opacity-45')}>
+          <div className="text-sm font-semibold text-[var(--text)]">{table.table_name}</div>
+          <div className="mt-0.5 flex items-center justify-center gap-1 text-[11px] text-[var(--text-tertiary)]">
+            <Users size={11} />
+            <span>{table.capacity}</span>
+            <span className="ml-1 font-mono opacity-50">{table.table_code}</span>
+          </div>
+        </div>
+      </button>
+
+      {/* QR preview modal */}
+      {showQrModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-6"
+          onClick={() => { setShowQrModal(false); setBigQr(null) }}
+        >
+          <div
+            className="flex w-full max-w-xs flex-col items-center gap-4 rounded-2xl bg-white p-8 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center">
+              <div className="text-base font-semibold text-gray-900">{table.table_name}</div>
+              <div className="mt-0.5 text-xs text-gray-500">{table.table_code}</div>
+            </div>
+            {bigQr ? (
+              <img src={bigQr} alt="" className="size-72 rounded-lg" />
+            ) : (
+              <div className="flex size-72 items-center justify-center rounded-lg bg-gray-50">
+                <Loader2 className="size-8 animate-spin text-gray-300" />
+              </div>
+            )}
+            <p className="text-center text-xs text-gray-400">{t.qr_scan_hint}</p>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

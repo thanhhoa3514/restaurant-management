@@ -92,5 +92,6 @@ export const vi = {
   qr_pending_badge: 'ĐANG CHỜ DUYỆT',
   qr_please_wait: 'Vui lòng chờ...',
   qr_inactive: 'Chưa kích hoạt',
+  qr_scan_hint: 'Quét mã QR này bằng điện thoại để vào bàn',
   qr_pending_hint: 'Nhân viên phục vụ sẽ duyệt phiên của bạn trong giây lát.',
 } as const

@@ -92,5 +92,6 @@ export const en = {
   qr_pending_badge: 'PENDING APPROVAL',
   qr_please_wait: 'Please wait...',
   qr_inactive: 'Not activated',
+  qr_scan_hint: 'Scan this QR with your phone to join',
   qr_pending_hint: 'A server will approve your session in a moment.',
 } as const
