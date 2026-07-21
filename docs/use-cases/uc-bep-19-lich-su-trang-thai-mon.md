@@ -12,6 +12,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-bep-19-lich-su-trang-thai-mon.drawio`](./uc-bep-19-lich-su-trang-thai-mon.drawio) — mở bằng draw.io / diagrams.net.
+
 *Hình: ĐẶC TẢ USE-CASE BẾP — LỊCH SỬ TRẠNG THÁI MÓN*
 Tác nhân **Bếp** giao tiếp với use-case «Xem lịch sử trạng thái món»; use-case «include» «Lấy `order_item_status_history`». Hiển thị dòng thời gian các mốc trạng thái của một món (ai đổi, khi nào). Là bước drill-down từ hàng đợi (UC-K16).
 

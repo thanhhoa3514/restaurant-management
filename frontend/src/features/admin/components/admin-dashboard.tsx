@@ -193,7 +193,7 @@ export const AdminDashboard = () => {
                 label={t('action_floor')}
                 desc={t('action_floor_desc')}
                 icon={TrendingUp}
-                onClick={() => navigate({ to: '/admin/floor-plan' })}
+                onClick={() => navigate({ to: '/admin/table-qrs' })}
               />
               <ActionButton
                 label={t('action_menu')}

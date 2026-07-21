@@ -13,6 +13,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-phuc-vu-10-luoi-ban.drawio`](./uc-phuc-vu-10-luoi-ban.drawio) — mở bằng draw.io / diagrams.net.
+
 _Hình: ĐẶC TẢ USE-CASE PHỤC VỤ — LƯỚI BÀN_
 Tác nhân **Phục vụ** giao tiếp với use-case «Xem sơ đồ/lưới bàn»; use-case «include» «Lấy bàn + trạng thái + tín hiệu». Đây là màn điều hành chính, dẫn sang «Theo dõi tín hiệu» (UC-P11), «Xem chi tiết phiên» (UC-P15) và các thao tác xử lý.
 

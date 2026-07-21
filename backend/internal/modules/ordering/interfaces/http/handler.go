@@ -26,6 +26,7 @@ type Handler struct {
 	GuestCallWaiter        *application.GuestCallWaiter
 	StaffAckWaiterCall     *application.StaffAckWaiterCall
 	StaffUpdateStatus      *application.StaffUpdateItemStatus
+	ServerReviewItem       *application.ServerReviewOrderItem
 	StaffMarkUnavailable   *application.StaffMarkUnavailable
 	StaffTakeawayOrder     *application.StaffTakeawayOrder
 	StaffAddTakeawayItems  *application.StaffAddTakeawayItems
@@ -42,6 +43,7 @@ func NewHandler(guestPlaceOrder *application.GuestPlaceOrder,
 	guestCallWaiter *application.GuestCallWaiter,
 	staffAckWaiterCall *application.StaffAckWaiterCall,
 	staffUpdateStatus *application.StaffUpdateItemStatus,
+	serverReviewItem *application.ServerReviewOrderItem,
 	staffMarkUnavailable *application.StaffMarkUnavailable,
 	staffTakeawayOrder *application.StaffTakeawayOrder,
 	staffAddTakeawayItems *application.StaffAddTakeawayItems,
@@ -60,6 +62,7 @@ func NewHandler(guestPlaceOrder *application.GuestPlaceOrder,
 		GuestCallWaiter:        guestCallWaiter,
 		StaffAckWaiterCall:     staffAckWaiterCall,
 		StaffUpdateStatus:      staffUpdateStatus,
+		ServerReviewItem:       serverReviewItem,
 		StaffMarkUnavailable:   staffMarkUnavailable,
 		StaffTakeawayOrder:     staffTakeawayOrder,
 		StaffAddTakeawayItems:  staffAddTakeawayItems,
@@ -77,6 +80,8 @@ func (h *Handler) RegisterStaffRoutes(r *gin.RouterGroup, secret string,
 	g.POST("/sessions/:sessionId/reopen", h.staffReopenSession)
 	g.POST("/sessions/:sessionId/ack-waiter-call", h.staffAckWaiterCall)
 	g.PATCH("/order-items/:itemId/status", h.staffUpdateItemStatus)
+	g.POST("/order-items/:itemId/confirm", h.serverConfirmItem)
+	g.POST("/order-items/:itemId/reject", h.serverRejectItem)
 	g.POST("/order-items/:itemId/unavailable", h.staffMarkUnavailable)
 	g.POST("/orders/takeaway", h.staffTakeawayOrder)
 	g.POST("/sessions/:sessionId/takeaway-items", h.staffAddTakeawayItems)
@@ -359,6 +364,45 @@ func (h *Handler) staffUpdateItemStatus(c *gin.Context) {
 		actorID = &id
 	}
 	out, err := h.StaffUpdateStatus.Handle(c.Request.Context(), itemID, req.Status, actorID, c.GetString(auth.CtxRole))
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) serverConfirmItem(c *gin.Context) {
+	itemID, err := uuidFromParam(c, "itemId")
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	var actorID *uuid.UUID
+	if id, err := uuid.Parse(c.GetString(auth.CtxUserID)); err == nil && id != uuid.Nil {
+		actorID = &id
+	}
+	out, err := h.ServerReviewItem.Confirm(c.Request.Context(), itemID, actorID, c.GetString(auth.CtxRole))
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) serverRejectItem(c *gin.Context) {
+	itemID, err := uuidFromParam(c, "itemId")
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	var req application.MarkUnavailableRequest
+	// Reason is optional; ignore a missing/empty body.
+	_ = c.ShouldBindJSON(&req)
+	var actorID *uuid.UUID
+	if id, err := uuid.Parse(c.GetString(auth.CtxUserID)); err == nil && id != uuid.Nil {
+		actorID = &id
+	}
+	out, err := h.ServerReviewItem.Reject(c.Request.Context(), itemID, req.Reason, actorID, c.GetString(auth.CtxRole))
 	if err != nil {
 		httpx.RespondError(c, err)
 		return

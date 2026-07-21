@@ -12,6 +12,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-thu-ngan-20-danh-sach-phien-cho-thanh-toan.drawio`](./uc-thu-ngan-20-danh-sach-phien-cho-thanh-toan.drawio) — mở bằng draw.io / diagrams.net.
+
 _Hình: ĐẶC TẢ USE-CASE THU NGÂN — DANH SÁCH PHIÊN CHỜ THANH TOÁN_
 Tác nhân **Thu ngân** giao tiếp với use-case «Xem danh sách phiên chờ thanh toán»; use-case «include» «Lấy trạng thái bàn/phiên». Đây là màn khởi đầu của thu ngân, dẫn sang «Xem hóa đơn» (UC-C21) khi chọn một phiên. Nguồn tín hiệu là phiên đã ở `AWAITING_PAYMENT` (khách đã yêu cầu thanh toán — UC-G08).
 

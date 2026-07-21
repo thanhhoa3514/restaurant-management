@@ -10,9 +10,11 @@ import type {
 } from '@/features/waiter/types'
 import { useStaffTables } from '@/features/waiter/queries/useStaffTables'
 import { useUpdateItemStatus } from '@/features/waiter/mutations/useUpdateItemStatus'
+import { useReviewOrderItem } from '@/features/waiter/mutations/useReviewOrderItem'
 import { useRequestBill } from '@/features/waiter/mutations/useRequestBill'
 import { useAckWaiterCall } from '@/features/waiter/mutations/useAckWaiterCall'
 import { useOpenSession } from '@/features/waiter/mutations/useOpenSession'
+import { useMergeSessions, useSplitSessions } from '@/features/waiter/mutations/useMergeSessions'
 
 type DictArgs = Array<string | number>
 
@@ -30,12 +32,17 @@ export function useWaiter(): UseWaiterValue {
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null)
   const [justChangedIds, setJustChangedIds] = useState<Set<string>>(() => new Set())
   const [demoOpen, setDemoOpen] = useState(false)
+  const [mergeMode, setMergeMode] = useState(false)
+  const [mergeSelectedIds, setMergeSelectedIds] = useState<string[]>([])
 
   const { tables, refetch } = useStaffTables()
   const updateItemStatus = useUpdateItemStatus()
+  const reviewItem = useReviewOrderItem()
   const requestBillMutation = useRequestBill()
   const ackWaiterCallMutation = useAckWaiterCall()
   const openSessionMutation = useOpenSession()
+  const mergeSessionsMutation = useMergeSessions()
+  const splitSessionsMutation = useSplitSessions()
 
   const setLang = useCallback((newLang: Lang) => {
     localStorage.setItem('rest_lang_waiter', newLang)
@@ -80,7 +87,7 @@ export function useWaiter(): UseWaiterValue {
       if (!sessionId) return
       ackWaiterCallMutation.mutateAsync(sessionId).then(() => {
         markJustChanged(tableId)
-        if (table) toast(t('toast_acknowledged', table.number))
+        if (table) toast(t('toast_acknowledged', table.code))
       })
     },
     [ackWaiterCallMutation, markJustChanged, t, tables],
@@ -102,10 +109,38 @@ export function useWaiter(): UseWaiterValue {
       const itemName = item ? (lang === 'vi' ? item.name_vi : item.name_en) : ''
       updateItemStatus.mutateAsync({ itemId, status: 'SERVED' }).then(() => {
         markJustChanged(tableId)
-        if (table) toast(t('toast_served', itemName, table.number))
+        if (table) toast(t('toast_served', itemName, table.code))
       })
     },
     [markJustChanged, updateItemStatus, tables, t, lang],
+  )
+
+  const confirmItem = useCallback(
+    (tableId: string, itemId: string) => {
+      const table = tables.find((item) => item.id === tableId)
+      reviewItem.confirm
+        .mutateAsync(itemId)
+        .then(() => {
+          markJustChanged(tableId)
+          if (table) toast(t('toast_item_confirmed', table.code))
+        })
+        .catch((error: Error) => toast.error(error.message))
+    },
+    [markJustChanged, reviewItem.confirm, tables, t],
+  )
+
+  const rejectItem = useCallback(
+    (tableId: string, itemId: string, reason: string) => {
+      const table = tables.find((item) => item.id === tableId)
+      reviewItem.reject
+        .mutateAsync({ itemId, reason })
+        .then(() => {
+          markJustChanged(tableId)
+          if (table) toast(t('toast_item_rejected', table.code))
+        })
+        .catch((error: Error) => toast.error(error.message))
+    },
+    [markJustChanged, reviewItem.reject, tables, t],
   )
 
   const markAllServed = useCallback(
@@ -121,7 +156,7 @@ export function useWaiter(): UseWaiterValue {
         ),
       ).then(() => {
         markJustChanged(tableId)
-        if (table) toast(t('toast_all_served', table.number))
+        if (table) toast(t('toast_all_served', table.code))
       })
     },
     [markJustChanged, updateItemStatus, tables, t],
@@ -145,10 +180,65 @@ export function useWaiter(): UseWaiterValue {
       const table = tables.find((t) => t.id === tableId)
       openSessionMutation.mutateAsync(tableId).then(() => {
         markJustChanged(tableId)
-        if (table) toast(t('toast_session_opened', table.number))
+        if (table) toast(t('toast_session_opened', table.code))
       })
     },
     [markJustChanged, openSessionMutation, tables, t],
+  )
+
+  const toggleMergeMode = useCallback(() => {
+    setMergeMode((current) => !current)
+    setMergeSelectedIds([])
+    setSelectedTableId(null)
+  }, [])
+
+  // Chỉ gộp được bàn đang có phiên và chưa nằm trong nhóm gộp nào
+  const toggleMergeSelection = useCallback(
+    (tableId: string) => {
+      const table = tables.find((item) => item.id === tableId)
+      if (!table?.session) return
+      if (table.session.merge_group_id) {
+        toast(t('merge_already_grouped'))
+        return
+      }
+      setMergeSelectedIds((current) =>
+        current.includes(tableId)
+          ? current.filter((id) => id !== tableId)
+          : [...current, tableId],
+      )
+    },
+    [t, tables],
+  )
+
+  const confirmMerge = useCallback(() => {
+    const sessionIds = mergeSelectedIds
+      .map((id) => tables.find((table) => table.id === id)?.session?.id)
+      .filter((id): id is string => Boolean(id))
+    if (sessionIds.length < 2) return
+    mergeSessionsMutation
+      .mutateAsync(sessionIds)
+      .then(() => {
+        mergeSelectedIds.forEach(markJustChanged)
+        setMergeSelectedIds([])
+        setMergeMode(false)
+        toast(t('toast_merged', sessionIds.length))
+      })
+      .catch((error: Error) => toast.error(error.message))
+  }, [markJustChanged, mergeSelectedIds, mergeSessionsMutation, t, tables])
+
+  const splitGroup = useCallback(
+    (tableId: string) => {
+      const groupId = tables.find((table) => table.id === tableId)?.session?.merge_group_id
+      if (!groupId) return
+      splitSessionsMutation
+        .mutateAsync(groupId)
+        .then(() => {
+          markJustChanged(tableId)
+          toast(t('toast_split'))
+        })
+        .catch((error: Error) => toast.error(error.message))
+    },
+    [markJustChanged, splitSessionsMutation, t, tables],
   )
 
   const counts = useMemo<WFCounts>(() => {
@@ -186,6 +276,8 @@ export function useWaiter(): UseWaiterValue {
       selectedTableId,
       justChangedIds,
       demoOpen,
+      mergeMode,
+      mergeSelectedIds,
     },
     actions: {
       selectTable,
@@ -193,6 +285,8 @@ export function useWaiter(): UseWaiterValue {
       notifyCashier,
       markItemServed,
       markAllServed,
+      confirmItem,
+      rejectItem,
       requestBill,
       openSession,
       injectItemReady: refetch,
@@ -205,6 +299,10 @@ export function useWaiter(): UseWaiterValue {
       setSoundOn,
       setView,
       setDemoOpen,
+      toggleMergeMode,
+      toggleMergeSelection,
+      confirmMerge,
+      splitGroup,
     },
     counts,
     selectedTable,

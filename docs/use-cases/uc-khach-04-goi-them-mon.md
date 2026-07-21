@@ -11,6 +11,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-khach-04-goi-them-mon.drawio`](./uc-khach-04-goi-them-mon.drawio) — mở bằng draw.io / diagrams.net.
+
 *Hình: ĐẶC TẢ USE-CASE KHÁCH — GỌI THÊM MÓN*
 Tác nhân **Khách** giao tiếp với use-case «Gọi thêm món»; use-case «include» thao tác «Kiểm phiên ACTIVE» và «Kiểm món còn hàng». Đây là vòng gọi món bổ sung ("add more") trong cùng phiên đang mở: thêm `order_item` mới vào đơn của phiên và «Đẩy ticket cho Bếp». Tiếp nối sau «Đặt món» (UC-G03).
 

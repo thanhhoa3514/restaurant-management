@@ -11,6 +11,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-khach-06-theo-doi-trang-thai-mon.drawio`](./uc-khach-06-theo-doi-trang-thai-mon.drawio) — mở bằng draw.io / diagrams.net.
+
 *Hình: ĐẶC TẢ USE-CASE KHÁCH — THEO DÕI TRẠNG THÁI MÓN*
 Tác nhân **Khách** giao tiếp với use-case «Theo dõi trạng thái món»; use-case «include» «Lấy món đã gọi của phiên». Bếp/Phục vụ đổi trạng thái món phát sự kiện realtime «extend» cập nhật màn khách. Trạng thái là **theo từng order-item**: `PENDING → ACKNOWLEDGED → PREPARING → READY → SERVED`. Tiếp nối sau «Đặt món» / «Gọi thêm món».
 

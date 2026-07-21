@@ -38,6 +38,7 @@ export interface WFSession {
   guest_name: string
   waiter_called_at: Date | null
   bill_requested_at: Date | null
+  merge_group_id: string | null
   orders: WFOrder[]
 }
 
@@ -48,6 +49,8 @@ export interface TablePosition {
 
 export interface WFTable {
   id: string
+  /** Mã bàn duy nhất (T01, V01…) — dùng để hiển thị, `number` chỉ để sắp xếp */
+  code: string
   number: number
   capacity: number
   position: TablePosition
@@ -97,6 +100,8 @@ export interface WaiterState {
   selectedTableId: string | null
   justChangedIds: Set<string>
   demoOpen: boolean
+  mergeMode: boolean
+  mergeSelectedIds: string[]
 }
 
 export interface WaiterActions {
@@ -105,6 +110,8 @@ export interface WaiterActions {
   notifyCashier: (tableId: string) => void
   markItemServed: (tableId: string, itemId: string) => void
   markAllServed: (tableId: string) => void
+  confirmItem: (tableId: string, itemId: string) => void
+  rejectItem: (tableId: string, itemId: string, reason: string) => void
   requestBill: (tableId: string) => void
   openSession: (tableId: string, guestCount: number, notes: string) => void
   injectItemReady: () => void
@@ -117,6 +124,10 @@ export interface WaiterActions {
   setSoundOn: (value: boolean | ((prev: boolean) => boolean)) => void
   setView: (value: WaiterView | ((prev: WaiterView) => WaiterView)) => void
   setDemoOpen: (value: boolean | ((prev: boolean) => boolean)) => void
+  toggleMergeMode: () => void
+  toggleMergeSelection: (tableId: string) => void
+  confirmMerge: () => void
+  splitGroup: (tableId: string) => void
 }
 
 export interface UseWaiterValue {

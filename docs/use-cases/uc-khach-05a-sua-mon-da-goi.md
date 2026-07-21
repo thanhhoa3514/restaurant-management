@@ -11,6 +11,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-khach-05a-sua-mon-da-goi.drawio`](./uc-khach-05a-sua-mon-da-goi.drawio) — mở bằng draw.io / diagrams.net.
+
 *Hình: ĐẶC TẢ USE-CASE KHÁCH — SỬA MÓN ĐÃ GỌI*
 Tác nhân **Khách** giao tiếp với use-case «Sửa món đã gọi»; use-case «include» thao tác «Đọc trạng thái món theo version» (khóa lạc quan). Sửa trực tiếp **chỉ** khi món còn `PENDING`. Khi món đã `ACKNOWLEDGED`+ thì không sửa được trực tiếp → chuyển sang «Hủy món đã gọi» (UC-G05b) gửi Bếp duyệt.
 

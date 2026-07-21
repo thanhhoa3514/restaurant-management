@@ -29,14 +29,20 @@ func NewRepository(pool *pgxpool.Pool, defaultRID uuid.UUID) *Repository { retur
 func (r *Repository) q(ctx context.Context) pg.Querier { return pg.QuerierFromContext(ctx, r.pool) }
 
 func (r *Repository) BuildInvoice(ctx context.Context, restaurantID, diningSessionID uuid.UUID) (*domain.Invoice, bool, error) {
+	// Bàn đã gộp: hoá đơn treo vào phiên chủ và gom món của cả nhóm
+	primaryID, memberIDs, err := r.billingSessions(ctx, restaurantID, diningSessionID)
+	if err != nil {
+		return nil, false, err
+	}
+
 	var sessionID uuid.UUID
 	var status string
-	err := r.q(ctx).QueryRow(ctx, `
+	err = r.q(ctx).QueryRow(ctx, `
 		SELECT id, status
 		FROM dining_sessions
 		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
 		FOR UPDATE
-	`, restaurantID, diningSessionID).Scan(&sessionID, &status)
+	`, restaurantID, primaryID).Scan(&sessionID, &status)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, false, apperr.New(apperr.CodeNotFound, "dining session not found")
 	}
@@ -50,7 +56,7 @@ func (r *Repository) BuildInvoice(ctx context.Context, restaurantID, diningSessi
 		return nil, false, apperr.New(apperr.CodeConflict, "dining session is not billable")
 	}
 
-	existingIDs, err := r.nonVoidInvoiceIDs(ctx, restaurantID, diningSessionID)
+	existingIDs, err := r.nonVoidInvoiceIDs(ctx, restaurantID, primaryID)
 	if err != nil {
 		return nil, false, err
 	}
@@ -67,7 +73,7 @@ func (r *Repository) BuildInvoice(ctx context.Context, restaurantID, diningSessi
 		return nil, false, err
 	}
 
-	items, subtotal, err := r.billableItems(ctx, restaurantID, diningSessionID)
+	items, subtotal, err := r.billableItems(ctx, restaurantID, memberIDs)
 	if err != nil {
 		return nil, false, err
 	}
@@ -89,7 +95,7 @@ func (r *Repository) BuildInvoice(ctx context.Context, restaurantID, diningSessi
 		)
 		VALUES ($1, $2, $3, 'STANDARD', 'PENDING', $4, 0, NULL, $5, $6, $7, $8, 0, $9)
 		RETURNING id
-	`, restaurantID, diningSessionID, invoiceNumber, subtotal, serviceBPS, serviceAmount, vatBPS, vatAmount, total).Scan(&invoiceID)
+	`, restaurantID, primaryID, invoiceNumber, subtotal, serviceBPS, serviceAmount, vatBPS, vatAmount, total).Scan(&invoiceID)
 	if pg.IsUniqueViolation(err) {
 		return nil, false, apperr.New(apperr.CodeConflict, "invoice number already exists")
 	}
@@ -106,8 +112,8 @@ func (r *Repository) BuildInvoice(ctx context.Context, restaurantID, diningSessi
 	_, err = r.q(ctx).Exec(ctx, `
 		UPDATE dining_sessions
 		SET status = 'AWAITING_PAYMENT', version = version + 1, updated_at = NOW()
-		WHERE restaurant_id = $1 AND id = $2 AND status = 'ACTIVE' AND deleted_at IS NULL
-	`, restaurantID, diningSessionID)
+		WHERE restaurant_id = $1 AND id = ANY($2) AND status = 'ACTIVE' AND deleted_at IS NULL
+	`, restaurantID, memberIDs)
 	if err != nil {
 		return nil, false, err
 	}
@@ -196,13 +202,18 @@ func (r *Repository) VoidInvoice(ctx context.Context, restaurantID, invoiceID uu
 }
 
 func (r *Repository) SplitInvoice(ctx context.Context, restaurantID uuid.UUID, input domain.SplitInvoiceInput) ([]*domain.Invoice, error) {
+	primaryID, memberIDs, err := r.billingSessions(ctx, restaurantID, input.DiningSessionID)
+	if err != nil {
+		return nil, err
+	}
+
 	var status string
-	err := r.q(ctx).QueryRow(ctx, `
+	err = r.q(ctx).QueryRow(ctx, `
 		SELECT status
 		FROM dining_sessions
 		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
 		FOR UPDATE
-	`, restaurantID, input.DiningSessionID).Scan(&status)
+	`, restaurantID, primaryID).Scan(&status)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, apperr.New(apperr.CodeNotFound, "dining session not found")
 	}
@@ -213,7 +224,7 @@ func (r *Repository) SplitInvoice(ctx context.Context, restaurantID uuid.UUID, i
 		return nil, apperr.New(apperr.CodeConflict, "dining session is not billable")
 	}
 
-	items, _, err := r.billableItems(ctx, restaurantID, input.DiningSessionID)
+	items, _, err := r.billableItems(ctx, restaurantID, memberIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +241,7 @@ func (r *Repository) SplitInvoice(ctx context.Context, restaurantID uuid.UUID, i
 		FROM invoices
 		WHERE restaurant_id = $1 AND dining_session_id = $2 AND status <> 'VOID' AND deleted_at IS NULL
 		FOR UPDATE
-	`, restaurantID, input.DiningSessionID)
+	`, restaurantID, primaryID)
 	if err != nil {
 		return nil, err
 	}
@@ -306,7 +317,7 @@ func (r *Repository) SplitInvoice(ctx context.Context, restaurantID uuid.UUID, i
 			)
 			VALUES ($1, $2, $3, 'STANDARD', 'PENDING', $4, 0, NULL, $5, $6, $7, $8, 0, $9)
 			RETURNING id
-		`, restaurantID, input.DiningSessionID, invoiceNumber, subtotal, serviceBPS, serviceAmount, vatBPS, vatAmount, total).Scan(&invoiceID)
+		`, restaurantID, primaryID, invoiceNumber, subtotal, serviceBPS, serviceAmount, vatBPS, vatAmount, total).Scan(&invoiceID)
 		if pg.IsUniqueViolation(err) {
 			return nil, apperr.New(apperr.CodeConflict, "invoice number already exists")
 		}
@@ -328,8 +339,8 @@ func (r *Repository) SplitInvoice(ctx context.Context, restaurantID uuid.UUID, i
 	if _, err := r.q(ctx).Exec(ctx, `
 		UPDATE dining_sessions
 		SET status = 'AWAITING_PAYMENT', version = version + 1, updated_at = NOW()
-		WHERE restaurant_id = $1 AND id = $2 AND status = 'ACTIVE' AND deleted_at IS NULL
-	`, restaurantID, input.DiningSessionID); err != nil {
+		WHERE restaurant_id = $1 AND id = ANY($2) AND status = 'ACTIVE' AND deleted_at IS NULL
+	`, restaurantID, memberIDs); err != nil {
 		return nil, err
 	}
 
@@ -337,7 +348,12 @@ func (r *Repository) SplitInvoice(ctx context.Context, restaurantID uuid.UUID, i
 }
 
 func (r *Repository) ListSessionInvoices(ctx context.Context, restaurantID, diningSessionID uuid.UUID) ([]*domain.Invoice, error) {
-	ids, err := r.nonVoidInvoiceIDs(ctx, restaurantID, diningSessionID)
+	// Bàn phụ trong nhóm gộp không giữ hoá đơn — trả hoá đơn của phiên chủ
+	primaryID, _, err := r.billingSessions(ctx, restaurantID, diningSessionID)
+	if err != nil {
+		return nil, err
+	}
+	ids, err := r.nonVoidInvoiceIDs(ctx, restaurantID, primaryID)
 	if err != nil {
 		return nil, err
 	}
@@ -350,6 +366,42 @@ func (r *Repository) ListSessionInvoices(ctx context.Context, restaurantID, dini
 		invoices = append(invoices, invoice)
 	}
 	return invoices, nil
+}
+
+// billingSessions resolves which dining sessions a bill covers. A session in an
+// active merge group bills as one: the oldest session of the group owns the
+// invoice ("primary") and every member's items go on it. An unmerged session
+// bills as itself.
+func (r *Repository) billingSessions(ctx context.Context, restaurantID, diningSessionID uuid.UUID) (uuid.UUID, []uuid.UUID, error) {
+	rows, err := r.q(ctx).Query(ctx, `
+		SELECT ds.id
+		FROM dining_sessions ds
+		JOIN dining_sessions self ON self.id = $2 AND self.restaurant_id = ds.restaurant_id
+		JOIN table_merge_groups g ON g.id = ds.merge_group_id AND g.is_active AND g.deleted_at IS NULL
+		WHERE ds.restaurant_id = $1
+		  AND ds.merge_group_id = self.merge_group_id
+		  AND ds.deleted_at IS NULL
+		ORDER BY ds.opened_at, ds.id
+	`, restaurantID, diningSessionID)
+	if err != nil {
+		return uuid.Nil, nil, err
+	}
+	defer rows.Close()
+	var members []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return uuid.Nil, nil, err
+		}
+		members = append(members, id)
+	}
+	if err := rows.Err(); err != nil {
+		return uuid.Nil, nil, err
+	}
+	if len(members) == 0 {
+		return diningSessionID, []uuid.UUID{diningSessionID}, nil
+	}
+	return members[0], members, nil
 }
 
 // nonVoidInvoiceIDs returns a session's non-VOID invoice ids, oldest first.
@@ -1013,20 +1065,20 @@ type billableItem struct {
 	TotalAmountVND    int64
 }
 
-func (r *Repository) billableItems(ctx context.Context, restaurantID, diningSessionID uuid.UUID) ([]billableItem, int64, error) {
+func (r *Repository) billableItems(ctx context.Context, restaurantID uuid.UUID, diningSessionIDs []uuid.UUID) ([]billableItem, int64, error) {
 	rows, err := r.q(ctx).Query(ctx, `
 		SELECT oi.id, oi.item_name_snapshot, oi.unit_price_vnd, oi.quantity,
 		       oi.subtotal_vnd, oi.discount_amount_vnd, oi.total_amount_vnd
 		FROM order_items oi
 		JOIN orders o ON o.restaurant_id = oi.restaurant_id AND o.id = oi.order_id
 		WHERE oi.restaurant_id = $1
-		  AND oi.dining_session_id = $2
+		  AND oi.dining_session_id = ANY($2)
 		  AND oi.deleted_at IS NULL
 		  AND oi.status <> 'CANCELLED'
 		  AND o.deleted_at IS NULL
 		  AND o.status <> 'CANCELLED'
 		ORDER BY o.submitted_at, oi.created_at, oi.id
-	`, restaurantID, diningSessionID)
+	`, restaurantID, diningSessionIDs)
 	if err != nil {
 		return nil, 0, err
 	}

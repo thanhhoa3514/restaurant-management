@@ -20,7 +20,6 @@ import { Route as AdminTableQrsRouteImport } from './routes/admin.table-qrs'
 import { Route as AdminStaffRouteImport } from './routes/admin.staff'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
-import { Route as AdminFloorPlanRouteImport } from './routes/admin.floor-plan'
 import { Route as AdminCatalogRouteImport } from './routes/admin.catalog'
 
 const WaiterRoute = WaiterRouteImport.update({
@@ -78,11 +77,6 @@ const AdminReportsRoute = AdminReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminFloorPlanRoute = AdminFloorPlanRouteImport.update({
-  id: '/floor-plan',
-  path: '/floor-plan',
-  getParentRoute: () => AdminRoute,
-} as any)
 const AdminCatalogRoute = AdminCatalogRouteImport.update({
   id: '/catalog',
   path: '/catalog',
@@ -98,7 +92,6 @@ export interface FileRoutesByFullPath {
   '/order': typeof OrderRoute
   '/waiter': typeof WaiterRoute
   '/admin/catalog': typeof AdminCatalogRoute
-  '/admin/floor-plan': typeof AdminFloorPlanRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/staff': typeof AdminStaffRoute
@@ -113,7 +106,6 @@ export interface FileRoutesByTo {
   '/order': typeof OrderRoute
   '/waiter': typeof WaiterRoute
   '/admin/catalog': typeof AdminCatalogRoute
-  '/admin/floor-plan': typeof AdminFloorPlanRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/staff': typeof AdminStaffRoute
@@ -129,7 +121,6 @@ export interface FileRoutesById {
   '/order': typeof OrderRoute
   '/waiter': typeof WaiterRoute
   '/admin/catalog': typeof AdminCatalogRoute
-  '/admin/floor-plan': typeof AdminFloorPlanRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/staff': typeof AdminStaffRoute
@@ -146,7 +137,6 @@ export interface FileRouteTypes {
     | '/order'
     | '/waiter'
     | '/admin/catalog'
-    | '/admin/floor-plan'
     | '/admin/reports'
     | '/admin/settings'
     | '/admin/staff'
@@ -161,7 +151,6 @@ export interface FileRouteTypes {
     | '/order'
     | '/waiter'
     | '/admin/catalog'
-    | '/admin/floor-plan'
     | '/admin/reports'
     | '/admin/settings'
     | '/admin/staff'
@@ -176,7 +165,6 @@ export interface FileRouteTypes {
     | '/order'
     | '/waiter'
     | '/admin/catalog'
-    | '/admin/floor-plan'
     | '/admin/reports'
     | '/admin/settings'
     | '/admin/staff'
@@ -272,13 +260,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminReportsRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/floor-plan': {
-      id: '/admin/floor-plan'
-      path: '/floor-plan'
-      fullPath: '/admin/floor-plan'
-      preLoaderRoute: typeof AdminFloorPlanRouteImport
-      parentRoute: typeof AdminRoute
-    }
     '/admin/catalog': {
       id: '/admin/catalog'
       path: '/catalog'
@@ -291,7 +272,6 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteChildren {
   AdminCatalogRoute: typeof AdminCatalogRoute
-  AdminFloorPlanRoute: typeof AdminFloorPlanRoute
   AdminReportsRoute: typeof AdminReportsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminStaffRoute: typeof AdminStaffRoute
@@ -300,7 +280,6 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminCatalogRoute: AdminCatalogRoute,
-  AdminFloorPlanRoute: AdminFloorPlanRoute,
   AdminReportsRoute: AdminReportsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminStaffRoute: AdminStaffRoute,

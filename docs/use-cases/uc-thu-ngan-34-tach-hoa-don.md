@@ -10,6 +10,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-thu-ngan-34-tach-hoa-don.drawio`](./uc-thu-ngan-34-tach-hoa-don.drawio) — mở bằng draw.io / diagrams.net.
+
 *Hình: ĐẶC TẢ USE-CASE THU NGÂN — TÁCH HÓA ĐƠN*
 Tác nhân **Thu ngân** giao tiếp với use-case «Tách hóa đơn»; use-case «include» «Gán món vào nhóm». Khi khách chung phiên muốn trả riêng, thu ngân chia các món của phiên thành nhiều hóa đơn theo nhóm. Mỗi hóa đơn con vẫn giữ snapshot tên/giá và được thanh toán độc lập (UC-C23/UC-C35).
 

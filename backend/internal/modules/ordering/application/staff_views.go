@@ -35,6 +35,7 @@ type StaffSessionDTO struct {
 	OpenedAt        time.Time       `json:"opened_at"`
 	BillRequestedAt *time.Time      `json:"bill_requested_at"`
 	WaiterCalledAt  *time.Time      `json:"waiter_called_at"`
+	MergeGroupID    *uuid.UUID      `json:"merge_group_id"`
 	Orders          []StaffOrderDTO `json:"orders"`
 	TotalVND        int64           `json:"total_vnd"`
 }
@@ -135,6 +136,8 @@ type StaffReadRepository interface {
 	CallWaiter(ctx context.Context, restaurantID, sessionID uuid.UUID) (RequestBillResponse, error)
 	AckWaiterCall(ctx context.Context, restaurantID, sessionID uuid.UUID) (RequestBillResponse, error)
 	UpdateOrderItemStatus(ctx context.Context, restaurantID, itemID uuid.UUID, status string, actorID *uuid.UUID, actorRole string) (UpdateItemStatusResponse, error)
+	ConfirmOrderItem(ctx context.Context, restaurantID, itemID uuid.UUID, actorID *uuid.UUID, actorRole string) (UpdateItemStatusResponse, error)
+	RejectOrderItem(ctx context.Context, restaurantID, itemID uuid.UUID, reason string, actorID *uuid.UUID, actorRole string) (UpdateItemStatusResponse, error)
 	MarkItemUnavailable(ctx context.Context, restaurantID, itemID uuid.UUID, reason string, actorID *uuid.UUID) (UpdateItemStatusResponse, error)
 	ListPendingCancelRequests(ctx context.Context, restaurantID uuid.UUID) ([]CancelRequestDTO, error)
 	ReviewCancelRequest(ctx context.Context, restaurantID, cancelRequestID uuid.UUID, approve bool, reviewedBy *uuid.UUID, note string) (CancelRequestReviewResult, error)
@@ -317,6 +320,55 @@ func (s *StaffUpdateItemStatus) Handle(ctx context.Context, itemID uuid.UUID, st
 		}
 		if s.outbox != nil {
 			return s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "order_item", AggregateID: itemID, EventType: "ordering.item_status_updated", Payload: map[string]any{"item_id": itemID, "status": out.Status}})
+		}
+		return nil
+	})
+	return out, err
+}
+
+// ServerReviewOrderItem is the server-confirmation gate: a guest (or staff)
+// order lands with items in PLACED, invisible to the kitchen. Serving staff
+// confirm each item into the kitchen queue (PLACED -> PENDING) or reject it
+// (PLACED -> CANCELLED). See migration 00012.
+type ServerReviewOrderItem struct {
+	tx                  TxRunner
+	repo                StaffReadRepository
+	outbox              domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
+}
+
+func NewServerReviewOrderItem(tx TxRunner, repo StaffReadRepository, outboxWriter domain.OutboxWriter, defaultRestaurantID uuid.UUID) *ServerReviewOrderItem {
+	return &ServerReviewOrderItem{tx: tx, repo: repo, outbox: outboxWriter, defaultRestaurantID: defaultRestaurantID}
+}
+
+func (s *ServerReviewOrderItem) Confirm(ctx context.Context, itemID uuid.UUID, actorID *uuid.UUID, actorRole string) (UpdateItemStatusResponse, error) {
+	var out UpdateItemStatusResponse
+	restaurantID := s.defaultRestaurantID
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
+		var err error
+		out, err = s.repo.ConfirmOrderItem(ctx, restaurantID, itemID, actorID, actorRole)
+		if err != nil {
+			return err
+		}
+		if s.outbox != nil {
+			return s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "order_item", AggregateID: itemID, EventType: "ordering.item_confirmed", Payload: map[string]any{"item_id": itemID, "status": out.Status}})
+		}
+		return nil
+	})
+	return out, err
+}
+
+func (s *ServerReviewOrderItem) Reject(ctx context.Context, itemID uuid.UUID, reason string, actorID *uuid.UUID, actorRole string) (UpdateItemStatusResponse, error) {
+	var out UpdateItemStatusResponse
+	restaurantID := s.defaultRestaurantID
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
+		var err error
+		out, err = s.repo.RejectOrderItem(ctx, restaurantID, itemID, strings.TrimSpace(reason), actorID, actorRole)
+		if err != nil {
+			return err
+		}
+		if s.outbox != nil {
+			return s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "order_item", AggregateID: itemID, EventType: "ordering.item_rejected", Payload: map[string]any{"item_id": itemID, "status": out.Status, "reason": reason}})
 		}
 		return nil
 	})

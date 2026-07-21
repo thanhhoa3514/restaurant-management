@@ -12,6 +12,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-thu-ngan-21-xem-hoa-don.drawio`](./uc-thu-ngan-21-xem-hoa-don.drawio) — mở bằng draw.io / diagrams.net.
+
 _Hình: ĐẶC TẢ USE-CASE THU NGÂN — XEM HÓA ĐƠN_
 Tác nhân **Thu ngân** giao tiếp với use-case «Xem hóa đơn»; use-case «include» «Lập hóa đơn (snapshot)» — gom món của phiên và sao chép **tên & giá tại thời điểm lập** vào `invoice_item`. Lập hóa đơn **idempotent**: gọi lại trả đúng hóa đơn đã có. Tiếp nối sau «Chọn phiên» (UC-C20), dẫn sang «Điều chỉnh» (UC-C22) / «Xử lý thanh toán» (UC-C23).
 

@@ -10,6 +10,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-thu-ngan-36-huy-hoa-don.drawio`](./uc-thu-ngan-36-huy-hoa-don.drawio) — mở bằng draw.io / diagrams.net.
+
 *Hình: ĐẶC TẢ USE-CASE THU NGÂN — HỦY HÓA ĐƠN*
 Tác nhân **Thu ngân** giao tiếp với use-case «Hủy hóa đơn»; use-case «include» «Ghi lý do hủy» (audit). Dùng khi hóa đơn lập sai và cần bỏ để lập lại. Hóa đơn `VOID` không còn chặn đóng phiên (UC-C25 chỉ chặn hóa đơn khác `VOID`/`PAID`).
 

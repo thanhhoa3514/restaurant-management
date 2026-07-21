@@ -11,6 +11,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-bep-18-xu-ly-yeu-cau-huy-mon.drawio`](./uc-bep-18-xu-ly-yeu-cau-huy-mon.drawio) — mở bằng draw.io / diagrams.net.
+
 _Hình: ĐẶC TẢ USE-CASE BẾP — DUYỆT YÊU CẦU HỦY MÓN_
 Tác nhân **Bếp** giao tiếp với use-case «Xác nhận/từ chối yêu cầu hủy món»; nhận yêu cầu hủy (do UC-G05b tạo khi món đã `PREPARING`) và quyết định chấp nhận (hủy món → `CANCELLED`) hoặc từ chối (giữ món, tiếp tục nấu). Hai nhánh chạy trong **một transaction**; kết quả phát realtime cho Khách.
 

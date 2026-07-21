@@ -11,6 +11,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-khach-01-quet-qr-vao-phien.drawio`](./uc-khach-01-quet-qr-vao-phien.drawio) — mở bằng draw.io / diagrams.net.
+
 *Hình: ĐẶC TẢ USE-CASE KHÁCH — QUÉT QR VÀO PHIÊN*
 Tác nhân **Khách** giao tiếp với use-case «Quét QR vào phiên»; use-case «include» thao tác «Kiểm tra mã QR» và «Ghi nhật ký quét QR». Trường hợp bàn chưa mở phiên «extend» sang use-case «Mở phiên cho khách» (tác nhân Phục vụ).
 

@@ -11,6 +11,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-khach-08-yeu-cau-thanh-toan.drawio`](./uc-khach-08-yeu-cau-thanh-toan.drawio) — mở bằng draw.io / diagrams.net.
+
 *Hình: ĐẶC TẢ USE-CASE KHÁCH — YÊU CẦU THANH TOÁN*
 Tác nhân **Khách** giao tiếp với use-case «Yêu cầu thanh toán»; use-case «include» «Khóa order của phiên» (chuyển phiên sang `AWAITING_PAYMENT`) và «Đẩy realtime cho Thu ngân/Phục vụ». Dẫn sang nghiệp vụ lập hóa đơn & thu tiền của Thu ngân.
 

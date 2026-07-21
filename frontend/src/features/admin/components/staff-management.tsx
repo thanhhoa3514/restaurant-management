@@ -30,7 +30,7 @@ import { useStaffRolesQuery, useStaffUsersQuery } from '@/features/admin/queries
 import { useManageStaffMutation } from '@/features/admin/mutations'
 import { staffQueryKeys } from '@/features/admin/api'
 import type { ManageUserRequest, RoleDTO, StaffUserDTO } from '@/features/admin/types'
-import { ApiError } from '@/lib/api'
+import { errorMessage } from '@/lib/api'
 import { getStaffSession } from '@/lib/auth'
 import { useLang } from '@/hooks/use-lang'
 import { cn } from '@/lib/utils'
@@ -111,7 +111,7 @@ export function StaffManagement() {
         {isError && (
           <Card className="border border-[var(--system-red)]/30 bg-[var(--system-red)]/5">
             <CardContent className="p-5 text-sm text-[var(--system-red)]">
-              {t('staff_load_error')}: {error instanceof ApiError ? error.message : ''}
+              {t('staff_load_error')}: {errorMessage(error, '')}
             </CardContent>
           </Card>
         )}
@@ -437,7 +437,7 @@ function StaffSheetBody({
 
           {mutation.isError && (
             <p className="text-sm text-[var(--system-red)]">
-              {mutation.error instanceof ApiError ? mutation.error.message : t('staff_action_failed')}
+              {errorMessage(mutation.error, t('staff_action_failed'))}
             </p>
           )}
         </div>
@@ -506,9 +506,7 @@ function ResetPasswordSheet({
                 </Field>
                 {mutation.isError && (
                   <p className="text-sm text-[var(--system-red)]">
-                    {mutation.error instanceof ApiError
-                      ? mutation.error.message
-                      : t('staff_action_failed')}
+                    {errorMessage(mutation.error, t('staff_action_failed'))}
                   </p>
                 )}
               </div>

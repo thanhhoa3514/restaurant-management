@@ -91,7 +91,7 @@ export const GridView: FC<GridViewProps> = ({
                       visual.text,
                     )}
                   >
-                    {table.number}
+                    {table.code}
                   </div>
                 </div>
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-xs border border-zinc-100 dark:bg-zinc-950 dark:border-zinc-800">

@@ -10,6 +10,8 @@
 
 ### 1) Đặc tả tổng quan
 
+> Sơ đồ: [`uc-phuc-vu-38-don-mang-ve.drawio`](./uc-phuc-vu-38-don-mang-ve.drawio) — mở bằng draw.io / diagrams.net.
+
 Tác nhân **Phục vụ** giao tiếp với use-case «Đơn mang về tại bàn». Khách đang có phiên ACTIVE muốn gọi thêm món **mang về** (không ăn tại bàn). Món này vẫn thuộc phiên hiện tại và tính vào hóa đơn chung của bàn. **Không cần nhập thông tin khách** vì đã có thông tin phiên.
 
 Hiện trạng: chưa triển khai backend. Cần mở rộng endpoint gọi món để đánh dấu `is_takeaway: true` trên từng order-item hoặc tạo đơn riêng nhưng gắn cùng phiên.

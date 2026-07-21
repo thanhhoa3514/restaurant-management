@@ -72,7 +72,7 @@ export const PaymentPanel: FC<PaymentPanelProps> = ({ session, now, lang, t, dis
           <Badge className="rounded-full border-0 bg-[var(--surface-grouped)] text-[var(--text-secondary)]">{t(`status_${session.status}`)}</Badge>
         </div>
         <p className="mt-1 text-sm text-[var(--text-tertiary)]">
-          {t('table')} {session.table_number} · {lang === 'vi' ? session.area_name_vi : session.area_name_en}
+          {t('table')} {session.table_label} · {lang === 'vi' ? session.area_name_vi : session.area_name_en}
         </p>
         {split ? (
           <p className="mt-1 text-xs font-semibold text-[var(--system-orange)]">

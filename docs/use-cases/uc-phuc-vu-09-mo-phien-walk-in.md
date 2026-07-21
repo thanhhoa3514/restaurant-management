@@ -13,6 +13,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-phuc-vu-09-mo-phien-walk-in.drawio`](./uc-phuc-vu-09-mo-phien-walk-in.drawio) — mở bằng draw.io / diagrams.net.
+
 _Hình: ĐẶC TẢ USE-CASE PHỤC VỤ — MỞ PHIÊN WALK-IN_
 Tác nhân **Phục vụ** giao tiếp với use-case «Mở phiên walk-in»; use-case «include» «Kiểm bàn có phiên ACTIVE chưa» (bất biến: **một phiên ACTIVE mỗi bàn**).
 

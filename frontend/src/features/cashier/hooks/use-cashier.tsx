@@ -561,7 +561,7 @@ export function CashierProvider({ children }: { children: ReactNode }) {
 
             if (methodCode === 'cash') toast(t('toast_cash_received'))
             else if (methodCode === 'card') toast(t('toast_card_received'))
-            else toast(t('toast_ewallet_paid', currentSession.table_number))
+            else toast(t('toast_ewallet_paid', currentSession.table_label))
 
             break
           }
@@ -616,8 +616,8 @@ export function CashierProvider({ children }: { children: ReactNode }) {
             baseDispatch(action)
             void queryClient.invalidateQueries({ queryKey: STAFF_TABLES_QUERY_KEY })
 
-            if (voided) toast(t('toast_session_voided', currentSession.table_number))
-            else toast(t('toast_session_closed', currentSession.table_number))
+            if (voided) toast(t('toast_session_voided', currentSession.table_label))
+            else toast(t('toast_session_closed', currentSession.table_label))
 
             break
           }

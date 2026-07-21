@@ -12,6 +12,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-thu-ngan-23-xu-ly-thanh-toan.drawio`](./uc-thu-ngan-23-xu-ly-thanh-toan.drawio) — mở bằng draw.io / diagrams.net.
+
 *Hình: ĐẶC TẢ USE-CASE THU NGÂN — XỬ LÝ THANH TOÁN*
 Tác nhân **Thu ngân** giao tiếp với use-case «Xử lý thanh toán»; use-case «include» «Ghi giao dịch & cập nhật hóa đơn». Nhánh ví điện tử «include» «Khởi tạo giao dịch cổng» (pha 1) và «Xác thực webhook» (pha 2) với tác nhân phụ **Cổng thanh toán**. Webhook phải **idempotent** — không cộng tiền hai lần. Tiếp nối sau «Lập hóa đơn» (UC-C21) / «Điều chỉnh hóa đơn» (UC-C22).
 

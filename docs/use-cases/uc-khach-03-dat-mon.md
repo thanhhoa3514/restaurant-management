@@ -11,6 +11,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-khach-03-dat-mon.drawio`](./uc-khach-03-dat-mon.drawio) — mở bằng draw.io / diagrams.net.
+
 *Hình: ĐẶC TẢ USE-CASE KHÁCH — ĐẶT MÓN*
 Tác nhân **Khách** giao tiếp với use-case «Đặt món»; use-case «include» thao tác «Kiểm phiên ACTIVE» và «Kiểm món còn hàng». Việc «Đẩy ticket cho Bếp» phát sinh sau khi tạo đơn thành công (realtime). Đặt món tiếp nối sau «Xem thực đơn» (UC-G02) và dẫn sang «Theo dõi trạng thái món» (UC-G06).
 

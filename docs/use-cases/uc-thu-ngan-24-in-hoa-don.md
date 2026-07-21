@@ -12,6 +12,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-thu-ngan-24-in-hoa-don.drawio`](./uc-thu-ngan-24-in-hoa-don.drawio) — mở bằng draw.io / diagrams.net.
+
 _Hình: ĐẶC TẢ USE-CASE THU NGÂN — IN HÓA ĐƠN_
 Tác nhân **Thu ngân** giao tiếp với use-case «In hóa đơn»; use-case «include» «Lấy hóa đơn snapshot». Bản in dựng từ dữ liệu `invoice` + `invoice_items` đã snapshot. Tiếp nối sau «Xử lý thanh toán» (UC-C23) hoặc bất cứ lúc nào cần bản in.
 

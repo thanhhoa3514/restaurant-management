@@ -1,0 +1,37 @@
+<mxfile host="app.diagrams.net" agent="claude" version="24.7.7">
+  <diagram id="uc-phuc-vu-15-chi-tiet-phien-theo-ban" name="ĐẶC TẢ USE-CASE PHỤC VỤ — CHI TIẾT PHIÊN THEO BÀN">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1040" pageHeight="390" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="ĐẶC TẢ USE-CASE PHỤC VỤ — CHI TIẾT PHIÊN THEO BÀN" style="text;html=1;fontSize=14;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="960" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="boundary" value="Hệ thống QR Ordering" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;fontSize=11;fontStyle=2;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="170" y="90" width="560" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="a0" value="Phục vụ" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;fontStyle=1;fillColor=#FFFFFF;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="40" y="185.0" width="40" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="uc" value="Xem chi tiết phiên / đơn theo bàn" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;verticalAlign=middle;fillColor=#FFFFFF;strokeColor=#000000;fontStyle=1;fillColor=#F5F5F5;" vertex="1" parent="1">
+          <mxGeometry x="210" y="185.0" width="190" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="inc0" value="Lấy đơn + order_item + trạng thái" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;verticalAlign=middle;fillColor=#FFFFFF;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="500" y="190.0" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="rel0" value="Lưới bàn&#10;(UC-10)" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;verticalAlign=middle;fillColor=#FFFFFF;strokeColor=#000000;fillColor=#FAFAFA;strokeColor=#9E9E9E;fontColor=#616161;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="800" y="190.0" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="e-a0" value="" style="edgeStyle=none;html=1;fontSize=10;endArrow=none;strokeColor=#000000;" edge="1" parent="1" source="a0" target="uc">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-inc0" value="«include»" style="edgeStyle=none;html=1;fontSize=10;endArrow=open;endFill=0;dashed=1;strokeColor=#000000;" edge="1" parent="1" source="uc" target="inc0">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-rel0" value="tiếp nối" style="edgeStyle=none;html=1;fontSize=10;endArrow=open;endFill=0;dashed=1;strokeColor=#808080;fontColor=#808080;" edge="1" parent="1" source="uc" target="rel0">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,4 +1,3 @@
-import { ApiError } from '@/lib/api'
 import type { AdminMenuItemSummaryDTO } from '@/features/catalog/types'
 
 const moneyFormatter = new Intl.NumberFormat('vi-VN', {
@@ -16,8 +15,4 @@ export const availabilityAfterToggle = (item: AdminMenuItemSummaryDTO) =>
       ? ('HIDDEN' as const)
       : ('OUT_OF_STOCK' as const)
 
-export function errorMessage(error: unknown, fallback: string) {
-  if (error instanceof ApiError) return error.message
-  if (error instanceof Error) return error.message
-  return fallback
-}
+

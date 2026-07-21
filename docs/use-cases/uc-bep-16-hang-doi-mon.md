@@ -12,6 +12,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-bep-16-hang-doi-mon.drawio`](./uc-bep-16-hang-doi-mon.drawio) — mở bằng draw.io / diagrams.net.
+
 *Hình: ĐẶC TẢ USE-CASE BẾP — HÀNG ĐỢI MÓN*
 Tác nhân **Bếp** giao tiếp với use-case «Xem hàng đợi món»; use-case «include» «Lấy order_item chưa hoàn tất». Món mới (`PENDING`) từ «Đặt món»/«Gọi thêm món» đẩy ticket realtime vào hàng đợi. Dẫn sang «Cập nhật trạng thái món» (UC-K17).
 

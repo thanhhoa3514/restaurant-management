@@ -78,7 +78,8 @@ export interface PaymentRecord {
 
 export interface CashierSession {
   id: string
-  table_number: number
+  /** Mã bàn hiển thị; nhóm gộp là "T09 + V01" */
+  table_label: string
   area_name_vi: string
   area_name_en: string
   guest_count: number

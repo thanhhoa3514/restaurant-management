@@ -58,7 +58,7 @@ func (routeSessionValidator) ValidateSessionToken(context.Context, string) (auth
 func guestOrderRouter() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	repo := guestRouteRepo{}
-	h := NewHandler(application.NewGuestPlaceOrder(guestRouteTx{}, repo, nil, uuid.New()), application.NewGuestViewOrders(repo, uuid.New()), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	h := NewHandler(application.NewGuestPlaceOrder(guestRouteTx{}, repo, nil, uuid.New()), application.NewGuestViewOrders(repo, uuid.New()), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	r := gin.New()
 	g := r.Group("/api/v1/customer", auth.QRSessionToken(routeSessionValidator{}))
 	h.RegisterGuestRoutes(g)

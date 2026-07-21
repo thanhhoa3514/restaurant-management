@@ -145,7 +145,7 @@ export const InvoicePDF = ({ session, t, lang }: InvoicePDFProps) => {
           <View style={styles.metaCol}>
             <Text>
               <Text style={{ fontFamily: 'Roboto-Bold' }}>{t('receipt_table')}: </Text>
-              {session.table_number} · {lang === 'vi' ? session.area_name_vi : session.area_name_en}
+              {session.table_label} · {lang === 'vi' ? session.area_name_vi : session.area_name_en}
             </Text>
             <Text>
               <Text style={{ fontFamily: 'Roboto-Bold' }}>{t('receipt_cashier')}: </Text>

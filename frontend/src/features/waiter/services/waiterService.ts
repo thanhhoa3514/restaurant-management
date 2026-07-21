@@ -1,6 +1,8 @@
 import {
   ackWaiterCall,
+  confirmOrderItem,
   fetchStaffTables,
+  rejectOrderItem,
   requestSessionBill,
   updateStaffOrderItemStatus,
   type StaffTablesResponse,
@@ -14,6 +16,14 @@ export const waiterService = {
 
   updateItemStatus(itemId: string, status: string): Promise<{ id: string; status: string }> {
     return updateStaffOrderItemStatus(itemId, status)
+  },
+
+  confirmItem(itemId: string): Promise<{ id: string; status: string }> {
+    return confirmOrderItem(itemId)
+  },
+
+  rejectItem(itemId: string, reason: string): Promise<{ id: string; status: string }> {
+    return rejectOrderItem(itemId, reason)
   },
 
   requestBill(sessionId: string): Promise<{ session_id: string; status: string; requested_at: string | null }> {

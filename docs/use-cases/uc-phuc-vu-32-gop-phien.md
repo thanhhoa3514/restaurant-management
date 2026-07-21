@@ -13,6 +13,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-phuc-vu-32-gop-phien.drawio`](./uc-phuc-vu-32-gop-phien.drawio) — mở bằng draw.io / diagrams.net.
+
 _Hình: ĐẶC TẢ USE-CASE PHỤC VỤ — GỘP PHIÊN_
 Tác nhân **Phục vụ** giao tiếp với use-case «Gộp phiên»; use-case «include» «Kiểm phiên ACTIVE & chưa thuộc nhóm gộp». Khi một nhóm khách ngồi nhiều bàn muốn tính tiền chung, phục vụ gộp các phiên ACTIVE thành một `merge_group` để lập hóa đơn gộp cuối phiên. Nghịch đảo là «Tách phiên» (UC-P33).
 

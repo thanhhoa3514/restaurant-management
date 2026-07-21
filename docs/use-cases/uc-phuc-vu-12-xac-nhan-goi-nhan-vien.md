@@ -13,6 +13,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-phuc-vu-12-xac-nhan-goi-nhan-vien.drawio`](./uc-phuc-vu-12-xac-nhan-goi-nhan-vien.drawio) — mở bằng draw.io / diagrams.net.
+
 _Hình: ĐẶC TẢ USE-CASE PHỤC VỤ — XÁC NHẬN GỌI NHÂN VIÊN_
 Tác nhân **Phục vụ** giao tiếp với use-case «Xác nhận gọi nhân viên»; tiếp nhận tín hiệu gọi NV (do UC-G07 phát) bằng cách xóa cờ gọi của phiên và phát realtime cho các phục vụ khác. Là bước xử lý một tín hiệu chọn từ UC-P11.
 

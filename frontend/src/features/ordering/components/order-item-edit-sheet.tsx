@@ -6,7 +6,7 @@ import { DICT } from '../data/i18n'
 import { formatVND } from '../helpers'
 import { useEditGuestOrder } from '../mutations/useEditGuestOrder'
 import { useCancelGuestOrder } from '../mutations/useCancelGuestOrder'
-import { ApiError } from '@/lib/api'
+import { ApiError, errorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import type { Lang, OrderItemDTO, EditOrderInput, EditOrderLineInput } from '../types'
 
@@ -105,11 +105,7 @@ export const OrderItemEditSheet: FC<OrderItemEditSheetProps> = ({
         onClose()
       } catch (err) {
         toast.error(
-          err instanceof ApiError
-            ? err.message
-            : lang === 'vi'
-              ? 'Không thể xoá đơn.'
-              : 'Could not delete order.',
+          errorMessage(err, lang === 'vi' ? 'Không thể xoá đơn.' : 'Could not delete order.'),
         )
       } finally {
         setSaving(false)

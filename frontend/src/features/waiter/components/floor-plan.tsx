@@ -1,5 +1,5 @@
-import { type FC } from 'react'
-import { Bell, Check, Receipt } from 'lucide-react'
+import { type FC, useMemo } from 'react'
+import { Bell, Check, Link2, Receipt } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { WF_LANDMARKS } from '@/features/waiter/data/seed'
@@ -20,9 +20,47 @@ interface FloorPlanProps {
   t: (key: string, ...args: Array<string | number>) => string
   onSelectTable: (tableId: string) => void
   justChangedIds: Set<string>
+  mergeMode: boolean
+  mergeSelectedIds: string[]
+  onToggleMergeSelection: (tableId: string) => void
 }
 
-export const FloorPlan: FC<FloorPlanProps> = ({ tables, now, lang, t, onSelectTable, justChangedIds }) => {
+// Nhãn A, B, C… cho từng nhóm bàn đã gộp
+const GROUP_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+export const FloorPlan: FC<FloorPlanProps> = ({
+  tables,
+  now,
+  lang,
+  t,
+  onSelectTable,
+  justChangedIds,
+  mergeMode,
+  mergeSelectedIds,
+  onToggleMergeSelection,
+}) => {
+  const { groupLabels, groupChains } = useMemo(() => {
+    const groups = new Map<string, WFTable[]>()
+    for (const table of tables) {
+      const groupId = table.session?.merge_group_id
+      if (!groupId) continue
+      const members = groups.get(groupId)
+      if (members) members.push(table)
+      else groups.set(groupId, [table])
+    }
+    const ids = [...groups.keys()]
+    return {
+      groupLabels: new Map(ids.map((id, index) => [id, GROUP_LABELS[index % GROUP_LABELS.length]])),
+      // ponytail: nối thành chuỗi theo x rồi y — đủ đọc, khỏi tính convex hull
+      groupChains: ids.map((id) => ({
+        id,
+        members: [...groups.get(id)!].sort(
+          (a, b) => a.position.x_pct - b.position.x_pct || a.position.y_pct - b.position.y_pct,
+        ),
+      })),
+    }
+  }, [tables])
+
   return (
     <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-x-visible sm:px-0">
       {/* ponytail: height as viewport fraction, not header-coupled magic px */}
@@ -53,22 +91,56 @@ export const FloorPlan: FC<FloorPlanProps> = ({ tables, now, lang, t, onSelectTa
         </div>
       ))}
 
+      {groupChains.length > 0 && (
+        <svg className="pointer-events-none absolute inset-0 size-full" aria-hidden>
+          {groupChains.flatMap(({ id, members }) =>
+            members.slice(1).map((table, index) => {
+              const from = members[index]
+              return (
+                <line
+                  key={`${id}-${table.id}`}
+                  x1={`${from.position.x_pct}%`}
+                  y1={`${from.position.y_pct}%`}
+                  x2={`${table.position.x_pct}%`}
+                  y2={`${table.position.y_pct}%`}
+                  className="stroke-purple-500/60"
+                  strokeWidth={3}
+                  strokeLinecap="round"
+                  strokeDasharray="6 6"
+                />
+              )
+            }),
+          )}
+        </svg>
+      )}
+
       {tables.map((table) => {
         const priority = wfPriorityOf(table, now)
         const visual = tableVisuals(priority)
         const secondaries = secondarySignals(table, priority)
         const changed = justChangedIds.has(table.id)
+        const groupLabel = table.session?.merge_group_id
+          ? groupLabels.get(table.session.merge_group_id)
+          : undefined
+        const mergeSelected = mergeSelectedIds.includes(table.id)
+        const mergeDisabled = mergeMode && (!table.session || Boolean(table.session.merge_group_id))
         return (
           <button
             key={table.id}
             type="button"
-            onClick={() => onSelectTable(table.id)}
+            onClick={() =>
+              mergeMode ? onToggleMergeSelection(table.id) : onSelectTable(table.id)
+            }
+            disabled={mergeDisabled}
             className={cn(
               'absolute h-20 w-20 rounded-[22px] border-2 shadow-lg ring-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95 cursor-pointer',
               'backdrop-blur-xl',
               priority === 'call' || priority === 'ready' ? 'animate-pulse' : '',
               changed ? 'scale-110' : '',
               visual.shell,
+              groupLabel ? 'ring-purple-500/25' : '',
+              mergeDisabled ? 'cursor-not-allowed opacity-40 hover:translate-y-0' : '',
+              mergeSelected ? 'ring-purple-500/50 border-purple-500 -translate-y-1' : '',
             )}
             style={{
               left: `${table.position.x_pct}%`,
@@ -85,16 +157,26 @@ export const FloorPlan: FC<FloorPlanProps> = ({ tables, now, lang, t, onSelectTa
                 </span>
               )}
 
-              <span className={cn('text-[28px] leading-none tracking-tight tabular-nums', 
+              <span className={cn('text-[22px] leading-none tracking-tight tabular-nums',
                 (priority !== 'empty' && priority !== 'occupied' && priority !== 'idle') ? 'mt-3.5' : ''
               )}>
-                {table.number}
+                {table.code}
               </span>
 
               <span className={cn('mt-0.5 text-[10px] font-bold tracking-tight opacity-75 tabular-nums', visual.sub)}>
                 {priority === 'empty' ? (lang === 'vi' ? 'Trống' : 'Empty') : `${table.session?.guest_count ?? 0}/${table.capacity}`}
               </span>
             </span>
+            {groupLabel && (
+              <span className="absolute -left-1 -top-1 flex size-5 items-center justify-center rounded-full border-2 border-white bg-purple-500 text-[10px] font-bold text-white shadow-sm dark:border-zinc-950">
+                {groupLabel}
+              </span>
+            )}
+            {mergeSelected && (
+              <span className="absolute -left-1 -top-1 flex size-5 items-center justify-center rounded-full border-2 border-white bg-purple-500 text-white shadow-sm dark:border-zinc-950">
+                <Link2 className="size-3" />
+              </span>
+            )}
             {secondaries.length > 0 && (
               <span className="absolute -right-1 -top-1 flex flex-col gap-0.5">
                 {secondaries.map((signal) => (
@@ -114,6 +196,7 @@ export const FloorPlan: FC<FloorPlanProps> = ({ tables, now, lang, t, onSelectTa
         <Badge variant="secondary" className="h-6 rounded-full px-2 text-[11px]">
           {priorityLabel('empty', lang)}
         </Badge>
+        {groupChains.length > 0 && <LegendDot color="bg-purple-500" label={t('merge_legend')} />}
       </div>
       </div>
     </div>

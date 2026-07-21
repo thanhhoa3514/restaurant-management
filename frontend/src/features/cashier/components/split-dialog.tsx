@@ -46,7 +46,7 @@ export const SplitDialog: FC<SplitDialogProps> = ({ open, session, lang, t, onOp
         <DialogHeader className="gap-1 border-b border-[var(--separator)] p-5 pb-4">
           <DialogTitle className="text-lg font-bold text-[var(--text)]">
             {t('split_dialog_title')}
-            {session ? <span className="ml-2 font-normal text-[var(--text-tertiary)]">· {t('table')} {session.table_number}</span> : null}
+            {session ? <span className="ml-2 font-normal text-[var(--text-tertiary)]">· {t('table')} {session.table_label}</span> : null}
           </DialogTitle>
           <DialogDescription>{t('split_hint')}</DialogDescription>
         </DialogHeader>

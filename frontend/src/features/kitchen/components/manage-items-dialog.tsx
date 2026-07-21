@@ -30,6 +30,8 @@ interface ManageItemsDialogProps {
 }
 
 const timelineBadgeStyle: Record<ItemStatus, string> = {
+  placed: 'bg-secondary text-secondary-foreground',
+  cancelled: 'bg-muted text-muted-foreground',
   pending: 'bg-secondary text-secondary-foreground',
   acknowledged:
     'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-400',

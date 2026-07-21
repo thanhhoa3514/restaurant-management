@@ -11,6 +11,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-khach-07-goi-nhan-vien.drawio`](./uc-khach-07-goi-nhan-vien.drawio) — mở bằng draw.io / diagrams.net.
+
 _Hình: ĐẶC TẢ USE-CASE KHÁCH — GỌI NHÂN VIÊN_
 Tác nhân **Khách** giao tiếp với use-case «Gọi nhân viên»; phát tín hiệu gắn bàn/phiên và «Đẩy realtime cho Phục vụ». Phục vụ xác nhận tín hiệu ở use-case «Xác nhận gọi nhân viên» (UC-12). Không đổi trạng thái phiên.
 

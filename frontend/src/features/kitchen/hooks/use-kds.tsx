@@ -11,7 +11,7 @@ import {
 import { KDS_DICT } from '@/features/kitchen/data/i18n'
 import { minStatus, nextStatus, urgencyFor } from '@/features/kitchen/helpers'
 import type { ItemStatus, KDSStats, Lang, Ticket, Urgency } from '@/features/kitchen/types'
-import { ApiError } from '@/lib/api'
+import { ApiError, errorMessage } from '@/lib/api'
 import {
   reviewCancelRequest,
   updateKitchenOrderItemStatus,
@@ -36,6 +36,8 @@ function statusToastKey(status: ItemStatus): KdsDictKey | null {
     case 'ready':
       return 'toast_served'
     case 'served':
+    case 'placed':
+    case 'cancelled':
       return null
   }
 }
@@ -192,9 +194,7 @@ export function useKds(): UseKdsValue {
           refetchQueue()
         })
         .catch((err) => {
-          notify(
-            err instanceof ApiError ? err.message : 'Không thể kết nối máy chủ',
-          )
+          notify(errorMessage(err, 'Không thể kết nối máy chủ'))
         })
     },
     [notify, refetchQueue, t, tickets],
@@ -210,7 +210,7 @@ export function useKds(): UseKdsValue {
           refetchQueue()
         })
         .catch((err) => {
-          notify(err instanceof ApiError ? err.message : 'Không thể kết nối máy chủ')
+          notify(errorMessage(err, 'Không thể kết nối máy chủ'))
         })
     },
     [notify, refetchCancelRequests, refetchQueue, t],

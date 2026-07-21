@@ -12,6 +12,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-quan-ly-30-quan-ly-nguoi-dung-phan-quyen.drawio`](./uc-quan-ly-30-quan-ly-nguoi-dung-phan-quyen.drawio) — mở bằng draw.io / diagrams.net.
+
 *Hình: ĐẶC TẢ USE-CASE QUẢN LÝ — QUẢN LÝ NGƯỜI DÙNG & PHÂN QUYỀN*
 Tác nhân **Quản lý** giao tiếp với use-case «Quản lý người dùng»; một endpoint kiểu action chọn thao tác «Tạo», «Sửa», «Khóa/Mở (set_status)», «Đặt lại mật khẩu». Gán vai trò lúc tạo/sửa; quyền suy ra theo vai trò (RBAC). «Sửa» và «Khóa» «include» «Chặn tự-thao-tác» — không đổi vai trò/trạng thái của chính mình (tránh tự khóa khỏi màn quản trị).
 

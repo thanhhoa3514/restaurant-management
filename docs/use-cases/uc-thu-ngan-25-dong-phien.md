@@ -12,6 +12,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-thu-ngan-25-dong-phien.drawio`](./uc-thu-ngan-25-dong-phien.drawio) — mở bằng draw.io / diagrams.net.
+
 _Hình: ĐẶC TẢ USE-CASE THU NGÂN — ĐÓNG PHIÊN_
 Tác nhân **Thu ngân** giao tiếp với use-case «Đóng phiên»; use-case «include» «Kiểm ràng buộc đóng phiên» (hóa đơn đã thanh toán). Đủ điều kiện → phiên `CLOSED`, bàn `AVAILABLE`. Là bước cuối vòng đời phiên: `ACTIVE → AWAITING_PAYMENT → CLOSED`. Tiếp nối sau «Xử lý thanh toán» (UC-C23).
 

@@ -12,6 +12,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-quan-ly-26-quan-ly-thuc-don.drawio`](./uc-quan-ly-26-quan-ly-thuc-don.drawio) — mở bằng draw.io / diagrams.net.
+
 _Hình: ĐẶC TẢ USE-CASE QUẢN LÝ — QUẢN LÝ THỰC ĐƠN_
 Tác nhân **Quản lý** giao tiếp với use-case «Quản lý thực đơn»; use-case gồm các thao tác «Thêm món», «Sửa món», «Xóa món» (soft delete) và «Xem danh mục/món». «Xóa» và «Sửa» «include» «Kiểm khóa lạc quan (version)». Đổi giá **chỉ áp cho lần gọi mới** — order_item đã snapshot giữ nguyên. Mỗi thao tác ghi/phát sự kiện realtime + ghi audit.
 

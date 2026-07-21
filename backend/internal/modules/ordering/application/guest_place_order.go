@@ -145,7 +145,7 @@ func (s *GuestPlaceOrder) Handle(ctx context.Context, req GuestPlaceOrderRequest
 			return err
 		}
 		if s.outbox != nil {
-			if err := s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "order", AggregateID: order.ID, EventType: "order.submitted", Payload: orderSubmittedPayload(order)}); err != nil {
+			if err := s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "order", AggregateID: order.ID, EventType: "ordering.order_placed", Payload: orderSubmittedPayload(order)}); err != nil {
 				return err
 			}
 		}

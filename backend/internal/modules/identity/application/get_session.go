@@ -9,6 +9,13 @@ import (
 	"restaurant-management/internal/modules/identity/domain"
 )
 
+type TESTRESPONSE struct {
+	UserId uuid.UUID `json:"cc"`
+	Name   string    `json:"ss"`
+	Age    int32     `json:"age"`
+	Dest   string    `json:"des"`
+}
+
 type SessionResponse struct {
 	UserID      uuid.UUID `json:"user_id"`
 	Username    string    `json:"username"`

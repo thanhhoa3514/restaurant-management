@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import type { AdminT } from '@/features/admin/data/i18n'
 import type { AdminMenuItemDetailDTO } from '@/features/catalog/types'
-import { errorMessage } from '@/features/catalog/helper/utils'
+import { errorMessage } from '@/lib/api'
 
 export function ToggleBox({
   label,

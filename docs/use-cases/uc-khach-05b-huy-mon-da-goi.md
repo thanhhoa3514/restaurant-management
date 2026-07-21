@@ -11,6 +11,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-khach-05b-huy-mon-da-goi.drawio`](./uc-khach-05b-huy-mon-da-goi.drawio) — mở bằng draw.io / diagrams.net.
+
 _Hình: ĐẶC TẢ USE-CASE KHÁCH — HỦY MÓN ĐÃ GỌI_
 Tác nhân **Khách** giao tiếp với use-case «Hủy món đã gọi»; use-case «include» «Đọc trạng thái món theo version». Món còn `PENDING` → hủy trực tiếp. Món đã `ACKNOWLEDGED`/`PREPARING` → «extend» sang «Xác nhận / từ chối yêu cầu hủy» của Bếp (UC-18): tạo yêu cầu hủy, đẩy realtime cho Bếp duyệt.
 

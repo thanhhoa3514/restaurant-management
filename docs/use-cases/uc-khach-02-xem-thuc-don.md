@@ -11,6 +11,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-khach-02-xem-thuc-don.drawio`](./uc-khach-02-xem-thuc-don.drawio) — mở bằng draw.io / diagrams.net.
+
 *Hình: ĐẶC TẢ USE-CASE KHÁCH — XEM THỰC ĐƠN*
 Tác nhân **Khách** giao tiếp với use-case «Xem thực đơn»; use-case «include» thao tác «Lấy danh mục & danh sách món» và «Xem chi tiết món». Trường hợp Quản lý đổi trạng thái còn/hết «extend» sang use-case «Cập nhật trạng thái món» (đẩy realtime, UC-G/Quản lý). Xem thực đơn là bước tiếp nối sau «Quét QR vào phiên» (UC-G01).
 

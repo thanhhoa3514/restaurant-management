@@ -30,7 +30,7 @@ const SHELL: Record<Lang, ShellStrings> = {
     navGroup: { manage: 'Quản lý', operate: 'Vận hành' },
     navLabel: {
       dashboard: 'Tổng quan',
-      'table-qrs': 'Mã QR bàn',
+      'table-qrs': 'Quản lý bàn',
       catalog: 'Danh mục món',
       staff: 'Nhân sự',
       reports: 'Báo cáo',
@@ -41,7 +41,7 @@ const SHELL: Record<Lang, ShellStrings> = {
     },
     navDesc: {
       dashboard: 'Tổng quan vận hành',
-      'table-qrs': 'Tạo và xoay mã QR gọi món',
+      'table-qrs': 'Bàn, sơ đồ và mã QR gọi món',
       catalog: 'Ẩn/hiện món và cập nhật giá',
       staff: 'Vai trò và ca trực',
       reports: 'Doanh thu và vận hành',
@@ -71,7 +71,7 @@ const SHELL: Record<Lang, ShellStrings> = {
     navGroup: { manage: 'Manage', operate: 'Operate' },
     navLabel: {
       dashboard: 'Overview',
-      'table-qrs': 'Table QR codes',
+      'table-qrs': 'Tables',
       catalog: 'Menu catalog',
       staff: 'Staff',
       reports: 'Reports',
@@ -82,7 +82,7 @@ const SHELL: Record<Lang, ShellStrings> = {
     },
     navDesc: {
       dashboard: 'Operations overview',
-      'table-qrs': 'Create & rotate ordering QR codes',
+      'table-qrs': 'Tables, floor plan and QR codes',
       catalog: 'Toggle items & update prices',
       staff: 'Roles & shifts',
       reports: 'Revenue & operations',

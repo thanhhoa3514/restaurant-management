@@ -13,6 +13,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-phuc-vu-33-tach-phien.drawio`](./uc-phuc-vu-33-tach-phien.drawio) — mở bằng draw.io / diagrams.net.
+
 *Hình: ĐẶC TẢ USE-CASE PHỤC VỤ — TÁCH PHIÊN*
 Tác nhân **Phục vụ** giao tiếp với use-case «Tách phiên»; use-case «include» «Kiểm nhóm gộp còn hiệu lực». Đây là nghịch đảo của «Gộp phiên» (UC-P32): gỡ các phiên khỏi `merge_group` và vô hiệu hóa nhóm, trả mỗi phiên về độc lập (tính tiền riêng).
 

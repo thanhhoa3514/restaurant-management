@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, Copy, Download, Plus, QrCode, RefreshCw } from 'lucide-react'
+import { Check, Copy, Download, LayoutGrid, Map as MapIcon, Pencil, Plus, QrCode, RefreshCw, SquareStack, Trash2 } from 'lucide-react'
 import QRCode from 'qrcode'
 
 import { Badge } from '@/components/ui/badge'
@@ -9,39 +9,50 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet'
 import { SecureActionDialog } from '@/components/SecureActionDialog'
 import { ShellHeaderCenter } from '@/components/admin-shell'
+import { AreaManagerDialog } from '@/features/admin/components/area-manager-dialog'
+import { FloorBuilder } from '@/features/admin/components/floor-builder'
+import { TableFormDialog } from '@/features/admin/components/table-form-dialog'
 import { makeAdminT, type AdminT } from '@/features/admin/data/i18n'
-import { ApiError } from '@/lib/api'
+import { errorMessage } from '@/lib/api'
 import { useLang } from '@/hooks/use-lang'
 import { cn } from '@/lib/utils'
-import { buildQROrderURL, listTableQRs, manageTableQR } from '@/features/dining/api'
+import { buildQROrderURL, deleteTable, listTableQRs, manageTableQR } from '@/features/dining/api'
 import type { TableQR } from '@/features/dining/types'
-
-const TABLE_QRS_KEY = ['dining', 'table-qrs'] as const
+import { TABLE_QRS_KEY } from '@/features/dining/keys'
 
 export function TableQRManager() {
   const { lang } = useLang()
   const t = makeAdminT(lang)
+  const queryClient = useQueryClient()
   const { data: tablesData, isLoading, isError, error, isSuccess } = useQuery({
     queryKey: TABLE_QRS_KEY,
     queryFn: listTableQRs,
   })
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [view, setView] = useState<'grid' | 'plan'>('grid')
+  // null = closed, 'new' = create, otherwise the table being edited.
+  const [editing, setEditing] = useState<TableQR | 'new' | null>(null)
+  const [deleting, setDeleting] = useState<TableQR | null>(null)
+  const [areasOpen, setAreasOpen] = useState(false)
+
+  const removeTable = useMutation({
+    mutationFn: deleteTable,
+    onSuccess: () => {
+      setSelectedId(null)
+      return queryClient.invalidateQueries({ queryKey: TABLE_QRS_KEY })
+    },
+  })
 
   const tables = tablesData ?? []
-  const areaGroups = tables.reduce<Array<{ name: string; tables: TableQR[] }>>(
-    (groups, table) => {
+  const areaGroups = Array.from(
+    tables.reduce((map, table) => {
       const name = table.area_name || t('qr_area_other')
-      const existing = groups.find((g) => g.name === name)
-      if (existing) {
-        return groups.map((g) =>
-          g.name === name
-            ? { ...g, tables: [...g.tables, table] }
-            : g,
-        )
-      }
-      return [...groups, { name, tables: [table] }]
-    },
-    [],
+      const group = map.get(name)
+      if (group) group.push(table)
+      else map.set(name, [table])
+      return map
+    }, new Map<string, TableQR[]>()),
+    ([name, tables]) => ({ name, tables }),
   )
   const selected = tables.find((table) => table.table_id === selectedId) ?? null
 
@@ -53,6 +64,41 @@ export function TableQRManager() {
         </div>
       </ShellHeaderCenter>
       <div className="mx-auto max-w-7xl space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex rounded-[14px] bg-[var(--surface-grouped)]/70 p-1">
+            {(['grid', 'plan'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setView(mode)}
+                className={cn(
+                  'flex items-center gap-2 rounded-[10px] px-3 py-1.5 text-sm font-semibold transition-colors',
+                  view === mode
+                    ? 'bg-[var(--material-regular)] text-[var(--text)] shadow-3xs'
+                    : 'text-[var(--text-secondary)]',
+                )}
+              >
+                {mode === 'grid' ? <LayoutGrid className="size-4" /> : <MapIcon className="size-4" />}
+                {t(mode === 'grid' ? 'tbl_view_grid' : 'tbl_view_plan')}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              className="rounded-[var(--radius-lg)]"
+              onClick={() => setAreasOpen(true)}
+            >
+              <SquareStack className="size-4" />
+              {t('area_manage')}
+            </Button>
+            <Button className="rounded-[var(--radius-lg)]" onClick={() => setEditing('new')}>
+              <Plus className="size-4" />
+              {t('tbl_add')}
+            </Button>
+          </div>
+        </div>
+
         {isLoading && (
           <p className="text-sm text-[var(--text-secondary)]">{t('qr_loading')}</p>
         )}
@@ -60,7 +106,7 @@ export function TableQRManager() {
           <Card className="border border-[var(--system-red)]/30 bg-[var(--system-red)]/5">
             <CardContent className="p-5 text-sm text-[var(--system-red)]">
               {t('qr_load_error')}:{' '}
-              {error instanceof ApiError ? error.message : t('qr_unknown_error')}
+              {errorMessage(error, t('qr_unknown_error'))}
             </CardContent>
           </Card>
         )}
@@ -73,7 +119,9 @@ export function TableQRManager() {
           </Card>
         )}
 
-        {areaGroups.map((group) => (
+        {view === 'plan' && <FloorBuilder />}
+
+        {view === 'grid' && areaGroups.map((group) => (
           <section key={group.name} className="space-y-3">
             <div className="flex items-baseline gap-2">
               <h2 className="text-[17px] font-semibold text-[var(--text)]">{group.name}</h2>
@@ -94,7 +142,39 @@ export function TableQRManager() {
           </section>
         ))}
       </div>
-      <QRDetailSheet table={selected} t={t} onClose={() => setSelectedId(null)} />
+      <QRDetailSheet
+        table={selected}
+        t={t}
+        onClose={() => setSelectedId(null)}
+        onEdit={() => selected && setEditing(selected)}
+        onDelete={() => selected && setDeleting(selected)}
+      />
+      <TableFormDialog
+        table={editing === 'new' ? null : editing}
+        open={editing !== null}
+        t={t}
+        onOpenChange={(next) => !next && setEditing(null)}
+      />
+      <AreaManagerDialog open={areasOpen} t={t} onOpenChange={setAreasOpen} />
+      {deleting && (
+        <SecureActionDialog
+          open
+          title={t('tbl_delete_title')}
+          description={t('tbl_delete_desc', deleting.table_name)}
+          requireConfirmationText={deleting.table_code}
+          inputPlaceholder={t('qr_confirm_placeholder', deleting.table_code)}
+          confirmText={t('tbl_delete_confirm')}
+          cancelText={t('qr_cancel')}
+          variant="destructive"
+          onOpenChange={(next) => !next && setDeleting(null)}
+          onConfirm={() => removeTable.mutate(deleting.table_id)}
+        />
+      )}
+      {removeTable.isError && (
+        <p className="mx-auto max-w-7xl text-sm text-[var(--system-red)]">
+          {errorMessage(removeTable.error, t('qr_action_failed'))}
+        </p>
+      )}
     </>
   )
 }
@@ -103,12 +183,10 @@ function TableCard({ table, t, onOpen }: { table: TableQR; t: AdminT; onOpen: ()
   return (
     <button
       type="button"
-      onClick={table.has_active_qr ? onOpen : undefined}
+      onClick={onOpen}
       className={cn(
-        'flex flex-col gap-3 rounded-[20px] border border-[var(--separator)] bg-[var(--material-regular)] p-5 text-left backdrop-blur-2xl transition-all duration-[220ms] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--system-purple)]/20',
-        table.has_active_qr
-          ? 'cursor-pointer hover:border-[var(--system-purple)]/40 hover:bg-[var(--system-purple)]/5'
-          : 'cursor-default opacity-40',
+        'flex cursor-pointer flex-col gap-3 rounded-[20px] border border-[var(--separator)] bg-[var(--material-regular)] p-5 text-left backdrop-blur-2xl transition-all duration-[220ms] hover:border-[var(--system-purple)]/40 hover:bg-[var(--system-purple)]/5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--system-purple)]/20',
+        !table.has_active_qr && 'opacity-60',
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -149,10 +227,14 @@ function QRDetailSheet({
   table,
   t,
   onClose,
+  onEdit,
+  onDelete,
 }: {
   table: TableQR | null
   t: AdminT
   onClose: () => void
+  onEdit: () => void
+  onDelete: () => void
 }) {
   const queryClient = useQueryClient()
   const [dataUrl, setDataUrl] = useState<string | null>(null)
@@ -201,6 +283,20 @@ function QRDetailSheet({
             <>
               <SheetHeader title={table.table_name} subtitle={table.table_code} />
               <div className="flex-1 space-y-5 overflow-y-auto px-5 pb-5">
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="secondary" className="rounded-[var(--radius-lg)]" onClick={onEdit}>
+                    <Pencil className="size-4" />
+                    {t('tbl_edit')}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="rounded-[var(--radius-lg)] text-[var(--system-red)]"
+                    onClick={onDelete}
+                  >
+                    <Trash2 className="size-4" />
+                    {t('tbl_delete')}
+                  </Button>
+                </div>
                 {table.has_active_qr ? (
                   <>
                     <div className="flex flex-col items-center gap-4 rounded-[20px] bg-white p-5">
@@ -280,9 +376,7 @@ function QRDetailSheet({
 
                 {mutation.isError && (
                   <p className="text-sm text-[var(--system-red)]">
-                    {mutation.error instanceof ApiError
-                      ? mutation.error.message
-                      : t('qr_action_failed')}
+                    {errorMessage(mutation.error, t('qr_action_failed'))}
                   </p>
                 )}
               </div>

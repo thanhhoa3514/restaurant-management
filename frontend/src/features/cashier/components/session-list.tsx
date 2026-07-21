@@ -36,7 +36,7 @@ export const SessionList: FC<SessionListProps> = ({ sessions, selectedId, now, l
     const query = search.trim().toLowerCase()
     const filtered = sessions.filter((session) => {
       if (!query) return true
-      return String(session.table_number).includes(query)
+      return String(session.table_label).includes(query)
     })
 
     return filtered.toSorted((a, b) => {
@@ -139,7 +139,7 @@ function SessionCard({
       <div className="w-full p-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-lg font-bold text-[var(--text)]">{t('table')} {session.table_number}</div>
+            <div className="text-lg font-bold text-[var(--text)]">{t('table')} {session.table_label}</div>
             <div className="mt-0.5 text-xs font-normal text-[var(--text-tertiary)]">
               {lang === 'vi' ? session.area_name_vi : session.area_name_en} · {t('guests', session.guest_count)}
               {session.guest_name && <span> · {session.guest_name}</span>}

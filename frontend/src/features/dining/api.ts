@@ -75,3 +75,61 @@ export function verifySession(sessionId: string, action: 'approve' | 'reject'): 
     body: { action },
   })
 }
+
+export interface Area {
+  id: string
+  name: string
+  description: string
+  display_order: number
+  is_active: boolean
+}
+
+export function listAreas(): Promise<{ areas: Area[] }> {
+  return apiRequest<{ areas: Area[] }>('/api/v1/restaurant/areas')
+}
+
+export interface SaveAreaArgs {
+  /** Omit to create a new area; set to update that area. */
+  areaId?: string
+  name: string
+  description?: string
+  displayOrder?: number
+  isActive?: boolean
+}
+
+export function saveArea({ areaId, name, description, displayOrder, isActive }: SaveAreaArgs) {
+  const body = {
+    name,
+    description: description ?? '',
+    display_order: displayOrder ?? 0,
+    ...(isActive === undefined ? {} : { is_active: isActive }),
+  }
+  return areaId
+    ? apiRequest(`/api/v1/restaurant/areas/${encodeURIComponent(areaId)}`, { method: 'PATCH', body })
+    : apiRequest('/api/v1/restaurant/areas', { method: 'POST', body })
+}
+
+export function deleteArea(areaId: string) {
+  return apiRequest(`/api/v1/restaurant/areas/${encodeURIComponent(areaId)}`, { method: 'DELETE' })
+}
+
+export interface SaveTableArgs {
+  /** Omit to create a new table; set to update that table. */
+  tableId?: string
+  areaId?: string | null
+  code: string
+  name: string
+  capacity: number
+  status: string
+}
+
+export function saveTable({ tableId, areaId, code, name, capacity, status }: SaveTableArgs) {
+  const body = { area_id: areaId ?? null, code, name, capacity, status }
+  return tableId
+    ? apiRequest(`/api/v1/restaurant/tables/${encodeURIComponent(tableId)}`, { method: 'PATCH', body })
+    : apiRequest('/api/v1/restaurant/tables', { method: 'POST', body })
+}
+
+export function deleteTable(tableId: string) {
+  return apiRequest(`/api/v1/restaurant/tables/${encodeURIComponent(tableId)}`, { method: 'DELETE' })
+}

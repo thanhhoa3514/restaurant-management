@@ -18,6 +18,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-quan-ly-29-quan-ly-ban-khu-vuc.drawio`](./uc-quan-ly-29-quan-ly-ban-khu-vuc.drawio) — mở bằng draw.io / diagrams.net.
+
 _Hình: ĐẶC TẢ USE-CASE QUẢN LÝ — QUẢN LÝ BÀN / KHU VỰC_
 Tác nhân **Quản lý** giao tiếp với use-case «Quản lý bàn/khu vực»; gồm «Thêm/Sửa/Xóa bàn», «Gán khu vực», «Sắp xếp sơ đồ». «Xóa bàn» «include» «Kiểm phiên active» — bàn đang có phiên `ACTIVE` bị chặn xóa, yêu cầu đóng phiên trước.
 

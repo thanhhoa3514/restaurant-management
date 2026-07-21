@@ -145,6 +145,15 @@ func (r *Repository) CreateOrderGraph(ctx context.Context, order *domain.OrderCr
 	if order.SessionID != uuid.Nil {
 		sessionID = order.SessionID
 	}
+	// Guest orders land in PLACED and wait for a server to confirm them into the
+	// kitchen queue (server-confirmation gate, migration 00012). Staff-placed
+	// orders (takeaway at the cashier) have no table/waiter queue to surface in,
+	// and the staff member placing them is confirming them — so they skip the
+	// gate and go straight to PENDING.
+	itemStatus := "PLACED"
+	if placedBy == "STAFF" {
+		itemStatus = "PENDING"
+	}
 	err := r.q(ctx).QueryRow(ctx, `
 		INSERT INTO orders (restaurant_id, dining_session_id, order_number, order_type, status, placed_by, placed_by_user_id, note, customer_name, customer_phone, pickup_time)
 		VALUES ($1, $2, $3, $4, 'SUBMITTED', $5, $6, $7, $8, $9, $10)
@@ -163,9 +172,9 @@ func (r *Repository) CreateOrderGraph(ctx context.Context, order *domain.OrderCr
 			 item_name_snapshot, item_code_snapshot, variant_name_snapshot, unit_price_vnd, quantity,
 			 options_total_vnd, subtotal_vnd, discount_amount_vnd, total_amount_vnd, status, station, note,
 			 is_takeaway)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'PENDING', $15, $16, $17)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $18, $15, $16, $17)
 			RETURNING id
-		`, order.RestaurantID, order.ID, sessionID, line.MenuItemID, line.VariantID, line.ItemNameSnapshot, nullString(line.ItemCodeSnapshot), line.VariantNameSnapshot, line.UnitPriceVND, line.Quantity, line.OptionsTotalVND, line.SubtotalVND, line.DiscountAmountVND, line.TotalAmountVND, line.Station, nullString(line.Note), line.IsTakeaway).Scan(&line.ID)
+		`, order.RestaurantID, order.ID, sessionID, line.MenuItemID, line.VariantID, line.ItemNameSnapshot, nullString(line.ItemCodeSnapshot), line.VariantNameSnapshot, line.UnitPriceVND, line.Quantity, line.OptionsTotalVND, line.SubtotalVND, line.DiscountAmountVND, line.TotalAmountVND, line.Station, nullString(line.Note), line.IsTakeaway, itemStatus).Scan(&line.ID)
 		if err != nil {
 			return err
 		}
@@ -430,7 +439,7 @@ func (r *Repository) UpdateOrderLine(ctx context.Context, restaurantID uuid.UUID
 		    unit_price_vnd = $6, quantity = $7, options_total_vnd = $8, subtotal_vnd = $9,
 		    discount_amount_vnd = $10, total_amount_vnd = $11, station = $12, note = $13,
 		    version = version + 1, updated_at = NOW()
-		WHERE restaurant_id = $1 AND id = $2 AND status = 'PENDING' AND deleted_at IS NULL
+		WHERE restaurant_id = $1 AND id = $2 AND status IN ('PLACED', 'PENDING') AND deleted_at IS NULL
 	`, restaurantID, line.ID, line.ItemNameSnapshot, nullString(line.ItemCodeSnapshot), line.VariantNameSnapshot, line.UnitPriceVND, line.Quantity, line.OptionsTotalVND, line.SubtotalVND, line.DiscountAmountVND, line.TotalAmountVND, line.Station, nullString(line.Note))
 	if err != nil {
 		return err
@@ -460,7 +469,7 @@ func (r *Repository) CancelOrderLines(ctx context.Context, restaurantID, orderID
 		UPDATE order_items
 		SET status = 'CANCELLED', cancelled_at = NOW(), cancelled_reason = $4,
 		    version = version + 1, updated_at = NOW()
-		WHERE restaurant_id = $1 AND order_id = $2 AND id = ANY($3) AND status = 'PENDING' AND deleted_at IS NULL
+		WHERE restaurant_id = $1 AND order_id = $2 AND id = ANY($3) AND status IN ('PLACED', 'PENDING') AND deleted_at IS NULL
 	`, restaurantID, orderID, lineIDs, reason); err != nil {
 		return err
 	}
@@ -686,7 +695,7 @@ func (r *Repository) ReviewCancelRequest(ctx context.Context, restaurantID, canc
 func (r *Repository) ListStaffTables(ctx context.Context, restaurantID uuid.UUID) ([]orderingapp.StaffTableDTO, error) {
 	rows, err := r.q(ctx).Query(ctx, `
 		SELECT t.id, t.code, t.name, t.capacity, t.status, COALESCE(a.name, ''),
-		       ds.id, ds.session_code, ds.status, COALESCE(ds.customer_count, 0), COALESCE(ds.customer_name, ''), ds.opened_at, ds.updated_at, ds.waiter_called_at
+		       ds.id, ds.session_code, ds.status, COALESCE(ds.customer_count, 0), COALESCE(ds.customer_name, ''), ds.opened_at, ds.updated_at, ds.waiter_called_at, ds.merge_group_id
 		FROM tables t
 		LEFT JOIN areas a ON a.id = t.area_id AND a.restaurant_id = t.restaurant_id AND a.deleted_at IS NULL
 		LEFT JOIN dining_sessions ds
@@ -705,12 +714,12 @@ func (r *Repository) ListStaffTables(ctx context.Context, restaurantID uuid.UUID
 	out := []orderingapp.StaffTableDTO{}
 	for rows.Next() {
 		var table orderingapp.StaffTableDTO
-		var sessionID pgtype.UUID
+		var sessionID, mergeGroupID pgtype.UUID
 		var sessionCode, sessionStatus pgtype.Text
 		var customerCount pgtype.Int4
 		var customerName pgtype.Text
 		var openedAt, updatedAt, waiterCalledAt pgtype.Timestamptz
-		if err := rows.Scan(&table.ID, &table.Code, &table.Name, &table.Capacity, &table.Status, &table.AreaName, &sessionID, &sessionCode, &sessionStatus, &customerCount, &customerName, &openedAt, &updatedAt, &waiterCalledAt); err != nil {
+		if err := rows.Scan(&table.ID, &table.Code, &table.Name, &table.Capacity, &table.Status, &table.AreaName, &sessionID, &sessionCode, &sessionStatus, &customerCount, &customerName, &openedAt, &updatedAt, &waiterCalledAt, &mergeGroupID); err != nil {
 			return nil, err
 		}
 		if sessionID.Valid {
@@ -732,6 +741,10 @@ func (r *Repository) ListStaffTables(ctx context.Context, restaurantID uuid.UUID
 			if waiterCalledAt.Valid {
 				t := waiterCalledAt.Time
 				session.WaiterCalledAt = &t
+			}
+			if mergeGroupID.Valid {
+				gid := uuid.UUID(mergeGroupID.Bytes)
+				session.MergeGroupID = &gid
 			}
 			view, err := r.ViewSessionOrders(ctx, restaurantID, sid)
 			if err != nil {
@@ -761,7 +774,7 @@ func (r *Repository) ListKitchenQueue(ctx context.Context, restaurantID uuid.UUI
 		    JOIN order_items oi ON oi.id = kti.order_item_id AND oi.restaurant_id = kti.restaurant_id AND oi.deleted_at IS NULL
 		    WHERE kti.restaurant_id = kt.restaurant_id
 		      AND kti.kitchen_ticket_id = kt.id
-		      AND oi.status <> 'SERVED'
+		      AND oi.status NOT IN ('PLACED', 'SERVED')
 		      AND kti.status <> 'CANCELLED'
 		  )
 		ORDER BY o.submitted_at, kt.created_at
@@ -827,6 +840,7 @@ func (r *Repository) fetchKitchenTicketItems(ctx context.Context, restaurantID u
 		FROM kitchen_ticket_items kti
 		JOIN order_items oi ON oi.id = kti.order_item_id AND oi.restaurant_id = kti.restaurant_id AND oi.deleted_at IS NULL
 		WHERE kti.restaurant_id = $1 AND kti.kitchen_ticket_id = ANY($2) AND kti.status <> 'CANCELLED'
+		  AND oi.status <> 'PLACED'
 		ORDER BY kti.created_at, kti.id
 	`, restaurantID, ticketIDs)
 	if err != nil {
@@ -1069,6 +1083,97 @@ func (r *Repository) MarkItemUnavailable(ctx context.Context, restaurantID, item
 		return orderingapp.UpdateItemStatusResponse{}, err
 	}
 	return orderingapp.UpdateItemStatusResponse{ID: itemID, Status: "UNAVAILABLE"}, nil
+}
+
+// ConfirmOrderItem promotes a PLACED item to PENDING, releasing it to the
+// kitchen queue. The kitchen_ticket_item was created PENDING already and only
+// becomes visible once the order_item leaves PLACED (see ListKitchenQueue).
+func (r *Repository) ConfirmOrderItem(ctx context.Context, restaurantID, itemID uuid.UUID, actorID *uuid.UUID, actorRole string) (orderingapp.UpdateItemStatusResponse, error) {
+	current, err := r.lockPlacedItem(ctx, restaurantID, itemID)
+	if err != nil {
+		return orderingapp.UpdateItemStatusResponse{}, err
+	}
+	if _, err := r.q(ctx).Exec(ctx, `
+		UPDATE order_items
+		SET status = 'PENDING', version = version + 1, updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2
+	`, restaurantID, itemID); err != nil {
+		return orderingapp.UpdateItemStatusResponse{}, err
+	}
+	if _, err := r.q(ctx).Exec(ctx, `
+		INSERT INTO order_item_status_history (restaurant_id, order_item_id, from_status, to_status, changed_by, changed_by_role)
+		VALUES ($1, $2, $3, 'PENDING', $4, $5)
+	`, restaurantID, itemID, current, actorID, nullString(actorRole)); err != nil {
+		return orderingapp.UpdateItemStatusResponse{}, err
+	}
+	return orderingapp.UpdateItemStatusResponse{ID: itemID, Status: "PENDING"}, nil
+}
+
+// RejectOrderItem cancels a PLACED item before it ever reaches the kitchen.
+// The item and its kitchen_ticket_item go CANCELLED; any ticket left with no
+// live items is cancelled too.
+func (r *Repository) RejectOrderItem(ctx context.Context, restaurantID, itemID uuid.UUID, reason string, actorID *uuid.UUID, actorRole string) (orderingapp.UpdateItemStatusResponse, error) {
+	current, err := r.lockPlacedItem(ctx, restaurantID, itemID)
+	if err != nil {
+		return orderingapp.UpdateItemStatusResponse{}, err
+	}
+	if _, err := r.q(ctx).Exec(ctx, `
+		UPDATE order_items
+		SET status = 'CANCELLED', cancelled_at = NOW(), cancelled_by = $3, cancelled_reason = $4,
+		    version = version + 1, updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2
+	`, restaurantID, itemID, actorID, nullString(reason)); err != nil {
+		return orderingapp.UpdateItemStatusResponse{}, err
+	}
+	if _, err := r.q(ctx).Exec(ctx, `
+		INSERT INTO order_item_status_history (restaurant_id, order_item_id, from_status, to_status, changed_by, changed_by_role, reason)
+		VALUES ($1, $2, $3, 'CANCELLED', $4, $5, $6)
+	`, restaurantID, itemID, current, actorID, nullString(actorRole), nullString(reason)); err != nil {
+		return orderingapp.UpdateItemStatusResponse{}, err
+	}
+	if _, err := r.q(ctx).Exec(ctx, `
+		UPDATE kitchen_ticket_items
+		SET status = 'CANCELLED', updated_at = NOW()
+		WHERE restaurant_id = $1 AND order_item_id = $2
+	`, restaurantID, itemID); err != nil {
+		return orderingapp.UpdateItemStatusResponse{}, err
+	}
+	if _, err := r.q(ctx).Exec(ctx, `
+		UPDATE kitchen_tickets kt
+		SET status = 'CANCELLED', updated_at = NOW()
+		WHERE kt.restaurant_id = $1
+		  AND kt.id = (SELECT kitchen_ticket_id FROM kitchen_ticket_items WHERE restaurant_id = $1 AND order_item_id = $2)
+		  AND NOT EXISTS (
+			SELECT 1 FROM kitchen_ticket_items kti
+			WHERE kti.restaurant_id = kt.restaurant_id
+			  AND kti.kitchen_ticket_id = kt.id
+			  AND kti.status <> 'CANCELLED'
+		  )
+	`, restaurantID, itemID); err != nil {
+		return orderingapp.UpdateItemStatusResponse{}, err
+	}
+	return orderingapp.UpdateItemStatusResponse{ID: itemID, Status: "CANCELLED"}, nil
+}
+
+// lockPlacedItem locks an order item and asserts it is still awaiting server
+// confirmation (PLACED). Returns the current status so callers can record it.
+func (r *Repository) lockPlacedItem(ctx context.Context, restaurantID, itemID uuid.UUID) (string, error) {
+	var current string
+	err := r.q(ctx).QueryRow(ctx, `
+		SELECT status FROM order_items
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+		FOR UPDATE
+	`, restaurantID, itemID).Scan(&current)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", apperr.New(apperr.CodeNotFound, "order item not found")
+	}
+	if err != nil {
+		return "", err
+	}
+	if current != "PLACED" {
+		return "", apperr.New(apperr.CodeConflict, "order item is not awaiting confirmation")
+	}
+	return current, nil
 }
 
 func toStaffOrders(orders []domain.OrderRead) []orderingapp.StaffOrderDTO {

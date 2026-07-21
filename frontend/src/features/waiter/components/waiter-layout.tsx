@@ -1,6 +1,8 @@
 import { type FC, useState } from 'react'
+import { Link2, X } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { LanguageLoader } from '@/components/ui/language-loader'
@@ -19,6 +21,13 @@ import { TakeawayPanel } from '@/features/cashier/components/takeaway-panel'
 export const WaiterLayout: FC = () => {
   const { state, actions, counts, selectedTable, t } = useWaiter()
   const [changingLang, setChangingLang] = useState<'vi' | 'en' | null>(null)
+
+  const groupId = selectedTable?.session?.merge_group_id
+  const mergeSiblings = groupId
+    ? state.tables
+        .filter((table) => table.id !== selectedTable?.id && table.session?.merge_group_id === groupId)
+        .map((table) => table.code)
+    : []
 
   useShellConfig({
     title: t('floor_view'),
@@ -109,14 +118,45 @@ export const WaiterLayout: FC = () => {
 
       <main className="mx-auto w-full max-w-[1600px] px-4 py-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-5 lg:px-8">
         {state.view === 'plan' ? (
-          <FloorPlan
-            tables={state.tables}
-            now={state.now}
-            lang={state.lang}
-            t={t}
-            onSelectTable={actions.selectTable}
-            justChangedIds={state.justChangedIds}
-          />
+          <>
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <Button
+                variant={state.mergeMode ? 'default' : 'outline'}
+                size="sm"
+                className="rounded-full"
+                onClick={actions.toggleMergeMode}
+              >
+                {state.mergeMode ? <X className="size-4" /> : <Link2 className="size-4" />}
+                {state.mergeMode ? t('merge_cancel') : t('merge_start')}
+              </Button>
+              {state.mergeMode && (
+                <>
+                  <span className="text-sm text-[var(--text-secondary)]">
+                    {t('merge_hint', state.mergeSelectedIds.length)}
+                  </span>
+                  <Button
+                    size="sm"
+                    className="rounded-full"
+                    disabled={state.mergeSelectedIds.length < 2}
+                    onClick={actions.confirmMerge}
+                  >
+                    {t('merge_confirm')}
+                  </Button>
+                </>
+              )}
+            </div>
+            <FloorPlan
+              tables={state.tables}
+              now={state.now}
+              lang={state.lang}
+              t={t}
+              onSelectTable={actions.selectTable}
+              justChangedIds={state.justChangedIds}
+              mergeMode={state.mergeMode}
+              mergeSelectedIds={state.mergeSelectedIds}
+              onToggleMergeSelection={actions.toggleMergeSelection}
+            />
+          </>
         ) : (
           <GridView
             tables={state.tables}
@@ -140,8 +180,12 @@ export const WaiterLayout: FC = () => {
         onNotifyCashier={actions.notifyCashier}
         onMarkItemServed={actions.markItemServed}
         onMarkAllServed={actions.markAllServed}
+        onConfirmItem={actions.confirmItem}
+        onRejectItem={actions.rejectItem}
         onRequestBill={actions.requestBill}
         onOpenSession={actions.openSession}
+        onSplitGroup={actions.splitGroup}
+        mergeSiblings={mergeSiblings}
       />
 
       <LanguageLoader open={changingLang !== null} targetLang={changingLang || state.lang} />

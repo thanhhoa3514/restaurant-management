@@ -13,6 +13,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-phuc-vu-11-theo-doi-tin-hieu-ban.drawio`](./uc-phuc-vu-11-theo-doi-tin-hieu-ban.drawio) — mở bằng draw.io / diagrams.net.
+
 *Hình: ĐẶC TẢ USE-CASE PHỤC VỤ — THEO DÕI TÍN HIỆU BÀN*
 Tác nhân **Phục vụ** giao tiếp với use-case «Theo dõi tín hiệu bàn»; nhận realtime các tín hiệu cần xử lý: món `READY`, khách gọi nhân viên (`dining.waiter_called`), yêu cầu tính tiền (`dining.bill_requested`). Chọn một tín hiệu dẫn sang «Xác nhận gọi nhân viên» (UC-P12) hoặc «Đánh dấu đã phục vụ» (UC-P13).
 

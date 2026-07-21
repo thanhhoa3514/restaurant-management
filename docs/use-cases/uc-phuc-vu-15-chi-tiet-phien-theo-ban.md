@@ -13,6 +13,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-phuc-vu-15-chi-tiet-phien-theo-ban.drawio`](./uc-phuc-vu-15-chi-tiet-phien-theo-ban.drawio) — mở bằng draw.io / diagrams.net.
+
 *Hình: ĐẶC TẢ USE-CASE PHỤC VỤ — CHI TIẾT PHIÊN THEO BÀN*
 Tác nhân **Phục vụ** giao tiếp với use-case «Xem chi tiết phiên/đơn theo bàn»; use-case «include» «Lấy đơn + order_item + trạng thái» của một bàn. Là bước drill-down từ lưới bàn (UC-P10) để xem món, trạng thái và các đơn trong phiên.
 

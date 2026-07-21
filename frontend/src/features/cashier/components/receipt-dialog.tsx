@@ -83,7 +83,7 @@ export const ReceiptDialog: FC<ReceiptDialogProps> = ({ open, session, t, lang, 
                 <ReceiptRow label={t('receipt_date')} value={invoice.payment?.completed_at ? fmtDateTime(invoice.payment.completed_at) : (now ? fmtDateTime(now) : '')} />
                 <ReceiptRow
                   label={t('receipt_table')}
-                  value={`${session.table_number} · ${lang === 'vi' ? session.area_name_vi : session.area_name_en}`}
+                  value={`${session.table_label} · ${lang === 'vi' ? session.area_name_vi : session.area_name_en}`}
                 />
                 <ReceiptRow label={t('receipt_cashier')} value={t('cashier_name')} />
               </div>

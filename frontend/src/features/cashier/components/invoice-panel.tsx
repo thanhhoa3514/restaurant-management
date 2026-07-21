@@ -70,7 +70,7 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <CardTitle className="text-2xl">{t('table')} {session.table_number}</CardTitle>
+                <CardTitle className="text-2xl">{t('table')} {session.table_label}</CardTitle>
                 <div className="mt-2 flex flex-wrap gap-2 text-sm text-[var(--text-tertiary)]">
                   <span>{lang === 'vi' ? session.area_name_vi : session.area_name_en}</span>
                   <span>·</span>

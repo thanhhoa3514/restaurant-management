@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { OrderItemEditSheet } from './order-item-edit-sheet'
 
 const STATUS_COLORS: Record<string, string> = {
+  PLACED: 'bg-system-orange/15 text-system-orange',
   PENDING: 'bg-system-orange/15 text-system-orange',
   CONFIRMED: 'bg-system-blue/15 text-system-blue',
   PREPARING: 'bg-system-blue/15 text-system-blue',

@@ -10,7 +10,7 @@ import { useCategoriesQuery, useMenuItemsQuery } from '@/features/catalog/querie
 import { useDeleteItemMutation, useToggleItemMutation } from '@/features/catalog/mutations'
 import type { AdminMenuItemSummaryDTO } from '@/features/catalog/types'
 import { useLang } from '@/hooks/use-lang'
-import { errorMessage } from '@/features/catalog/helper/utils'
+import { errorMessage } from '@/lib/api'
 
 import { ErrorCard } from './catalog-shared'
 import { CategoryFilter } from './category-filter'

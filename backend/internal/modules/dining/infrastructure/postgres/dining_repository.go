@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -17,21 +18,23 @@ import (
 )
 
 type Repository struct {
-	pool      *pgxpool.Pool
+	pool       *pgxpool.Pool
 	defaultRID uuid.UUID
 }
 
-func NewRepository(pool *pgxpool.Pool, defaultRID uuid.UUID) *Repository { return &Repository{pool: pool, defaultRID: defaultRID} }
+func NewRepository(pool *pgxpool.Pool, defaultRID uuid.UUID) *Repository {
+	return &Repository{pool: pool, defaultRID: defaultRID}
+}
 
 func (r *Repository) q(ctx context.Context) pg.Querier { return pg.QuerierFromContext(ctx, r.pool) }
 
 func (r *Repository) FindTable(ctx context.Context, restaurantID, tableID uuid.UUID) (*domain.Table, error) {
 	t := &domain.Table{}
 	err := r.q(ctx).QueryRow(ctx, `
-		SELECT id, restaurant_id, COALESCE(area_id, '00000000-0000-0000-0000-000000000000'::uuid), code, name, version, deleted_at
+		SELECT id, restaurant_id, COALESCE(area_id, '00000000-0000-0000-0000-000000000000'::uuid), code, name, capacity, status, version, deleted_at
 		FROM tables
 		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
-	`, restaurantID, tableID).Scan(&t.ID, &t.RestaurantID, &t.AreaID, &t.Code, &t.Name, &t.Version, &t.DeletedAt)
+	`, restaurantID, tableID).Scan(&t.ID, &t.RestaurantID, &t.AreaID, &t.Code, &t.Name, &t.Capacity, &t.Status, &t.Version, &t.DeletedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, apperr.New(apperr.CodeNotFound, "table not found")
 	}
@@ -133,7 +136,7 @@ func (r *Repository) ValidateSessionToken(ctx context.Context, token string) (au
 func (r *Repository) ListTablesWithActiveQR(ctx context.Context, restaurantID uuid.UUID) ([]domain.TableWithQR, error) {
 	rows, err := r.q(ctx).Query(ctx, `
 		SELECT t.id, t.code, t.name, t.status, t.capacity,
-		       COALESCE(a.name, ''), COALESCE(a.display_order, 0),
+		       a.id, COALESCE(a.name, ''), COALESCE(a.display_order, 0),
 		       q.id, q.token
 		FROM tables t
 		LEFT JOIN areas a
@@ -156,9 +159,14 @@ func (r *Repository) ListTablesWithActiveQR(ctx context.Context, restaurantID uu
 	for rows.Next() {
 		var row domain.TableWithQR
 		var qrID pgtype.UUID
+		var areaID pgtype.UUID
 		var token pgtype.Text
-		if err := rows.Scan(&row.TableID, &row.TableCode, &row.TableName, &row.Status, &row.Capacity, &row.AreaName, &row.AreaOrder, &qrID, &token); err != nil {
+		if err := rows.Scan(&row.TableID, &row.TableCode, &row.TableName, &row.Status, &row.Capacity, &areaID, &row.AreaName, &row.AreaOrder, &qrID, &token); err != nil {
 			return nil, err
+		}
+		if areaID.Valid {
+			id := uuid.UUID(areaID.Bytes)
+			row.AreaID = &id
 		}
 		if qrID.Valid {
 			id := uuid.UUID(qrID.Bytes)
@@ -219,18 +227,43 @@ func (r *Repository) CloseSession(ctx context.Context, restaurantID, sessionID u
 		return nil, false, apperr.New(apperr.CodeConflict, "dining session is not closable")
 	}
 
+	closingIDs := []uuid.UUID{sessionID}
+	if s.MergeGroupID != nil {
+		rows, err := r.q(ctx).Query(ctx, `
+			SELECT id
+			FROM dining_sessions
+			WHERE restaurant_id = $1 AND merge_group_id = $2 AND deleted_at IS NULL
+		`, restaurantID, *s.MergeGroupID)
+		if err != nil {
+			return nil, false, err
+		}
+		closingIDs = closingIDs[:0]
+		for rows.Next() {
+			var id uuid.UUID
+			if err := rows.Scan(&id); err != nil {
+				rows.Close()
+				return nil, false, err
+			}
+			closingIDs = append(closingIDs, id)
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return nil, false, err
+		}
+	}
+
 	var hasUnpaidInvoice bool
 	if err := r.q(ctx).QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1
 			FROM invoices
 			WHERE restaurant_id = $1
-			  AND dining_session_id = $2
+			  AND dining_session_id = ANY($2)
 			  AND status <> 'VOID'
 			  AND status <> 'PAID'
 			  AND deleted_at IS NULL
 		)
-	`, restaurantID, sessionID).Scan(&hasUnpaidInvoice); err != nil {
+	`, restaurantID, closingIDs).Scan(&hasUnpaidInvoice); err != nil {
 		return nil, false, err
 	}
 	if hasUnpaidInvoice {
@@ -250,11 +283,33 @@ func (r *Repository) CloseSession(ctx context.Context, restaurantID, sessionID u
 	if err != nil {
 		return nil, false, err
 	}
+	if len(closingIDs) > 1 {
+		if _, err := r.q(ctx).Exec(ctx, `
+			UPDATE dining_sessions
+			SET status = 'CLOSED',
+			    closed_at = COALESCE(closed_at, NOW()),
+			    closed_by = COALESCE(closed_by, $3),
+			    version = version + 1,
+			    updated_at = NOW()
+			WHERE restaurant_id = $1 AND id = ANY($2) AND status <> 'CLOSED' AND deleted_at IS NULL
+		`, restaurantID, closingIDs, closedBy); err != nil {
+			return nil, false, err
+		}
+		if _, err := r.q(ctx).Exec(ctx, `
+			UPDATE table_merge_groups
+			SET is_active = FALSE, version = version + 1, updated_at = NOW()
+			WHERE restaurant_id = $1 AND id = $2
+		`, restaurantID, *s.MergeGroupID); err != nil {
+			return nil, false, err
+		}
+	}
+
 	if _, err := r.q(ctx).Exec(ctx, `
 		UPDATE tables
 		SET status = 'AVAILABLE', version = version + 1, updated_at = NOW()
-		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
-	`, restaurantID, s.TableID); err != nil {
+		WHERE restaurant_id = $1 AND deleted_at IS NULL
+		  AND id IN (SELECT table_id FROM dining_sessions WHERE restaurant_id = $1 AND id = ANY($2))
+	`, restaurantID, closingIDs); err != nil {
 		return nil, false, err
 	}
 	return s, true, nil
@@ -422,6 +477,154 @@ func (r *Repository) VerifySession(ctx context.Context, restaurantID, sessionID 
 	}
 	if tag.RowsAffected() == 0 {
 		return apperr.New(apperr.CodeNotFound, "pending session not found")
+	}
+	return nil
+}
+
+func (r *Repository) ListAreas(ctx context.Context, restaurantID uuid.UUID) ([]domain.Area, error) {
+	rows, err := r.q(ctx).Query(ctx, `
+		SELECT id, restaurant_id, name, COALESCE(description, ''), display_order, is_active
+		FROM areas
+		WHERE restaurant_id = $1 AND deleted_at IS NULL
+		ORDER BY display_order, name
+	`, restaurantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]domain.Area, 0)
+	for rows.Next() {
+		var a domain.Area
+		if err := rows.Scan(&a.ID, &a.RestaurantID, &a.Name, &a.Description, &a.DisplayOrder, &a.IsActive); err != nil {
+			return nil, err
+		}
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}
+
+func duplicateTableCode(err error) error {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" && strings.Contains(pgErr.ConstraintName, "tables_restaurant_code") {
+		return apperr.New(apperr.CodeConflict, "table code already exists")
+	}
+	return err
+}
+
+func (r *Repository) CreateTable(ctx context.Context, t *domain.Table) error {
+	var areaID any
+	if t.AreaID != uuid.Nil {
+		areaID = t.AreaID
+	}
+	err := r.q(ctx).QueryRow(ctx, `
+		INSERT INTO tables (restaurant_id, area_id, code, name, capacity, status)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id, version
+	`, t.RestaurantID, areaID, t.Code, t.Name, t.Capacity, t.Status).Scan(&t.ID, &t.Version)
+	if err != nil {
+		return duplicateTableCode(err)
+	}
+	return nil
+}
+
+func (r *Repository) UpdateTable(ctx context.Context, t *domain.Table) error {
+	var areaID any
+	if t.AreaID != uuid.Nil {
+		areaID = t.AreaID
+	}
+	tag, err := r.q(ctx).Exec(ctx, `
+		UPDATE tables
+		SET area_id = $3, code = $4, name = $5, capacity = $6, status = $7,
+		    version = version + 1, updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, t.RestaurantID, t.ID, areaID, t.Code, t.Name, t.Capacity, t.Status)
+	if err != nil {
+		return duplicateTableCode(err)
+	}
+	if tag.RowsAffected() == 0 {
+		return apperr.New(apperr.CodeNotFound, "table not found")
+	}
+	return nil
+}
+
+func (r *Repository) SoftDeleteTable(ctx context.Context, restaurantID, tableID uuid.UUID) error {
+	tag, err := r.q(ctx).Exec(ctx, `
+		UPDATE tables
+		SET deleted_at = NOW(), status = 'INACTIVE', version = version + 1, updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, restaurantID, tableID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return apperr.New(apperr.CodeNotFound, "table not found")
+	}
+	return nil
+}
+func duplicateAreaName(err error) error {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" && strings.Contains(pgErr.ConstraintName, "areas_restaurant_name") {
+		return apperr.New(apperr.CodeConflict, "area name already exists")
+	}
+	return err
+}
+
+func (r *Repository) FindArea(ctx context.Context, restaurantID, areaID uuid.UUID) (*domain.Area, error) {
+	a := &domain.Area{}
+	err := r.q(ctx).QueryRow(ctx, `
+		SELECT id, restaurant_id, name, COALESCE(description, ''), display_order, is_active
+		FROM areas
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, restaurantID, areaID).Scan(&a.ID, &a.RestaurantID, &a.Name, &a.Description, &a.DisplayOrder, &a.IsActive)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperr.New(apperr.CodeNotFound, "area not found")
+	}
+	if err != nil {
+		return nil, err
+	}
+	return a, nil
+}
+
+func (r *Repository) CreateArea(ctx context.Context, a *domain.Area) error {
+	err := r.q(ctx).QueryRow(ctx, `
+		INSERT INTO areas (restaurant_id, name, description, display_order, is_active)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id
+	`, a.RestaurantID, a.Name, a.Description, a.DisplayOrder, a.IsActive).Scan(&a.ID)
+	if err != nil {
+		return duplicateAreaName(err)
+	}
+	return nil
+}
+
+func (r *Repository) UpdateArea(ctx context.Context, a *domain.Area) error {
+	tag, err := r.q(ctx).Exec(ctx, `
+		UPDATE areas
+		SET name = $3, description = $4, display_order = $5, is_active = $6,
+		    version = version + 1, updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, a.RestaurantID, a.ID, a.Name, a.Description, a.DisplayOrder, a.IsActive)
+	if err != nil {
+		return duplicateAreaName(err)
+	}
+	if tag.RowsAffected() == 0 {
+		return apperr.New(apperr.CodeNotFound, "area not found")
+	}
+	return nil
+}
+
+func (r *Repository) DeleteArea(ctx context.Context, restaurantID, areaID uuid.UUID) error {
+	tag, err := r.q(ctx).Exec(ctx, `
+		UPDATE areas
+		SET deleted_at = NOW(), is_active = FALSE, version = version + 1, updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, restaurantID, areaID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return apperr.New(apperr.CodeNotFound, "area not found")
 	}
 	return nil
 }

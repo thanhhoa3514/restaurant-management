@@ -12,6 +12,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-thu-ngan-22-dieu-chinh-hoa-don-giam-gia.drawio`](./uc-thu-ngan-22-dieu-chinh-hoa-don-giam-gia.drawio) — mở bằng draw.io / diagrams.net.
+
 _Hình: ĐẶC TẢ USE-CASE THU NGÂN — ĐIỀU CHỈNH HÓA ĐƠN & GIẢM GIÁ_
 Tác nhân **Thu ngân** giao tiếp với use-case «Điều chỉnh hóa đơn & giảm giá»; use-case «include» «Kiểm hóa đơn chưa thanh toán» và «Tính lại tổng + ghi log điều chỉnh». Chỉ áp dụng khi hóa đơn **chưa** `PAID`. Tiếp nối sau «Xem hóa đơn» (UC-C21), dẫn sang «Xử lý thanh toán» (UC-C23).
 

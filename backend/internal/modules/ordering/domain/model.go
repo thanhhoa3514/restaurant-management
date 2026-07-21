@@ -10,6 +10,7 @@ import (
 type OrderItemStatus string
 
 const (
+	StatusPlaced       OrderItemStatus = "PLACED"
 	StatusPending      OrderItemStatus = "PENDING"
 	StatusAcknowledged OrderItemStatus = "ACKNOWLEDGED"
 	StatusPreparing    OrderItemStatus = "PREPARING"

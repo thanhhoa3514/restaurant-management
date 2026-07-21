@@ -12,6 +12,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-bep-17-cap-nhat-trang-thai-mon.drawio`](./uc-bep-17-cap-nhat-trang-thai-mon.drawio) — mở bằng draw.io / diagrams.net.
+
 *Hình: ĐẶC TẢ USE-CASE BẾP — CẬP NHẬT TRẠNG THÁI MÓN*
 Tác nhân **Bếp** giao tiếp với use-case «Cập nhật trạng thái món»; chuyển món qua chuỗi `PENDING → ACKNOWLEDGED → PREPARING → READY`. Ghi lịch sử trạng thái và phát realtime cho Khách/Phục vụ. "Cả đơn" là bấm nhanh áp cho từng món của đơn.
 

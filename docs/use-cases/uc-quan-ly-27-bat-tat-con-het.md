@@ -12,6 +12,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-quan-ly-27-bat-tat-con-het.drawio`](./uc-quan-ly-27-bat-tat-con-het.drawio) — mở bằng draw.io / diagrams.net.
+
 _Hình: ĐẶC TẢ USE-CASE QUẢN LÝ — BẬT/TẮT CÒN-HẾT_
 Tác nhân **Quản lý** giao tiếp với use-case «Bật/tắt còn-hết»; đặt trạng thái đích tường minh (`is_available = true|false`) cho một món trong thực đơn. Đủ điều kiện → lưu trạng thái, ghi audit, phát realtime tới màn Khách (ảnh hưởng UC-K02: món hết bị ẩn/khóa). Khác với UC-B39 (Bếp báo hết cho _order-item_ trong bếp) — UC-27 đổi cờ còn/hết của _món trong thực đơn_.
 

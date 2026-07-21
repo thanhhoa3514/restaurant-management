@@ -10,6 +10,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-thu-ngan-37-mo-lai-phien.drawio`](./uc-thu-ngan-37-mo-lai-phien.drawio) — mở bằng draw.io / diagrams.net.
+
 *Hình: ĐẶC TẢ USE-CASE THU NGÂN — MỞ LẠI PHIÊN*
 Tác nhân **Thu ngân/Phục vụ** giao tiếp với use-case «Mở lại phiên»; đảo trạng thái khóa order do «Yêu cầu thanh toán» (UC-G08) đặt. Khi khách muốn gọi thêm sau khi đã bấm thanh toán, nhân viên mở lại phiên `AWAITING_PAYMENT → ACTIVE` để tiếp tục đặt món.
 

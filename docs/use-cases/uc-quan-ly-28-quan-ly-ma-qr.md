@@ -12,6 +12,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-quan-ly-28-quan-ly-ma-qr.drawio`](./uc-quan-ly-28-quan-ly-ma-qr.drawio) — mở bằng draw.io / diagrams.net.
+
 _Hình: ĐẶC TẢ USE-CASE QUẢN LÝ — QUẢN LÝ MÃ QR THEO BÀN_
 Tác nhân **Quản lý** giao tiếp với use-case «Quản lý mã QR»; gồm «Xem mã QR các bàn» và «Sinh/Đổi mã QR». Sinh khi bàn chưa có mã hoạt động là **idempotent** (trả mã cũ nếu đã có, `rotate=false`). «Đổi mã» (`rotate=true`) là hành động ảnh hưởng cao: vô hiệu mã cũ (in ra vô dụng) rồi mint token mới — cả hai bước trong **một transaction** để không vi phạm chỉ mục `uq_qr_codes_one_active_per_table` (một mã hoạt động/bàn).
 

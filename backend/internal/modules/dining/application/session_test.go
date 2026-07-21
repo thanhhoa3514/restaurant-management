@@ -28,6 +28,10 @@ type fakeRepo struct {
 	deactivated   bool
 	createdQR     *domain.QRCode
 	createQRErr   error
+
+	createdTable   *domain.Table
+	updatedTable   *domain.Table
+	deletedTableID uuid.UUID
 }
 
 func (r *fakeRepo) FindTable(context.Context, uuid.UUID, uuid.UUID) (*domain.Table, error) {
@@ -67,6 +71,27 @@ func (r *fakeRepo) FindActiveSessionByTable(context.Context, uuid.UUID, uuid.UUI
 }
 func (r *fakeRepo) ListTablesWithActiveQR(context.Context, uuid.UUID) ([]domain.TableWithQR, error) {
 	return r.tablesWithQR, nil
+}
+func (r *fakeRepo) ListAreas(context.Context, uuid.UUID) ([]domain.Area, error) {
+	return nil, nil
+}
+func (r *fakeRepo) CreateArea(context.Context, *domain.Area) error         { return nil }
+func (r *fakeRepo) UpdateArea(context.Context, *domain.Area) error         { return nil }
+func (r *fakeRepo) DeleteArea(context.Context, uuid.UUID, uuid.UUID) error { return nil }
+func (r *fakeRepo) FindArea(context.Context, uuid.UUID, uuid.UUID) (*domain.Area, error) {
+	return &domain.Area{}, nil
+}
+func (r *fakeRepo) CreateTable(_ context.Context, t *domain.Table) error {
+	r.createdTable = t
+	return nil
+}
+func (r *fakeRepo) UpdateTable(_ context.Context, t *domain.Table) error {
+	r.updatedTable = t
+	return nil
+}
+func (r *fakeRepo) SoftDeleteTable(_ context.Context, _, tableID uuid.UUID) error {
+	r.deletedTableID = tableID
+	return nil
 }
 func (r *fakeRepo) UpdateSessionCustomerName(_ context.Context, sessionID uuid.UUID, name string) error {
 	if r.activeSession != nil && r.activeSession.ID == sessionID {
@@ -108,7 +133,9 @@ func (r *fakeRepo) FindActiveMergeGroup(_ context.Context, _, _ uuid.UUID) (*dom
 func (r *fakeRepo) FindSessionsByMergeGroup(_ context.Context, _, _ uuid.UUID) ([]domain.DiningSession, error) {
 	return nil, nil
 }
-func (r *fakeRepo) UpdateSessionMergeGroup(_ context.Context, _ uuid.UUID, _ *uuid.UUID) error { return nil }
+func (r *fakeRepo) UpdateSessionMergeGroup(_ context.Context, _ uuid.UUID, _ *uuid.UUID) error {
+	return nil
+}
 
 func (r *fakeRepo) FindSessionsPendingVerification(_ context.Context, _ uuid.UUID) ([]domain.DiningSession, error) {
 	return nil, nil
@@ -213,9 +240,9 @@ func TestJoinSession(t *testing.T) {
 
 	t.Run("no active session creates PENDING_VERIFICATION", func(t *testing.T) {
 		repo := &fakeRepo{
-			activeQR: qr,
+			activeQR:  qr,
 			activeErr: apperr.New(apperr.CodeNotFound, "none"),
-			table:    &domain.Table{ID: tableID, RestaurantID: rid, Code: "T01", Name: "Bàn 1"},
+			table:     &domain.Table{ID: tableID, RestaurantID: rid, Code: "T01", Name: "Bàn 1"},
 		}
 		outbox := &fakeDiningOutbox{}
 		svc := NewJoinSession(fakeTx{}, repo, outbox)

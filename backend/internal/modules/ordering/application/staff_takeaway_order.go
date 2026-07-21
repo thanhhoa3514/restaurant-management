@@ -12,11 +12,11 @@ import (
 )
 
 type StaffTakeawayOrderRequest struct {
-	Items        []GuestOrderLineRequest `json:"items" binding:"required"`
-	CustomerName string                  `json:"customer_name"`
-	CustomerPhone string                 `json:"customer_phone"`
-	PickupTime   *time.Time              `json:"pickup_time,omitempty"`
-	Note         string                  `json:"note"`
+	Items         []GuestOrderLineRequest `json:"items" binding:"required"`
+	CustomerName  string                  `json:"customer_name"`
+	CustomerPhone string                  `json:"customer_phone"`
+	PickupTime    *time.Time              `json:"pickup_time,omitempty"`
+	Note          string                  `json:"note"`
 }
 
 type StaffTakeawayOrderResponse struct {
@@ -93,7 +93,7 @@ func (s *StaffTakeawayOrder) Handle(ctx context.Context, req StaffTakeawayOrderR
 				RestaurantID:  restaurantID,
 				AggregateType: "order",
 				AggregateID:   order.ID,
-				EventType:     "order.submitted",
+				EventType:     "ordering.order_placed",
 				Payload: map[string]any{
 					"order_id":      order.ID,
 					"order_type":    "TAKEAWAY",
@@ -110,17 +110,17 @@ func (s *StaffTakeawayOrder) Handle(ctx context.Context, req StaffTakeawayOrderR
 		items := make([]GuestOrderItemDTO, 0, len(order.Lines))
 		for _, line := range order.Lines {
 			items = append(items, GuestOrderItemDTO{
-				OrderItemID:    line.ID,
-				MenuItemID:     line.MenuItemID,
-				NameSnapshot:   line.ItemNameSnapshot,
-				Quantity:       line.Quantity,
-				UnitPriceVND:   line.UnitPriceVND,
+				OrderItemID:     line.ID,
+				MenuItemID:      line.MenuItemID,
+				NameSnapshot:    line.ItemNameSnapshot,
+				Quantity:        line.Quantity,
+				UnitPriceVND:    line.UnitPriceVND,
 				OptionsTotalVND: line.OptionsTotalVND,
-				SubtotalVND:    line.SubtotalVND,
-				TotalAmountVND: line.TotalAmountVND,
-				Status:         line.Status,
-				Station:        line.Station,
-				IsTakeaway:     true,
+				SubtotalVND:     line.SubtotalVND,
+				TotalAmountVND:  line.TotalAmountVND,
+				Status:          line.Status,
+				Station:         line.Station,
+				IsTakeaway:      true,
 			})
 		}
 		out = StaffTakeawayOrderResponse{OrderID: order.ID, OrderNumber: order.OrderNumber, OrderType: "TAKEAWAY", Items: items, TotalVND: totalVND}

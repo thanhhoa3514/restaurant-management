@@ -50,6 +50,7 @@ export interface StaffSessionDTO {
   opened_at: string
   bill_requested_at: string | null
   waiter_called_at: string | null
+  merge_group_id: string | null
   orders: StaffOrderDTO[]
   total_vnd: number
 }
@@ -84,6 +85,25 @@ export function ackWaiterCall(
   return apiRequest(`/api/v1/restaurant/sessions/${sessionId}/ack-waiter-call`, { method: 'POST' })
 }
 
+export function mergeSessions(
+  sessionIds: string[],
+  note = '',
+): Promise<{ merge_group_id: string; session_ids: string[]; table_codes: string[] }> {
+  return apiRequest('/api/v1/restaurant/sessions/merge', {
+    method: 'POST',
+    body: { session_ids: sessionIds, note },
+  })
+}
+
+export function splitSessions(
+  mergeGroupId: string,
+): Promise<{ merge_group_id: string; session_ids: string[] }> {
+  return apiRequest('/api/v1/restaurant/sessions/split', {
+    method: 'POST',
+    body: { merge_group_id: mergeGroupId },
+  })
+}
+
 export function updateStaffOrderItemStatus(
   itemId: string,
   status: string,
@@ -91,6 +111,22 @@ export function updateStaffOrderItemStatus(
   return apiRequest(`/api/v1/restaurant/order-items/${itemId}/status`, {
     method: 'PATCH',
     body: { status },
+  })
+}
+
+// Server-confirmation gate: a PLACED item is released to the kitchen (confirm)
+// or cancelled before it ever reaches the kitchen (reject).
+export function confirmOrderItem(itemId: string): Promise<{ id: string; status: string }> {
+  return apiRequest(`/api/v1/restaurant/order-items/${itemId}/confirm`, { method: 'POST' })
+}
+
+export function rejectOrderItem(
+  itemId: string,
+  reason = '',
+): Promise<{ id: string; status: string }> {
+  return apiRequest(`/api/v1/restaurant/order-items/${itemId}/reject`, {
+    method: 'POST',
+    body: { reason },
   })
 }
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FC, type ReactNode } from 'react'
 import { Loader2, QrCode, ScanLine, AlertCircle, Users } from 'lucide-react'
 import QRCodeLib from 'qrcode'
-import { ApiError } from '@/lib/api'
+import { ApiError, errorMessage } from '@/lib/api'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT, type Dict } from '../data/i18n'
 import { useJoinSession } from '@/features/ordering/mutations/useJoinSession'
@@ -319,7 +319,7 @@ function TablePicker({
             <div className="mx-auto max-w-sm rounded-xl border border-red-300/30 bg-red-50/50 p-5 text-center dark:border-red-800/30 dark:bg-red-950/20">
               <AlertCircle size={24} className="mx-auto mb-2 text-red-500" />
               <p className="mb-3 text-sm font-medium text-red-600 dark:text-red-400">
-                {tablesRawError instanceof ApiError ? tablesRawError.message : t.qr_failed_load}
+                {errorMessage(tablesRawError, t.qr_failed_load)}
               </p>
               <button
                 type="button"
@@ -355,6 +355,7 @@ function TablePicker({
                       <TableCard
                         key={table.table_id}
                         table={table}
+                        t={t}
                         onClick={() => {
                           if (!table.qr_token || !table.has_active_qr) return
                           onSelectTable(table.qr_token)
@@ -499,7 +500,9 @@ function JoinFlow({
 
               {/* Icon */}
               <div className="mx-auto mb-4 flex size-36 items-center justify-center rounded-2xl border border-[var(--separator)] bg-white">
-                {joinState === 'joining' || joinState === 'pending_verification' ? (
+                {joinState === 'pending_verification' ? (
+                  <WaitingForStaff />
+                ) : joinState === 'joining' ? (
                   <ScanLine size={60} className="animate-pulse text-blue-500" />
                 ) : joinState === 'error' || joinState === 'not_opened' ? (
                   <AlertCircle size={60} className="text-red-400" />
@@ -518,6 +521,21 @@ function JoinFlow({
               >
                 {message || t.session_hint}
               </p>
+
+              {joinState === 'pending_verification' && (
+                <>
+                  <p className="mt-2 text-xs text-[var(--text-tertiary)]">{t.qr_pending_hint}</p>
+                  <div className="mt-3 flex justify-center gap-1.5">
+                    {[0, 150, 300].map((delay) => (
+                      <span
+                        key={delay}
+                        className="size-1.5 animate-bounce rounded-full bg-orange-400"
+                        style={{ animationDelay: `${delay}ms` }}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Action */}
@@ -542,9 +560,24 @@ function JoinFlow({
   )
 }
 
+// ── Waiting-for-staff animation (pending_verification) ──────────────────────
+
+function WaitingForStaff() {
+  return (
+    <div className="relative flex size-24 items-center justify-center">
+      {/* expanding rings */}
+      <span className="absolute size-16 animate-ping rounded-full bg-orange-400/25 [animation-duration:2s]" />
+      <span className="absolute size-24 animate-ping rounded-full bg-orange-400/15 [animation-duration:2s] [animation-delay:0.6s]" />
+      {/* rotating arc */}
+      <span className="absolute size-20 animate-spin rounded-full border-2 border-orange-200 border-t-orange-500 [animation-duration:1.6s]" />
+      <Users size={34} className="relative text-orange-500" />
+    </div>
+  )
+}
+
 // ── Table card ───────────────────────────────────────────────────────────────
 
-function TableCard({ table, onClick }: { table: GuestTable; onClick: () => void }) {
+function TableCard({ table, onClick, t }: { table: GuestTable; onClick: () => void; t: Dict }) {
   const isActive = table.has_active_qr
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
 
@@ -565,20 +598,29 @@ function TableCard({ table, onClick }: { table: GuestTable; onClick: () => void 
       disabled={!isActive}
       onClick={isActive ? onClick : undefined}
       className={cn(
-        'group flex flex-col items-center gap-2 rounded-xl border border-[var(--separator)] bg-[var(--material-thin)] p-4 transition-all',
+        'group relative flex flex-col items-center gap-2 rounded-xl border border-[var(--separator)] bg-[var(--material-thin)] p-4 transition-all',
         isActive
           ? 'cursor-pointer hover:border-blue-300 hover:shadow-sm active:scale-[0.97] dark:hover:border-blue-700'
-          : 'opacity-40 cursor-not-allowed grayscale'
+          : 'cursor-not-allowed'
       )}
     >
-      <div className="flex size-28 items-center justify-center rounded-lg bg-white p-2 shadow-sm">
+      <div className="relative flex size-28 items-center justify-center rounded-lg bg-white p-2 shadow-sm">
         {qrDataUrl ? (
-          <img src={qrDataUrl} alt="" className="size-full object-contain" />
+          <img
+            src={qrDataUrl}
+            alt=""
+            className={cn('size-full object-contain', !isActive && 'opacity-25 blur-[2px] grayscale')}
+          />
         ) : (
           <QrCode size={36} className="text-gray-300" />
         )}
+        {!isActive && (
+          <span className="absolute inset-x-1 top-1/2 -translate-y-1/2 rounded-md bg-[var(--text)]/75 px-1.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--bg)]">
+            {t.qr_inactive}
+          </span>
+        )}
       </div>
-      <div className="text-center">
+      <div className={cn('text-center', !isActive && 'opacity-45')}>
         <div className="text-sm font-semibold text-[var(--text)]">{table.table_name}</div>
         <div className="mt-0.5 flex items-center justify-center gap-1 text-[11px] text-[var(--text-tertiary)]">
           <Users size={11} />

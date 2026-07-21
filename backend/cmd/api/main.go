@@ -151,18 +151,23 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 	catalogHandler := cataloghttp.NewHandler(catalogapp.NewCreateMenuItem(tx, catalogRepo, outboxWriter, defaultRID), catalogapp.NewUpdateMenuItem(tx, catalogRepo, outboxWriter, defaultRID), catalogapp.NewDeleteMenuItem(tx, catalogRepo, outboxWriter, defaultRID), catalogapp.NewToggleAvailability(tx, catalogRepo, outboxWriter, defaultRID), catalogapp.NewListCategories(catalogRepo, defaultRID), catalogapp.NewListMenuItems(catalogRepo, defaultRID), catalogapp.NewGetMenuItem(catalogRepo, defaultRID), catalogapp.NewListAdminMenuItems(catalogRepo, defaultRID), catalogapp.NewGetAdminMenuItem(catalogRepo, defaultRID), s3Client)
 
 	diningRepo := diningrepo.NewRepository(pool, defaultRID)
-	diningHandler := dininghttp.NewHandler(
-		diningapp.NewOpenSession(tx, diningRepo, outboxWriter, defaultRID),
-		diningapp.NewJoinSession(tx, diningRepo, outboxWriter),
-		diningapp.NewCloseSession(tx, diningRepo, outboxWriter, defaultRID),
-		diningapp.NewManageTableQR(tx, diningRepo, outboxWriter, defaultRID),
-		diningapp.NewListTableQRs(diningRepo, defaultRID),
-		diningapp.NewListGuestTables(diningRepo, defaultRID),
-		diningapp.NewMergeSessions(tx, diningRepo, outboxWriter, defaultRID),
-		diningapp.NewSplitSessions(tx, diningRepo, outboxWriter, defaultRID),
-		diningapp.NewListPendingSessions(diningRepo, defaultRID),
-		diningapp.NewStaffVerifySession(tx, diningRepo, outboxWriter, defaultRID),
-	)
+	diningHandler := &dininghttp.Handler{
+		OpenSession:         diningapp.NewOpenSession(tx, diningRepo, outboxWriter, defaultRID),
+		JoinSession:         diningapp.NewJoinSession(tx, diningRepo, outboxWriter),
+		CloseSession:        diningapp.NewCloseSession(tx, diningRepo, outboxWriter, defaultRID),
+		ManageTableQR:       diningapp.NewManageTableQR(tx, diningRepo, outboxWriter, defaultRID),
+		ListTableQRs:        diningapp.NewListTableQRs(diningRepo, defaultRID),
+		ListGuestTables:     diningapp.NewListGuestTables(diningRepo, defaultRID),
+		MergeSessions:       diningapp.NewMergeSessions(tx, diningRepo, outboxWriter, defaultRID),
+		SplitSessions:       diningapp.NewSplitSessions(tx, diningRepo, outboxWriter, defaultRID),
+		ListPendingSessions: diningapp.NewListPendingSessions(diningRepo, defaultRID),
+		StaffVerifySession:  diningapp.NewStaffVerifySession(tx, diningRepo, outboxWriter, defaultRID),
+		SaveTable:           diningapp.NewSaveTable(tx, diningRepo, defaultRID),
+		DeleteTable:         diningapp.NewDeleteTable(tx, diningRepo, defaultRID),
+		ListAreas:           diningapp.NewListAreas(diningRepo, defaultRID),
+		SaveArea:            diningapp.NewSaveArea(tx, diningRepo, defaultRID),
+		DeleteArea:          diningapp.NewDeleteArea(tx, diningRepo, defaultRID),
+	}
 
 	orderingRepo := orderingrepo.NewRepository(pool, defaultRID)
 	orderingHandler := orderinghttp.NewHandler(
@@ -177,6 +182,7 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 		orderingapp.NewGuestCallWaiter(tx, orderingRepo, outboxWriter, defaultRID),
 		orderingapp.NewStaffAckWaiterCall(tx, orderingRepo, outboxWriter, defaultRID),
 		orderingapp.NewStaffUpdateItemStatus(tx, orderingRepo, outboxWriter, defaultRID),
+		orderingapp.NewServerReviewOrderItem(tx, orderingRepo, outboxWriter, defaultRID),
 		orderingapp.NewStaffMarkUnavailable(tx, orderingRepo, outboxWriter, defaultRID),
 		orderingapp.NewStaffTakeawayOrder(tx, orderingRepo, outboxWriter, defaultRID),
 		orderingapp.NewStaffAddTakeawayItems(tx, orderingRepo, outboxWriter, defaultRID),
@@ -206,8 +212,8 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 	// Customer-facing API — QR token or public
 	// ──────────────────────────────────────────────
 	customer := api.Group("/customer")
-	diningHandler.RegisterGuestRoutes(customer)                            // /customer/sessions/join, /customer/tables — public
-	catalogHandler.RegisterGuestRoutes(customer)                           // /customer/menu/* — public (browse menu before joining)
+	diningHandler.RegisterGuestRoutes(customer)  // /customer/sessions/join, /customer/tables — public
+	catalogHandler.RegisterGuestRoutes(customer) // /customer/menu/* — public (browse menu before joining)
 
 	orders := api.Group("/customer", auth.QRSessionToken(diningRepo), orderRateLimiter.Middleware(ratelimit.GuestSessionKey))
 	orderingHandler.RegisterGuestRoutes(orders)

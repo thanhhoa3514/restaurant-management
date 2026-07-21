@@ -22,8 +22,13 @@ interface TableSheetProps {
   onNotifyCashier: (tableId: string) => void
   onMarkItemServed: (tableId: string, itemId: string) => void
   onMarkAllServed: (tableId: string) => void
+  onConfirmItem: (tableId: string, itemId: string) => void
+  onRejectItem: (tableId: string, itemId: string, reason: string) => void
   onRequestBill: (tableId: string) => void
   onOpenSession: (tableId: string, guestCount: number, notes: string) => void
+  onSplitGroup: (tableId: string) => void
+  /** Mã các bàn khác trong cùng nhóm gộp, rỗng nếu bàn không được gộp */
+  mergeSiblings: string[]
 }
 
 interface ReadyItem {
@@ -42,8 +47,12 @@ export const TableSheet: FC<TableSheetProps> = ({
   onNotifyCashier,
   onMarkItemServed,
   onMarkAllServed,
+  onConfirmItem,
+  onRejectItem,
   onRequestBill,
   onOpenSession,
+  onSplitGroup,
+  mergeSiblings,
 }) => {
   const [{ confirmBill, showOpenForm, guestCount, notes }, dispatch] = useReducer(
     (s: any, a: any) => ({ ...s, ...a }),
@@ -72,6 +81,16 @@ export const TableSheet: FC<TableSheetProps> = ({
     )
   }, [table])
 
+  const placedItems = useMemo<ReadyItem[]>(() => {
+    if (!table?.session) return []
+    return table.session.orders.flatMap((order) =>
+      order.items.reduce<ReadyItem[]>((acc, item) => {
+        if (item.status === 'placed') acc.push({ item, orderId: order.id })
+        return acc
+      }, [])
+    )
+  }, [table])
+
   const subtotal = useMemo(() => {
     if (!table?.session) return 0
     return table.session.orders.reduce(
@@ -92,7 +111,7 @@ export const TableSheet: FC<TableSheetProps> = ({
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-[32px] font-bold leading-none text-[var(--text)]">
-                {t('table')} {table.number}
+                {t('table')} {table.code}
               </h2>
               {isEmpty ? (
                 <Badge variant="secondary" className="rounded-full">
@@ -107,6 +126,11 @@ export const TableSheet: FC<TableSheetProps> = ({
                 </>
               )}
             </div>
+            {mergeSiblings.length > 0 && (
+              <Badge className="mt-2 rounded-full border-0 bg-purple-500/12 text-purple-600 dark:text-purple-400">
+                {t('merge_with', mergeSiblings.join(', '))}
+              </Badge>
+            )}
             <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">
               {isEmpty
                 ? `${table.capacity} ${lang === 'vi' ? 'chỗ ngồi' : 'seats'}`
@@ -143,10 +167,13 @@ export const TableSheet: FC<TableSheetProps> = ({
               lang={lang}
               t={t}
               readyItems={readyItems}
+              placedItems={placedItems}
               onAcknowledgeCall={onAcknowledgeCall}
               onNotifyCashier={onNotifyCashier}
               onMarkItemServed={onMarkItemServed}
               onMarkAllServed={onMarkAllServed}
+              onConfirmItem={onConfirmItem}
+              onRejectItem={onRejectItem}
             />
           )}
         </div>
@@ -161,6 +188,15 @@ export const TableSheet: FC<TableSheetProps> = ({
                   {table.session?.orders.length ?? 0} {lang === 'vi' ? 'lượt gọi món' : 'orders'}
                 </div>
               </div>
+              {table.session?.merge_group_id && (
+                <Button
+                  variant="outline"
+                  className="rounded-2xl max-sm:h-11 max-sm:w-full"
+                  onClick={() => onSplitGroup(table.id)}
+                >
+                  {t('merge_split')}
+                </Button>
+              )}
               {table.session?.bill_requested_at ? (
                 <Badge variant="default" className="shrink-0 rounded-full px-3 py-1.5">
                   {t('signal_bill')}
@@ -199,10 +235,13 @@ interface OccupiedBodyProps {
   lang: Lang
   t: (key: string, ...args: Array<string | number>) => string
   readyItems: ReadyItem[]
+  placedItems: ReadyItem[]
   onAcknowledgeCall: (tableId: string) => void
   onNotifyCashier: (tableId: string) => void
   onMarkItemServed: (tableId: string, itemId: string) => void
   onMarkAllServed: (tableId: string) => void
+  onConfirmItem: (tableId: string, itemId: string) => void
+  onRejectItem: (tableId: string, itemId: string, reason: string) => void
 }
 
 const OccupiedBody: FC<OccupiedBodyProps> = ({
@@ -212,10 +251,13 @@ const OccupiedBody: FC<OccupiedBodyProps> = ({
   lang,
   t,
   readyItems,
+  placedItems,
   onAcknowledgeCall,
   onNotifyCashier,
   onMarkItemServed,
   onMarkAllServed,
+  onConfirmItem,
+  onRejectItem,
 }) => (
   <div className="space-y-5">
     {session.waiter_called_at && (
@@ -235,6 +277,29 @@ const OccupiedBody: FC<OccupiedBodyProps> = ({
         buttonLabel={t('btn_notify_cashier')}
         onClick={() => onNotifyCashier(table.id)}
       />
+    )}
+
+    {placedItems.length > 0 && (
+      <section>
+        <div className="mb-3 flex items-center gap-2">
+          <h3 className="flex items-center gap-2 text-base font-bold text-amber-800 dark:text-amber-400">
+            <span className="size-2.5 rounded-full bg-amber-500" />
+            {t('awaiting_confirm', placedItems.length)}
+          </h3>
+        </div>
+        <Card className="overflow-hidden rounded-[24px] border-2 border-amber-500/25 bg-amber-500/10">
+          {placedItems.map(({ item }) => (
+            <PlacedItemRow
+              key={item.id}
+              item={item}
+              lang={lang}
+              t={t}
+              onConfirm={() => onConfirmItem(table.id, item.id)}
+              onReject={(reason) => onRejectItem(table.id, item.id, reason)}
+            />
+          ))}
+        </Card>
+      </section>
     )}
 
     {readyItems.length > 0 && (
@@ -365,6 +430,64 @@ const OrderItemRow: FC<OrderItemRowProps> = ({ item, lang, t }) => {
   )
 }
 
+interface PlacedItemRowProps {
+  item: WFItem
+  lang: Lang
+  t: (key: string, ...args: Array<string | number>) => string
+  onConfirm: () => void
+  onReject: (reason: string) => void
+}
+
+// A PLACED item awaiting the server's confirm/reject decision. Reject reveals
+// an inline optional-reason field so staff can note why (e.g. out of stock).
+const PlacedItemRow: FC<PlacedItemRowProps> = ({ item, lang, t, onConfirm, onReject }) => {
+  const [rejecting, setRejecting] = useReducer((s: boolean) => !s, false)
+  const [reason, setReason] = useReducer(
+    (_: string, next: string) => next,
+    '',
+  )
+  return (
+    <div className="space-y-3 border-b border-amber-500/15 p-4 last:border-b-0">
+      <div className="flex items-start gap-3">
+        <QuantityPill qty={item.qty} />
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold leading-tight text-[var(--text)]">{lang === 'vi' ? item.name_vi : item.name_en}</div>
+          <div className="mt-1 text-sm text-[var(--text-secondary)]">{lang === 'vi' ? item.options_text_vi : item.options_text_en}</div>
+          {item.notes && <div className="mt-1 text-xs italic text-amber-700">“{item.notes}”</div>}
+        </div>
+      </div>
+      {rejecting ? (
+        <div className="space-y-2">
+          <Input
+            autoFocus
+            value={reason}
+            placeholder={t('reject_reason_ph')}
+            onChange={(event) => setReason(event.target.value)}
+            className="h-10 rounded-xl"
+          />
+          <div className="flex gap-2">
+            <Button variant="secondary" size="sm" className="flex-1 rounded-full" onClick={() => setRejecting()}>
+              {t('cancel')}
+            </Button>
+            <Button variant="destructive" size="sm" className="flex-1 rounded-full" onClick={() => onReject(reason.trim())}>
+              {t('btn_reject_send')}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex gap-2">
+          <Button variant="secondary" size="sm" className="flex-1 rounded-full text-red-600" onClick={() => setRejecting()}>
+            {t('btn_reject_item')}
+          </Button>
+          <Button size="sm" className="flex-1 rounded-full bg-amber-600 hover:bg-amber-700" onClick={onConfirm}>
+            {t('btn_confirm_item')}
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const QuantityPill: FC<{ qty: number; muted?: boolean }> = ({ qty, muted }) => (
   <span
     className={cn(
@@ -377,6 +500,8 @@ const QuantityPill: FC<{ qty: number; muted?: boolean }> = ({ qty, muted }) => (
 )
 
 const CHIP_VARIANTS: Record<ItemStatus, 'default' | 'secondary' | 'outline' | 'success' | 'warning'> = {
+  placed: 'warning',
+  cancelled: 'outline',
   pending: 'secondary',
   acknowledged: 'default',
   preparing: 'warning',
@@ -421,7 +546,7 @@ const EmptyTableBody: FC<EmptyTableBodyProps> = ({
     return (
       <div className="py-12 text-center">
         <div className="mx-auto flex size-24 items-center justify-center rounded-[28px] bg-[var(--surface-grouped)] text-4xl font-bold text-[var(--text-tertiary)]">
-          {table.number}
+          {table.code}
         </div>
         <div className="mt-5 text-xl font-bold text-[var(--text)]">{t('empty')}</div>
         <p className="mt-1 text-sm text-[var(--text-secondary)]">
@@ -438,11 +563,11 @@ const EmptyTableBody: FC<EmptyTableBodyProps> = ({
     <div>
       <h3 className="text-lg font-bold text-[var(--text)]">{t('open_session_title')}</h3>
       <p className="mt-1 text-sm text-[var(--text-secondary)]">
-        {t('table')} {table.number} • {table.capacity} {lang === 'vi' ? 'chỗ ngồi' : 'seats'}
+        {t('table')} {table.code} • {table.capacity} {lang === 'vi' ? 'chỗ ngồi' : 'seats'}
       </p>
 
       <div className="mt-5 space-y-5">
-        <Input value={`${t('table')} ${table.number}`} readOnly aria-label="Table" className="h-12 rounded-2xl font-semibold" />
+        <Input value={`${t('table')} ${table.code}`} readOnly aria-label="Table" className="h-12 rounded-2xl font-semibold" />
         <div>
           <label className="mb-2 block text-sm font-semibold text-[var(--text-secondary)]">{t('guest_count_label')}</label>
           <div className="flex flex-wrap gap-2">

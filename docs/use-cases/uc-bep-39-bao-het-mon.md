@@ -11,6 +11,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-bep-39-bao-het-mon.drawio`](./uc-bep-39-bao-het-mon.drawio) — mở bằng draw.io / diagrams.net.
+
 *Hình: ĐẶC TẢ USE-CASE BẾP — BÁO HẾT MÓN*
 Tác nhân **Bếp** giao tiếp với use-case «Báo hết món»; đánh dấu một `order_item` đã gọi là `UNAVAILABLE` khi hết nguyên liệu giữa ca, và phát realtime để khách/Phục vụ biết. Khác «Bật/tắt còn-hết» của Quản lý (UC-27) — cái này tác động lên **một dòng món đã gọi trong đơn**, không phải trạng thái toàn menu.
 

@@ -13,6 +13,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-phuc-vu-13-danh-dau-da-phuc-vu.drawio`](./uc-phuc-vu-13-danh-dau-da-phuc-vu.drawio) — mở bằng draw.io / diagrams.net.
+
 *Hình: ĐẶC TẢ USE-CASE PHỤC VỤ — ĐÁNH DẤU ĐÃ PHỤC VỤ*
 Tác nhân **Phục vụ** giao tiếp với use-case «Đánh dấu đã phục vụ»; chuyển trạng thái món `READY → SERVED`, ghi lịch sử trạng thái (audit) và phát realtime cho Khách. Trạng thái là **theo từng order-item**; "phục vụ nhiều món" là gọi lặp thao tác cho từng món.
 

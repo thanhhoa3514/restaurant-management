@@ -27,6 +27,9 @@ type Area struct {
 	ID           uuid.UUID
 	RestaurantID uuid.UUID
 	Name         string
+	Description  string
+	DisplayOrder int
+	IsActive     bool
 }
 
 type Table struct {
@@ -35,6 +38,8 @@ type Table struct {
 	AreaID       uuid.UUID
 	Code         string
 	Name         string
+	Capacity     int
+	Status       string
 	Version      int
 	DeletedAt    *time.Time
 }
@@ -48,14 +53,13 @@ type QRCode struct {
 	CreatedBy    *uuid.UUID
 }
 
-// TableWithQR is a read projection joining a table to its current active QR
-// code (if any). QR fields are nil when the table has no active QR.
 type TableWithQR struct {
 	TableID   uuid.UUID
 	TableCode string
 	TableName string
 	Status    string
 	Capacity  int
+	AreaID    *uuid.UUID
 	AreaName  string
 	AreaOrder int
 	QRCodeID  *uuid.UUID
@@ -68,20 +72,15 @@ type DiningSession struct {
 	TableID      uuid.UUID
 	QRCodeID     *uuid.UUID
 	SessionCode  string
-	// SessionToken is stored raw because the token is a shared per-session
-	// bearer value returned by join-session. Per-guest hashed tokens are deferred.
-	SessionToken  string
-	Status        SessionStatus
-	OpenedVia     OpenedVia
-	OpenedBy      *uuid.UUID
-	CustomerName  string
-	MergeGroupID  *uuid.UUID
-	Version       int
-	ClosedAt      *time.Time
+	SessionToken string
+	Status       SessionStatus
+	OpenedVia    OpenedVia
+	OpenedBy     *uuid.UUID
+	CustomerName string
+	MergeGroupID *uuid.UUID
+	Version      int
+	ClosedAt     *time.Time
 }
-
-// MergeGroup represents a group of dining sessions merged together
-// for a single party occupying multiple tables.
 type MergeGroup struct {
 	ID           uuid.UUID
 	RestaurantID uuid.UUID
@@ -91,7 +90,6 @@ type MergeGroup struct {
 	Version      int
 	DeletedAt    *time.Time
 }
-
 type Event struct {
 	ID           uuid.UUID
 	RestaurantID uuid.UUID
@@ -107,10 +105,18 @@ type DiningRepository interface {
 	FindQRByToken(ctx context.Context, qrToken string) (*QRCode, error)
 	FindActiveSessionByTable(ctx context.Context, restaurantID, tableID uuid.UUID) (*DiningSession, error)
 	ListTablesWithActiveQR(ctx context.Context, restaurantID uuid.UUID) ([]TableWithQR, error)
+	ListAreas(ctx context.Context, restaurantID uuid.UUID) ([]Area, error)
+	CreateTable(ctx context.Context, t *Table) error
+	UpdateTable(ctx context.Context, t *Table) error
+	SoftDeleteTable(ctx context.Context, restaurantID, tableID uuid.UUID) error
 	CloseSession(ctx context.Context, restaurantID, sessionID uuid.UUID, closedBy *uuid.UUID) (*DiningSession, bool, error)
 	DeactivateActiveQR(ctx context.Context, restaurantID, tableID uuid.UUID, deactivatedBy *uuid.UUID, reason string) error
 	CreateQR(ctx context.Context, qr *QRCode) error
 	UpdateSessionCustomerName(ctx context.Context, sessionID uuid.UUID, name string) error
+	CreateArea(ctx context.Context, a *Area) error
+	UpdateArea(ctx context.Context, a *Area) error
+	FindArea(ctx context.Context, restaurantID, areaID uuid.UUID) (*Area, error)
+	DeleteArea(ctx context.Context, restaurantID, areaID uuid.UUID) error
 
 	FindSessionByID(ctx context.Context, restaurantID, sessionID uuid.UUID) (*DiningSession, error)
 	FindSessionsPendingVerification(ctx context.Context, restaurantID uuid.UUID) ([]DiningSession, error)

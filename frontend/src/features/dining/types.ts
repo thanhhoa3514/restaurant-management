@@ -16,6 +16,7 @@ export interface TableQR {
   table_name: string
   table_status: string
   capacity: number
+  area_id: string | null
   area_name: string
   area_order: number
   qr_code_id?: string

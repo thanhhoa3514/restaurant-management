@@ -17,6 +17,8 @@
 
 ### 1) Use-case đặc tả tổng quan
 
+> Sơ đồ: [`uc-quan-ly-31-bao-cao-thong-ke.drawio`](./uc-quan-ly-31-bao-cao-thong-ke.drawio) — mở bằng draw.io / diagrams.net.
+
 *Hình: ĐẶC TẢ USE-CASE QUẢN LÝ — XEM BÁO CÁO & THỐNG KÊ*
 Tác nhân **Quản lý** giao tiếp với use-case «Xem báo cáo»; chọn loại báo cáo + khoảng thời gian, hệ thống tổng hợp KPI (doanh thu, số bàn phục vụ, thời gian chờ bếp, thanh toán…) từ dữ liệu vận hành (gồm `order_item_status_history`) và trả về để hiển thị KPI/biểu đồ.
 

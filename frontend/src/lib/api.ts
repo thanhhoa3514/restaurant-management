@@ -2,6 +2,12 @@ import { getStaffSession, refreshStaffSession } from '@/lib/auth'
 import { ApiError, type Envelope, type RequestOptions } from '@/types/api'
 export { ApiError }
 
+export function errorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiError) return error.message
+  if (error instanceof Error) return error.message
+  return fallback
+}
+
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
 
 
