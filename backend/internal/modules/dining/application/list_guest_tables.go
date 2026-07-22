@@ -2,13 +2,11 @@ package application
 
 import (
 	"context"
+	"restaurant-management/internal/modules/dining/domain"
 
 	"github.com/google/uuid"
-
-	"restaurant-management/internal/modules/dining/domain"
 )
 
-// GuestTableDTO is a public subset of table info exposed without auth.
 type GuestTableDTO struct {
 	TableID          uuid.UUID `json:"table_id"`
 	TableCode        string    `json:"table_code"`

@@ -15,8 +15,6 @@ import (
 type JoinSessionRequest struct {
 	QRToken   string `json:"qr_token"`
 	GuestName string `json:"guest_name"`
-	// Server-observed request metadata. The HTTP handler populates these
-	// fields; they are never trusted from JSON.
 	IPHash    string `json:"-"`
 	UserAgent string `json:"-"`
 	TraceID   string `json:"-"`

@@ -19,6 +19,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminTableQrsRouteImport } from './routes/admin.table-qrs'
 import { Route as AdminStaffRouteImport } from './routes/admin.staff'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
+import { Route as AdminSessionsRouteImport } from './routes/admin.sessions'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
 import { Route as AdminCatalogRouteImport } from './routes/admin.catalog'
 
@@ -72,6 +73,11 @@ const AdminSettingsRoute = AdminSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminSessionsRoute = AdminSessionsRouteImport.update({
+  id: '/sessions',
+  path: '/sessions',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminReportsRoute = AdminReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -93,6 +99,7 @@ export interface FileRoutesByFullPath {
   '/waiter': typeof WaiterRoute
   '/admin/catalog': typeof AdminCatalogRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/sessions': typeof AdminSessionsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/staff': typeof AdminStaffRoute
   '/admin/table-qrs': typeof AdminTableQrsRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/waiter': typeof WaiterRoute
   '/admin/catalog': typeof AdminCatalogRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/sessions': typeof AdminSessionsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/staff': typeof AdminStaffRoute
   '/admin/table-qrs': typeof AdminTableQrsRoute
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/waiter': typeof WaiterRoute
   '/admin/catalog': typeof AdminCatalogRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/sessions': typeof AdminSessionsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/staff': typeof AdminStaffRoute
   '/admin/table-qrs': typeof AdminTableQrsRoute
@@ -138,6 +147,7 @@ export interface FileRouteTypes {
     | '/waiter'
     | '/admin/catalog'
     | '/admin/reports'
+    | '/admin/sessions'
     | '/admin/settings'
     | '/admin/staff'
     | '/admin/table-qrs'
@@ -152,6 +162,7 @@ export interface FileRouteTypes {
     | '/waiter'
     | '/admin/catalog'
     | '/admin/reports'
+    | '/admin/sessions'
     | '/admin/settings'
     | '/admin/staff'
     | '/admin/table-qrs'
@@ -166,6 +177,7 @@ export interface FileRouteTypes {
     | '/waiter'
     | '/admin/catalog'
     | '/admin/reports'
+    | '/admin/sessions'
     | '/admin/settings'
     | '/admin/staff'
     | '/admin/table-qrs'
@@ -253,6 +265,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSettingsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/sessions': {
+      id: '/admin/sessions'
+      path: '/sessions'
+      fullPath: '/admin/sessions'
+      preLoaderRoute: typeof AdminSessionsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/reports': {
       id: '/admin/reports'
       path: '/reports'
@@ -273,6 +292,7 @@ declare module '@tanstack/react-router' {
 interface AdminRouteChildren {
   AdminCatalogRoute: typeof AdminCatalogRoute
   AdminReportsRoute: typeof AdminReportsRoute
+  AdminSessionsRoute: typeof AdminSessionsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminStaffRoute: typeof AdminStaffRoute
   AdminTableQrsRoute: typeof AdminTableQrsRoute
@@ -281,6 +301,7 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminCatalogRoute: AdminCatalogRoute,
   AdminReportsRoute: AdminReportsRoute,
+  AdminSessionsRoute: AdminSessionsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminStaffRoute: AdminStaffRoute,
   AdminTableQrsRoute: AdminTableQrsRoute,

@@ -76,7 +76,8 @@ func (r *Repository) ListItems(ctx context.Context, restaurantID uuid.UUID, cate
 	query := `
 		SELECT mi.id, mi.category_id, mi.name, mi.slug, COALESCE(mi.short_description, ''), COALESCE(mi.image_url, ''),
 		       mi.base_price_vnd, mi.availability_status, mi.is_available,
-		       COALESCE(va.has_variants, FALSE), va.price_from_vnd
+		       COALESCE(va.has_variants, FALSE), va.price_from_vnd,
+		       COALESCE(og.has_required_options, FALSE)
 		FROM menu_items mi
 		LEFT JOIN LATERAL (
 			SELECT COUNT(*) > 0 AS has_variants, MIN(price_vnd) AS price_from_vnd
@@ -86,6 +87,14 @@ func (r *Repository) ListItems(ctx context.Context, restaurantID uuid.UUID, cate
 			  AND v.is_available = TRUE
 			  AND v.deleted_at IS NULL
 		) va ON TRUE
+		LEFT JOIN LATERAL (
+			SELECT COUNT(*) > 0 AS has_required_options
+			FROM menu_item_option_groups og
+			WHERE og.restaurant_id = mi.restaurant_id
+			  AND og.menu_item_id = mi.id
+			  AND og.is_required = TRUE
+			  AND og.deleted_at IS NULL
+		) og ON TRUE
 		WHERE mi.restaurant_id = $1
 		  AND mi.status = 'PUBLISHED'
 		  AND mi.availability_status <> 'HIDDEN'
@@ -107,7 +116,7 @@ func (r *Repository) ListItems(ctx context.Context, restaurantID uuid.UUID, cate
 	for rows.Next() {
 		var row domain.MenuItemSummary
 		var price pgtype.Int8
-		if err := rows.Scan(&row.ID, &row.CategoryID, &row.Name, &row.Slug, &row.ShortDescription, &row.ImageURL, &row.BasePriceVND, &row.AvailabilityStatus, &row.IsAvailable, &row.HasVariants, &price); err != nil {
+		if err := rows.Scan(&row.ID, &row.CategoryID, &row.Name, &row.Slug, &row.ShortDescription, &row.ImageURL, &row.BasePriceVND, &row.AvailabilityStatus, &row.IsAvailable, &row.HasVariants, &price, &row.HasRequiredOptions); err != nil {
 			return nil, err
 		}
 		if price.Valid {
@@ -124,6 +133,7 @@ func (r *Repository) ListItemsAdmin(ctx context.Context, restaurantID uuid.UUID,
 		SELECT mi.id, mi.category_id, mi.name, mi.slug, COALESCE(mi.short_description, ''), COALESCE(mi.image_url, ''),
 		       mi.base_price_vnd, mi.availability_status, mi.is_available,
 		       COALESCE(va.has_variants, FALSE), va.price_from_vnd,
+		       COALESCE(og.has_required_options, FALSE),
 		       mi.status, mi.is_featured, COALESCE(mi.station, ''), mi.display_order, mi.version
 		FROM menu_items mi
 		LEFT JOIN LATERAL (
@@ -133,6 +143,14 @@ func (r *Repository) ListItemsAdmin(ctx context.Context, restaurantID uuid.UUID,
 			  AND v.menu_item_id = mi.id
 			  AND v.deleted_at IS NULL
 		) va ON TRUE
+		LEFT JOIN LATERAL (
+			SELECT COUNT(*) > 0 AS has_required_options
+			FROM menu_item_option_groups og
+			WHERE og.restaurant_id = mi.restaurant_id
+			  AND og.menu_item_id = mi.id
+			  AND og.is_required = TRUE
+			  AND og.deleted_at IS NULL
+		) og ON TRUE
 		WHERE mi.restaurant_id = $1
 		  AND mi.deleted_at IS NULL`
 	args := []any{restaurantID}
@@ -152,7 +170,7 @@ func (r *Repository) ListItemsAdmin(ctx context.Context, restaurantID uuid.UUID,
 	for rows.Next() {
 		var row domain.AdminMenuItemSummary
 		var price pgtype.Int8
-		if err := rows.Scan(&row.ID, &row.CategoryID, &row.Name, &row.Slug, &row.ShortDescription, &row.ImageURL, &row.BasePriceVND, &row.AvailabilityStatus, &row.IsAvailable, &row.HasVariants, &price, &row.Status, &row.IsFeatured, &row.Station, &row.DisplayOrder, &row.Version); err != nil {
+		if err := rows.Scan(&row.ID, &row.CategoryID, &row.Name, &row.Slug, &row.ShortDescription, &row.ImageURL, &row.BasePriceVND, &row.AvailabilityStatus, &row.IsAvailable, &row.HasVariants, &price, &row.HasRequiredOptions, &row.Status, &row.IsFeatured, &row.Station, &row.DisplayOrder, &row.Version); err != nil {
 			return nil, err
 		}
 		if price.Valid {

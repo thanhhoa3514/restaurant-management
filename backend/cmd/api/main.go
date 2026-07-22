@@ -167,6 +167,8 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 		ListAreas:           diningapp.NewListAreas(diningRepo, defaultRID),
 		SaveArea:            diningapp.NewSaveArea(tx, diningRepo, defaultRID),
 		DeleteArea:          diningapp.NewDeleteArea(tx, diningRepo, defaultRID),
+		ListDailySessions:   diningapp.NewListDailySessions(diningRepo, defaultRID),
+		GetSessionDetail:    diningapp.NewGetSessionDetail(diningRepo, defaultRID),
 	}
 
 	orderingRepo := orderingrepo.NewRepository(pool, defaultRID)

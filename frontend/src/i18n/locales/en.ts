@@ -27,6 +27,7 @@ export const en: LocaleDict = {
     navLabel: {
       dashboard: 'Overview',
       'table-qrs': 'Tables',
+      sessions: 'Dining Sessions',
       catalog: 'Menu catalog',
       staff: 'Staff',
       reports: 'Reports',
@@ -38,6 +39,7 @@ export const en: LocaleDict = {
     navDesc: {
       dashboard: 'Operations overview',
       'table-qrs': 'Tables, floor plan and QR codes',
+      sessions: 'Daily dining sessions history & details',
       catalog: 'Toggle items & update prices',
       staff: 'Roles & shifts',
       reports: 'Revenue & operations',

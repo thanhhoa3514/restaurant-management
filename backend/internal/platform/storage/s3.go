@@ -51,9 +51,6 @@ func NewClient(ctx context.Context, cfg S3Config, log *slog.Logger) (*Client, er
 	return client, nil
 }
 
-// PresignedPutURL generates a presigned PUT URL for uploading an object with
-// the given extension (e.g. ".jpg", ".png"). The returned PresignedResult
-// contains both the upload URL and the direct public URL.
 func (c *Client) PresignedPutURL(ctx context.Context, ext string, expiry time.Duration) (*PresignedResult, error) {
 	key := fmt.Sprintf("menu/%s%s", uuid.New().String(), ext)
 
@@ -68,8 +65,6 @@ func (c *Client) PresignedPutURL(ctx context.Context, ext string, expiry time.Du
 		ObjectKey:    key,
 	}, nil
 }
-
-// DeleteObject removes an object from the bucket.
 func (c *Client) DeleteObject(ctx context.Context, key string) error {
 	return c.mc.RemoveObject(ctx, c.bucket, key, minio.RemoveObjectOptions{})
 }
@@ -87,7 +82,6 @@ func (c *Client) ensureBucket(ctx context.Context) error {
 		return fmt.Errorf("make bucket: %w", err)
 	}
 
-	// Set public-read policy so images are directly accessible.
 	policy := fmt.Sprintf(`{
 		"Version": "2012-10-17",
 		"Statement": [{

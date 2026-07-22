@@ -78,6 +78,12 @@ func (r *fakeRepo) ListAreas(context.Context, uuid.UUID) ([]domain.Area, error) 
 func (r *fakeRepo) CreateArea(context.Context, *domain.Area) error         { return nil }
 func (r *fakeRepo) UpdateArea(context.Context, *domain.Area) error         { return nil }
 func (r *fakeRepo) DeleteArea(context.Context, uuid.UUID, uuid.UUID) error { return nil }
+func (r *fakeRepo) ListDailySessions(context.Context, uuid.UUID, domain.ListDailySessionsFilter) (domain.ListDailySessionsResponse, error) {
+	return domain.ListDailySessionsResponse{}, nil
+}
+func (r *fakeRepo) GetSessionDetail(context.Context, uuid.UUID, uuid.UUID) (domain.SessionDetailDTO, error) {
+	return domain.SessionDetailDTO{}, nil
+}
 func (r *fakeRepo) FindArea(context.Context, uuid.UUID, uuid.UUID) (*domain.Area, error) {
 	return &domain.Area{}, nil
 }

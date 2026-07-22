@@ -30,9 +30,6 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-// SessionChecker is the subset of SessionRepository needed to validate
-// a session is still active. Defined here to avoid importing the identity
-// domain from the platform layer.
 type SessionChecker interface {
 	IsSessionValid(ctx context.Context, sessionID uuid.UUID) (bool, error)
 }
@@ -48,11 +45,9 @@ func GenerateRefreshToken() (raw string, hash string, err error) {
 	return raw, hash, nil
 }
 
-// HashRefreshToken returns the SHA-256 hex digest of a raw refresh token.
 func HashRefreshToken(raw string) string {
 	b, err := hex.DecodeString(raw)
 	if err != nil {
-		// If it's not hex-encoded, hash the string bytes directly.
 		sum := sha256.Sum256([]byte(raw))
 		return hex.EncodeToString(sum[:])
 	}
@@ -79,7 +74,6 @@ func Issue(secret string, claims Claims, ttl time.Duration) (string, error) {
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(secret))
 }
 
-// parseClaims is the shared JWT parsing logic used by JWT and JWTSession.
 func parseClaims(c *gin.Context, secret string) *Claims {
 	token := strings.TrimPrefix(c.GetHeader("Authorization"), "Bearer ")
 	if token == "" {
@@ -115,9 +109,6 @@ func JWT(secret string) gin.HandlerFunc {
 	}
 }
 
-// JWTSession is like JWT but also verifies that the session referenced in the
-// JWT claims is still active (not revoked and not expired). Routes that should
-// reject revoked sessions must use this instead of JWT.
 func JWTSession(secret string, checker SessionChecker) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		claims := parseClaims(c, secret)

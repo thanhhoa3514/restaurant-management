@@ -27,6 +27,7 @@ export const vi: LocaleDict = {
     navLabel: {
       dashboard: 'Tổng quan',
       'table-qrs': 'Quản lý bàn',
+      sessions: 'Nhật ký phiên ăn',
       catalog: 'Danh mục món',
       staff: 'Nhân sự',
       reports: 'Báo cáo',
@@ -38,6 +39,7 @@ export const vi: LocaleDict = {
     navDesc: {
       dashboard: 'Tổng quan vận hành',
       'table-qrs': 'Bàn, sơ đồ và mã QR gọi món',
+      sessions: 'Tra cứu nhật ký tất cả phiên ăn trong ngày',
       catalog: 'Ẩn/hiện món và cập nhật giá',
       staff: 'Vai trò và ca trực',
       reports: 'Doanh thu và vận hành',

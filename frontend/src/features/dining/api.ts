@@ -59,6 +59,99 @@ export interface CloseSessionResult {
   status: string
 }
 
+export function staffVerifySession(sessionId: string): Promise<{ session_id: string; status: string }> {
+  return apiRequest<{ session_id: string; status: string }>(
+    `/api/v1/restaurant/sessions/${encodeURIComponent(sessionId)}/verify`,
+    { method: 'POST' },
+  )
+}
+
+export interface DailySessionItem {
+  id: string
+  session_code: string
+  table_id: string
+  table_code: string
+  table_name: string
+  area_name: string
+  status: string
+  opened_via: string
+  opened_at: string
+  opened_by_name: string
+  closed_at: string | null
+  closed_by_name: string
+  customer_name: string
+  duration_minutes: number
+  total_items_count: number
+  total_amount_vnd: number
+}
+
+export interface DailySessionsStats {
+  total_sessions: number
+  active_sessions: number
+  closed_sessions: number
+  total_revenue_vnd: number
+}
+
+export interface ListDailySessionsResponse {
+  sessions: DailySessionItem[]
+  stats: DailySessionsStats
+}
+
+export interface DailySessionsFilter {
+  date?: string
+  status?: string
+  search?: string
+}
+
+export interface SessionOrderItemDetail {
+  order_item_id: string
+  menu_item_name: string
+  variant_name: string | null
+  quantity: number
+  unit_price_vnd: number
+  options_total_vnd: number
+  subtotal_vnd: number
+  status: string
+  station: string
+  note: string
+}
+
+export interface SessionOrderDetail {
+  order_id: string
+  order_number: string
+  submitted_at: string
+  status: string
+  items: SessionOrderItemDetail[]
+}
+
+export interface SessionInvoiceDetail {
+  id: string
+  invoice_number: string
+  status: string
+  grand_total_vnd: number
+  payment_method: string | null
+  paid_at: string | null
+}
+
+export interface SessionDetail extends DailySessionItem {
+  orders: SessionOrderDetail[]
+  invoices: SessionInvoiceDetail[]
+}
+
+export function fetchDailySessions(filter: DailySessionsFilter): Promise<ListDailySessionsResponse> {
+  const params = new URLSearchParams()
+  if (filter.date) params.set('date', filter.date)
+  if (filter.status) params.set('status', filter.status)
+  if (filter.search) params.set('search', filter.search)
+
+  const query = params.toString()
+  return apiRequest<ListDailySessionsResponse>(`/api/v1/restaurant/sessions/daily${query ? `?${query}` : ''}`)
+}
+
+export function fetchSessionDetail(sessionId: string): Promise<SessionDetail> {
+  return apiRequest<SessionDetail>(`/api/v1/restaurant/sessions/daily/${encodeURIComponent(sessionId)}`)
+}
+
 export function closeDiningSession(sessionId: string): Promise<CloseSessionResult> {
   return apiRequest<CloseSessionResult>(`/api/v1/restaurant/sessions/${encodeURIComponent(sessionId)}/close`, {
     method: 'POST',

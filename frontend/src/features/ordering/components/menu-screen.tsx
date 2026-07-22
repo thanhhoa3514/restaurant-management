@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FC } from 'react'
-import { Search, ShoppingBag, Plus, ChevronRight, Grid2x2 } from 'lucide-react'
+import { Search, ShoppingBag, Plus, ChevronRight, Grid2x2, Receipt } from 'lucide-react'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '@/i18n'
 import { formatVND, totalItems } from '../helpers'
@@ -44,18 +44,16 @@ export const MenuScreen: FC = () => {
     refetch: refetchItems,
   } = useGuestItems(sessionToken)
 
-  const filtered = useMemo(
-    () => {
-      const items = itemsData ?? []
-      return items.filter((item) => {
-        if (!item.is_available) return false
-        if (activeCategory !== 'all' && item.category_id !== activeCategory) return false
-        if (debouncedSearch && !item.name.toLowerCase().includes(debouncedSearch.toLowerCase())) return false
-        return true
-      })
-    },
-    [itemsData, activeCategory, debouncedSearch],
-  )
+  const filtered = useMemo(() => {
+    const items = itemsData ?? []
+    return items.filter((item) => {
+      if (!item.is_available) return false
+      if (activeCategory !== 'all' && item.category_id !== activeCategory) return false
+      if (debouncedSearch && !item.name.toLowerCase().includes(debouncedSearch.toLowerCase()))
+        return false
+      return true
+    })
+  }, [itemsData, activeCategory, debouncedSearch])
 
   const cartCount = totalItems(state.cart)
 
@@ -87,34 +85,46 @@ export const MenuScreen: FC = () => {
       <div className="sticky top-0 z-[var(--z-sticky)]">
         {/* Premium Glass Header */}
         <header className="bg-[var(--material-thin)]/80 backdrop-blur-2xl border-b border-[var(--separator)] shadow-sm">
-          <div className="px-4 pt-5 pb-4 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col">
-                <img src="/zenith-logo-transparent.png" alt="Zenith Logo" className="h-8 w-auto object-contain" />
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs font-medium text-[var(--text-tertiary)]">{t.floor}</span>
-                  <span className="inline-block size-1 rounded-full bg-[var(--text-tertiary)] opacity-40" />
-                  <span className="inline-flex items-center rounded-full bg-[var(--system-purple)]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[var(--system-purple)]">
-                    {t.table} {state.session?.table}
-                  </span>
-                </div>
-              </div>
+          <div className="px-4 pt-3 pb-2 flex flex-col gap-2">
+            <div className="flex items-center justify-between min-h-0">
               <div className="flex items-center gap-2">
+                <img
+                  src="/zenith-logo-transparent.png"
+                  alt="Zenith Logo"
+                  className="h-5 w-auto object-contain"
+                />
+                <span className="hidden sm:inline-block size-1 rounded-full bg-[var(--text-tertiary)] opacity-40" />
+                <span className="hidden sm:inline text-xs font-medium text-[var(--text-tertiary)] whitespace-nowrap">
+                  {t.floor}
+                </span>
+                <span className="inline-flex items-center rounded-full bg-[var(--system-purple)]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[var(--system-purple)] whitespace-nowrap">
+                  {t.table} {state.session?.table}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   aria-label={state.lang === 'vi' ? 'Dịch vụ' : 'Services'}
-                  className="relative flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surface-grouped)] text-[var(--text)] transition-colors hover:bg-[var(--separator)]/50 active:scale-95 cursor-pointer"
+                  className="relative flex h-9 w-9 items-center justify-center rounded-full bg-[var(--surface-grouped)] text-[var(--text)] transition-colors hover:bg-[var(--separator)]/50 active:scale-95 cursor-pointer"
                   onClick={() => setServicesOpen(true)}
                 >
-                  <Grid2x2 size={20} strokeWidth={2.5} />
+                  <Grid2x2 size={18} strokeWidth={2.5} />
+                </button>
+                <button
+                  type="button"
+                  aria-label={state.lang === 'vi' ? 'Lịch sử gọi món' : 'Order history'}
+                  className="relative flex h-9 w-9 items-center justify-center rounded-full bg-[var(--surface-grouped)] text-[var(--text)] transition-colors hover:bg-[var(--separator)]/50 active:scale-95 cursor-pointer"
+                  onClick={() => dispatch({ type: 'SET_SCREEN', payload: 'order' })}
+                >
+                  <Receipt size={18} strokeWidth={2.5} />
                 </button>
                 <button
                   type="button"
                   aria-label={t.view_cart}
-                  className="relative flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surface-grouped)] text-[var(--text)] transition-colors hover:bg-[var(--separator)]/50 active:scale-95 cursor-pointer"
+                  className="relative flex h-9 w-9 items-center justify-center rounded-full bg-[var(--surface-grouped)] text-[var(--text)] transition-colors hover:bg-[var(--separator)]/50 active:scale-95 cursor-pointer"
                   onClick={() => dispatch({ type: 'OPEN_CART' })}
                 >
-                  <ShoppingBag size={20} strokeWidth={2.5} />
+                  <ShoppingBag size={18} strokeWidth={2.5} />
                   {cartCount > 0 && (
                     <span className="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-[var(--system-red)] text-[9px] font-bold text-white ring-2 ring-[var(--bg)]">
                       {cartCount}
@@ -126,13 +136,13 @@ export const MenuScreen: FC = () => {
 
             <div className="relative group">
               <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-[var(--text-tertiary)] group-focus-within:text-[var(--system-blue)] transition-colors">
-                <Search size={18} />
+                <Search size={16} />
               </div>
               <input
                 type="text"
                 aria-label={t.search_placeholder}
                 placeholder={t.search_placeholder}
-                className="w-full h-11 pl-10 pr-4 rounded-2xl bg-[var(--surface-grouped)]/60 border border-[var(--separator)] text-sm font-medium text-[var(--text)] placeholder-[var(--text-tertiary)] outline-none transition-all focus:bg-[var(--surface-grouped)] focus:ring-2 focus:ring-[var(--system-blue)]/20 focus:border-[var(--system-blue)]/40"
+                className="w-full h-9 pl-9 pr-4 rounded-2xl bg-[var(--surface-grouped)]/60 border border-[var(--separator)] text-sm font-medium text-[var(--text)] placeholder-[var(--text-tertiary)] outline-none transition-all focus:bg-[var(--surface-grouped)] focus:ring-2 focus:ring-[var(--system-blue)]/20 focus:border-[var(--system-blue)]/40"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -147,10 +157,10 @@ export const MenuScreen: FC = () => {
               type="button"
               onClick={() => setActiveCategory('all')}
               className={cn(
-                "whitespace-nowrap px-4 py-2.5 rounded-full text-sm font-bold transition-all duration-300 active:scale-95 border cursor-pointer",
+                'whitespace-nowrap px-4 py-2.5 rounded-full text-sm font-bold transition-all duration-300 active:scale-95 border cursor-pointer',
                 activeCategory === 'all'
-                  ? "bg-[var(--text)] text-[var(--bg)] border-transparent shadow-md"
-                  : "bg-transparent text-[var(--text-secondary)] border-[var(--separator)] hover:bg-[var(--surface-grouped)]"
+                  ? 'bg-[var(--text)] text-[var(--bg)] border-transparent shadow-md'
+                  : 'bg-transparent text-[var(--text-secondary)] border-[var(--separator)] hover:bg-[var(--surface-grouped)]',
               )}
             >
               {state.lang === 'vi' ? 'Tất cả' : 'All'}
@@ -161,10 +171,10 @@ export const MenuScreen: FC = () => {
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
                 className={cn(
-                  "whitespace-nowrap px-4 py-2.5 rounded-full text-sm font-bold transition-all duration-300 active:scale-95 border cursor-pointer",
+                  'whitespace-nowrap px-4 py-2.5 rounded-full text-sm font-bold transition-all duration-300 active:scale-95 border cursor-pointer',
                   activeCategory === cat.id
-                    ? "bg-[var(--text)] text-[var(--bg)] border-transparent shadow-md"
-                    : "bg-transparent text-[var(--text-secondary)] border-[var(--separator)] hover:bg-[var(--surface-grouped)]"
+                    ? 'bg-[var(--text)] text-[var(--bg)] border-transparent shadow-md'
+                    : 'bg-transparent text-[var(--text-secondary)] border-[var(--separator)] hover:bg-[var(--surface-grouped)]',
                 )}
               >
                 {cat.name}
@@ -200,9 +210,15 @@ export const MenuScreen: FC = () => {
         ) : isItemsError ? (
           <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
             <p className="text-sm font-medium text-[var(--text-secondary)]">
-              {state.lang === 'vi' ? 'Lỗi kết nối. Không tải được thực đơn.' : 'Connection error. Could not load the menu.'}
+              {state.lang === 'vi'
+                ? 'Lỗi kết nối. Không tải được thực đơn.'
+                : 'Connection error. Could not load the menu.'}
             </p>
-            <Button variant="secondary" onClick={() => refetchItems()} className="rounded-xl font-bold">
+            <Button
+              variant="secondary"
+              onClick={() => refetchItems()}
+              className="rounded-xl font-bold"
+            >
               {state.lang === 'vi' ? 'Thử lại' : 'Retry'}
             </Button>
           </div>
@@ -252,10 +268,7 @@ export const MenuScreen: FC = () => {
         sessionToken={sessionToken}
       />
 
-      <LanguageLoader
-        open={changingLang !== null}
-        targetLang={changingLang || state.lang}
-      />
+      <LanguageLoader open={changingLang !== null} targetLang={changingLang || state.lang} />
     </div>
   )
 }
@@ -269,22 +282,23 @@ interface MenuItemCardProps {
 }
 
 const MenuItemCard: FC<MenuItemCardProps> = ({ item, lang, cartQty, onSelect, onQuickAdd }) => {
-  const price = item.has_variants && item.price_from_vnd != null ? item.price_from_vnd : item.base_price_vnd
-  const canQuickAdd = !item.has_variants
+  const price =
+    item.has_variants && item.price_from_vnd != null ? item.price_from_vnd : item.base_price_vnd
+  const canQuickAdd = !item.has_variants && !item.has_required_options
 
   return (
-    <Card 
-      className="group overflow-hidden cursor-pointer hover:shadow-md transition-all active:scale-[0.98] bg-[var(--bg-elevated)] border-[var(--separator)] flex flex-row sm:flex-col" 
+    <Card
+      className="group overflow-hidden cursor-pointer hover:shadow-md transition-all active:scale-[0.98] bg-[var(--bg-elevated)] border-[var(--separator)] flex flex-row sm:flex-col"
       onClick={onSelect}
     >
       <div className="relative w-[110px] sm:w-full shrink-0 aspect-square sm:aspect-[4/3] bg-[var(--surface-grouped)] overflow-hidden">
         {item.image_url ? (
           <>
-            <img 
-              src={item.image_url} 
-              alt={item.name} 
-              className="size-full object-cover transition-transform duration-500 group-hover:scale-105" 
-              loading="lazy" 
+            <img
+              src={item.image_url}
+              alt={item.name}
+              className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+              loading="lazy"
             />
             <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity" />
           </>
@@ -297,7 +311,7 @@ const MenuItemCard: FC<MenuItemCardProps> = ({ item, lang, cartQty, onSelect, on
           </span>
         )}
       </div>
-      
+
       <CardContent className="p-3 sm:p-4 flex flex-col flex-1 justify-center sm:justify-start gap-1 sm:gap-2">
         <h3 className="text-[15px] font-bold text-[var(--text)] leading-snug line-clamp-2 transition-colors group-hover:text-[var(--system-blue)]">
           {item.name}
@@ -309,17 +323,23 @@ const MenuItemCard: FC<MenuItemCardProps> = ({ item, lang, cartQty, onSelect, on
         )}
         <div className="mt-auto pt-2 flex items-center justify-between">
           <span className="text-[14px] sm:text-[15px] font-extrabold text-[var(--text)]">
-            {item.has_variants && item.price_from_vnd != null
-              ? <span className="text-[11px] sm:text-[12px] font-bold text-[var(--text-tertiary)] uppercase mr-1">{lang === 'vi' ? 'Từ' : 'From'}</span>
-              : null}
+            {item.has_variants && item.price_from_vnd != null ? (
+              <span className="text-[11px] sm:text-[12px] font-bold text-[var(--text-tertiary)] uppercase mr-1">
+                {lang === 'vi' ? 'Từ' : 'From'}
+              </span>
+            ) : null}
             {formatVND(price)}
           </span>
           <button
             type="button"
             aria-label={
               canQuickAdd
-                ? lang === 'vi' ? 'Thêm vào giỏ' : 'Add to cart'
-                : lang === 'vi' ? 'Xem chi tiết' : 'View details'
+                ? lang === 'vi'
+                  ? 'Thêm vào giỏ'
+                  : 'Add to cart'
+                : lang === 'vi'
+                  ? 'Xem chi tiết'
+                  : 'View details'
             }
             onClick={(e) => {
               e.stopPropagation()
@@ -328,7 +348,11 @@ const MenuItemCard: FC<MenuItemCardProps> = ({ item, lang, cartQty, onSelect, on
             }}
             className="flex size-7 sm:size-8 items-center justify-center rounded-full bg-[var(--surface-grouped)] text-[var(--text-secondary)] group-hover:bg-[var(--system-blue)] group-hover:text-white transition-colors cursor-pointer"
           >
-            {canQuickAdd ? <Plus size={16} strokeWidth={2.5} /> : <ChevronRight size={16} strokeWidth={2.5} />}
+            {canQuickAdd ? (
+              <Plus size={16} strokeWidth={2.5} />
+            ) : (
+              <ChevronRight size={16} strokeWidth={2.5} />
+            )}
           </button>
         </div>
       </CardContent>

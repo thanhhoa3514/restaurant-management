@@ -3,7 +3,9 @@ package postgres
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -634,4 +636,302 @@ func (r *Repository) DeleteArea(ctx context.Context, restaurantID, areaID uuid.U
 		return apperr.New(apperr.CodeNotFound, "area not found")
 	}
 	return nil
+}
+
+func (r *Repository) ListDailySessions(ctx context.Context, restaurantID uuid.UUID, filter domain.ListDailySessionsFilter) (domain.ListDailySessionsResponse, error) {
+	var out domain.ListDailySessionsResponse
+	out.Sessions = make([]domain.DailySessionItemDTO, 0)
+
+	var dateFilterStart, dateFilterEnd *time.Time
+	if filter.Date != "" {
+		if t, err := time.Parse("2006-01-02", filter.Date); err == nil {
+			loc := time.Local
+			start := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, loc)
+			end := start.Add(24 * time.Hour)
+			dateFilterStart = &start
+			dateFilterEnd = &end
+		}
+	}
+
+	query := `
+		SELECT 
+			ds.id,
+			COALESCE(ds.session_code, ''),
+			ds.table_id,
+			t.code AS table_code,
+			t.name AS table_name,
+			COALESCE(a.name, 'Chưa phân khu') AS area_name,
+			ds.status,
+			COALESCE(ds.opened_via, 'STAFF'),
+			ds.opened_at,
+			COALESCE(u_open.full_name, 'Khách quét QR') AS opened_by_name,
+			ds.closed_at,
+			COALESCE(u_close.full_name, '') AS closed_by_name,
+			COALESCE(ds.customer_name, ''),
+			COALESCE(inv_stats.total_vnd, 0) AS total_amount_vnd,
+			COALESCE(order_stats.item_count, 0) AS total_items_count
+		FROM dining_sessions ds
+		JOIN tables t ON t.id = ds.table_id
+		LEFT JOIN areas a ON a.id = t.area_id
+		LEFT JOIN users u_open ON u_open.id = ds.opened_by
+		LEFT JOIN users u_close ON u_close.id = ds.closed_by
+		LEFT JOIN (
+			SELECT dining_session_id, SUM(grand_total_vnd) AS total_vnd
+			FROM invoices
+			WHERE status = 'PAID' AND deleted_at IS NULL
+			GROUP BY dining_session_id
+		) inv_stats ON inv_stats.dining_session_id = ds.id
+		LEFT JOIN (
+			SELECT dining_session_id, SUM(quantity) AS item_count
+			FROM order_items
+			WHERE status NOT IN ('CANCELLED', 'UNAVAILABLE') AND deleted_at IS NULL
+			GROUP BY dining_session_id
+		) order_stats ON order_stats.dining_session_id = ds.id
+		WHERE ds.restaurant_id = $1
+	`
+	args := []any{restaurantID}
+	idx := 2
+
+	if filter.Status != "" && filter.Status != "ALL" {
+		query += fmt.Sprintf(" AND ds.status = $%d", idx)
+		args = append(args, filter.Status)
+		idx++
+	}
+	if dateFilterStart != nil && dateFilterEnd != nil {
+		query += fmt.Sprintf(" AND ds.opened_at >= $%d AND ds.opened_at < $%d", idx, idx+1)
+		args = append(args, *dateFilterStart, *dateFilterEnd)
+		idx += 2
+	}
+	if filter.Search != "" {
+		searchTerm := "%" + strings.ToLower(filter.Search) + "%"
+		query += fmt.Sprintf(" AND (LOWER(t.code) LIKE $%d OR LOWER(t.name) LIKE $%d OR LOWER(COALESCE(ds.session_code, '')) LIKE $%d)", idx, idx, idx)
+		args = append(args, searchTerm)
+		idx++
+	}
+
+	query += " ORDER BY ds.opened_at DESC"
+
+	rows, err := r.q(ctx).Query(ctx, query, args...)
+	if err != nil {
+		return out, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var item domain.DailySessionItemDTO
+		var closedAt *time.Time
+		err := rows.Scan(
+			&item.ID,
+			&item.SessionCode,
+			&item.TableID,
+			&item.TableCode,
+			&item.TableName,
+			&item.AreaName,
+			&item.Status,
+			&item.OpenedVia,
+			&item.OpenedAt,
+			&item.OpenedByName,
+			&closedAt,
+			&item.ClosedByName,
+			&item.CustomerName,
+			&item.TotalAmountVND,
+			&item.TotalItemsCount,
+		)
+		if err != nil {
+			return out, err
+		}
+		item.ClosedAt = closedAt
+
+		if closedAt != nil {
+			item.DurationMinutes = int(closedAt.Sub(item.OpenedAt).Minutes())
+		} else {
+			item.DurationMinutes = int(time.Since(item.OpenedAt).Minutes())
+		}
+		if item.DurationMinutes < 0 {
+			item.DurationMinutes = 0
+		}
+
+		out.Sessions = append(out.Sessions, item)
+
+		out.Stats.TotalSessions++
+		if item.Status == "ACTIVE" || item.Status == "AWAITING_PAYMENT" {
+			out.Stats.ActiveSessions++
+		} else if item.Status == "CLOSED" {
+			out.Stats.ClosedSessions++
+		}
+		out.Stats.TotalRevenueVND += item.TotalAmountVND
+	}
+
+	return out, nil
+}
+
+func (r *Repository) GetSessionDetail(ctx context.Context, restaurantID, sessionID uuid.UUID) (domain.SessionDetailDTO, error) {
+	var detail domain.SessionDetailDTO
+	detail.Orders = make([]domain.SessionOrderDetailDTO, 0)
+	detail.Invoices = make([]domain.SessionInvoiceDetailDTO, 0)
+
+	var closedAt *time.Time
+	err := r.q(ctx).QueryRow(ctx, `
+		SELECT 
+			ds.id,
+			COALESCE(ds.session_code, ''),
+			ds.table_id,
+			t.code AS table_code,
+			t.name AS table_name,
+			COALESCE(a.name, 'Chưa phân khu') AS area_name,
+			ds.status,
+			COALESCE(ds.opened_via, 'STAFF'),
+			ds.opened_at,
+			COALESCE(u_open.full_name, 'Khách quét QR') AS opened_by_name,
+			ds.closed_at,
+			COALESCE(u_close.full_name, '') AS closed_by_name,
+			COALESCE(ds.customer_name, ''),
+			COALESCE(inv_stats.total_vnd, 0) AS total_amount_vnd,
+			COALESCE(order_stats.item_count, 0) AS total_items_count
+		FROM dining_sessions ds
+		JOIN tables t ON t.id = ds.table_id
+		LEFT JOIN areas a ON a.id = t.area_id
+		LEFT JOIN users u_open ON u_open.id = ds.opened_by
+		LEFT JOIN users u_close ON u_close.id = ds.closed_by
+		LEFT JOIN (
+			SELECT dining_session_id, SUM(grand_total_vnd) AS total_vnd
+			FROM invoices
+			WHERE status = 'PAID' AND deleted_at IS NULL
+			GROUP BY dining_session_id
+		) inv_stats ON inv_stats.dining_session_id = ds.id
+		LEFT JOIN (
+			SELECT dining_session_id, SUM(quantity) AS item_count
+			FROM order_items
+			WHERE status NOT IN ('CANCELLED', 'UNAVAILABLE') AND deleted_at IS NULL
+			GROUP BY dining_session_id
+		) order_stats ON order_stats.dining_session_id = ds.id
+		WHERE ds.restaurant_id = $1 AND ds.id = $2
+	`, restaurantID, sessionID).Scan(
+		&detail.ID,
+		&detail.SessionCode,
+		&detail.TableID,
+		&detail.TableCode,
+		&detail.TableName,
+		&detail.AreaName,
+		&detail.Status,
+		&detail.OpenedVia,
+		&detail.OpenedAt,
+		&detail.OpenedByName,
+		&closedAt,
+		&detail.ClosedByName,
+		&detail.CustomerName,
+		&detail.TotalAmountVND,
+		&detail.TotalItemsCount,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return detail, apperr.New(apperr.CodeNotFound, "session not found")
+	}
+	if err != nil {
+		return detail, err
+	}
+	detail.ClosedAt = closedAt
+	if closedAt != nil {
+		detail.DurationMinutes = int(closedAt.Sub(detail.OpenedAt).Minutes())
+	} else {
+		detail.DurationMinutes = int(time.Since(detail.OpenedAt).Minutes())
+	}
+
+	orderRows, err := r.q(ctx).Query(ctx, `
+		SELECT 
+			o.id AS order_id,
+			COALESCE(o.order_number, ''),
+			o.submitted_at,
+			o.status AS order_status,
+			oi.id AS order_item_id,
+			COALESCE(oi.name_snapshot, mi.name) AS menu_item_name,
+			oi.variant_name_snapshot,
+			oi.quantity,
+			oi.unit_price_vnd,
+			oi.options_total_vnd,
+			oi.subtotal_vnd,
+			oi.status AS item_status,
+			COALESCE(oi.station, 'KITCHEN') AS station,
+			COALESCE(oi.note, '') AS note
+		FROM orders o
+		JOIN order_items oi ON oi.order_id = o.id
+		LEFT JOIN menu_items mi ON mi.id = oi.menu_item_id
+		WHERE o.restaurant_id = $1 AND o.dining_session_id = $2 AND o.deleted_at IS NULL
+		ORDER BY o.submitted_at ASC, oi.created_at ASC
+	`, restaurantID, sessionID)
+	if err == nil {
+		defer orderRows.Close()
+		orderMap := make(map[uuid.UUID]*domain.SessionOrderDetailDTO)
+		orderOrder := make([]uuid.UUID, 0)
+
+		for orderRows.Next() {
+			var orderID uuid.UUID
+			var orderNum string
+			var subAt time.Time
+			var orderStatus string
+			var item domain.SessionOrderItemDetailDTO
+
+			if err := orderRows.Scan(
+				&orderID,
+				&orderNum,
+				&subAt,
+				&orderStatus,
+				&item.OrderItemID,
+				&item.MenuItemName,
+				&item.VariantName,
+				&item.Quantity,
+				&item.UnitPriceVND,
+				&item.OptionsTotalVND,
+				&item.SubtotalVND,
+				&item.Status,
+				&item.Station,
+				&item.Note,
+			); err == nil {
+				ord, exists := orderMap[orderID]
+				if !exists {
+					ord = &domain.SessionOrderDetailDTO{
+						OrderID:     orderID,
+						OrderNumber: orderNum,
+						SubmittedAt: subAt,
+						Status:      orderStatus,
+						Items:       make([]domain.SessionOrderItemDetailDTO, 0),
+					}
+					orderMap[orderID] = ord
+					orderOrder = append(orderOrder, orderID)
+				}
+				ord.Items = append(ord.Items, item)
+			}
+		}
+		for _, id := range orderOrder {
+			detail.Orders = append(detail.Orders, *orderMap[id])
+		}
+	}
+
+	invRows, err := r.q(ctx).Query(ctx, `
+		SELECT 
+			inv.id,
+			inv.invoice_number,
+			inv.status,
+			inv.grand_total_vnd,
+			p.payment_method,
+			inv.paid_at
+		FROM invoices inv
+		LEFT JOIN payments p ON p.invoice_id = inv.id
+		WHERE inv.restaurant_id = $1 AND inv.dining_session_id = $2 AND inv.deleted_at IS NULL
+		ORDER BY inv.created_at DESC
+	`, restaurantID, sessionID)
+	if err == nil {
+		defer invRows.Close()
+		for invRows.Next() {
+			var inv domain.SessionInvoiceDetailDTO
+			var paidAt *time.Time
+			var pMethod *string
+			if err := invRows.Scan(&inv.ID, &inv.InvoiceNumber, &inv.Status, &inv.GrandTotalVND, &pMethod, &paidAt); err == nil {
+				inv.PaidAt = paidAt
+				inv.PaymentMethod = pMethod
+				detail.Invoices = append(detail.Invoices, inv)
+			}
+		}
+	}
+
+	return detail, nil
 }

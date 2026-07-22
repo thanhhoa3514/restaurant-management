@@ -30,6 +30,8 @@ type Handler struct {
 	ListAreas           *application.ListAreas
 	SaveArea            *application.SaveArea
 	DeleteArea          *application.DeleteArea
+	ListDailySessions   *application.ListDailySessions
+	GetSessionDetail    *application.GetSessionDetail
 }
 
 func (h *Handler) RegisterGuestRoutes(r *gin.RouterGroup) {
@@ -54,6 +56,8 @@ func (h *Handler) RegisterStaffRoutes(r *gin.RouterGroup, secret string, resolve
 	manager.POST("/tables", h.createTable)
 	manager.PATCH("/tables/:tableId", h.updateTable)
 	manager.DELETE("/tables/:tableId", h.deleteTable)
+	manager.GET("/sessions/daily", h.listDailySessions)
+	manager.GET("/sessions/daily/:sessionId", h.getSessionDetail)
 
 	serve := r.Group("", auth.JWT(secret), auth.RequirePermission(resolver, auth.PermissionDiningServe, defaultRestaurantID))
 	serve.POST("/sessions/merge", h.mergeSessions)
@@ -338,4 +342,32 @@ func (h *Handler) deleteTable(c *gin.Context) {
 		return
 	}
 	httpx.Respond(c, http.StatusOK, gin.H{"id": tableID, "deleted": true}, nil)
+}
+
+func (h *Handler) listDailySessions(c *gin.Context) {
+	filter := application.ListDailySessionsFilter{
+		Date:   c.Query("date"),
+		Status: c.Query("status"),
+		Search: c.Query("search"),
+	}
+	out, err := h.ListDailySessions.Handle(c.Request.Context(), filter)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) getSessionDetail(c *gin.Context) {
+	sessionID, err := uuid.Parse(c.Param("sessionId"))
+	if err != nil {
+		httpx.RespondError(c, apperr.New(apperr.CodeInvalid, "invalid session id"))
+		return
+	}
+	out, err := h.GetSessionDetail.Handle(c.Request.Context(), sessionID)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
 }

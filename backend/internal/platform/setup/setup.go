@@ -1,7 +1,3 @@
-// Package setup provides shared functions for bootstrapping a restaurant's
-// initial data: restaurant record, staff users, areas + tables, QR codes,
-// and payment methods. Used by both the production setup command and the
-// development seed command.
 package setup
 
 import (
@@ -15,10 +11,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/crypto/bcrypt"
 )
-
-// ──────────────────────────────────────────────
-// Config types
-// ──────────────────────────────────────────────
 
 type RestaurantConfig struct {
 	Code                     string
@@ -39,8 +31,8 @@ type UserConfig struct {
 }
 
 type AreaConfig struct {
-	Name        string
-	Description string
+	Name         string
+	Description  string
 	DisplayOrder int
 }
 
@@ -51,13 +43,6 @@ type TableConfig struct {
 	Capacity int
 }
 
-// ──────────────────────────────────────────────
-// Restaurant
-// ──────────────────────────────────────────────
-
-// EnsureRestaurant creates or updates the restaurant record. It uses the
-// restaurant code (normalized to uppercase) as the conflict key so re-running
-// is idempotent. Returns the restaurant's UUID.
 func EnsureRestaurant(ctx context.Context, tx pgx.Tx, cfg RestaurantConfig) (uuid.UUID, error) {
 	var id uuid.UUID
 	err := tx.QueryRow(ctx, `
@@ -79,13 +64,6 @@ func EnsureRestaurant(ctx context.Context, tx pgx.Tx, cfg RestaurantConfig) (uui
 	return id, nil
 }
 
-// ──────────────────────────────────────────────
-// Users
-// ──────────────────────────────────────────────
-
-// EnsureUsers creates staff users for the restaurant. Each user is linked to
-// a role by name (manager, cashier, server, kitchen). Re-running skips
-// existing users (ON CONFLICT DO NOTHING on username).
 func EnsureUsers(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID, users []UserConfig) error {
 	for _, u := range users {
 		hash, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
@@ -108,13 +86,6 @@ func EnsureUsers(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID, users [
 	return nil
 }
 
-// ──────────────────────────────────────────────
-// Areas & Tables
-// ──────────────────────────────────────────────
-
-// EnsureAreasAndTables creates areas and tables. Returns maps of area name →
-// UUID and table code → UUID so callers can reference them later (e.g. for QR
-// codes). Existing areas/tables are updated, not duplicated.
 func EnsureAreasAndTables(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID, areas []AreaConfig, tables []TableConfig) (areaIDs map[string]uuid.UUID, tableIDs map[string]uuid.UUID, err error) {
 	areaIDs = make(map[string]uuid.UUID, len(areas))
 	for _, a := range areas {
@@ -155,8 +126,6 @@ func EnsureAreasAndTables(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID
 		tableIDs[t.Code] = id
 	}
 
-	// Stale area cleanup: remove areas from older configs that are no longer
-	// in the list and have no remaining tables referencing them.
 	var areaNames []string
 	for _, a := range areas {
 		areaNames = append(areaNames, a.Name)
@@ -176,24 +145,15 @@ func EnsureAreasAndTables(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID
 	return areaIDs, tableIDs, nil
 }
 
-// ──────────────────────────────────────────────
-// QR Codes
-// ──────────────────────────────────────────────
-
-// randToken returns an opaque random token suitable for QR code URLs.
 func randToken() string {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
-		panic(err) // crypto/rand failure is unrecoverable
+		panic(err)
 	}
 	return hex.EncodeToString(b)
 }
 
-// EnsureQRCodes deactivates any currently-active QR codes and creates one new
-// active code per table. Returns a map of table code → QR token so callers
-// can print the printed tokens (or display them).
 func EnsureQRCodes(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID, tableIDs map[string]uuid.UUID) (map[string]string, error) {
-	// Deactivate all active codes for this restaurant.
 	if _, err := tx.Exec(ctx, `
 		UPDATE qr_codes
 		SET is_active = FALSE, deactivated_at = NOW(), deactivated_reason = 'replaced'
@@ -222,13 +182,6 @@ func EnsureQRCodes(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID, table
 	return tokens, nil
 }
 
-// ──────────────────────────────────────────────
-// Payment Methods
-// ──────────────────────────────────────────────
-
-// SeedPaymentMethods inserts the standard payment methods (cash, card, momo,
-// zalopay, vnpay). In non-production environments an additional "mock" wallet
-// is added for testing. Methods are upserted by (restaurant_id, code).
 func SeedPaymentMethods(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID, isProduction bool) error {
 	type method struct {
 		code         string
@@ -265,13 +218,6 @@ func SeedPaymentMethods(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID, 
 	return nil
 }
 
-// ──────────────────────────────────────────────
-// Demo data cleanup
-// ──────────────────────────────────────────────
-
-// ClearTransactionalData deletes demo transactional data (payments, invoices,
-// dining sessions) for the given restaurant so the seed can re-create fresh
-// demo sessions without conflict.
 func ClearTransactionalData(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 	for _, q := range []string{
 		`DELETE FROM payments WHERE restaurant_id = $1`,
@@ -286,8 +232,6 @@ func ClearTransactionalData(ctx context.Context, tx pgx.Tx, restaurantID uuid.UU
 	return nil
 }
 
-// ClearMenuData deletes menu data (categories, items, variants, options) so
-// the seed can re-create the demo menu from scratch.
 func ClearMenuData(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 	for _, q := range []string{
 		`DELETE FROM menu_item_option_groups WHERE restaurant_id = $1`,

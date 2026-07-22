@@ -31,6 +31,7 @@ const WaiterLayout = lazy(() =>
 
 const MANAGE_ROUTES: Record<string, StaffView> = {
   '/admin/table-qrs': 'table-qrs',
+  '/admin/sessions': 'sessions',
   '/admin/floor-plan': 'table-qrs',
   '/admin/catalog': 'catalog',
   '/admin/staff': 'staff',

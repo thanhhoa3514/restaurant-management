@@ -10,11 +10,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Connect builds a tuned pgx pool and verifies connectivity.
-//
-// pgxpool.New is lazy (no connection until first use), so we Ping after
-// construction to fail fast at startup instead of on the first request.
-// maxConns <= 0 falls back to the pgx default (derived from num CPUs).
 func Connect(ctx context.Context, url string, maxConns int) (*pgxpool.Pool, error) {
 	cfg, err := pgxpool.ParseConfig(url)
 	if err != nil {

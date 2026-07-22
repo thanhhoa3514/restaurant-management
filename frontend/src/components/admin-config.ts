@@ -1,6 +1,7 @@
 import {
   BarChart3,
   ChefHat,
+  Clock,
   ClipboardList,
   CreditCard,
   LayoutDashboard,
@@ -15,12 +16,13 @@ import type { PermissionCode, StaffRole } from '@/lib/auth'
 export type NavHref =
   | '/admin'
   | '/admin/table-qrs'
+  | '/admin/sessions'
   | '/admin/catalog'
   | '/admin/staff'
   | '/admin/reports'
   | '/admin/settings'
 export type AdminView = 'dashboard' | 'cashier' | 'waiter' | 'kitchen'
-export type ManageRoute = 'table-qrs' | 'catalog' | 'staff' | 'reports' | 'settings'
+export type ManageRoute = 'table-qrs' | 'sessions' | 'catalog' | 'staff' | 'reports' | 'settings'
 export type StaffView = AdminView | ManageRoute
 
 export type NavGroup = 'manage' | 'operate'
@@ -45,6 +47,7 @@ export const navItems: NavItem[] = [
 
   { id: 'dashboard', group: 'manage', href: '/admin', view: 'dashboard', icon: LayoutDashboard, permission: 'identity.manage' },
   { id: 'table-qrs', group: 'manage', href: '/admin/table-qrs', icon: QrCode, permission: 'dining.manage' },
+  { id: 'sessions', group: 'manage', href: '/admin/sessions', icon: Clock, permission: 'dining.manage' },
   { id: 'catalog', group: 'manage', href: '/admin/catalog', icon: ClipboardList, permission: 'catalog.manage' },
   { id: 'staff', group: 'manage', href: '/admin/staff', icon: UsersRound, permission: 'identity.manage' },
   { id: 'reports', group: 'manage', href: '/admin/reports', icon: BarChart3, permission: 'identity.manage' },

@@ -24,6 +24,7 @@ type MenuItemSummaryDTO struct {
 	IsAvailable        bool      `json:"is_available"`
 	HasVariants        bool      `json:"has_variants"`
 	PriceFromVND       *int64    `json:"price_from_vnd"`
+	HasRequiredOptions bool     `json:"has_required_options"`
 }
 
 type AdminMenuItemSummaryDTO struct {
@@ -38,6 +39,7 @@ type AdminMenuItemSummaryDTO struct {
 	IsAvailable        bool      `json:"is_available"`
 	HasVariants        bool      `json:"has_variants"`
 	PriceFromVND       *int64    `json:"price_from_vnd"`
+	HasRequiredOptions bool     `json:"has_required_options"`
 	Status             string    `json:"status"`
 	IsFeatured         bool      `json:"is_featured"`
 	Station            string    `json:"station"`

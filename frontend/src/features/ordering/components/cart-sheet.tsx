@@ -1,10 +1,11 @@
 import { useState, type FC, useCallback } from 'react'
-import { Minus, Plus, ShoppingBag, Trash2, ChevronRight } from 'lucide-react'
+import { Minus, Plus, ShoppingBag, Trash2, ChevronRight, Receipt } from 'lucide-react'
 import { toast } from 'sonner'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '@/i18n'
 import { formatVND, summarizeCartLine, cartTotal, totalItems } from '../helpers'
 import { usePlaceGuestOrder } from '../mutations/usePlaceGuestOrder'
+import { useGuestOrders } from '../queries/useGuestOrders'
 import { ApiError } from '@/lib/api'
 import type { CartLine, Lang, PlaceOrderInput } from '../types'
 
@@ -85,6 +86,10 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
     })
   }
 
+  const { data: ordersData } = useGuestOrders(sessionToken)
+  const placedOrders = ordersData?.orders ?? []
+  const placedItemCount = placedOrders.reduce((sum, o) => sum + (o.items?.length ?? 0), 0)
+
   return (
     <>
       {open && (
@@ -117,17 +122,64 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4 bg-gradient-to-b from-[var(--surface-grouped)]/30 to-[var(--bg)]">
-          {state.cart.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full min-h-[40vh] gap-4">
-              <div className="size-24 rounded-full bg-[var(--surface-grouped)] flex items-center justify-center text-[var(--text-tertiary)]/60">
-                <ShoppingBag size={48} strokeWidth={1.5} />
+          {placedItemCount > 0 && state.cart.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                onClose()
+                dispatch({ type: 'SET_SCREEN', payload: 'order' })
+              }}
+              className="flex items-center justify-between w-full bg-[var(--system-blue)]/10 hover:bg-[var(--system-blue)]/15 border border-[var(--system-blue)]/20 text-[var(--system-blue)] px-4 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <Receipt size={16} />
+                <span>
+                  {lang === 'vi'
+                    ? `Bạn đã gửi ${placedItemCount} món trước đó`
+                    : `You have ${placedItemCount} previously placed items`}
+                </span>
               </div>
-              <p className="text-[16px] font-semibold text-[var(--text-secondary)]">
-                {t.empty_cart}
-              </p>
-              <p className="text-[14px] text-[var(--text-tertiary)] max-w-[200px] text-center">
-                {t.empty_cart_hint}
-              </p>
+              <span className="flex items-center gap-1 underline text-[11px]">
+                {lang === 'vi' ? 'Xem trạng thái' : 'View status'}
+                <ChevronRight size={14} />
+              </span>
+            </button>
+          )}
+
+          {state.cart.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full min-h-[40vh] gap-4 px-4 text-center">
+              <div className="size-20 rounded-full bg-[var(--surface-grouped)] flex items-center justify-center text-[var(--text-tertiary)]/60">
+                <ShoppingBag size={40} strokeWidth={1.5} />
+              </div>
+              <div className="space-y-1">
+                <p className="text-[17px] font-bold text-[var(--text)]">
+                  {t.empty_cart}
+                </p>
+                <p className="text-[14px] text-[var(--text-tertiary)] max-w-[260px] mx-auto">
+                  {placedItemCount > 0
+                    ? (lang === 'vi'
+                        ? 'Bạn không có món nháp nào trong giỏ. Món đã gửi đang được xử lý ở Đơn món.'
+                        : 'No draft items in cart. Placed items are being processed in Order Status.')
+                    : t.empty_cart_hint}
+                </p>
+              </div>
+
+              {placedItemCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose()
+                    dispatch({ type: 'SET_SCREEN', payload: 'order' })
+                  }}
+                  className="mt-2 flex items-center gap-2 rounded-2xl bg-[var(--system-blue)] hover:bg-[var(--system-blue)]/90 text-white px-5 py-3 text-sm font-bold shadow-lg shadow-[var(--system-blue)]/20 transition-all active:scale-95 cursor-pointer"
+                >
+                  <Receipt size={18} />
+                  {lang === 'vi'
+                    ? `Theo dõi trạng thái ${placedItemCount} món đã đặt`
+                    : `Track status of ${placedItemCount} placed items`}
+                  <ChevronRight size={16} />
+                </button>
+              )}
             </div>
           ) : (
             <div className="flex flex-col gap-4">
