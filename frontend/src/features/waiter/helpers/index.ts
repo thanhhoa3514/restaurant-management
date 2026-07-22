@@ -87,6 +87,8 @@ export function wfFmtClock(d: Date): string {
   return `${h}:${m}`
 }
 
+export const wfFmtTime = wfFmtClock
+
 export function wfFmtHMS(seconds: number | null): string {
   if (seconds == null) return ''
   seconds = Math.max(0, Math.floor(seconds))

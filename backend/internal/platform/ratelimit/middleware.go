@@ -8,16 +8,12 @@ import (
 	"restaurant-management/internal/shared/apperr"
 )
 
-// KeyFunc extracts a rate limit key from the request context.
 type KeyFunc func(*gin.Context) string
 
-// Middleware returns a Gin handler that rate-limits based on the key
-// extracted by keyFn. Requests exceeding the limit get 429 Too Many Requests.
 func (sw *SlidingWindow) Middleware(keyFn KeyFunc) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		key := keyFn(c)
 		if key == "" {
-			// No key = no rate limiting (shouldn't happen if configured right)
 			c.Next()
 			return
 		}

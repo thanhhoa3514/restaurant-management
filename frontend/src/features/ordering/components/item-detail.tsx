@@ -6,7 +6,6 @@ import { DICT, type Dict } from '../data/i18n'
 import { formatVND } from '../helpers'
 import { useGuestItemDetail } from '../queries/useGuestItemDetail'
 import type { ApiMenuItemDetail, ApiOptionGroup, CartLine, CartOption, Lang } from '../types'
-import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
@@ -75,6 +74,8 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
       notes: '',
     })
   }, [item])
+
+
 
   const estUnitPrice = useMemo(() => {
     if (!item) return 0
@@ -164,18 +165,8 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
   }
 
   return (
-    <Sheet
-      open={!!itemId}
-      onOpenChange={(open) => {
-        if (!open) onClose()
-      }}
-    >
-      <SheetContent
-        side="right"
-        hideClose
-        className="w-full sm:max-w-md p-0 overflow-hidden flex flex-col border-none bg-[var(--bg)] shadow-2xl"
-      >
-        <SheetTitle className="sr-only">{item?.name ?? 'Item Detail'}</SheetTitle>
+    <div className="fixed inset-0 z-[var(--z-modal)] bg-[var(--bg)] flex flex-col overflow-hidden animate-in fade-in duration-200 sm:max-w-md sm:mx-auto sm:border-x sm:border-[var(--separator)] sm:shadow-2xl">
+      <div className="sr-only">{item?.name ?? 'Item Detail'}</div>
 
         <div className="absolute inset-x-0 top-0 z-30 flex items-center justify-between px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pointer-events-none">
           <button
@@ -268,8 +259,7 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
             </div>
           </>
         )}
-      </SheetContent>
-    </Sheet>
+    </div>
   )
 }
 

@@ -222,7 +222,7 @@ func (r *Repository) SessionTotal(ctx context.Context, restaurantID, sessionID u
 		SELECT COALESCE(SUM(oi.total_amount_vnd), 0)
 		FROM order_items oi
 		JOIN orders o ON o.id = oi.order_id AND o.restaurant_id = oi.restaurant_id
-		WHERE oi.restaurant_id = $1 AND oi.dining_session_id = $2
+		WHERE oi.restaurant_id = $1 AND (oi.dining_session_id = $2 OR oi.order_id = $2)
 		  AND oi.deleted_at IS NULL AND oi.status <> 'CANCELLED'
 		  AND o.deleted_at IS NULL AND o.status <> 'CANCELLED'
 	`, restaurantID, sessionID).Scan(&total)
@@ -278,7 +278,7 @@ func (r *Repository) fetchOrders(ctx context.Context, restaurantID, sessionID uu
 	rows, err := r.q(ctx).Query(ctx, `
 		SELECT id, order_number, order_type, status, version, submitted_at, COALESCE(note, '')
 		FROM orders
-		WHERE restaurant_id = $1 AND dining_session_id = $2 AND deleted_at IS NULL
+		WHERE restaurant_id = $1 AND (dining_session_id = $2 OR id = $2) AND deleted_at IS NULL
 		ORDER BY submitted_at, created_at
 	`, restaurantID, sessionID)
 	if err != nil {
@@ -303,7 +303,7 @@ func (r *Repository) fetchItems(ctx context.Context, restaurantID, sessionID uui
 		       options_total_vnd, subtotal_vnd, total_amount_vnd, status, COALESCE(station, 'GENERAL'), COALESCE(note, ''),
 		       is_takeaway, unavailable_reason
 		FROM order_items
-		WHERE restaurant_id = $1 AND dining_session_id = $2 AND order_id = ANY($3) AND deleted_at IS NULL
+		WHERE restaurant_id = $1 AND (dining_session_id = $2 OR order_id = $2) AND order_id = ANY($3) AND deleted_at IS NULL
 		ORDER BY created_at, id
 	`, restaurantID, sessionID, orderIDs)
 	if err != nil {
@@ -704,7 +704,15 @@ func (r *Repository) ListStaffTables(ctx context.Context, restaurantID uuid.UUID
 		 AND ds.status IN ('ACTIVE', 'AWAITING_PAYMENT')
 		 AND ds.deleted_at IS NULL
 		WHERE t.restaurant_id = $1 AND t.deleted_at IS NULL
-		ORDER BY t.code
+
+		UNION ALL
+
+		SELECT '00000000-0000-0000-0000-000000000001'::uuid, 'Mang về', 'Mang về', 0, 'AVAILABLE', '',
+		       o.id, o.order_number, o.status, 1, COALESCE(o.customer_name, ''), o.submitted_at, o.updated_at, NULL::timestamptz, NULL::uuid
+		FROM orders o
+		WHERE o.restaurant_id = $1 AND o.order_type = 'TAKEAWAY' AND o.status NOT IN ('PAID', 'CANCELLED') AND o.deleted_at IS NULL
+		
+		ORDER BY 2
 	`, restaurantID)
 	if err != nil {
 		return nil, err
@@ -762,11 +770,11 @@ func (r *Repository) ListStaffTables(ctx context.Context, restaurantID uuid.UUID
 
 func (r *Repository) ListKitchenQueue(ctx context.Context, restaurantID uuid.UUID) ([]orderingapp.KitchenTicketDTO, error) {
 	rows, err := r.q(ctx).Query(ctx, `
-		SELECT kt.id, kt.order_id, kt.dining_session_id, kt.table_id, t.code, t.name,
+		SELECT kt.id, kt.order_id, kt.dining_session_id, kt.table_id, COALESCE(t.code, ''), COALESCE(t.name, ''),
 		       kt.ticket_number, kt.station, kt.priority, kt.status, o.submitted_at
 		FROM kitchen_tickets kt
 		JOIN orders o ON o.id = kt.order_id AND o.restaurant_id = kt.restaurant_id AND o.deleted_at IS NULL AND o.status <> 'CANCELLED'
-		JOIN tables t ON t.id = kt.table_id AND t.restaurant_id = kt.restaurant_id AND t.deleted_at IS NULL
+		LEFT JOIN tables t ON t.id = kt.table_id AND t.restaurant_id = kt.restaurant_id AND t.deleted_at IS NULL
 		WHERE kt.restaurant_id = $1 AND kt.deleted_at IS NULL AND kt.status <> 'CANCELLED'
 		  AND EXISTS (
 		    SELECT 1
@@ -789,8 +797,17 @@ func (r *Repository) ListKitchenQueue(ctx context.Context, restaurantID uuid.UUI
 	idx := map[uuid.UUID]int{}
 	for rows.Next() {
 		var ticket orderingapp.KitchenTicketDTO
-		if err := rows.Scan(&ticket.ID, &ticket.OrderID, &ticket.SessionID, &ticket.TableID, &ticket.TableCode, &ticket.TableName, &ticket.Number, &ticket.Station, &ticket.Priority, &ticket.Status, &ticket.SubmittedAt); err != nil {
+		var sessionID, tableID pgtype.UUID
+		if err := rows.Scan(&ticket.ID, &ticket.OrderID, &sessionID, &tableID, &ticket.TableCode, &ticket.TableName, &ticket.Number, &ticket.Station, &ticket.Priority, &ticket.Status, &ticket.SubmittedAt); err != nil {
 			return nil, err
+		}
+		if sessionID.Valid {
+			id := uuid.UUID(sessionID.Bytes)
+			ticket.SessionID = &id
+		}
+		if tableID.Valid {
+			id := uuid.UUID(tableID.Bytes)
+			ticket.TableID = &id
 		}
 		ticket.Items = []orderingapp.KitchenTicketItemDTO{}
 		idx[ticket.ID] = len(tickets)

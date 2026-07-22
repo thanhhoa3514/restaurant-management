@@ -67,11 +67,7 @@ export const KdsLayout: FC = () => {
         </Button>
       </ShellHeaderActions>
 
-      {kds.lastMessage && (
-        <div className="pointer-events-none fixed left-1/2 top-24 z-[360] -translate-x-1/2 rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-background shadow-lg">
-          {kds.lastMessage}
-        </div>
-      )}
+
 
       <main className="mx-auto max-w-[1800px] px-4 py-6 lg:px-6">
         <CancelRequestsPanel

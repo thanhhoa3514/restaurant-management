@@ -1,5 +1,5 @@
 import { useMemo, useState, type FC } from 'react'
-import { Search, ShoppingBag, Plus, ChevronRight } from 'lucide-react'
+import { Search, ShoppingBag, Plus, ChevronRight, Grid2x2 } from 'lucide-react'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '../data/i18n'
 import { formatVND, totalItems } from '../helpers'
@@ -10,10 +10,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { LanguageLoader } from '@/components/ui/language-loader'
-import { ThemeToggle } from '@/components/ui/theme-toggle'
-import { LanguageSwitcher } from '@/components/ui/language-switcher'
+
 import { ItemDetail } from './item-detail'
 import { CartSheet } from './cart-sheet'
+import { ServicesSheet } from './services-sheet'
 import { cn } from '@/lib/utils'
 
 export const MenuScreen: FC = () => {
@@ -24,6 +24,7 @@ export const MenuScreen: FC = () => {
   const [search, setSearch] = useState('')
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [changingLang, setChangingLang] = useState<'vi' | 'en' | null>(null)
+  const [servicesOpen, setServicesOpen] = useState(false)
 
   const { data: categoriesData } = useGuestCategories(sessionToken)
 
@@ -60,9 +61,7 @@ export const MenuScreen: FC = () => {
         <div className="px-4 pt-5 pb-4 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
-              <h1 className="text-xl font-bold text-[var(--text)] tracking-tight">
-                {t.restaurant}
-              </h1>
+              <img src="/zenith-logo-transparent.png" alt="Zenith Logo" className="h-8 w-auto object-contain" />
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-xs font-medium text-[var(--text-tertiary)]">{t.floor}</span>
                 <span className="inline-block size-1 rounded-full bg-[var(--text-tertiary)] opacity-40" />
@@ -72,17 +71,27 @@ export const MenuScreen: FC = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <ThemeToggle />
-              <LanguageSwitcher
-                currentLang={state.lang}
-                onLangChange={(target) => {
-                  setChangingLang(target)
-                  setTimeout(() => {
-                    dispatch({ type: 'SET_LANG', payload: target })
-                    setChangingLang(null)
-                  }, 750)
-                }}
-              />
+              <button
+                type="button"
+                aria-label={state.lang === 'vi' ? 'Dịch vụ' : 'Services'}
+                className="relative flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface-grouped)] text-[var(--text)] transition-colors hover:bg-[var(--separator)]/50 active:scale-95 cursor-pointer"
+                onClick={() => setServicesOpen(true)}
+              >
+                <Grid2x2 size={20} strokeWidth={2.5} />
+              </button>
+              <button
+                type="button"
+                aria-label={t.view_cart}
+                className="relative flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface-grouped)] text-[var(--text)] transition-colors hover:bg-[var(--separator)]/50 active:scale-95 cursor-pointer"
+                onClick={() => dispatch({ type: 'OPEN_CART' })}
+              >
+                <ShoppingBag size={20} strokeWidth={2.5} />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-[var(--system-red)] text-[9px] font-bold text-white ring-2 ring-[var(--bg)]">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
             </div>
           </div>
 
@@ -181,43 +190,29 @@ export const MenuScreen: FC = () => {
         )}
       </main>
 
-      {/* Floating Cart Button */}
-      {cartCount > 0 && (
-        <div className="fixed bottom-[max(1.5rem,calc(env(safe-area-inset-bottom)+0.5rem))] left-0 right-0 z-[var(--z-floating)] px-4 pointer-events-none flex justify-center animate-in slide-in-from-bottom-10 fade-in duration-500">
-          <button
-            type="button"
-            className="group pointer-events-auto relative flex h-14 w-full max-w-sm items-center justify-between overflow-hidden rounded-full bg-[var(--text)] px-6 shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition-all active:scale-[0.98] cursor-pointer"
-            onClick={() => dispatch({ type: 'OPEN_CART' })}
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-            <div className="flex items-center gap-3 relative z-10">
-              <div className="relative">
-                <ShoppingBag size={22} className="text-[var(--bg)]" />
-                <span className="absolute -top-1 -right-2 flex size-4 items-center justify-center rounded-full bg-[var(--system-red)] text-[9px] font-bold text-white ring-2 ring-[var(--text)]">
-                  {cartCount}
-                </span>
-              </div>
-              <span className="font-semibold text-[var(--bg)] text-[15px]">
-                {t.view_cart}
-              </span>
-            </div>
-            <div className="flex items-center text-[var(--bg)]/80 relative z-10">
-              <ChevronRight size={20} className="transition-transform group-hover:translate-x-1" />
-            </div>
-          </button>
-        </div>
-      )}
 
-      <ItemDetail
-        itemId={selectedItemId}
-        lang={state.lang}
-        onClose={() => setSelectedItemId(null)}
-      />
+
+      {selectedItemId && (
+        <ItemDetail
+          itemId={selectedItemId}
+          lang={state.lang}
+          onClose={() => setSelectedItemId(null)}
+        />
+      )}
 
       <CartSheet
         open={state.cartOpen}
         lang={state.lang}
         onClose={() => dispatch({ type: 'CLOSE_CART' })}
+      />
+
+      <ServicesSheet
+        open={servicesOpen}
+        onClose={() => setServicesOpen(false)}
+        lang={state.lang}
+        dispatch={dispatch}
+        setChangingLang={setChangingLang}
+        sessionToken={sessionToken}
       />
 
       <LanguageLoader

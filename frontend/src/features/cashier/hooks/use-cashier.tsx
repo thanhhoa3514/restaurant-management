@@ -308,7 +308,7 @@ function cashierReducer(state: CashierState, action: CashierAction): CashierStat
         }),
         selectedSessionId: action.sessions.some((session) => session.id === state.selectedSessionId)
           ? state.selectedSessionId
-          : (action.sessions[0]?.id ?? null),
+          : null,
       }
 
     case 'selectSession':

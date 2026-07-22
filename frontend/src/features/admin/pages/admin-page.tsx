@@ -24,7 +24,7 @@ const KdsLayout = lazy(() =>
   })),
 )
 const WaiterLayout = lazy(() =>
-  import('@/features/waiter/components/waiter-layout').then((m) => ({
+  import('@/features/waiter/pages/waiter-page').then((m) => ({
     default: m.WaiterLayout,
   })),
 )

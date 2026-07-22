@@ -7,6 +7,7 @@ import {
   type Dispatch,
   type SetStateAction,
 } from 'react'
+import { toast } from 'sonner'
 
 import { KDS_DICT } from '@/features/kitchen/data/i18n'
 import { minStatus, nextStatus, urgencyFor } from '@/features/kitchen/helpers'
@@ -55,7 +56,6 @@ export interface UseKdsValue {
   demoOpen: boolean
   stats: KDSStats
   manageTicket: Ticket | undefined
-  lastMessage: string | null
   cancelRequests: CancelRequestDTO[]
   t: (key: KdsDictKey, ...args: Array<number | string>) => string
   advanceAll: (orderId: string) => void
@@ -81,7 +81,6 @@ export function useKds(): UseKdsValue {
   const [fadingIds, setFadingIds] = useState<Set<string>>(() => new Set())
   const [manageOrderId, setManageOrderId] = useState<string | null>(null)
   const [demoOpen, setDemoOpen] = useState(false)
-  const [lastMessage, setLastMessage] = useState<string | null>(null)
 
   const { tickets, refetch: refetchQueue } = useKdsQueue(paused)
   const { cancelRequests, refetch: refetchCancelRequests } = useCancelRequests(paused)
@@ -92,10 +91,18 @@ export function useKds(): UseKdsValue {
   const ticketsRef = useRef(tickets)
   const fadingIdsRef = useRef(fadingIds)
 
-  useEffect(() => { langRef.current = lang }, [lang])
-  useEffect(() => { soundOnRef.current = soundOn }, [soundOn])
-  useEffect(() => { ticketsRef.current = tickets }, [tickets])
-  useEffect(() => { fadingIdsRef.current = fadingIds }, [fadingIds])
+  useEffect(() => {
+    langRef.current = lang
+  }, [lang])
+  useEffect(() => {
+    soundOnRef.current = soundOn
+  }, [soundOn])
+  useEffect(() => {
+    ticketsRef.current = tickets
+  }, [tickets])
+  useEffect(() => {
+    fadingIdsRef.current = fadingIds
+  }, [fadingIds])
 
   const setLang = useCallback((newLang: Lang) => {
     localStorage.setItem('rest_lang_kds', newLang)
@@ -108,8 +115,12 @@ export function useKds(): UseKdsValue {
     return value ?? key
   }, [])
 
-  const notify = useCallback((message: string) => {
-    setLastMessage(message)
+  const notify = useCallback((message: string, isError = false) => {
+    if (isError) {
+      toast.error(message)
+    } else {
+      toast.success(message)
+    }
   }, [])
 
   // ── Timer: urgency tracking ────────────────────────────────────────────────
@@ -171,15 +182,12 @@ export function useKds(): UseKdsValue {
           refetchQueue()
         })
         .catch((err) => {
-          notify(
-            err instanceof ApiError ? err.message : 'Không thể kết nối máy chủ',
-          )
+          notify(err instanceof ApiError ? err.message : 'Không thể kết nối máy chủ', true)
         })
     },
     [notify, refetchQueue, t, tickets],
   )
 
-  // ── Advance a single item ──────────────────────────────────────────────────
   const advanceItem = useCallback(
     (_orderId: string, itemId: string) => {
       const item = tickets
@@ -194,13 +202,12 @@ export function useKds(): UseKdsValue {
           refetchQueue()
         })
         .catch((err) => {
-          notify(errorMessage(err, 'Không thể kết nối máy chủ'))
+          notify(errorMessage(err, 'Không thể kết nối máy chủ'), true)
         })
     },
     [notify, refetchQueue, t, tickets],
   )
 
-  // ── Approve / reject a guest cancel request ────────────────────────────────
   const reviewCancel = useCallback(
     (cancelRequestId: string, action: 'approve' | 'reject') => {
       void reviewCancelRequest(cancelRequestId, action)
@@ -210,34 +217,30 @@ export function useKds(): UseKdsValue {
           refetchQueue()
         })
         .catch((err) => {
-          notify(errorMessage(err, 'Không thể kết nối máy chủ'))
+          notify(errorMessage(err, 'Không thể kết nối máy chủ'), true)
         })
     },
     [notify, refetchCancelRequests, refetchQueue, t],
   )
 
-  // ── Fade out fully-served tickets ──────────────────────────────────────────
   useEffect(() => {
     for (const ticket of tickets) {
-      if (fadingIds.has(ticket.order_id)) continue
+      if (fadingIdsRef.current.has(ticket.order_id)) continue
       if (ticket.items.length === 0) continue
       if (!ticket.items.every((item) => item.status === 'served')) continue
 
+      setFadingIds((current) => new Set(current).add(ticket.order_id))
       window.setTimeout(() => {
-        setFadingIds((current) => new Set(current).add(ticket.order_id))
-        window.setTimeout(() => {
-          setFadingIds((current) => {
-            const next = new Set(current)
-            next.delete(ticket.order_id)
-            return next
-          })
-          refetchQueue()
-        }, FADE_OUT_MS)
-      }, 0)
+        setFadingIds((current) => {
+          const next = new Set(current)
+          next.delete(ticket.order_id)
+          return next
+        })
+        refetchQueue()
+      }, FADE_OUT_MS)
     }
-  }, [fadingIds, refetchQueue, tickets])
+  }, [tickets, refetchQueue])
 
-  // ── Derived stats ──────────────────────────────────────────────────────────
   const stats = useMemo<KDSStats>(() => {
     return tickets.reduce(
       (acc, ticket) => {
@@ -275,7 +278,6 @@ export function useKds(): UseKdsValue {
     demoOpen,
     stats,
     manageTicket,
-    lastMessage,
     cancelRequests,
     t,
     advanceAll,

@@ -82,6 +82,7 @@ export interface WFCounts {
   bills: number
   occupied: number
   total: number
+  pending: number
 }
 
 import type { Lang } from '@/constants'

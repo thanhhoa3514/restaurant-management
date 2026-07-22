@@ -1,4 +1,4 @@
 export const waiterKeys = {
-  all: ['waiter'] as const,
+  all: ['staff'] as const,
   tables: () => [...waiterKeys.all, 'tables'] as const,
 }

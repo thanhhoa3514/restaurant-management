@@ -12,10 +12,10 @@ import { wfFmtClock } from '@/features/waiter/helpers'
 import { useWaiter } from '@/features/waiter/hooks/use-waiter'
 import type { WaiterView } from '@/features/waiter/types'
 import { cn } from '@/lib/utils'
-import { FloorPlan } from './floor-plan'
-import { GridView } from './grid-view'
-import { TableSheet } from './table-sheet'
-import { ActionCenterPanel } from './action-center-panel'
+import { FloorPlan } from '../components/floor-plan'
+import { GridView } from '../components/grid-view'
+import { TableSheet } from '../components/table-sheet'
+import { ActionCenterPanel } from '../components/action-center-panel'
 import { TakeawayPanel } from '@/features/cashier/components/takeaway-panel'
 
 export const WaiterLayout: FC = () => {
@@ -25,16 +25,14 @@ export const WaiterLayout: FC = () => {
   const groupId = selectedTable?.session?.merge_group_id
   const mergeSiblings = groupId
     ? state.tables
-        .filter(
-          (table) => table.id !== selectedTable?.id && table.session?.merge_group_id === groupId,
-        )
+        .filter((table) => table.id !== selectedTable?.id && table.session?.merge_group_id === groupId)
         .map((table) => table.code)
     : []
 
   useShellConfig({
     title: t('floor_view'),
     subtitle: `${t('restaurant')} · ${t('shift')}`,
-    contentClassName: 'p-0',
+    contentClassName: "p-0"
   })
 
   return (
@@ -74,16 +72,10 @@ export const WaiterLayout: FC = () => {
               className="min-w-0 flex-1 sm:flex-none"
             >
               <TabsList className="w-full rounded-[18px] sm:w-auto">
-                <TabsTrigger
-                  value="plan"
-                  className="flex-1 rounded-[15px] px-4 sm:flex-none sm:px-5"
-                >
+                <TabsTrigger value="plan" className="flex-1 rounded-[15px] px-4 sm:flex-none sm:px-5">
                   {t('view_plan')}
                 </TabsTrigger>
-                <TabsTrigger
-                  value="grid"
-                  className="flex-1 rounded-[15px] px-4 sm:flex-none sm:px-5"
-                >
+                <TabsTrigger value="grid" className="flex-1 rounded-[15px] px-4 sm:flex-none sm:px-5">
                   {t('view_grid')}
                 </TabsTrigger>
               </TabsList>
@@ -225,11 +217,7 @@ const SignalChip: FC<CounterPillProps> = ({ tone, label, value }) => {
       <span
         className={cn(
           'size-1.5 rounded-full',
-          tone === 'red'
-            ? 'animate-pulse bg-red-500'
-            : tone === 'emerald'
-              ? 'bg-emerald-500'
-              : 'bg-blue-500',
+          tone === 'red' ? 'animate-pulse bg-red-500' : tone === 'emerald' ? 'bg-emerald-500' : 'bg-blue-500',
         )}
       />
       {label}

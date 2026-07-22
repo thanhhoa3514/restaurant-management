@@ -129,8 +129,6 @@ func (s *StaffTakeawayOrder) Handle(ctx context.Context, req StaffTakeawayOrderR
 	return out, err
 }
 
-// validateTakeawayLines validates order lines for takeaway, reusing the same
-// validation logic but without the session dependency.
 func validateTakeawayLines(ctx context.Context, repo domain.OrderPlacementRepository, restaurantID uuid.UUID, reqs []GuestOrderLineRequest) ([]domain.OrderLineCreate, []LineError, error) {
 	lines := make([]domain.OrderLineCreate, 0, len(reqs))
 	lineErrors := []LineError{}

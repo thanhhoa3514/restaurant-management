@@ -5,10 +5,16 @@ import (
 	"encoding/json"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+)
+
+const (
+	pongWait   = 60 * time.Second    // tối đa chờ Pong từ client
+	pingPeriod = (pongWait * 9) / 10 // gửi Ping trước khi deadline để tránh race
 )
 
 type Topic struct {
@@ -33,9 +39,6 @@ type Hub struct {
 	upgrader websocket.Upgrader
 }
 
-// NewHub builds the realtime hub. allowedOrigins gates the websocket upgrade
-// against cross-site hijacking; when empty (env unset) any origin is accepted
-// for dev convenience. Supply the staff and QR-guest frontend origins in prod.
 func NewHub(allowedOrigins []string) *Hub {
 	allowed := make(map[string]struct{}, len(allowedOrigins))
 	for _, o := range allowedOrigins {
@@ -86,19 +89,68 @@ func (h *Hub) Broadcast(_ Topic, event Event) error {
 	}
 	return nil
 }
+
 func (h *Hub) writePump(s *subscription) {
-	for msg := range s.send {
-		if err := s.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
-			break
+	ticker := time.NewTicker(pingPeriod)
+	defer func() {
+		ticker.Stop()
+		_ = s.conn.Close()
+	}()
+	for {
+		select {
+		case msg, ok := <-s.send:
+			if !ok {
+				return // channel đã đóng
+			}
+			if err := s.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+				return
+			}
+		case <-ticker.C:
+			if err := s.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				return
+			}
 		}
 	}
-	_ = s.conn.Close()
 }
+
 func (h *Hub) readPump(s *subscription) {
-	defer func() { h.mu.Lock(); delete(h.clients, s); h.mu.Unlock(); close(s.send); _ = s.conn.Close() }()
+	defer func() {
+		h.mu.Lock()
+		delete(h.clients, s)
+		h.mu.Unlock()
+		close(s.send)
+		_ = s.conn.Close()
+	}()
+
+	s.conn.SetReadLimit(4096)
+	s.conn.SetReadDeadline(time.Now().Add(pongWait))
+	s.conn.SetPongHandler(func(string) error {
+		s.conn.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
+	s.conn.SetPingHandler(func(string) error {
+		s.conn.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
+
 	for {
-		if _, _, err := s.conn.ReadMessage(); err != nil {
+		_, msg, err := s.conn.ReadMessage()
+		if err != nil {
 			return
 		}
+		s.conn.SetReadDeadline(time.Now().Add(pongWait))
+		if isInternalPing(msg) {
+			continue
+		}
 	}
+}
+
+func isInternalPing(msg []byte) bool {
+	var v struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(msg, &v); err != nil {
+		return false
+	}
+	return v.Type == "_ping"
 }

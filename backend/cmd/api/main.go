@@ -208,19 +208,13 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 	orderRateLimiter := ratelimit.NewSlidingWindow(30, 1*time.Minute)
 	defer orderRateLimiter.Stop()
 
-	// ──────────────────────────────────────────────
-	// Customer-facing API — QR token or public
-	// ──────────────────────────────────────────────
 	customer := api.Group("/customer")
-	diningHandler.RegisterGuestRoutes(customer)  // /customer/sessions/join, /customer/tables — public
-	catalogHandler.RegisterGuestRoutes(customer) // /customer/menu/* — public (browse menu before joining)
+	diningHandler.RegisterGuestRoutes(customer)
+	catalogHandler.RegisterGuestRoutes(customer)
 
 	orders := api.Group("/customer", auth.QRSessionToken(diningRepo), orderRateLimiter.Middleware(ratelimit.GuestSessionKey))
 	orderingHandler.RegisterGuestRoutes(orders)
 
-	// ──────────────────────────────────────────────
-	// Restaurant staff API — JWT required
-	// ──────────────────────────────────────────────
 	restaurant := api.Group("/restaurant")
 	identityHandler.RegisterRoutes(restaurant, secret, identityRepo, sessionRepo, defaultRID)
 	catalogHandler.RegisterStaffRoutes(restaurant, secret, identityRepo, defaultRID)
@@ -229,9 +223,6 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 	orderingHandler.RegisterKitchenRoutes(restaurant, secret, identityRepo, defaultRID)
 	billingHandler.RegisterStaffRoutes(restaurant, secret, identityRepo, defaultRID)
 
-	// ──────────────────────────────────────────────
-	// Webhooks — called by payment gateways, not by us
-	// ──────────────────────────────────────────────
 	billingHandler.RegisterWebhookRoutes(api)
 }
 

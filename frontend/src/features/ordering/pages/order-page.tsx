@@ -51,7 +51,17 @@ function OrderFlow() {
         replace: true,
       })
     }
-  }, [state.session])
+  }, [state.session, navigate, sessionTokenParam])
+
+  // If we have a session token in the URL but the session hasn't been restored yet,
+  // we shouldn't render the QR landing page to avoid flashing the TablePicker.
+  if (sessionTokenParam && !state.session) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-[var(--bg)]">
+        <div className="size-8 animate-spin rounded-full border-4 border-[var(--separator)] border-t-[var(--system-blue)]" />
+      </div>
+    )
+  }
 
   switch (state.screen) {
     case 'qr':

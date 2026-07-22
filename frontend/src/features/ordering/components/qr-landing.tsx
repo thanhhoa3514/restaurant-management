@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FC, type ReactNode } from 'react'
 import { Loader2, QrCode, ScanLine, AlertCircle, Users } from 'lucide-react'
+import { toast } from 'sonner'
 import QRCodeLib from 'qrcode'
 import { ApiError, errorMessage } from '@/lib/api'
 import { useOrdering } from '../hooks/use-ordering'
@@ -41,6 +42,7 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
     const onVerified = () => {
       setJoinState('ready')
       setMessage(t.qr_ready)
+      toast.success(state.lang === 'vi' ? 'Chào mừng bạn đến với Zenith!' : 'Welcome to Zenith!')
       setTimeout(() => {
         dispatch({ type: 'SET_SCREEN', payload: 'menu' })
       }, 600)
@@ -374,9 +376,11 @@ function TablePicker({
       {pendingJoinToken && joinState === 'idle' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6">
           <div className="w-full max-w-sm rounded-2xl border border-[var(--separator)] bg-[var(--material-thick)] p-6 text-center shadow-2xl backdrop-blur-2xl">
-            <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--system-blue)] to-[var(--system-purple)] shadow-lg">
-              <Users size={24} className="text-white" />
-            </div>
+            <img
+              src="/zenith-logo-transparent.png"
+              alt="Logo"
+              className="mx-auto mb-4 size-16 rounded-[20px] object-cover shadow-lg"
+            />
             <h2 className="mb-1 text-lg font-semibold text-[var(--text)]">{t.qr_name_label}</h2>
             <p className="mb-5 text-xs text-[var(--text-tertiary)]">{t.session_hint}</p>
             <NameForm
@@ -451,9 +455,11 @@ function JoinFlow({
         {/* Name input (before joining) */}
         {showNameForm && (
           <div className="w-full rounded-2xl border border-[var(--separator)] bg-[var(--material-thin)] p-6 text-center">
-            <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--system-blue)] to-[var(--system-purple)] shadow-lg">
-              <Users size={24} className="text-white" />
-            </div>
+            <img
+              src="/zenith-logo-transparent.png"
+              alt="Logo"
+              className="mx-auto mb-4 size-16 rounded-[20px] object-cover shadow-lg"
+            />
             <h2 className="mb-1 text-lg font-semibold text-[var(--text)]">{t.qr_name_label}</h2>
             <p className="mb-5 text-xs text-[var(--text-tertiary)]">{t.session_hint}</p>
             <NameForm
@@ -560,8 +566,6 @@ function JoinFlow({
   )
 }
 
-// ── Waiting-for-staff animation (pending_verification) ──────────────────────
-
 function WaitingForStaff() {
   return (
     <div className="relative flex size-24 items-center justify-center">
@@ -570,7 +574,11 @@ function WaitingForStaff() {
       <span className="absolute size-24 animate-ping rounded-full bg-orange-400/15 [animation-duration:2s] [animation-delay:0.6s]" />
       {/* rotating arc */}
       <span className="absolute size-20 animate-spin rounded-full border-2 border-orange-200 border-t-orange-500 [animation-duration:1.6s]" />
-      <Users size={34} className="relative text-orange-500" />
+      <img
+        src="/zenith-logo-transparent.png"
+        alt="Zenith"
+        className="relative size-10 rounded-[10px] object-cover shadow-sm"
+      />
     </div>
   )
 }
@@ -585,9 +593,11 @@ function TableCard({ table, onClick, t }: { table: GuestTable; onClick: () => vo
   useEffect(() => {
     if (!table.qr_token) return
     let active = true
-    QRCodeLib.toDataURL(buildQROrderURL(table.qr_token), { width: 320, margin: 2 }).then((dataUrl) => {
-      if (active) setQrDataUrl(dataUrl)
-    })
+    QRCodeLib.toDataURL(buildQROrderURL(table.qr_token), { width: 320, margin: 2 }).then(
+      (dataUrl) => {
+        if (active) setQrDataUrl(dataUrl)
+      },
+    )
     return () => {
       active = false
     }
@@ -597,10 +607,14 @@ function TableCard({ table, onClick, t }: { table: GuestTable; onClick: () => vo
   useEffect(() => {
     if (!showQrModal || !table.qr_token) return
     let active = true
-    QRCodeLib.toDataURL(buildQROrderURL(table.qr_token), { width: 800, margin: 4 }).then((dataUrl) => {
-      if (active) setBigQr(dataUrl)
-    })
-    return () => { active = false }
+    QRCodeLib.toDataURL(buildQROrderURL(table.qr_token), { width: 800, margin: 4 }).then(
+      (dataUrl) => {
+        if (active) setBigQr(dataUrl)
+      },
+    )
+    return () => {
+      active = false
+    }
   }, [showQrModal, table.qr_token])
 
   return (
@@ -613,7 +627,7 @@ function TableCard({ table, onClick, t }: { table: GuestTable; onClick: () => vo
           'group relative flex flex-col items-center gap-2 rounded-xl border border-[var(--separator)] bg-[var(--material-thin)] p-4 transition-all',
           isActive
             ? 'cursor-pointer hover:border-blue-300 hover:shadow-sm active:scale-[0.97] dark:hover:border-blue-700'
-            : 'cursor-not-allowed'
+            : 'cursor-not-allowed',
         )}
       >
         <div
@@ -657,7 +671,10 @@ function TableCard({ table, onClick, t }: { table: GuestTable; onClick: () => vo
       {showQrModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-6"
-          onClick={() => { setShowQrModal(false); setBigQr(null) }}
+          onClick={() => {
+            setShowQrModal(false)
+            setBigQr(null)
+          }}
         >
           <div
             className="flex w-full max-w-xs flex-col items-center gap-4 rounded-2xl bg-white p-8 shadow-2xl"

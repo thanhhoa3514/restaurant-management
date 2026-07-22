@@ -1,10 +1,6 @@
 import { type FC } from 'react'
-import { ArrowRight, List, MessageSquare, Printer, Timer } from 'lucide-react'
+import { ArrowRight, Flame, List, MessageSquare, Printer } from 'lucide-react'
 
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
 import { KDS_DICT } from '@/features/kitchen/data/i18n'
 import { minStatus, urgencyFor } from '@/features/kitchen/helpers'
 
@@ -23,27 +19,51 @@ interface TicketCardProps {
   onOpenManage: () => void
 }
 
-const urgencyBorder: Record<Urgency, string> = {
-  green: 'border-l-emerald-500',
-  amber: 'border-l-amber-500',
-  red: 'border-l-red-500 bg-red-50/40 dark:bg-red-950/20',
+const surface = {
+  card: 'bg-white dark:bg-zinc-900',
+  cardHover: 'bg-zinc-50 dark:bg-zinc-800',
+  border: 'border-zinc-200 dark:border-zinc-800',
+  divider: 'border-zinc-100 dark:border-zinc-800/50',
+  textPrimary: 'text-zinc-900 dark:text-zinc-100',
+  textMuted: 'text-zinc-500 dark:text-zinc-400',
+  chipMuted: 'bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500',
 }
 
-const urgencyBadgeVariant: Record<Urgency, 'success' | 'warning' | 'destructive'> = {
-  green: 'success',
-  amber: 'warning',
-  red: 'destructive',
+const urgencyStyles: Record<
+  Urgency,
+  { timerText: string; labelText: string; pulse: boolean }
+> = {
+  green: {
+    timerText: 'text-emerald-600 dark:text-emerald-500',
+    labelText: 'text-emerald-600 dark:text-emerald-500',
+    pulse: false,
+  },
+  amber: {
+    timerText: 'text-amber-600 dark:text-amber-500',
+    labelText: 'text-amber-600 dark:text-amber-500',
+    pulse: false,
+  },
+  red: {
+    timerText: 'text-red-600 dark:text-red-500',
+    labelText: 'text-red-600 dark:text-red-500',
+    pulse: true,
+  },
 }
 
-const statusBadgeClass: Record<ItemStatus, string> = {
-  placed: 'bg-secondary text-secondary-foreground',
-  cancelled: 'bg-muted text-muted-foreground',
-  pending: 'bg-secondary text-secondary-foreground',
-  acknowledged:
-    'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-400',
-  preparing: 'bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400',
-  ready: 'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400',
-  served: 'border-transparent bg-muted text-muted-foreground',
+const statusPillClass: Record<ItemStatus, string> = {
+  placed: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400',
+  pending: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400',
+  cancelled: 'bg-zinc-100 text-zinc-400 line-through dark:bg-zinc-800 dark:text-zinc-500',
+  acknowledged: 'bg-blue-500 text-white',
+  preparing: 'bg-amber-500 text-white',
+  ready: 'bg-emerald-500 text-white font-bold',
+  served: 'bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500',
+}
+
+function formatWait(waitSec: number): string {
+  const m = Math.floor(waitSec / 60)
+  const s = waitSec % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
 }
 
 function urgencyLabel(urgency: Urgency, t: TicketCardProps['t']): string {
@@ -66,7 +86,13 @@ function primaryActionLabel(status: ItemStatus, t: TicketCardProps['t']): string
 export const ColoredBadge: FC<{ status: ItemStatus; t: TicketCardProps['t'] }> = ({
   status,
   t,
-}) => <Badge className={statusBadgeClass[status]}>{statusLabel(status, t)}</Badge>
+}) => (
+  <span
+    className={`rounded px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider ${statusPillClass[status]}`}
+  >
+    {statusLabel(status, t)}
+  </span>
+)
 
 export const TicketCard: FC<TicketCardProps> = ({
   ticket,
@@ -79,71 +105,87 @@ export const TicketCard: FC<TicketCardProps> = ({
 }) => {
   const waitSec = Math.max(0, Math.floor((now.getTime() - ticket.submitted_at.getTime()) / 1_000))
   const urgency = urgencyFor(waitSec)
+  const uStyle = urgencyStyles[urgency]
   const liveItems = ticket.items.filter((item) => item.status !== 'served')
   const allServed = liveItems.length === 0
   const currentStatus = allServed ? 'served' : minStatus(liveItems)
   const actionLabel = primaryActionLabel(currentStatus, t)
 
   return (
-    <Card
-      className={`border-l-4 ${urgencyBorder[urgency]} ${
+    <article
+      className={`relative overflow-hidden rounded-2xl border ${surface.border} ${surface.card} ${surface.textPrimary} shadow-sm ${
         fading ? 'scale-95 opacity-0' : 'opacity-100'
       } transition-all duration-500`}
     >
-      <CardHeader className="flex flex-row items-start justify-between gap-3 pb-0">
-        <div className="min-w-0 space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold tracking-tight">
+      <div className="flex flex-col">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3 p-5 pb-4">
+          <div className="min-w-0">
+            <div className="text-2xl font-black leading-none tracking-tight">
               {t('table' as KdsKey)} {ticket.table_number}
-            </span>
+            </div>
+            <div className={`mt-1.5 truncate text-[13px] font-medium ${surface.textMuted}`}>
+              {lang === 'vi' ? ticket.area_name_vi : ticket.area_name_en}
+            </div>
           </div>
-          <div className="truncate text-sm text-muted-foreground">
-            {lang === 'vi' ? ticket.area_name_vi : ticket.area_name_en}
-          </div>
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-2">
-          <Badge variant={urgencyBadgeVariant[urgency]}>
-            {urgency === 'red' && <Timer className="mr-1 size-3 animate-pulse" />}
-            {urgencyLabel(urgency, t)}
-          </Badge>
-          <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-[11px] text-muted-foreground/60">
-            {ticket.order_id.slice(0, 8)}
-          </span>
-        </div>
-      </CardHeader>
 
-      <CardContent className="pb-0 pt-3">
+          <div className="shrink-0 text-right">
+            <div
+              className={`flex items-center justify-end gap-1 font-mono text-xl font-bold tabular-nums ${uStyle.timerText}`}
+            >
+              {urgency === 'red' && <Flame className="size-4" />}
+              {formatWait(waitSec)}
+            </div>
+            <div
+              className={`mt-1 text-[10px] font-bold uppercase tracking-widest ${uStyle.labelText}`}
+            >
+              {urgencyLabel(urgency, t)}
+            </div>
+          </div>
+        </div>
+
         {/* Items */}
-        <div className="space-y-0">
-          {ticket.items.map((item, index) => (
-            <div key={item.id}>
-              {index > 0 && <Separator className="my-1.5" />}
+        <div className={`border-t ${surface.divider} bg-zinc-50/50 dark:bg-zinc-900/50`}>
+          {ticket.items.map((item) => (
+            <div key={item.id} className={`border-b ${surface.divider} last:border-b-0`}>
               <ItemRow item={item} lang={lang} t={t} />
             </div>
           ))}
         </div>
-      </CardContent>
 
-      <CardFooter className="flex-col gap-2">
-        <Button
-          className="h-11 w-full"
-          disabled={allServed}
-          variant={currentStatus === 'acknowledged' ? 'secondary' : 'default'}
-          onClick={onAdvanceAll}
-        >
-          {actionLabel}
-          <ArrowRight className="ml-1 size-4" />
-        </Button>
-        <Button variant="outline" className="w-full" size="sm" onClick={onOpenManage}>
-          <List className="mr-1.5 size-4" />
-          {t('btn_manage' as KdsKey)}
-        </Button>
-        <Button variant="ghost" className="w-full" size="sm" onClick={() => window.print()}>
-          <Printer className="mr-1.5 size-4" />
-          {t('print_ticket' as KdsKey)}
-        </Button>
-      </CardFooter>
-    </Card>
+        {/* Actions */}
+        <div className="flex flex-col gap-2 p-4">
+          <button
+            type="button"
+            disabled={allServed}
+            onClick={onAdvanceAll}
+            className="flex h-12 w-full items-center justify-center gap-1.5 rounded-xl bg-orange-500 text-sm font-bold text-white shadow-sm transition-colors duration-200 hover:bg-orange-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400 dark:disabled:bg-zinc-800 dark:disabled:text-zinc-500"
+          >
+            {actionLabel}
+            <ArrowRight className="size-4" />
+          </button>
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onOpenManage}
+              className={`flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl border ${surface.border} text-[13px] font-semibold ${surface.textMuted} transition-colors duration-200 hover:${surface.cardHover} hover:text-zinc-900 dark:hover:text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500`}
+            >
+              <List className="size-3.5" />
+              {t('btn_manage' as KdsKey)}
+            </button>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className={`flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl border ${surface.border} text-[13px] font-semibold ${surface.textMuted} transition-colors duration-200 hover:${surface.cardHover} hover:text-zinc-900 dark:hover:text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500`}
+            >
+              <Printer className="size-3.5" />
+              {t('print_ticket' as KdsKey)}
+            </button>
+          </div>
+        </div>
+      </div>
+    </article>
   )
 }
 
@@ -153,29 +195,29 @@ const ItemRow: FC<{ item: KDSItem; lang: Lang; t: TicketCardProps['t'] }> = ({ i
   const served = item.status === 'served'
 
   return (
-    <div className="flex items-start justify-between gap-3 py-1.5">
-      <div className="flex min-w-0 items-start gap-2.5">
+    <div className="flex items-start justify-between gap-3 px-5 py-3.5">
+      <div className="flex min-w-0 items-start gap-3">
         <span
-          className={`mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-md text-sm font-bold tabular-nums ${
-            served ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground'
+          className={`mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-lg font-mono text-[13px] font-bold tabular-nums ${
+            served ? surface.chipMuted : 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900'
           }`}
         >
           {item.qty}
         </span>
         <div className="min-w-0">
           <div
-            className={`text-base font-semibold leading-tight ${
-              served ? 'text-muted-foreground line-through' : 'text-foreground'
+            className={`text-[15px] font-bold leading-tight ${
+              served ? `line-through ${surface.textMuted}` : surface.textPrimary
             }`}
           >
             {name}
           </div>
           {options && (
-            <div className="mt-0.5 text-sm leading-snug text-muted-foreground">{options}</div>
+            <div className={`mt-1 text-[13px] font-medium leading-snug ${surface.textMuted}`}>{options}</div>
           )}
           {item.notes && (
-            <div className="mt-1 flex items-center gap-1 text-[13px] italic text-amber-600 dark:text-amber-400">
-              <MessageSquare className="size-3 shrink-0" />
+            <div className="mt-1.5 flex items-center gap-1.5 text-[12px] font-semibold italic text-amber-600 dark:text-amber-500">
+              <MessageSquare className="size-3.5 shrink-0" />
               {item.notes}
             </div>
           )}

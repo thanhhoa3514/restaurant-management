@@ -1,6 +1,8 @@
 import { type FC, useMemo, useState } from 'react'
-import { Plus, Pencil, ShoppingBag, UtensilsCrossed, RefreshCw } from 'lucide-react'
+import { ChevronLeft, Plus, Pencil, ShoppingBag, UtensilsCrossed, RefreshCw, Receipt, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { useOrdering } from '../hooks/use-ordering'
+import { useRequestBill } from '../mutations/useRequestBill'
 import { DICT } from '../data/i18n'
 import { formatTime } from '../helpers'
 import type { Lang, OrderItemDTO, GuestOrderDTO } from '../types'
@@ -27,6 +29,8 @@ export const OrderStatusScreen: FC = () => {
   const t = DICT[state.lang]
   const sessionToken = state.session?.token
 
+  const requestBill = useRequestBill()
+
   const { data: ordersData, isLoading: isOrdersLoading } = useGuestOrders(sessionToken)
 
   const { data: menuItems } = useGuestItems(sessionToken)
@@ -47,9 +51,19 @@ export const OrderStatusScreen: FC = () => {
   return (
     <div className="flex min-h-dvh flex-col bg-[var(--surface-grouped)]">
       <header className="sticky top-0 z-[var(--z-sticky)] bg-[var(--material-thin)]/80 backdrop-blur-2xl border-b border-[var(--separator)] shadow-sm">
-        <div className="mx-auto w-full max-w-lg px-4 pt-5 pb-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-[var(--text)] tracking-tight">{t.your_order}</h1>
-          <Badge className="rounded-full bg-[var(--system-green)]/15 text-[var(--system-green)] text-xs font-bold px-3 py-1 border-0">
+        <div className="mx-auto w-full max-w-lg px-4 pt-5 pb-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label={t.back}
+              onClick={() => dispatch({ type: 'SET_SCREEN', payload: 'menu' })}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--surface-grouped)] text-[var(--text)] transition-colors hover:bg-[var(--separator)]/50 active:scale-95 shrink-0"
+            >
+              <ChevronLeft size={20} strokeWidth={2.5} />
+            </button>
+            <h1 className="text-xl font-bold text-[var(--text)] tracking-tight">{t.your_order}</h1>
+          </div>
+          <Badge className="rounded-full bg-[var(--system-green)]/15 text-[var(--system-green)] text-xs font-bold px-3 py-1 border-0 shrink-0">
             {orders.length} {t.orders_history.toLowerCase()}
           </Badge>
         </div>
@@ -119,14 +133,37 @@ export const OrderStatusScreen: FC = () => {
       )}
 
       <div className="sticky bottom-0 bg-[var(--material-thin)]/80 backdrop-blur-2xl border-t border-[var(--separator)] shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
-        <div className="mx-auto w-full max-w-lg px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        <div className="mx-auto w-full max-w-lg px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] flex gap-3">
           <Button
             size="lg"
-            className="w-full rounded-2xl h-14 text-base font-semibold text-white shadow-lg shadow-[var(--system-orange)]/25 bg-gradient-to-r from-[var(--system-orange)] to-[var(--system-red)] hover:opacity-90"
+            variant="outline"
+            className="flex-1 rounded-2xl h-14 text-[14px] sm:text-base font-bold bg-[var(--surface-grouped)] text-[var(--text)] border-transparent hover:bg-[var(--separator)]/50 shadow-sm"
             onClick={() => dispatch({ type: 'SET_SCREEN', payload: 'menu' })}
           >
-            <Plus size={20} className="mr-1.5" strokeWidth={2.5} />
+            <Plus size={18} className="mr-1.5 text-[var(--text-secondary)]" strokeWidth={2.5} />
             {t.order_more}
+          </Button>
+          <Button
+            size="lg"
+            disabled={requestBill.isPending}
+            className="flex-1 rounded-2xl h-14 text-[14px] sm:text-base font-bold text-white shadow-lg shadow-[var(--system-blue)]/25 bg-gradient-to-r from-[var(--system-blue)] to-[var(--system-purple)] hover:opacity-90 border-0"
+            onClick={() => {
+              if (window.confirm(state.lang === 'vi' ? 'Bạn có chắc chắn muốn yêu cầu thanh toán không? Bàn sẽ được khóa để tính tiền.' : 'Are you sure you want to request the bill? The table will be locked.')) {
+                if (!sessionToken) return
+                requestBill.mutate(sessionToken, {
+                  onSuccess: () => {
+                    toast.success(state.lang === 'vi' ? 'Đã gửi yêu cầu thanh toán.' : 'Checkout request sent.')
+                    dispatch({ type: 'SET_SCREEN', payload: 'invoice' })
+                  },
+                  onError: () => {
+                    toast.error(state.lang === 'vi' ? 'Có lỗi xảy ra, vui lòng thử lại!' : 'Error occurred, please try again!')
+                  }
+                })
+              }
+            }}
+          >
+            {requestBill.isPending ? <Loader2 size={18} className="mr-1.5 animate-spin" /> : <Receipt size={18} className="mr-1.5" strokeWidth={2.5} />}
+            {state.lang === 'vi' ? 'Thanh toán' : 'Checkout'}
           </Button>
         </div>
       </div>

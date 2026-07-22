@@ -252,10 +252,14 @@ export function useWaiter(): UseWaiterValue {
             (sum, order) => sum + order.items.filter((item) => item.status === 'ready').length,
             0,
           )
+          acc.pending += table.session.orders.reduce(
+            (sum, order) => sum + order.items.filter((item) => item.status === 'placed').length,
+            0,
+          )
         }
         return acc
       },
-      { calls: 0, ready: 0, bills: 0, occupied: 0, total: tables.length },
+      { calls: 0, ready: 0, bills: 0, occupied: 0, total: tables.length, pending: 0 },
     )
   }, [tables])
 

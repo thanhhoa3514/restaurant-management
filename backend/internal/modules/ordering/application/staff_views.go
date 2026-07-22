@@ -88,8 +88,8 @@ type KitchenQueueResponse struct {
 type KitchenTicketDTO struct {
 	ID          uuid.UUID              `json:"id"`
 	OrderID     uuid.UUID              `json:"order_id"`
-	SessionID   uuid.UUID              `json:"session_id"`
-	TableID     uuid.UUID              `json:"table_id"`
+	SessionID   *uuid.UUID             `json:"session_id,omitempty"`
+	TableID     *uuid.UUID             `json:"table_id,omitempty"`
 	TableCode   string                 `json:"table_code"`
 	TableName   string                 `json:"table_name"`
 	Number      string                 `json:"ticket_number"`
@@ -235,8 +235,6 @@ func (s *StaffReopenSession) Handle(ctx context.Context, sessionID uuid.UUID) (R
 	return out, err
 }
 
-// GuestCallWaiter marks a session as having called for staff attention.
-// Guest-initiated (QR token); waiter screen shows the flag and clears it via ack.
 type GuestCallWaiter struct {
 	tx                  TxRunner
 	repo                StaffReadRepository
@@ -326,10 +324,6 @@ func (s *StaffUpdateItemStatus) Handle(ctx context.Context, itemID uuid.UUID, st
 	return out, err
 }
 
-// ServerReviewOrderItem is the server-confirmation gate: a guest (or staff)
-// order lands with items in PLACED, invisible to the kitchen. Serving staff
-// confirm each item into the kitchen queue (PLACED -> PENDING) or reject it
-// (PLACED -> CANCELLED). See migration 00012.
 type ServerReviewOrderItem struct {
 	tx                  TxRunner
 	repo                StaffReadRepository

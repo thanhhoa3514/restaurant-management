@@ -34,7 +34,7 @@ export function fetchGuestTables(): Promise<GuestTable[]> {
 
 export function buildQROrderURL(token: string): string {
   const origin =
-    (import.meta.env.VITE_PUBLIC_ORIGIN as string | undefined)?.replace(/\/$/, '') ??
+    (import.meta.env.VITE_PUBLIC_ORIGIN as string)?.replace(/\/$/, '') ||
     (typeof window !== 'undefined' ? window.location.origin : '')
   return `${origin}/order?t=${encodeURIComponent(token)}`
 }
