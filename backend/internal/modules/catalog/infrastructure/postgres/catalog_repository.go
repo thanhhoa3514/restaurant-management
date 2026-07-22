@@ -77,7 +77,7 @@ func (r *Repository) ListItems(ctx context.Context, restaurantID uuid.UUID, cate
 		SELECT mi.id, mi.category_id, mi.name, mi.slug, COALESCE(mi.short_description, ''), COALESCE(mi.image_url, ''),
 		       mi.base_price_vnd, mi.availability_status, mi.is_available,
 		       COALESCE(va.has_variants, FALSE), va.price_from_vnd,
-		       COALESCE(og.has_required_options, FALSE)
+		       COALESCE(rog.has_required_options, FALSE)
 		FROM menu_items mi
 		LEFT JOIN LATERAL (
 			SELECT COUNT(*) > 0 AS has_variants, MIN(price_vnd) AS price_from_vnd
@@ -89,12 +89,12 @@ func (r *Repository) ListItems(ctx context.Context, restaurantID uuid.UUID, cate
 		) va ON TRUE
 		LEFT JOIN LATERAL (
 			SELECT COUNT(*) > 0 AS has_required_options
-			FROM menu_item_option_groups og
-			WHERE og.restaurant_id = mi.restaurant_id
-			  AND og.menu_item_id = mi.id
-			  AND og.is_required = TRUE
-			  AND og.deleted_at IS NULL
-		) og ON TRUE
+			FROM menu_item_option_groups miog
+			JOIN option_groups og ON og.id = miog.option_group_id AND og.deleted_at IS NULL
+			WHERE miog.restaurant_id = mi.restaurant_id
+			  AND miog.menu_item_id = mi.id
+			  AND COALESCE(miog.is_required_override, og.is_required) = TRUE
+		) rog ON TRUE
 		WHERE mi.restaurant_id = $1
 		  AND mi.status = 'PUBLISHED'
 		  AND mi.availability_status <> 'HIDDEN'
@@ -133,7 +133,7 @@ func (r *Repository) ListItemsAdmin(ctx context.Context, restaurantID uuid.UUID,
 		SELECT mi.id, mi.category_id, mi.name, mi.slug, COALESCE(mi.short_description, ''), COALESCE(mi.image_url, ''),
 		       mi.base_price_vnd, mi.availability_status, mi.is_available,
 		       COALESCE(va.has_variants, FALSE), va.price_from_vnd,
-		       COALESCE(og.has_required_options, FALSE),
+		       COALESCE(rog.has_required_options, FALSE),
 		       mi.status, mi.is_featured, COALESCE(mi.station, ''), mi.display_order, mi.version
 		FROM menu_items mi
 		LEFT JOIN LATERAL (
@@ -145,12 +145,12 @@ func (r *Repository) ListItemsAdmin(ctx context.Context, restaurantID uuid.UUID,
 		) va ON TRUE
 		LEFT JOIN LATERAL (
 			SELECT COUNT(*) > 0 AS has_required_options
-			FROM menu_item_option_groups og
-			WHERE og.restaurant_id = mi.restaurant_id
-			  AND og.menu_item_id = mi.id
-			  AND og.is_required = TRUE
-			  AND og.deleted_at IS NULL
-		) og ON TRUE
+			FROM menu_item_option_groups miog
+			JOIN option_groups og ON og.id = miog.option_group_id AND og.deleted_at IS NULL
+			WHERE miog.restaurant_id = mi.restaurant_id
+			  AND miog.menu_item_id = mi.id
+			  AND COALESCE(miog.is_required_override, og.is_required) = TRUE
+		) rog ON TRUE
 		WHERE mi.restaurant_id = $1
 		  AND mi.deleted_at IS NULL`
 	args := []any{restaurantID}
