@@ -1,0 +1,86 @@
+<mxfile host="app.diagrams.net" modified="2026-07-15T00:00:00.000Z" agent="claude-code" version="24.0.0">
+
+  <diagram id="flow-merge-tables" name="1. Gom ban (Phuc vu)">
+    <mxGraphModel dx="900" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="960" pageHeight="760" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="p1_t" value="LUỒNG: GOM BÀN — tính chung nhiều phiên (vai trò Phục vụ)" style="text;html=1;align=center;fontSize=14;fontStyle=1;fontColor=#1F2937;" vertex="1" parent="1"><mxGeometry x="40" y="10" width="880" height="24" as="geometry"/></mxCell>
+        <mxCell id="p1_s" value="Bắt đầu" style="ellipse;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="330" y="50" width="180" height="40" as="geometry"/></mxCell>
+        <mxCell id="p1_a" value="Nhóm khách đông ngồi nhiều bàn, muốn tính chung" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1"><mxGeometry x="300" y="120" width="240" height="60" as="geometry"/></mxCell>
+        <mxCell id="p1_pick" value="Phục vụ chọn ≥ 2 phiên bàn trên lưới bàn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1"><mxGeometry x="300" y="200" width="240" height="60" as="geometry"/></mxCell>
+        <mxCell id="p1_d1" value="Các phiên đều đang mở (ACTIVE)?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1"><mxGeometry x="310" y="290" width="220" height="100" as="geometry"/></mxCell>
+        <mxCell id="p1_err" value="Báo lỗi — chọn lại các phiên hợp lệ" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;" vertex="1" parent="1"><mxGeometry x="620" y="305" width="240" height="60" as="geometry"/></mxCell>
+        <mxCell id="p1_merge" value="Gộp bàn (POST /restaurant/sessions/merge) → tạo merge_group" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1"><mxGeometry x="300" y="430" width="240" height="70" as="geometry"/></mxCell>
+        <mxCell id="p1_grp" value="Các bàn cùng nhóm → xem &amp; tính chung 1 hóa đơn khi thanh toán" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1"><mxGeometry x="300" y="530" width="240" height="70" as="geometry"/></mxCell>
+        <mxCell id="p1_e" value="Kết thúc" style="ellipse;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="330" y="630" width="180" height="40" as="geometry"/></mxCell>
+        <mxCell id="p1_x1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="p1_s" target="p1_a"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p1_x2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="p1_a" target="p1_pick"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p1_x3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="p1_pick" target="p1_d1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p1_x4" value="Không" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="p1_d1" target="p1_err"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p1_x5" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;dashed=1;strokeColor=#B85450;exitX=0.5;exitY=0;entryX=1;entryY=0.5;" edge="1" parent="1" source="p1_err" target="p1_pick"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p1_x6" value="Có" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="p1_d1" target="p1_merge"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p1_x7" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="p1_merge" target="p1_grp"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p1_x8" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="p1_grp" target="p1_e"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="flow-split-bill" name="2. Chia bill theo mon (Thu ngan)">
+    <mxGraphModel dx="900" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="960" pageHeight="800" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="p2_t" value="LUỒNG: CHIA BILL THEO MÓN — mỗi nhóm 1 hóa đơn (vai trò Thu ngân)" style="text;html=1;align=center;fontSize=14;fontStyle=1;fontColor=#1F2937;" vertex="1" parent="1"><mxGeometry x="40" y="10" width="880" height="24" as="geometry"/></mxCell>
+        <mxCell id="p2_s" value="Bắt đầu" style="ellipse;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="330" y="50" width="180" height="40" as="geometry"/></mxCell>
+        <mxCell id="p2_a" value="Khách muốn tách tiền theo món (mỗi người/nhóm trả phần của mình)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1"><mxGeometry x="300" y="120" width="240" height="70" as="geometry"/></mxCell>
+        <mxCell id="p2_open" value="Thu ngân mở hóa đơn của phiên" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1"><mxGeometry x="300" y="210" width="240" height="50" as="geometry"/></mxCell>
+        <mxCell id="p2_grp" value="Gán món vào từng nhóm (nhãn + danh sách order_item)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1"><mxGeometry x="300" y="290" width="240" height="60" as="geometry"/></mxCell>
+        <mxCell id="p2_split" value="Bấm Chia bill (POST /restaurant/invoices/split)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1"><mxGeometry x="300" y="380" width="240" height="60" as="geometry"/></mxCell>
+        <mxCell id="p2_gen" value="Tạo N hóa đơn con — mỗi nhóm 1 hóa đơn (snapshot món riêng)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1"><mxGeometry x="300" y="470" width="240" height="70" as="geometry"/></mxCell>
+        <mxCell id="p2_pay" value="Mỗi hóa đơn con thanh toán độc lập (tiền mặt / ví / trả từng phần)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1"><mxGeometry x="300" y="570" width="240" height="70" as="geometry"/></mxCell>
+        <mxCell id="p2_note" value="Chia theo MÓN (chọn món vào nhóm). Chưa có chia đều theo đầu người tự động." style="rounded=0;whiteSpace=wrap;html=1;dashed=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=11;" vertex="1" parent="1"><mxGeometry x="620" y="290" width="260" height="70" as="geometry"/></mxCell>
+        <mxCell id="p2_e" value="Kết thúc" style="ellipse;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="330" y="670" width="180" height="40" as="geometry"/></mxCell>
+        <mxCell id="p2_x1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="p2_s" target="p2_a"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p2_x2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="p2_a" target="p2_open"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p2_x3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="p2_open" target="p2_grp"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p2_x4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="p2_grp" target="p2_split"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p2_x5" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="p2_split" target="p2_gen"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p2_x6" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="p2_gen" target="p2_pay"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p2_x7" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="p2_pay" target="p2_e"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p2_x8" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;dashed=1;strokeColor=#D6B656;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="p2_grp" target="p2_note"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="flow-pay-partial" name="3. Tra tung phan (Thu ngan)">
+    <mxGraphModel dx="900" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="860" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="p3_t" value="LUỒNG: TRẢ TỪNG PHẦN — nhiều người góp / trả nhiều lần (vai trò Thu ngân)" style="text;html=1;align=center;fontSize=14;fontStyle=1;fontColor=#1F2937;" vertex="1" parent="1"><mxGeometry x="40" y="10" width="920" height="24" as="geometry"/></mxCell>
+        <mxCell id="p3_s" value="Bắt đầu" style="ellipse;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="340" y="50" width="180" height="40" as="geometry"/></mxCell>
+        <mxCell id="p3_a" value="1 hóa đơn, khách muốn góp trả / trả làm nhiều lần" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1"><mxGeometry x="310" y="120" width="240" height="60" as="geometry"/></mxCell>
+        <mxCell id="p3_d1" value="Phương thức là tiền mặt?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1"><mxGeometry x="320" y="210" width="220" height="100" as="geometry"/></mxCell>
+        <mxCell id="p3_ew" value="Ví điện tử KHÔNG hỗ trợ trả từng phần → phải trả đủ 1 lần (luồng thanh toán full)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;" vertex="1" parent="1"><mxGeometry x="620" y="215" width="260" height="90" as="geometry"/></mxCell>
+        <mxCell id="p3_in" value="Nhập số tiền nhận (POST /invoices/:id/pay-partial)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1"><mxGeometry x="310" y="350" width="240" height="60" as="geometry"/></mxCell>
+        <mxCell id="p3_run" value="Cộng dồn số đã trả (running_paid_vnd)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1"><mxGeometry x="310" y="440" width="240" height="50" as="geometry"/></mxCell>
+        <mxCell id="p3_d2" value="Đã trả đủ tổng hóa đơn?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1"><mxGeometry x="320" y="520" width="220" height="100" as="geometry"/></mxCell>
+        <mxCell id="p3_part" value="Hóa đơn PARTIALLY_PAID — chờ nhận tiếp" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1"><mxGeometry x="620" y="535" width="260" height="70" as="geometry"/></mxCell>
+        <mxCell id="p3_paid" value="Hóa đơn PAID (đã thanh toán đủ)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1"><mxGeometry x="310" y="660" width="240" height="50" as="geometry"/></mxCell>
+        <mxCell id="p3_close" value="Đóng phiên (CLOSED)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1"><mxGeometry x="310" y="730" width="240" height="50" as="geometry"/></mxCell>
+        <mxCell id="p3_e" value="Kết thúc" style="ellipse;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="620" y="735" width="180" height="40" as="geometry"/></mxCell>
+        <mxCell id="p3_x1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="p3_s" target="p3_a"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3_x2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="p3_a" target="p3_d1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3_x3" value="Không (ví ĐT)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="p3_d1" target="p3_ew"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3_x4" value="Có" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="p3_d1" target="p3_in"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3_x5" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="p3_in" target="p3_run"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3_x6" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="p3_run" target="p3_d2"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3_x7" value="Chưa" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="p3_d2" target="p3_part"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3_x8" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;dashed=1;strokeColor=#D79B00;exitX=0.5;exitY=0;entryX=1;entryY=0.5;" edge="1" parent="1" source="p3_part" target="p3_in"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3_x9" value="Đủ" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="p3_d2" target="p3_paid"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3_x10" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="p3_paid" target="p3_close"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3_x11" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;" edge="1" parent="1" source="p3_close" target="p3_e"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3_x12" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=classic;strokeColor=#4A4A4A;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="p3_ew" target="p3_e"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+</mxfile>

@@ -6,8 +6,6 @@ import (
 	"github.com/google/uuid"
 
 	"restaurant-management/internal/modules/catalog/domain"
-	"restaurant-management/internal/platform/tenant"
-	"restaurant-management/internal/shared/apperr"
 )
 
 type CategoryDTO struct {
@@ -20,18 +18,17 @@ type CategoryDTO struct {
 	DisplayOrder int       `json:"display_order"`
 }
 
-type ListCategories struct{ repo domain.MenuReadRepository }
+type ListCategories struct {
+	repo               domain.MenuReadRepository
+	defaultRestaurantID uuid.UUID
+}
 
-func NewListCategories(repo domain.MenuReadRepository) *ListCategories {
-	return &ListCategories{repo: repo}
+func NewListCategories(repo domain.MenuReadRepository, defaultRestaurantID uuid.UUID) *ListCategories {
+	return &ListCategories{repo: repo, defaultRestaurantID: defaultRestaurantID}
 }
 
 func (s *ListCategories) Handle(ctx context.Context) ([]CategoryDTO, error) {
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return nil, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant")
-	}
-	rows, err := s.repo.ListCategories(ctx, restaurantID)
+	rows, err := s.repo.ListCategories(ctx, s.defaultRestaurantID)
 	if err != nil {
 		return nil, err
 	}

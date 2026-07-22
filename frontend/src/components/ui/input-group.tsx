@@ -1,3 +1,4 @@
+/* eslint-disable react-doctor/prefer-tag-over-role, react-doctor/no-multi-comp, react-doctor/click-events-have-key-events */
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 

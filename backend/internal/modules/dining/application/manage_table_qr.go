@@ -6,18 +6,11 @@ import (
 	"github.com/google/uuid"
 
 	"restaurant-management/internal/modules/dining/domain"
-	"restaurant-management/internal/platform/tenant"
 )
 
 type ManageTableQRRequest struct {
 	TableID uuid.UUID `json:"table_id"`
-	// Rotate forces a new token, deactivating any existing active QR for the
-	// table. This invalidates printed codes, so it is gated as a high-impact
-	// action on the client. When false, an existing active QR is returned
-	// unchanged (idempotent generate).
-	Rotate bool `json:"rotate"`
-	// ActorID is the authenticated staff user, populated by the handler from
-	// the JWT claim. Used for the created_by / deactivated_by audit trail.
+	Rotate  bool      `json:"rotate"`
 	ActorID uuid.UUID `json:"-"`
 }
 
@@ -30,29 +23,26 @@ type ManageTableQRResponse struct {
 }
 
 type ManageTableQR struct {
-	tx     TxRunner
-	repo   domain.DiningRepository
-	outbox domain.OutboxWriter
+	tx                  TxRunner
+	repo                domain.DiningRepository
+	outbox              domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
 }
 
-func NewManageTableQR(tx TxRunner, repo domain.DiningRepository, outbox domain.OutboxWriter) *ManageTableQR {
-	return &ManageTableQR{tx: tx, repo: repo, outbox: outbox}
+func NewManageTableQR(tx TxRunner, repo domain.DiningRepository, outbox domain.OutboxWriter, defaultRestaurantID uuid.UUID) *ManageTableQR {
+	return &ManageTableQR{tx: tx, repo: repo, outbox: outbox, defaultRestaurantID: defaultRestaurantID}
 }
 
 func (s *ManageTableQR) Handle(ctx context.Context, in ManageTableQRRequest) (ManageTableQRResponse, error) {
 	var out ManageTableQRResponse
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return out, err
-	}
+	restaurantID := s.defaultRestaurantID
 
 	var actor *uuid.UUID
 	if in.ActorID != uuid.Nil {
 		actor = &in.ActorID
 	}
 
-	err = s.tx.Run(ctx, func(ctx context.Context) error {
-		// Validate the table belongs to this tenant.
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
 		if _, err := s.repo.FindTable(ctx, restaurantID, in.TableID); err != nil {
 			return err
 		}
@@ -62,7 +52,6 @@ func (s *ManageTableQR) Handle(ctx context.Context, in ManageTableQRRequest) (Ma
 			return err
 		}
 
-		// Idempotent generate: return the existing active QR unchanged.
 		if existing != nil && !in.Rotate {
 			out = ManageTableQRResponse{
 				ID:      existing.ID,
@@ -74,9 +63,6 @@ func (s *ManageTableQR) Handle(ctx context.Context, in ManageTableQRRequest) (Ma
 			return nil
 		}
 
-		// Rotate (or first-time generate): deactivate any active QR, then mint
-		// a fresh token. Both steps run in one transaction so the partial
-		// unique index uq_qr_codes_one_active_per_table is never violated.
 		if existing != nil {
 			if err := s.repo.DeactivateActiveQR(ctx, restaurantID, in.TableID, actor, "rotated"); err != nil {
 				return err

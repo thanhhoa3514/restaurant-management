@@ -1,16 +1,8 @@
-export type ItemStatus =
-  | 'pending'
-  | 'acknowledged'
-  | 'preparing'
-  | 'ready'
-  | 'served'
+import type { ItemStatus, StatusHistoryEntry } from '@/constants'
+export type { ItemStatus, StatusHistoryEntry } from '@/constants'
+export { STATUS_FLOW } from '@/constants'
 
 export type Urgency = 'green' | 'amber' | 'red'
-
-export interface StatusHistoryEntry {
-  status: ItemStatus
-  timestamp: Date
-}
 
 export interface KDSItem {
   id: string
@@ -52,12 +44,4 @@ export interface KDSStats {
   ready: number
 }
 
-export type Lang = 'vi' | 'en'
-
-export const STATUS_FLOW: ItemStatus[] = [
-  'pending',
-  'acknowledged',
-  'preparing',
-  'ready',
-  'served',
-]
+export type { Lang } from '@/constants'

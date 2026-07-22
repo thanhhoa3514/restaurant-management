@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"restaurant-management/internal/modules/billing/domain"
@@ -30,11 +31,12 @@ func (m *MoMo) Provider() string { return "momo" }
 
 func (m *MoMo) Initiate(ctx context.Context, in domain.InitiateInput) (domain.InitiateResult, error) {
 	endpoint := strings.TrimRight(m.cfg.Endpoint, "/") + "/v2/gateway/api/create"
+	amountStr := strconv.FormatInt(in.AmountVND, 10)
 	req := map[string]any{
 		"partnerCode": m.cfg.PartnerCode,
 		"accessKey":   m.cfg.AccessKey,
 		"requestId":   in.PaymentNumber,
-		"amount":      in.AmountVND,
+		"amount":      amountStr,
 		"orderId":     in.PaymentNumber,
 		"orderInfo":   in.Description,
 		"redirectUrl": in.ReturnURL,
@@ -43,8 +45,8 @@ func (m *MoMo) Initiate(ctx context.Context, in domain.InitiateInput) (domain.In
 		"requestType": "captureWallet",
 		"lang":        "vi",
 	}
-	signData := fmt.Sprintf("accessKey=%s&amount=%d&extraData=&ipnUrl=%s&orderId=%s&orderInfo=%s&partnerCode=%s&redirectUrl=%s&requestId=%s&requestType=captureWallet",
-		m.cfg.AccessKey, in.AmountVND, in.IPNURL, in.PaymentNumber, in.Description, m.cfg.PartnerCode, in.ReturnURL, in.PaymentNumber)
+	signData := fmt.Sprintf("accessKey=%s&amount=%s&extraData=&ipnUrl=%s&orderId=%s&orderInfo=%s&partnerCode=%s&redirectUrl=%s&requestId=%s&requestType=captureWallet",
+		m.cfg.AccessKey, amountStr, in.IPNURL, in.PaymentNumber, in.Description, m.cfg.PartnerCode, in.ReturnURL, in.PaymentNumber)
 	req["signature"] = hmacSHA256Hex(m.cfg.SecretKey, signData)
 
 	var resp struct {

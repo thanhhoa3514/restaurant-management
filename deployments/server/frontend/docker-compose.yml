@@ -1,0 +1,11 @@
+services:
+  web:
+    image: restaurant-web:${TAG:?set TAG in .env (e.g. prod)}
+    container_name: web
+    networks:
+      - restaurant
+    restart: unless-stopped
+
+networks:
+  restaurant:
+    external: true

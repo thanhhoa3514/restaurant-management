@@ -1,9 +1,6 @@
-export type ItemStatus =
-  | 'pending'
-  | 'acknowledged'
-  | 'preparing'
-  | 'ready'
-  | 'served'
+import type { ItemStatus, StatusHistoryEntry } from '@/constants'
+export type { ItemStatus, StatusHistoryEntry } from '@/constants'
+export { STATUS_FLOW } from '@/constants'
 
 export type TableOccupancy = 'empty' | 'occupied'
 
@@ -14,11 +11,6 @@ export type WFPriority =
   | 'idle'
   | 'occupied'
   | 'empty'
-
-export interface StatusHistoryEntry {
-  status: ItemStatus
-  timestamp: Date
-}
 
 export interface WFItem {
   id: string
@@ -43,8 +35,10 @@ export interface WFSession {
   id: string
   started_at: Date
   guest_count: number
+  guest_name: string
   waiter_called_at: Date | null
   bill_requested_at: Date | null
+  merge_group_id: string | null
   orders: WFOrder[]
 }
 
@@ -55,6 +49,8 @@ export interface TablePosition {
 
 export interface WFTable {
   id: string
+  /** Mã bàn duy nhất (T01, V01…) — dùng để hiển thị, `number` chỉ để sắp xếp */
+  code: string
   number: number
   capacity: number
   position: TablePosition
@@ -86,14 +82,59 @@ export interface WFCounts {
   bills: number
   occupied: number
   total: number
+  pending: number
 }
 
-export type Lang = 'vi' | 'en'
+import type { Lang } from '@/constants'
+export type { Lang } from '@/constants'
 
-export const STATUS_FLOW: ItemStatus[] = [
-  'pending',
-  'acknowledged',
-  'preparing',
-  'ready',
-  'served',
-]
+export type WaiterView = 'plan' | 'grid'
+
+export interface WaiterState {
+  tables: WFTable[]
+  now: Date
+  timeMultiplier: number
+  autoOn: boolean
+  lang: Lang
+  soundOn: boolean
+  view: WaiterView
+  selectedTableId: string | null
+  justChangedIds: Set<string>
+  demoOpen: boolean
+  mergeMode: boolean
+  mergeSelectedIds: string[]
+}
+
+export interface WaiterActions {
+  selectTable: (tableId: string | null) => void
+  acknowledgeCall: (tableId: string) => void
+  notifyCashier: (tableId: string) => void
+  markItemServed: (tableId: string, itemId: string) => void
+  markAllServed: (tableId: string) => void
+  confirmItem: (tableId: string, itemId: string) => void
+  rejectItem: (tableId: string, itemId: string, reason: string) => void
+  requestBill: (tableId: string) => void
+  openSession: (tableId: string, guestCount: number, notes: string) => void
+  injectItemReady: () => void
+  injectCall: () => void
+  injectBill: () => void
+  injectNewSession: () => void
+  setAutoOn: (value: boolean | ((prev: boolean) => boolean)) => void
+  setTimeMultiplier: (value: number | ((prev: number) => number)) => void
+  setLang: (lang: Lang) => void
+  setSoundOn: (value: boolean | ((prev: boolean) => boolean)) => void
+  setView: (value: WaiterView | ((prev: WaiterView) => WaiterView)) => void
+  setDemoOpen: (value: boolean | ((prev: boolean) => boolean)) => void
+  toggleMergeMode: () => void
+  toggleMergeSelection: (tableId: string) => void
+  confirmMerge: () => void
+  splitGroup: (tableId: string) => void
+}
+
+export interface UseWaiterValue {
+  state: WaiterState
+  actions: WaiterActions
+  counts: WFCounts
+  selectedTable: WFTable | null
+  t: (key: string, ...args: Array<string | number>) => string
+}

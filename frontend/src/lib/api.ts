@@ -1,76 +1,40 @@
-import { getStaffSession } from '@/lib/auth'
+import { getStaffSession, refreshStaffSession } from '@/lib/auth'
+import { ApiError, type Envelope, type RequestOptions } from '@/types/api'
+export { ApiError }
 
-// Base URL for the backend API.
-// - Dev: leave VITE_API_URL unset; requests go same-origin and vite.config.ts
-//   proxies /api -> the Go backend (no CORS).
-// - Prod: set VITE_API_URL to the backend origin; the backend must allow it via
-//   ALLOWED_ORIGINS (httpx.CORS).
+export function errorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiError) return error.message
+  if (error instanceof Error) return error.message
+  return fallback
+}
+
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
 
-// Backend success/error envelope: { data, meta, error }.
-interface Envelope<T> {
-  data: T | null
-  meta?: unknown
-  error?: { code: string; message: string } | null
-}
 
-export class ApiError extends Error {
-  readonly status: number
-  readonly code: string
+let refreshPromise: Promise<boolean> | null = null
 
-  constructor(status: number, code: string, message: string) {
-    super(message)
-    this.name = 'ApiError'
-    this.status = status
-    this.code = code
-  }
-}
+async function attemptRefresh(): Promise<boolean> {
 
-interface RequestOptions {
-  method?: string
-  body?: unknown
-  signal?: AbortSignal
-  // QR-guest session token. When set, the request authenticates as a dining
-  // guest via the X-Session-Token header (backend auth.QRSessionToken) instead
-  // of the staff JWT. Used for /api/v1/guest/* endpoints.
-  sessionToken?: string
-}
-
-export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, signal, sessionToken } = options
-
-  const headers: Record<string, string> = { Accept: 'application/json' }
-  if (body !== undefined) headers['Content-Type'] = 'application/json'
-
-  if (sessionToken) {
-    // Guest path: authenticate with the dining session token. Do not send the
-    // staff Authorization header — these endpoints expect X-Session-Token only.
-    headers['X-Session-Token'] = sessionToken
-  } else {
-    // Attach the staff JWT issued by /api/v1/identity/authenticate.
-    const session = getStaffSession()
-    if (session?.token) headers.Authorization = `Bearer ${session.token}`
-  }
-
-  let res: Response
+  if (refreshPromise) return refreshPromise
+  refreshPromise = refreshStaffSession().then((s) => s !== null)
   try {
-    res = await fetch(`${API_BASE_URL}${path}`, {
-      method,
-      headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
-      signal,
-    })
-  } catch (err) {
-    // Network failure / aborted / DNS — no HTTP response at all.
-    if (err instanceof DOMException && err.name === 'AbortError') throw err
-    throw new ApiError(0, 'network_error', 'Không thể kết nối máy chủ')
+    return await refreshPromise
+  } finally {
+    refreshPromise = null
   }
+}
 
-  // 204 / empty body: nothing to parse.
+async function doFetch<T>(path: string, options: RequestOptions, headers: Record<string, string>): Promise<T> {
+  const { method = 'GET', body, signal } = options
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+    signal,
+  })
+
   if (res.status === 204) return undefined as T
 
-  // The dev proxy or a misroute can return HTML (SPA fallback / error page).
-  // Don't blindly JSON.parse it — surface a clear error instead.
   const contentType = res.headers.get('content-type') ?? ''
   if (!contentType.includes('application/json')) {
     if (!res.ok) {
@@ -88,4 +52,45 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   }
 
   return envelope.data as T
+}
+
+export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const { body, sessionToken } = options
+
+  const headers: Record<string, string> = { Accept: 'application/json' }
+  if (body !== undefined) headers['Content-Type'] = 'application/json'
+
+  let isStaffRequest = false
+  if (sessionToken) {
+    headers['X-Session-Token'] = sessionToken
+  } else {
+
+    isStaffRequest = true
+    const session = getStaffSession()
+    if (session?.token) headers.Authorization = `Bearer ${session.token}`
+  }
+
+  try {
+    return await doFetch<T>(path, options, headers)
+  } catch (err) {
+    if (
+      isStaffRequest &&
+      err instanceof ApiError &&
+      err.status === 401 &&
+      !path.includes('/restaurant/auth/login') &&
+      !path.includes('/restaurant/auth/refresh')
+    ) {
+      const refreshed = await attemptRefresh()
+      if (refreshed) {
+        const session = getStaffSession()
+        if (session?.token) {
+          headers.Authorization = `Bearer ${session.token}`
+        }
+        return doFetch<T>(path, options, headers)
+      }
+    }
+    if (err instanceof DOMException && err.name === 'AbortError') throw err
+    if (err instanceof ApiError) throw err
+    throw new ApiError(0, 'network_error', 'Không thể kết nối máy chủ')
+  }
 }

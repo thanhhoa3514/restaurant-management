@@ -1,0 +1,44 @@
+services:
+  migrate:
+    image: restaurant-api:${TAG:?set TAG in .env (e.g. prod)}
+    entrypoint: ["/bin/restaurant-migrate"]
+    env_file: .env
+    networks:
+      - restaurant
+    restart: "no"
+
+  seed:
+    image: restaurant-api:${TAG}
+    entrypoint: ["/bin/restaurant-seed"]
+    env_file: .env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - restaurant
+    restart: "no"
+
+  api:
+    image: restaurant-api:${TAG}
+    container_name: api
+    env_file: .env
+    environment:
+      HTTP_ADDR: ":8080"
+      LOG_DIR: /logs
+    volumes:
+      - ../../logs/api:/logs
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - restaurant
+    restart: unless-stopped
+
+networks:
+  restaurant:
+    external: true

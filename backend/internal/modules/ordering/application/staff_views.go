@@ -9,7 +9,6 @@ import (
 
 	"restaurant-management/internal/modules/ordering/domain"
 	"restaurant-management/internal/platform/outbox"
-	"restaurant-management/internal/platform/tenant"
 	"restaurant-management/internal/shared/apperr"
 )
 
@@ -32,8 +31,11 @@ type StaffSessionDTO struct {
 	SessionCode     string          `json:"session_code"`
 	Status          string          `json:"status"`
 	CustomerCount   int             `json:"customer_count"`
+	GuestName       string          `json:"guest_name"`
 	OpenedAt        time.Time       `json:"opened_at"`
 	BillRequestedAt *time.Time      `json:"bill_requested_at"`
+	WaiterCalledAt  *time.Time      `json:"waiter_called_at"`
+	MergeGroupID    *uuid.UUID      `json:"merge_group_id"`
 	Orders          []StaffOrderDTO `json:"orders"`
 	TotalVND        int64           `json:"total_vnd"`
 }
@@ -62,6 +64,7 @@ type StaffOrderItemDTO struct {
 	Status              string           `json:"status"`
 	Station             string           `json:"station"`
 	Note                string           `json:"note"`
+	IsTakeaway          bool             `json:"is_takeaway"`
 	Options             []StaffOptionDTO `json:"options"`
 	StatusHistory       []StaffStatusDTO `json:"status_history"`
 }
@@ -85,8 +88,8 @@ type KitchenQueueResponse struct {
 type KitchenTicketDTO struct {
 	ID          uuid.UUID              `json:"id"`
 	OrderID     uuid.UUID              `json:"order_id"`
-	SessionID   uuid.UUID              `json:"session_id"`
-	TableID     uuid.UUID              `json:"table_id"`
+	SessionID   *uuid.UUID             `json:"session_id,omitempty"`
+	TableID     *uuid.UUID             `json:"table_id,omitempty"`
 	TableCode   string                 `json:"table_code"`
 	TableName   string                 `json:"table_name"`
 	Number      string                 `json:"ticket_number"`
@@ -129,18 +132,28 @@ type StaffReadRepository interface {
 	ListStaffTables(ctx context.Context, restaurantID uuid.UUID) ([]StaffTableDTO, error)
 	ListKitchenQueue(ctx context.Context, restaurantID uuid.UUID) ([]KitchenTicketDTO, error)
 	RequestBill(ctx context.Context, restaurantID, sessionID uuid.UUID) (RequestBillResponse, error)
+	ReopenSession(ctx context.Context, restaurantID, sessionID uuid.UUID) (RequestBillResponse, error)
+	CallWaiter(ctx context.Context, restaurantID, sessionID uuid.UUID) (RequestBillResponse, error)
+	AckWaiterCall(ctx context.Context, restaurantID, sessionID uuid.UUID) (RequestBillResponse, error)
 	UpdateOrderItemStatus(ctx context.Context, restaurantID, itemID uuid.UUID, status string, actorID *uuid.UUID, actorRole string) (UpdateItemStatusResponse, error)
+	ConfirmOrderItem(ctx context.Context, restaurantID, itemID uuid.UUID, actorID *uuid.UUID, actorRole string) (UpdateItemStatusResponse, error)
+	RejectOrderItem(ctx context.Context, restaurantID, itemID uuid.UUID, reason string, actorID *uuid.UUID, actorRole string) (UpdateItemStatusResponse, error)
+	MarkItemUnavailable(ctx context.Context, restaurantID, itemID uuid.UUID, reason string, actorID *uuid.UUID) (UpdateItemStatusResponse, error)
+	ListPendingCancelRequests(ctx context.Context, restaurantID uuid.UUID) ([]CancelRequestDTO, error)
+	ReviewCancelRequest(ctx context.Context, restaurantID, cancelRequestID uuid.UUID, approve bool, reviewedBy *uuid.UUID, note string) (CancelRequestReviewResult, error)
 }
 
-type StaffTables struct{ repo StaffReadRepository }
+type StaffTables struct {
+	repo                StaffReadRepository
+	defaultRestaurantID uuid.UUID
+}
 
-func NewStaffTables(repo StaffReadRepository) *StaffTables { return &StaffTables{repo: repo} }
+func NewStaffTables(repo StaffReadRepository, defaultRestaurantID uuid.UUID) *StaffTables {
+	return &StaffTables{repo: repo, defaultRestaurantID: defaultRestaurantID}
+}
 
 func (s *StaffTables) Handle(ctx context.Context) (StaffTablesResponse, error) {
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return StaffTablesResponse{}, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant")
-	}
+	restaurantID := s.defaultRestaurantID
 	tables, err := s.repo.ListStaffTables(ctx, restaurantID)
 	if err != nil {
 		return StaffTablesResponse{}, err
@@ -148,15 +161,17 @@ func (s *StaffTables) Handle(ctx context.Context) (StaffTablesResponse, error) {
 	return StaffTablesResponse{Tables: tables}, nil
 }
 
-type KitchenQueue struct{ repo StaffReadRepository }
+type KitchenQueue struct {
+	repo                StaffReadRepository
+	defaultRestaurantID uuid.UUID
+}
 
-func NewKitchenQueue(repo StaffReadRepository) *KitchenQueue { return &KitchenQueue{repo: repo} }
+func NewKitchenQueue(repo StaffReadRepository, defaultRestaurantID uuid.UUID) *KitchenQueue {
+	return &KitchenQueue{repo: repo, defaultRestaurantID: defaultRestaurantID}
+}
 
 func (s *KitchenQueue) Handle(ctx context.Context) (KitchenQueueResponse, error) {
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return KitchenQueueResponse{}, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant")
-	}
+	restaurantID := s.defaultRestaurantID
 	tickets, err := s.repo.ListKitchenQueue(ctx, restaurantID)
 	if err != nil {
 		return KitchenQueueResponse{}, err
@@ -165,22 +180,20 @@ func (s *KitchenQueue) Handle(ctx context.Context) (KitchenQueueResponse, error)
 }
 
 type StaffRequestBill struct {
-	tx     TxRunner
-	repo   StaffReadRepository
-	outbox domain.OutboxWriter
+	tx                  TxRunner
+	repo                StaffReadRepository
+	outbox              domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
 }
 
-func NewStaffRequestBill(tx TxRunner, repo StaffReadRepository, outboxWriter domain.OutboxWriter) *StaffRequestBill {
-	return &StaffRequestBill{tx: tx, repo: repo, outbox: outboxWriter}
+func NewStaffRequestBill(tx TxRunner, repo StaffReadRepository, outboxWriter domain.OutboxWriter, defaultRestaurantID uuid.UUID) *StaffRequestBill {
+	return &StaffRequestBill{tx: tx, repo: repo, outbox: outboxWriter, defaultRestaurantID: defaultRestaurantID}
 }
 
 func (s *StaffRequestBill) Handle(ctx context.Context, sessionID uuid.UUID) (RequestBillResponse, error) {
 	var out RequestBillResponse
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return out, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant")
-	}
-	err = s.tx.Run(ctx, func(ctx context.Context) error {
+	restaurantID := s.defaultRestaurantID
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
 		var err error
 		out, err = s.repo.RequestBill(ctx, restaurantID, sessionID)
 		if err != nil {
@@ -194,14 +207,100 @@ func (s *StaffRequestBill) Handle(ctx context.Context, sessionID uuid.UUID) (Req
 	return out, err
 }
 
-type StaffUpdateItemStatus struct {
-	tx     TxRunner
-	repo   StaffReadRepository
-	outbox domain.OutboxWriter
+type StaffReopenSession struct {
+	tx                  TxRunner
+	repo                StaffReadRepository
+	outbox              domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
 }
 
-func NewStaffUpdateItemStatus(tx TxRunner, repo StaffReadRepository, outboxWriter domain.OutboxWriter) *StaffUpdateItemStatus {
-	return &StaffUpdateItemStatus{tx: tx, repo: repo, outbox: outboxWriter}
+func NewStaffReopenSession(tx TxRunner, repo StaffReadRepository, outboxWriter domain.OutboxWriter, defaultRestaurantID uuid.UUID) *StaffReopenSession {
+	return &StaffReopenSession{tx: tx, repo: repo, outbox: outboxWriter, defaultRestaurantID: defaultRestaurantID}
+}
+
+func (s *StaffReopenSession) Handle(ctx context.Context, sessionID uuid.UUID) (RequestBillResponse, error) {
+	var out RequestBillResponse
+	restaurantID := s.defaultRestaurantID
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
+		var err error
+		out, err = s.repo.ReopenSession(ctx, restaurantID, sessionID)
+		if err != nil {
+			return err
+		}
+		if s.outbox != nil {
+			return s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "dining_session", AggregateID: sessionID, EventType: "dining.session_reopened", Payload: map[string]any{"session_id": sessionID, "status": out.Status}})
+		}
+		return nil
+	})
+	return out, err
+}
+
+type GuestCallWaiter struct {
+	tx                  TxRunner
+	repo                StaffReadRepository
+	outbox              domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
+}
+
+func NewGuestCallWaiter(tx TxRunner, repo StaffReadRepository, outboxWriter domain.OutboxWriter, defaultRestaurantID uuid.UUID) *GuestCallWaiter {
+	return &GuestCallWaiter{tx: tx, repo: repo, outbox: outboxWriter, defaultRestaurantID: defaultRestaurantID}
+}
+
+func (s *GuestCallWaiter) Handle(ctx context.Context, sessionID uuid.UUID) (RequestBillResponse, error) {
+	var out RequestBillResponse
+	restaurantID := s.defaultRestaurantID
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
+		var err error
+		out, err = s.repo.CallWaiter(ctx, restaurantID, sessionID)
+		if err != nil {
+			return err
+		}
+		if s.outbox != nil {
+			return s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "dining_session", AggregateID: sessionID, EventType: "dining.waiter_called", Payload: map[string]any{"session_id": sessionID}})
+		}
+		return nil
+	})
+	return out, err
+}
+
+// StaffAckWaiterCall clears the waiter-call flag once staff attends the table.
+type StaffAckWaiterCall struct {
+	tx                  TxRunner
+	repo                StaffReadRepository
+	outbox              domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
+}
+
+func NewStaffAckWaiterCall(tx TxRunner, repo StaffReadRepository, outboxWriter domain.OutboxWriter, defaultRestaurantID uuid.UUID) *StaffAckWaiterCall {
+	return &StaffAckWaiterCall{tx: tx, repo: repo, outbox: outboxWriter, defaultRestaurantID: defaultRestaurantID}
+}
+
+func (s *StaffAckWaiterCall) Handle(ctx context.Context, sessionID uuid.UUID) (RequestBillResponse, error) {
+	var out RequestBillResponse
+	restaurantID := s.defaultRestaurantID
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
+		var err error
+		out, err = s.repo.AckWaiterCall(ctx, restaurantID, sessionID)
+		if err != nil {
+			return err
+		}
+		if s.outbox != nil {
+			return s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "dining_session", AggregateID: sessionID, EventType: "dining.waiter_call_acked", Payload: map[string]any{"session_id": sessionID}})
+		}
+		return nil
+	})
+	return out, err
+}
+
+type StaffUpdateItemStatus struct {
+	tx                  TxRunner
+	repo                StaffReadRepository
+	outbox              domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
+}
+
+func NewStaffUpdateItemStatus(tx TxRunner, repo StaffReadRepository, outboxWriter domain.OutboxWriter, defaultRestaurantID uuid.UUID) *StaffUpdateItemStatus {
+	return &StaffUpdateItemStatus{tx: tx, repo: repo, outbox: outboxWriter, defaultRestaurantID: defaultRestaurantID}
 }
 
 func (s *StaffUpdateItemStatus) Handle(ctx context.Context, itemID uuid.UUID, status string, actorID *uuid.UUID, actorRole string) (UpdateItemStatusResponse, error) {
@@ -210,11 +309,8 @@ func (s *StaffUpdateItemStatus) Handle(ctx context.Context, itemID uuid.UUID, st
 	if !validStaffStatus(next) {
 		return out, apperr.New(apperr.CodeInvalid, "invalid item status")
 	}
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return out, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant")
-	}
-	err = s.tx.Run(ctx, func(ctx context.Context) error {
+	restaurantID := s.defaultRestaurantID
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
 		var err error
 		out, err = s.repo.UpdateOrderItemStatus(ctx, restaurantID, itemID, next, actorID, actorRole)
 		if err != nil {
@@ -222,6 +318,51 @@ func (s *StaffUpdateItemStatus) Handle(ctx context.Context, itemID uuid.UUID, st
 		}
 		if s.outbox != nil {
 			return s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "order_item", AggregateID: itemID, EventType: "ordering.item_status_updated", Payload: map[string]any{"item_id": itemID, "status": out.Status}})
+		}
+		return nil
+	})
+	return out, err
+}
+
+type ServerReviewOrderItem struct {
+	tx                  TxRunner
+	repo                StaffReadRepository
+	outbox              domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
+}
+
+func NewServerReviewOrderItem(tx TxRunner, repo StaffReadRepository, outboxWriter domain.OutboxWriter, defaultRestaurantID uuid.UUID) *ServerReviewOrderItem {
+	return &ServerReviewOrderItem{tx: tx, repo: repo, outbox: outboxWriter, defaultRestaurantID: defaultRestaurantID}
+}
+
+func (s *ServerReviewOrderItem) Confirm(ctx context.Context, itemID uuid.UUID, actorID *uuid.UUID, actorRole string) (UpdateItemStatusResponse, error) {
+	var out UpdateItemStatusResponse
+	restaurantID := s.defaultRestaurantID
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
+		var err error
+		out, err = s.repo.ConfirmOrderItem(ctx, restaurantID, itemID, actorID, actorRole)
+		if err != nil {
+			return err
+		}
+		if s.outbox != nil {
+			return s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "order_item", AggregateID: itemID, EventType: "ordering.item_confirmed", Payload: map[string]any{"item_id": itemID, "status": out.Status}})
+		}
+		return nil
+	})
+	return out, err
+}
+
+func (s *ServerReviewOrderItem) Reject(ctx context.Context, itemID uuid.UUID, reason string, actorID *uuid.UUID, actorRole string) (UpdateItemStatusResponse, error) {
+	var out UpdateItemStatusResponse
+	restaurantID := s.defaultRestaurantID
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
+		var err error
+		out, err = s.repo.RejectOrderItem(ctx, restaurantID, itemID, strings.TrimSpace(reason), actorID, actorRole)
+		if err != nil {
+			return err
+		}
+		if s.outbox != nil {
+			return s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "order_item", AggregateID: itemID, EventType: "ordering.item_rejected", Payload: map[string]any{"item_id": itemID, "status": out.Status, "reason": reason}})
 		}
 		return nil
 	})

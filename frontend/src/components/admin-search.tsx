@@ -1,4 +1,3 @@
-import type { Dispatch, SetStateAction } from 'react'
 import {
   CommandDialog,
   CommandInput,
@@ -7,7 +6,7 @@ import {
   CommandGroup,
   CommandItem,
 } from '@/components/ui/command'
-import type { shellStrings } from '@/components/shell-i18n'
+import type { ShellStrings } from '@/i18n'
 import type { LucideIcon } from 'lucide-react'
 
 export interface CommandEntry {
@@ -20,10 +19,10 @@ export interface CommandEntry {
 
 interface StaffCommandDialogProps {
   open: boolean
-  onOpenChange: Dispatch<SetStateAction<boolean>>
+  onOpenChange: (open: boolean) => void
   query: string
-  setQuery: Dispatch<SetStateAction<string>>
-  s: ReturnType<typeof shellStrings>
+  setQuery: (query: string) => void
+  s: ShellStrings
   commandItems: CommandEntry[]
 }
 

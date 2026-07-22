@@ -28,16 +28,16 @@ func TestParseLevel(t *testing.T) {
 func TestNewRespectsLevel(t *testing.T) {
 	ctx := context.Background()
 
-	debugLog := New("development", "debug")
+	debugLog := New("development", "debug", "")
 	require.True(t, debugLog.Enabled(ctx, slog.LevelDebug))
 
-	infoLog := New("development", "info")
+	infoLog := New("development", "info", "")
 	require.False(t, infoLog.Enabled(ctx, slog.LevelDebug))
 	require.True(t, infoLog.Enabled(ctx, slog.LevelInfo))
 }
 
 func TestNewSetsDefault(t *testing.T) {
-	l := New("production", "warn")
+	l := New("production", "warn", "")
 	require.Same(t, l, slog.Default())
 }
 

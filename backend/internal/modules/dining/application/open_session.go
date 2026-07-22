@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 
 	"restaurant-management/internal/modules/dining/domain"
-	"restaurant-management/internal/platform/tenant"
 )
 
 type OpenSessionRequest struct {
@@ -26,22 +25,20 @@ type OpenSessionResponse struct {
 }
 
 type OpenSession struct {
-	tx     TxRunner
-	repo   domain.DiningRepository
-	outbox domain.OutboxWriter
+	tx                  TxRunner
+	repo                domain.DiningRepository
+	outbox              domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
 }
 
-func NewOpenSession(tx TxRunner, repo domain.DiningRepository, outbox domain.OutboxWriter) *OpenSession {
-	return &OpenSession{tx: tx, repo: repo, outbox: outbox}
+func NewOpenSession(tx TxRunner, repo domain.DiningRepository, outbox domain.OutboxWriter, defaultRestaurantID uuid.UUID) *OpenSession {
+	return &OpenSession{tx: tx, repo: repo, outbox: outbox, defaultRestaurantID: defaultRestaurantID}
 }
 
 func (s *OpenSession) Handle(ctx context.Context, req OpenSessionRequest) (OpenSessionResponse, error) {
 	var out OpenSessionResponse
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return out, err
-	}
-	err = s.tx.Run(ctx, func(ctx context.Context) error {
+	restaurantID := s.defaultRestaurantID
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
 		if _, err := s.repo.FindTable(ctx, restaurantID, req.TableID); err != nil {
 			return err
 		}

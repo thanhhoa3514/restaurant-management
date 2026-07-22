@@ -1,7 +1,10 @@
+/* eslint-disable react-doctor/prefer-dynamic-import */
+import { useMemo } from 'react'
 import { PDFDownloadLink } from '@react-pdf/renderer'
 import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-react'
 import type { CashierSession } from '@/features/cashier/types'
+import { activeInvoice } from '@/features/cashier/helpers'
 import { InvoicePDF } from './invoice-pdf'
 
 interface LazyPDFLinkProps {
@@ -11,10 +14,11 @@ interface LazyPDFLinkProps {
 }
 
 export default function LazyPDFLink({ session, t, lang }: LazyPDFLinkProps) {
-  const invoice = session.invoice
+  const invoice = activeInvoice(session)
+  const document = useMemo(() => <InvoicePDF session={session} t={t} lang={lang} />, [session, t, lang])
   return (
     <PDFDownloadLink
-      document={<InvoicePDF session={session} t={t} lang={lang} />}
+      document={document}
       fileName={`Hoa_Don_${invoice.number}.pdf`}
       className="flex-1"
     >

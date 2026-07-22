@@ -12,7 +12,6 @@ import (
 	"restaurant-management/internal/modules/ordering/domain"
 	"restaurant-management/internal/platform/guest"
 	"restaurant-management/internal/platform/outbox"
-	"restaurant-management/internal/platform/tenant"
 	"restaurant-management/internal/shared/apperr"
 )
 
@@ -54,13 +53,17 @@ type GuestOrderItemDTO struct {
 	TotalAmountVND      int64                 `json:"total_amount_vnd"`
 	Status              string                `json:"status"`
 	Station             string                `json:"station"`
+	IsTakeaway          bool                  `json:"is_takeaway"`
 	Options             []GuestOrderOptionDTO `json:"options"`
+	UnavailableReason   *string               `json:"unavailable_reason"`
 }
 
 type GuestOrderOptionDTO struct {
-	NameSnapshot          string `json:"name_snapshot"`
-	PriceDeltaSnapshotVND int64  `json:"price_delta_snapshot_vnd"`
-	Quantity              int    `json:"quantity"`
+	OptionID              uuid.UUID `json:"option_id"`
+	OptionGroupID         uuid.UUID `json:"option_group_id"`
+	NameSnapshot          string    `json:"name_snapshot"`
+	PriceDeltaSnapshotVND int64     `json:"price_delta_snapshot_vnd"`
+	Quantity              int       `json:"quantity"`
 }
 
 type LineError struct {
@@ -79,13 +82,14 @@ func (e *CartValidationError) AppError() *apperr.Error {
 }
 
 type GuestPlaceOrder struct {
-	tx     TxRunner
-	repo   domain.OrderPlacementRepository
-	outbox domain.OutboxWriter
+	tx                  TxRunner
+	repo                domain.OrderPlacementRepository
+	outbox              domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
 }
 
-func NewGuestPlaceOrder(tx TxRunner, repo domain.OrderPlacementRepository, outbox domain.OutboxWriter) *GuestPlaceOrder {
-	return &GuestPlaceOrder{tx: tx, repo: repo, outbox: outbox}
+func NewGuestPlaceOrder(tx TxRunner, repo domain.OrderPlacementRepository, outbox domain.OutboxWriter, defaultRestaurantID uuid.UUID) *GuestPlaceOrder {
+	return &GuestPlaceOrder{tx: tx, repo: repo, outbox: outbox, defaultRestaurantID: defaultRestaurantID}
 }
 
 func (s *GuestPlaceOrder) Handle(ctx context.Context, req GuestPlaceOrderRequest) (GuestPlaceOrderResponse, error) {
@@ -93,16 +97,13 @@ func (s *GuestPlaceOrder) Handle(ctx context.Context, req GuestPlaceOrderRequest
 	if len(req.Items) == 0 {
 		return out, apperr.New(apperr.CodeInvalid, "order must contain at least one item")
 	}
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return out, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant")
-	}
+	restaurantID := s.defaultRestaurantID
 	gs, ok := guest.SessionFromContext(ctx)
 	if !ok || gs.SessionID == uuid.Nil {
 		return out, apperr.New(apperr.CodeUnauthorized, "missing guest session")
 	}
 
-	err = s.tx.Run(ctx, func(ctx context.Context) error {
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
 		session, err := s.repo.LockSessionForOrder(ctx, restaurantID, gs.SessionID)
 		if err != nil {
 			return err
@@ -144,7 +145,7 @@ func (s *GuestPlaceOrder) Handle(ctx context.Context, req GuestPlaceOrderRequest
 			return err
 		}
 		if s.outbox != nil {
-			if err := s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "order", AggregateID: order.ID, EventType: "order.submitted", Payload: orderSubmittedPayload(order)}); err != nil {
+			if err := s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "order", AggregateID: order.ID, EventType: "ordering.order_placed", Payload: orderSubmittedPayload(order)}); err != nil {
 				return err
 			}
 		}
@@ -300,9 +301,9 @@ func toPlaceResponse(order *domain.OrderCreate) GuestPlaceOrderResponse {
 	for _, line := range order.Lines {
 		options := make([]GuestOrderOptionDTO, 0, len(line.Options))
 		for _, opt := range line.Options {
-			options = append(options, GuestOrderOptionDTO{NameSnapshot: opt.OptionNameSnapshot, PriceDeltaSnapshotVND: opt.PriceDeltaSnapshotVND, Quantity: opt.Quantity})
+			options = append(options, GuestOrderOptionDTO{OptionID: opt.OptionID, OptionGroupID: opt.OptionGroupID, NameSnapshot: opt.OptionNameSnapshot, PriceDeltaSnapshotVND: opt.PriceDeltaSnapshotVND, Quantity: opt.Quantity})
 		}
-		items = append(items, GuestOrderItemDTO{OrderItemID: line.ID, MenuItemID: line.MenuItemID, NameSnapshot: line.ItemNameSnapshot, VariantNameSnapshot: line.VariantNameSnapshot, Quantity: line.Quantity, UnitPriceVND: line.UnitPriceVND, OptionsTotalVND: line.OptionsTotalVND, SubtotalVND: line.SubtotalVND, TotalAmountVND: line.TotalAmountVND, Status: line.Status, Station: line.Station, Options: options})
+		items = append(items, GuestOrderItemDTO{OrderItemID: line.ID, MenuItemID: line.MenuItemID, NameSnapshot: line.ItemNameSnapshot, VariantNameSnapshot: line.VariantNameSnapshot, Quantity: line.Quantity, UnitPriceVND: line.UnitPriceVND, OptionsTotalVND: line.OptionsTotalVND, SubtotalVND: line.SubtotalVND, TotalAmountVND: line.TotalAmountVND, Status: line.Status, Station: line.Station, IsTakeaway: line.IsTakeaway, Options: options})
 	}
 	return GuestPlaceOrderResponse{OrderID: order.ID, OrderNumber: order.OrderNumber, OrderType: order.OrderType, Items: items, SessionTotalVND: order.SessionTotalVND}
 }

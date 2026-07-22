@@ -6,8 +6,6 @@ import (
 	"github.com/google/uuid"
 
 	"restaurant-management/internal/modules/catalog/domain"
-	"restaurant-management/internal/platform/tenant"
-	"restaurant-management/internal/shared/apperr"
 )
 
 type ListMenuItemsRequest struct {
@@ -28,18 +26,57 @@ type MenuItemSummaryDTO struct {
 	PriceFromVND       *int64    `json:"price_from_vnd"`
 }
 
-type ListMenuItems struct{ repo domain.MenuReadRepository }
+type AdminMenuItemSummaryDTO struct {
+	ID                 uuid.UUID `json:"id"`
+	CategoryID         uuid.UUID `json:"category_id"`
+	Name               string    `json:"name"`
+	Slug               string    `json:"slug"`
+	ShortDescription   string    `json:"short_description"`
+	ImageURL           string    `json:"image_url"`
+	BasePriceVND       int64     `json:"base_price_vnd"`
+	AvailabilityStatus string    `json:"availability_status"`
+	IsAvailable        bool      `json:"is_available"`
+	HasVariants        bool      `json:"has_variants"`
+	PriceFromVND       *int64    `json:"price_from_vnd"`
+	Status             string    `json:"status"`
+	IsFeatured         bool      `json:"is_featured"`
+	Station            string    `json:"station"`
+	DisplayOrder       int       `json:"display_order"`
+	Version            int       `json:"version"`
+}
 
-func NewListMenuItems(repo domain.MenuReadRepository) *ListMenuItems {
-	return &ListMenuItems{repo: repo}
+type ListMenuItems struct {
+	repo               domain.MenuReadRepository
+	defaultRestaurantID uuid.UUID
+}
+
+func NewListMenuItems(repo domain.MenuReadRepository, defaultRestaurantID uuid.UUID) *ListMenuItems {
+	return &ListMenuItems{repo: repo, defaultRestaurantID: defaultRestaurantID}
+}
+
+type ListAdminMenuItems struct {
+	repo               domain.MenuReadRepository
+	defaultRestaurantID uuid.UUID
+}
+
+func NewListAdminMenuItems(repo domain.MenuReadRepository, defaultRestaurantID uuid.UUID) *ListAdminMenuItems {
+	return &ListAdminMenuItems{repo: repo, defaultRestaurantID: defaultRestaurantID}
+}
+
+func (s *ListAdminMenuItems) Handle(ctx context.Context, req ListMenuItemsRequest) ([]AdminMenuItemSummaryDTO, error) {
+	rows, err := s.repo.ListItemsAdmin(ctx, s.defaultRestaurantID, req.CategoryID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]AdminMenuItemSummaryDTO, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, AdminMenuItemSummaryDTO(row))
+	}
+	return out, nil
 }
 
 func (s *ListMenuItems) Handle(ctx context.Context, req ListMenuItemsRequest) ([]MenuItemSummaryDTO, error) {
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return nil, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant")
-	}
-	rows, err := s.repo.ListItems(ctx, restaurantID, req.CategoryID)
+	rows, err := s.repo.ListItems(ctx, s.defaultRestaurantID, req.CategoryID)
 	if err != nil {
 		return nil, err
 	}

@@ -2,26 +2,37 @@ package logger
 
 import (
 	"context"
+	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
+
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 type ctxKey struct{}
 
-// New builds the root application logger. In production it emits JSON; in any
-// other environment it emits human-readable text. It also installs itself as
-// the slog default so library code logging via slog stays consistent.
-func New(env, level string) *slog.Logger {
+func New(env, level, logDir string) *slog.Logger {
 	opts := &slog.HandlerOptions{
 		Level:     parseLevel(level),
 		AddSource: true,
 	}
+	var w io.Writer = os.Stdout
+	if strings.EqualFold(env, "production") && logDir != "" {
+		w = &lumberjack.Logger{
+			Filename:   filepath.Join(logDir, "api.log"),
+			MaxSize:    100,
+			MaxAge:     7,
+			MaxBackups: 14,
+			Compress:   true,
+		}
+	}
 	var h slog.Handler
 	if strings.EqualFold(env, "production") {
-		h = slog.NewJSONHandler(os.Stdout, opts)
+		h = slog.NewJSONHandler(w, opts)
 	} else {
-		h = slog.NewTextHandler(os.Stdout, opts)
+		h = slog.NewTextHandler(w, opts)
 	}
 	l := slog.New(h).With(
 		slog.String("service", "restaurant-api"),
@@ -44,13 +55,10 @@ func parseLevel(s string) slog.Level {
 	}
 }
 
-// WithContext returns a copy of ctx carrying l so downstream code can retrieve
-// the request-scoped logger via FromContext.
 func WithContext(ctx context.Context, l *slog.Logger) context.Context {
 	return context.WithValue(ctx, ctxKey{}, l)
 }
 
-// FromContext returns the logger stored in ctx, or the slog default if none.
 func FromContext(ctx context.Context) *slog.Logger {
 	if l, ok := ctx.Value(ctxKey{}).(*slog.Logger); ok && l != nil {
 		return l

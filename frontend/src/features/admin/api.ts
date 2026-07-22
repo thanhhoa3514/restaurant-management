@@ -1,32 +1,32 @@
 import { apiRequest } from '@/lib/api'
+import type {
+  AdminDashboardDTO,
+  ManageUserRequest,
+  ManageUserResult,
+  RoleDTO,
+  StaffUserDTO,
+} from '@/features/admin/types'
 
-export interface AdminDashboardDTO {
-  revenue: {
-    value: string
-    sub: string
-  }
-  tables: {
-    value: string
-    sub: string
-  }
-  kitchen: {
-    value: string
-    sub: string
-  }
-  payments: {
-    value: string
-    sub: string
-  }
-  staffs: {
-    name: string
-    code: string
-    role: string
-    tone: 'green' | 'blue' | 'orange' | 'purple'
-    time: string
-  }[]
+export const staffQueryKeys = {
+  users: ['identity', 'users'] as const,
+  roles: ['identity', 'roles'] as const,
 }
 
 export function fetchAdminDashboard(): Promise<AdminDashboardDTO> {
-  // Hit the backend mock endpoint for now until real aggregation is implemented
-  return apiRequest<AdminDashboardDTO>('/api/v1/identity/dashboard')
+  return apiRequest<AdminDashboardDTO>('/api/v1/restaurant/dashboard')
+}
+
+export function listStaffUsers(): Promise<StaffUserDTO[]> {
+  return apiRequest<StaffUserDTO[]>('/api/v1/restaurant/users')
+}
+
+export function listRoles(): Promise<RoleDTO[]> {
+  return apiRequest<RoleDTO[]>('/api/v1/restaurant/users/roles')
+}
+
+export function manageStaffUser(body: ManageUserRequest): Promise<ManageUserResult> {
+  return apiRequest<ManageUserResult>('/api/v1/restaurant/users', {
+    method: 'POST',
+    body,
+  })
 }

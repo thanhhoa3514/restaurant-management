@@ -12,23 +12,32 @@ import { restrictToParentElement } from '@dnd-kit/modifiers'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { WF_TABLE_LAYOUT, WF_LANDMARKS } from '@/features/waiter/data/seed'
-import { Save, Plus, GripVertical } from 'lucide-react'
+import { WF_LANDMARKS } from '@/features/waiter/data/seed'
+import { useStaffTables } from '@/features/waiter/queries/useStaffTables'
+import { Save, GripVertical } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface TableData {
   id: string
-  number: number
+  code: string
   capacity: number
   x: number
   y: number
 }
 
 export function FloorBuilder() {
-  const [tables, setTables] = useState<TableData[]>(
-    WF_TABLE_LAYOUT.map((t: { number: number, capacity: number, x: number, y: number }) => ({ ...t, id: `T${t.number}` }))
-  )
-  const [isSaving, setIsSaving] = useState(false)
+  const { tables: dbTables, isLoading, isError } = useStaffTables()
+  // ponytail: chỉ giữ toạ độ đã kéo trong state, phần còn lại đọc thẳng từ query
+  // -> refetch 8s không ghi đè thao tác kéo, không phải đồng bộ hai nguồn.
+  const [moved, setMoved] = useState<Record<string, { x: number; y: number }>>({})
+
+  const tables: TableData[] = dbTables.map((t) => ({
+    id: t.id,
+    code: t.code,
+    capacity: t.capacity,
+    x: moved[t.id]?.x ?? t.position.x_pct,
+    y: moved[t.id]?.y ?? t.position.y_pct,
+  }))
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -43,59 +52,43 @@ export function FloorBuilder() {
     const { active, delta } = event
     if (!delta.x && !delta.y) return
 
-    setTables((prev: TableData[]) =>
-      prev.map((t: TableData) => {
-        if (t.id === active.id) {
-          // Approximate pixel to percentage conversion based on typical container
-          // You'd calculate the actual width/height of the container ideally
-          // but for this mock, a simplistic scaling works.
-          const parentWidth = window.innerWidth > 1280 ? 1100 : window.innerWidth - 100
-          const parentHeight = 620
-          
-          const dxPct = (delta.x / parentWidth) * 100
-          const dyPct = (delta.y / parentHeight) * 100
-          
-          return {
-            ...t,
-            x: Math.max(0, Math.min(100, t.x + dxPct)),
-            y: Math.max(0, Math.min(100, t.y + dyPct)),
-          }
-        }
-        return t
-      })
-    )
-  }
+    const current = tables.find((t) => t.id === active.id)
+    if (!current) return
 
-  const handleSave = () => {
-    setIsSaving(true)
-    setTimeout(() => {
-      setIsSaving(false)
-      // Toast notification would go here in a real app
-    }, 1000)
-  }
+    // Approximate pixel to percentage conversion based on typical container
+    const parentWidth = window.innerWidth > 1280 ? 1100 : window.innerWidth - 100
+    const parentHeight = 620
 
-  const handleAddTable = () => {
-    const nextNum = Math.max(...tables.map((t: TableData) => t.number)) + 1
-    setTables([
-      ...tables,
-      { id: `T${nextNum}`, number: nextNum, capacity: 4, x: 50, y: 50 },
-    ])
+    const dxPct = (delta.x / parentWidth) * 100
+    const dyPct = (delta.y / parentHeight) * 100
+
+    setMoved((prev) => ({
+      ...prev,
+      [current.id]: {
+        x: Math.max(0, Math.min(100, current.x + dxPct)),
+        y: Math.max(0, Math.min(100, current.y + dyPct)),
+      },
+    }))
   }
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Floor Plan Builder</h2>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleAddTable}>
-            <Plus className="size-4" />
-            Add Table
-          </Button>
-          <Button onClick={handleSave} disabled={isSaving}>
-            <Save className="size-4" />
-            {isSaving ? 'Saving...' : 'Save Layout'}
-          </Button>
+        <div>
+          <h2 className="text-xl font-bold">Sơ đồ bàn</h2>
+          <p className="text-xs text-zinc-500">
+            {isLoading
+              ? 'Đang tải bàn…'
+              : isError
+                ? 'Không tải được danh sách bàn'
+                : `${tables.length} bàn`}
+          </p>
         </div>
+        {/* ponytail: lưu cần PATCH position_x/position_y — chưa có endpoint, disable thay vì giả vờ lưu */}
+        <Button disabled title="Cần API lưu toạ độ bàn">
+          <Save className="size-4" />
+          Lưu sơ đồ
+        </Button>
       </div>
 
       <DndContext
@@ -169,8 +162,8 @@ function DraggableTable({ table }: { table: TableData }) {
       {...attributes}
     >
       <GripVertical className="absolute top-2 size-3 text-zinc-400 opacity-50" />
-      <span className="mt-2 text-2xl font-bold leading-none tracking-tight tabular-nums text-zinc-800 dark:text-zinc-200">
-        {table.number}
+      <span className="mt-2 text-lg font-bold leading-none tracking-tight text-zinc-800 dark:text-zinc-200">
+        {table.code}
       </span>
       <span className="mt-1 text-[10px] font-bold text-zinc-500">
         CAP: {table.capacity}

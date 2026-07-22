@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -16,19 +17,24 @@ import (
 	"restaurant-management/internal/shared/apperr"
 )
 
-type Repository struct{ pool *pgxpool.Pool }
+type Repository struct {
+	pool       *pgxpool.Pool
+	defaultRID uuid.UUID
+}
 
-func NewRepository(pool *pgxpool.Pool) *Repository { return &Repository{pool: pool} }
+func NewRepository(pool *pgxpool.Pool, defaultRID uuid.UUID) *Repository {
+	return &Repository{pool: pool, defaultRID: defaultRID}
+}
 
 func (r *Repository) q(ctx context.Context) pg.Querier { return pg.QuerierFromContext(ctx, r.pool) }
 
 func (r *Repository) FindTable(ctx context.Context, restaurantID, tableID uuid.UUID) (*domain.Table, error) {
 	t := &domain.Table{}
 	err := r.q(ctx).QueryRow(ctx, `
-		SELECT id, restaurant_id, COALESCE(area_id, '00000000-0000-0000-0000-000000000000'::uuid), code, name, version, deleted_at
+		SELECT id, restaurant_id, COALESCE(area_id, '00000000-0000-0000-0000-000000000000'::uuid), code, name, capacity, status, version, deleted_at
 		FROM tables
 		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
-	`, restaurantID, tableID).Scan(&t.ID, &t.RestaurantID, &t.AreaID, &t.Code, &t.Name, &t.Version, &t.DeletedAt)
+	`, restaurantID, tableID).Scan(&t.ID, &t.RestaurantID, &t.AreaID, &t.Code, &t.Name, &t.Capacity, &t.Status, &t.Version, &t.DeletedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, apperr.New(apperr.CodeNotFound, "table not found")
 	}
@@ -68,6 +74,15 @@ func (r *Repository) CreateSession(ctx context.Context, s *domain.DiningSession)
 	return err
 }
 
+func (r *Repository) UpdateSessionCustomerName(ctx context.Context, sessionID uuid.UUID, name string) error {
+	_, err := r.q(ctx).Exec(ctx, `
+		UPDATE dining_sessions
+		SET customer_name = $1, updated_at = NOW()
+		WHERE id = $2 AND deleted_at IS NULL
+	`, name, sessionID)
+	return err
+}
+
 func (r *Repository) FindQRByToken(ctx context.Context, qrToken string) (*domain.QRCode, error) {
 	qr := &domain.QRCode{}
 	err := r.q(ctx).QueryRow(ctx, `
@@ -86,9 +101,9 @@ func (r *Repository) FindQRByToken(ctx context.Context, qrToken string) (*domain
 
 func (r *Repository) FindActiveSessionByTable(ctx context.Context, restaurantID, tableID uuid.UUID) (*domain.DiningSession, error) {
 	s := &domain.DiningSession{}
-	var qrCodeID, openedBy pgtype.UUID
+	var qrCodeID, openedBy, mergeGroupID pgtype.UUID
 	err := r.q(ctx).QueryRow(ctx, activeSessionSelect(`restaurant_id = $1 AND table_id = $2`), restaurantID, tableID).Scan(
-		&s.ID, &s.RestaurantID, &s.TableID, &qrCodeID, &s.SessionCode, &s.SessionToken, &s.Status, &s.OpenedVia, &openedBy, &s.Version, &s.ClosedAt,
+		&s.ID, &s.RestaurantID, &s.TableID, &qrCodeID, &s.SessionCode, &s.SessionToken, &s.Status, &s.OpenedVia, &openedBy, &mergeGroupID, &s.Version, &s.ClosedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, apperr.New(apperr.CodeNotFound, "active session not found")
@@ -96,14 +111,7 @@ func (r *Repository) FindActiveSessionByTable(ctx context.Context, restaurantID,
 	if err != nil {
 		return nil, err
 	}
-	if qrCodeID.Valid {
-		id := uuid.UUID(qrCodeID.Bytes)
-		s.QRCodeID = &id
-	}
-	if openedBy.Valid {
-		id := uuid.UUID(openedBy.Bytes)
-		s.OpenedBy = &id
-	}
+	fullSessionRow(s, &qrCodeID, &openedBy, &mergeGroupID)
 	return s, nil
 }
 
@@ -113,7 +121,7 @@ func (r *Repository) ValidateSessionToken(ctx context.Context, token string) (au
 		SELECT restaurant_id, id, table_id
 		FROM dining_sessions
 		WHERE session_token = $1
-		  AND status IN ('ACTIVE', 'AWAITING_PAYMENT')
+		  AND status IN ('PENDING_VERIFICATION', 'ACTIVE', 'AWAITING_PAYMENT')
 		  AND deleted_at IS NULL
 	`, strings.TrimSpace(token)).Scan(&out.RestaurantID, &out.SessionID, &out.TableID)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -127,15 +135,27 @@ func (r *Repository) ValidateSessionToken(ctx context.Context, token string) (au
 
 func (r *Repository) ListTablesWithActiveQR(ctx context.Context, restaurantID uuid.UUID) ([]domain.TableWithQR, error) {
 	rows, err := r.q(ctx).Query(ctx, `
-		SELECT t.id, t.code, t.name, t.status, q.id, q.token
+		SELECT t.id, t.code, t.name, t.status, t.capacity,
+		       a.id, COALESCE(a.name, ''), COALESCE(a.display_order, 0),
+		       q.id, q.token,
+		       EXISTS (
+		           SELECT 1 FROM dining_sessions ds
+		           WHERE ds.restaurant_id = t.restaurant_id
+		             AND ds.table_id = t.id
+		             AND ds.status IN ('ACTIVE', 'AWAITING_PAYMENT')
+		             AND ds.deleted_at IS NULL
+		       ) AS has_active_session
 		FROM tables t
+		LEFT JOIN areas a
+		  ON a.id = t.area_id
+		 AND a.deleted_at IS NULL
 		LEFT JOIN qr_codes q
 		  ON q.restaurant_id = t.restaurant_id
 		 AND q.table_id = t.id
 		 AND q.is_active = TRUE
 		 AND q.deleted_at IS NULL
 		WHERE t.restaurant_id = $1 AND t.deleted_at IS NULL
-		ORDER BY t.code
+		ORDER BY COALESCE(a.display_order, 0), t.code
 	`, restaurantID)
 	if err != nil {
 		return nil, err
@@ -146,9 +166,14 @@ func (r *Repository) ListTablesWithActiveQR(ctx context.Context, restaurantID uu
 	for rows.Next() {
 		var row domain.TableWithQR
 		var qrID pgtype.UUID
+		var areaID pgtype.UUID
 		var token pgtype.Text
-		if err := rows.Scan(&row.TableID, &row.TableCode, &row.TableName, &row.Status, &qrID, &token); err != nil {
+		if err := rows.Scan(&row.TableID, &row.TableCode, &row.TableName, &row.Status, &row.Capacity, &areaID, &row.AreaName, &row.AreaOrder, &qrID, &token, &row.HasActiveSession); err != nil {
 			return nil, err
+		}
+		if areaID.Valid {
+			id := uuid.UUID(areaID.Bytes)
+			row.AreaID = &id
 		}
 		if qrID.Valid {
 			id := uuid.UUID(qrID.Bytes)
@@ -186,14 +211,14 @@ func (r *Repository) CreateQR(ctx context.Context, qr *domain.QRCode) error {
 
 func (r *Repository) CloseSession(ctx context.Context, restaurantID, sessionID uuid.UUID, closedBy *uuid.UUID) (*domain.DiningSession, bool, error) {
 	s := &domain.DiningSession{}
-	var qrCodeID, openedBy pgtype.UUID
+	var qrCodeID, openedBy, mergeGroupID pgtype.UUID
 	err := r.q(ctx).QueryRow(ctx, `
-		SELECT id, restaurant_id, table_id, qr_code_id, session_code, COALESCE(session_token, ''), status, opened_via, opened_by, version, closed_at
+		SELECT id, restaurant_id, table_id, qr_code_id, session_code, COALESCE(session_token, ''), status, opened_via, opened_by, merge_group_id, version, closed_at
 		FROM dining_sessions
 		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
 		FOR UPDATE
 	`, restaurantID, sessionID).Scan(
-		&s.ID, &s.RestaurantID, &s.TableID, &qrCodeID, &s.SessionCode, &s.SessionToken, &s.Status, &s.OpenedVia, &openedBy, &s.Version, &s.ClosedAt,
+		&s.ID, &s.RestaurantID, &s.TableID, &qrCodeID, &s.SessionCode, &s.SessionToken, &s.Status, &s.OpenedVia, &openedBy, &mergeGroupID, &s.Version, &s.ClosedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, false, apperr.New(apperr.CodeNotFound, "dining session not found")
@@ -201,19 +226,37 @@ func (r *Repository) CloseSession(ctx context.Context, restaurantID, sessionID u
 	if err != nil {
 		return nil, false, err
 	}
-	if qrCodeID.Valid {
-		id := uuid.UUID(qrCodeID.Bytes)
-		s.QRCodeID = &id
-	}
-	if openedBy.Valid {
-		id := uuid.UUID(openedBy.Bytes)
-		s.OpenedBy = &id
-	}
+	fullSessionRow(s, &qrCodeID, &openedBy, &mergeGroupID)
 	if s.Status == domain.SessionClosed {
 		return s, false, nil
 	}
 	if s.Status != domain.SessionActive && s.Status != domain.SessionAwaitingPayment {
 		return nil, false, apperr.New(apperr.CodeConflict, "dining session is not closable")
+	}
+
+	closingIDs := []uuid.UUID{sessionID}
+	if s.MergeGroupID != nil {
+		rows, err := r.q(ctx).Query(ctx, `
+			SELECT id
+			FROM dining_sessions
+			WHERE restaurant_id = $1 AND merge_group_id = $2 AND deleted_at IS NULL
+		`, restaurantID, *s.MergeGroupID)
+		if err != nil {
+			return nil, false, err
+		}
+		closingIDs = closingIDs[:0]
+		for rows.Next() {
+			var id uuid.UUID
+			if err := rows.Scan(&id); err != nil {
+				rows.Close()
+				return nil, false, err
+			}
+			closingIDs = append(closingIDs, id)
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return nil, false, err
+		}
 	}
 
 	var hasUnpaidInvoice bool
@@ -222,12 +265,12 @@ func (r *Repository) CloseSession(ctx context.Context, restaurantID, sessionID u
 			SELECT 1
 			FROM invoices
 			WHERE restaurant_id = $1
-			  AND dining_session_id = $2
+			  AND dining_session_id = ANY($2)
 			  AND status <> 'VOID'
 			  AND status <> 'PAID'
 			  AND deleted_at IS NULL
 		)
-	`, restaurantID, sessionID).Scan(&hasUnpaidInvoice); err != nil {
+	`, restaurantID, closingIDs).Scan(&hasUnpaidInvoice); err != nil {
 		return nil, false, err
 	}
 	if hasUnpaidInvoice {
@@ -247,11 +290,33 @@ func (r *Repository) CloseSession(ctx context.Context, restaurantID, sessionID u
 	if err != nil {
 		return nil, false, err
 	}
+	if len(closingIDs) > 1 {
+		if _, err := r.q(ctx).Exec(ctx, `
+			UPDATE dining_sessions
+			SET status = 'CLOSED',
+			    closed_at = COALESCE(closed_at, NOW()),
+			    closed_by = COALESCE(closed_by, $3),
+			    version = version + 1,
+			    updated_at = NOW()
+			WHERE restaurant_id = $1 AND id = ANY($2) AND status <> 'CLOSED' AND deleted_at IS NULL
+		`, restaurantID, closingIDs, closedBy); err != nil {
+			return nil, false, err
+		}
+		if _, err := r.q(ctx).Exec(ctx, `
+			UPDATE table_merge_groups
+			SET is_active = FALSE, version = version + 1, updated_at = NOW()
+			WHERE restaurant_id = $1 AND id = $2
+		`, restaurantID, *s.MergeGroupID); err != nil {
+			return nil, false, err
+		}
+	}
+
 	if _, err := r.q(ctx).Exec(ctx, `
 		UPDATE tables
 		SET status = 'AVAILABLE', version = version + 1, updated_at = NOW()
-		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
-	`, restaurantID, s.TableID); err != nil {
+		WHERE restaurant_id = $1 AND deleted_at IS NULL
+		  AND id IN (SELECT table_id FROM dining_sessions WHERE restaurant_id = $1 AND id = ANY($2))
+	`, restaurantID, closingIDs); err != nil {
 		return nil, false, err
 	}
 	return s, true, nil
@@ -259,12 +324,314 @@ func (r *Repository) CloseSession(ctx context.Context, restaurantID, sessionID u
 
 func activeSessionSelect(where string) string {
 	return `
-		SELECT id, restaurant_id, table_id, qr_code_id, session_code, session_token, status, opened_via, opened_by, version, closed_at
+		SELECT id, restaurant_id, table_id, qr_code_id, session_code, session_token, status, opened_via, opened_by, merge_group_id, version, closed_at
 		FROM dining_sessions
 		WHERE ` + where + `
-		  AND status IN ('ACTIVE', 'AWAITING_PAYMENT')
+		  AND status IN ('PENDING_VERIFICATION', 'ACTIVE', 'AWAITING_PAYMENT')
 		  AND deleted_at IS NULL
 		ORDER BY opened_at DESC
 		LIMIT 1
 	`
+}
+
+func (r *Repository) FindSessionByID(ctx context.Context, restaurantID, sessionID uuid.UUID) (*domain.DiningSession, error) {
+	s := &domain.DiningSession{}
+	var qrCodeID, openedBy, mergeGroupID pgtype.UUID
+	err := r.q(ctx).QueryRow(ctx, `
+		SELECT id, restaurant_id, table_id, qr_code_id, session_code, session_token, status, opened_via, opened_by, merge_group_id, version, closed_at
+		FROM dining_sessions
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, restaurantID, sessionID).Scan(
+		&s.ID, &s.RestaurantID, &s.TableID, &qrCodeID, &s.SessionCode, &s.SessionToken, &s.Status, &s.OpenedVia, &openedBy, &mergeGroupID, &s.Version, &s.ClosedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperr.New(apperr.CodeNotFound, "dining session not found")
+	}
+	if err != nil {
+		return nil, err
+	}
+	fullSessionRow(s, &qrCodeID, &openedBy, &mergeGroupID)
+	return s, nil
+}
+
+func (r *Repository) CreateMergeGroup(ctx context.Context, g *domain.MergeGroup) error {
+	return r.q(ctx).QueryRow(ctx, `
+		INSERT INTO table_merge_groups (restaurant_id, merged_by, note)
+		VALUES ($1, $2, $3)
+		RETURNING id
+	`, g.RestaurantID, g.MergedBy, g.Note).Scan(&g.ID)
+}
+
+func (r *Repository) DeactivateMergeGroup(ctx context.Context, restaurantID, groupID uuid.UUID) error {
+	_, err := r.q(ctx).Exec(ctx, `
+		UPDATE table_merge_groups
+		SET is_active = FALSE, version = version + 1, updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND is_active = TRUE AND deleted_at IS NULL
+	`, restaurantID, groupID)
+	return err
+}
+
+func (r *Repository) FindActiveMergeGroup(ctx context.Context, restaurantID, groupID uuid.UUID) (*domain.MergeGroup, error) {
+	g := &domain.MergeGroup{}
+	var mergedBy pgtype.UUID
+	err := r.q(ctx).QueryRow(ctx, `
+		SELECT id, restaurant_id, merged_by, note, is_active, version, deleted_at
+		FROM table_merge_groups
+		WHERE restaurant_id = $1 AND id = $2 AND is_active = TRUE AND deleted_at IS NULL
+	`, restaurantID, groupID).Scan(&g.ID, &g.RestaurantID, &mergedBy, &g.Note, &g.IsActive, &g.Version, &g.DeletedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperr.New(apperr.CodeNotFound, "active merge group not found")
+	}
+	if err != nil {
+		return nil, err
+	}
+	if mergedBy.Valid {
+		id := uuid.UUID(mergedBy.Bytes)
+		g.MergedBy = &id
+	}
+	return g, nil
+}
+
+// fullSessionRow scans a single dining_sessions row into a DiningSession, including merge_group_id.
+func fullSessionRow(s *domain.DiningSession, qrCodeID, openedBy, mergeGroupID *pgtype.UUID) {
+	if qrCodeID != nil && qrCodeID.Valid {
+		id := uuid.UUID(qrCodeID.Bytes)
+		s.QRCodeID = &id
+	}
+	if openedBy != nil && openedBy.Valid {
+		id := uuid.UUID(openedBy.Bytes)
+		s.OpenedBy = &id
+	}
+	if mergeGroupID != nil && mergeGroupID.Valid {
+		id := uuid.UUID(mergeGroupID.Bytes)
+		s.MergeGroupID = &id
+	}
+}
+
+func (r *Repository) FindSessionsByMergeGroup(ctx context.Context, restaurantID, groupID uuid.UUID) ([]domain.DiningSession, error) {
+	rows, err := r.q(ctx).Query(ctx, `
+		SELECT id, restaurant_id, table_id, qr_code_id, session_code, session_token, status, opened_via, opened_by, merge_group_id, version, closed_at
+		FROM dining_sessions
+		WHERE restaurant_id = $1 AND merge_group_id = $2 AND status IN ('ACTIVE', 'AWAITING_PAYMENT') AND deleted_at IS NULL
+		ORDER BY opened_at
+	`, restaurantID, groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []domain.DiningSession
+	for rows.Next() {
+		var s domain.DiningSession
+		var qrCodeID, openedBy, mergeGroupID pgtype.UUID
+		if err := rows.Scan(&s.ID, &s.RestaurantID, &s.TableID, &qrCodeID, &s.SessionCode, &s.SessionToken, &s.Status, &s.OpenedVia, &openedBy, &mergeGroupID, &s.Version, &s.ClosedAt); err != nil {
+			return nil, err
+		}
+		fullSessionRow(&s, &qrCodeID, &openedBy, &mergeGroupID)
+		out = append(out, s)
+	}
+	return out, rows.Err()
+}
+
+func (r *Repository) UpdateSessionMergeGroup(ctx context.Context, sessionID uuid.UUID, mergeGroupID *uuid.UUID) error {
+	_, err := r.q(ctx).Exec(ctx, `
+		UPDATE dining_sessions
+		SET merge_group_id = $2, version = version + 1, updated_at = NOW()
+		WHERE id = $1 AND deleted_at IS NULL
+	`, sessionID, mergeGroupID)
+	return err
+}
+
+func (r *Repository) FindSessionsPendingVerification(ctx context.Context, restaurantID uuid.UUID) ([]domain.DiningSession, error) {
+	rows, err := r.q(ctx).Query(ctx, `
+		SELECT id, restaurant_id, table_id, qr_code_id, session_code, session_token, status, opened_via, opened_by, merge_group_id, version, closed_at
+		FROM dining_sessions
+		WHERE restaurant_id = $1 AND status = 'PENDING_VERIFICATION' AND deleted_at IS NULL
+		ORDER BY opened_at
+	`, restaurantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []domain.DiningSession
+	for rows.Next() {
+		var s domain.DiningSession
+		var qrCodeID, openedBy, mergeGroupID pgtype.UUID
+		if err := rows.Scan(&s.ID, &s.RestaurantID, &s.TableID, &qrCodeID, &s.SessionCode, &s.SessionToken, &s.Status, &s.OpenedVia, &openedBy, &mergeGroupID, &s.Version, &s.ClosedAt); err != nil {
+			return nil, err
+		}
+		fullSessionRow(&s, &qrCodeID, &openedBy, &mergeGroupID)
+		out = append(out, s)
+	}
+	return out, rows.Err()
+}
+
+func (r *Repository) VerifySession(ctx context.Context, restaurantID, sessionID uuid.UUID, verifiedBy *uuid.UUID) error {
+	tag, err := r.q(ctx).Exec(ctx, `
+		UPDATE dining_sessions
+		SET status = 'ACTIVE',
+		    opened_by = $3,
+		    version = version + 1,
+		    updated_at = NOW()
+		WHERE restaurant_id = $1
+		  AND id = $2
+		  AND status = 'PENDING_VERIFICATION'
+		  AND deleted_at IS NULL
+	`, restaurantID, sessionID, verifiedBy)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return apperr.New(apperr.CodeNotFound, "pending session not found")
+	}
+	return nil
+}
+
+func (r *Repository) ListAreas(ctx context.Context, restaurantID uuid.UUID) ([]domain.Area, error) {
+	rows, err := r.q(ctx).Query(ctx, `
+		SELECT id, restaurant_id, name, COALESCE(description, ''), display_order, is_active
+		FROM areas
+		WHERE restaurant_id = $1 AND deleted_at IS NULL
+		ORDER BY display_order, name
+	`, restaurantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]domain.Area, 0)
+	for rows.Next() {
+		var a domain.Area
+		if err := rows.Scan(&a.ID, &a.RestaurantID, &a.Name, &a.Description, &a.DisplayOrder, &a.IsActive); err != nil {
+			return nil, err
+		}
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}
+
+func duplicateTableCode(err error) error {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" && strings.Contains(pgErr.ConstraintName, "tables_restaurant_code") {
+		return apperr.New(apperr.CodeConflict, "table code already exists")
+	}
+	return err
+}
+
+func (r *Repository) CreateTable(ctx context.Context, t *domain.Table) error {
+	var areaID any
+	if t.AreaID != uuid.Nil {
+		areaID = t.AreaID
+	}
+	err := r.q(ctx).QueryRow(ctx, `
+		INSERT INTO tables (restaurant_id, area_id, code, name, capacity, status)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id, version
+	`, t.RestaurantID, areaID, t.Code, t.Name, t.Capacity, t.Status).Scan(&t.ID, &t.Version)
+	if err != nil {
+		return duplicateTableCode(err)
+	}
+	return nil
+}
+
+func (r *Repository) UpdateTable(ctx context.Context, t *domain.Table) error {
+	var areaID any
+	if t.AreaID != uuid.Nil {
+		areaID = t.AreaID
+	}
+	tag, err := r.q(ctx).Exec(ctx, `
+		UPDATE tables
+		SET area_id = $3, code = $4, name = $5, capacity = $6, status = $7,
+		    version = version + 1, updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, t.RestaurantID, t.ID, areaID, t.Code, t.Name, t.Capacity, t.Status)
+	if err != nil {
+		return duplicateTableCode(err)
+	}
+	if tag.RowsAffected() == 0 {
+		return apperr.New(apperr.CodeNotFound, "table not found")
+	}
+	return nil
+}
+
+func (r *Repository) SoftDeleteTable(ctx context.Context, restaurantID, tableID uuid.UUID) error {
+	tag, err := r.q(ctx).Exec(ctx, `
+		UPDATE tables
+		SET deleted_at = NOW(), status = 'INACTIVE', version = version + 1, updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, restaurantID, tableID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return apperr.New(apperr.CodeNotFound, "table not found")
+	}
+	return nil
+}
+func duplicateAreaName(err error) error {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" && strings.Contains(pgErr.ConstraintName, "areas_restaurant_name") {
+		return apperr.New(apperr.CodeConflict, "area name already exists")
+	}
+	return err
+}
+
+func (r *Repository) FindArea(ctx context.Context, restaurantID, areaID uuid.UUID) (*domain.Area, error) {
+	a := &domain.Area{}
+	err := r.q(ctx).QueryRow(ctx, `
+		SELECT id, restaurant_id, name, COALESCE(description, ''), display_order, is_active
+		FROM areas
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, restaurantID, areaID).Scan(&a.ID, &a.RestaurantID, &a.Name, &a.Description, &a.DisplayOrder, &a.IsActive)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperr.New(apperr.CodeNotFound, "area not found")
+	}
+	if err != nil {
+		return nil, err
+	}
+	return a, nil
+}
+
+func (r *Repository) CreateArea(ctx context.Context, a *domain.Area) error {
+	err := r.q(ctx).QueryRow(ctx, `
+		INSERT INTO areas (restaurant_id, name, description, display_order, is_active)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id
+	`, a.RestaurantID, a.Name, a.Description, a.DisplayOrder, a.IsActive).Scan(&a.ID)
+	if err != nil {
+		return duplicateAreaName(err)
+	}
+	return nil
+}
+
+func (r *Repository) UpdateArea(ctx context.Context, a *domain.Area) error {
+	tag, err := r.q(ctx).Exec(ctx, `
+		UPDATE areas
+		SET name = $3, description = $4, display_order = $5, is_active = $6,
+		    version = version + 1, updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, a.RestaurantID, a.ID, a.Name, a.Description, a.DisplayOrder, a.IsActive)
+	if err != nil {
+		return duplicateAreaName(err)
+	}
+	if tag.RowsAffected() == 0 {
+		return apperr.New(apperr.CodeNotFound, "area not found")
+	}
+	return nil
+}
+
+func (r *Repository) DeleteArea(ctx context.Context, restaurantID, areaID uuid.UUID) error {
+	tag, err := r.q(ctx).Exec(ctx, `
+		UPDATE areas
+		SET deleted_at = NOW(), is_active = FALSE, version = version + 1, updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, restaurantID, areaID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return apperr.New(apperr.CodeNotFound, "area not found")
+	}
+	return nil
 }

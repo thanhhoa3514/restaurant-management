@@ -8,20 +8,20 @@ import (
 
 	"restaurant-management/internal/modules/billing/domain"
 	"restaurant-management/internal/platform/outbox"
-	"restaurant-management/internal/platform/tenant"
 	"restaurant-management/internal/shared/apperr"
 )
 
 type ProcessPayment struct {
-	tx            TxRunner
-	repo          domain.InvoiceRepository
-	outbox        domain.OutboxWriter
-	gateways      *domain.GatewayRegistry
-	publicBaseURL string
+	tx                 TxRunner
+	repo               domain.InvoiceRepository
+	outbox             domain.OutboxWriter
+	gateways           *domain.GatewayRegistry
+	publicBaseURL      string
+	defaultRestaurantID uuid.UUID
 }
 
-func NewProcessPayment(tx TxRunner, repo domain.InvoiceRepository, outbox domain.OutboxWriter, gateways *domain.GatewayRegistry, publicBaseURL string) *ProcessPayment {
-	return &ProcessPayment{tx: tx, repo: repo, outbox: outbox, gateways: gateways, publicBaseURL: strings.TrimRight(publicBaseURL, "/")}
+func NewProcessPayment(tx TxRunner, repo domain.InvoiceRepository, outbox domain.OutboxWriter, gateways *domain.GatewayRegistry, publicBaseURL string, defaultRestaurantID uuid.UUID) *ProcessPayment {
+	return &ProcessPayment{tx: tx, repo: repo, outbox: outbox, gateways: gateways, publicBaseURL: strings.TrimRight(publicBaseURL, "/"), defaultRestaurantID: defaultRestaurantID}
 }
 
 func (s *ProcessPayment) Handle(ctx context.Context, in ProcessPaymentRequest) (InvoiceResponse, error) {
@@ -36,12 +36,8 @@ func (s *ProcessPayment) Handle(ctx context.Context, in ProcessPaymentRequest) (
 	if in.ActorID == uuidNil {
 		return out, apperr.New(apperr.CodeUnauthorized, "invalid user claim")
 	}
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return out, err
-	}
-	err = s.tx.Run(ctx, func(ctx context.Context) error {
-		method, err := s.repo.FindPaymentMethod(ctx, restaurantID, methodCode)
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
+		method, err := s.repo.FindPaymentMethod(ctx, s.defaultRestaurantID, methodCode)
 		if err != nil {
 			return err
 		}
@@ -50,7 +46,7 @@ func (s *ProcessPayment) Handle(ctx context.Context, in ProcessPaymentRequest) (
 			return apperr.New(apperr.CodeNotImplemented, "payment provider not configured")
 		}
 		if method.Type == "E_WALLET" && hasGateway {
-			invoice, err := s.processAsync(ctx, restaurantID, method.Code, gateway, in)
+			invoice, err := s.processAsync(ctx, method.Code, gateway, in)
 			if err != nil {
 				return err
 			}
@@ -61,7 +57,7 @@ func (s *ProcessPayment) Handle(ctx context.Context, in ProcessPaymentRequest) (
 		if in.ReceivedAmountVND <= 0 {
 			return apperr.New(apperr.CodeInvalid, "received_amount_vnd must be positive")
 		}
-		invoice, err := s.repo.ProcessPayment(ctx, restaurantID, domain.PaymentInput{
+		invoice, err := s.repo.ProcessPayment(ctx, s.defaultRestaurantID, domain.PaymentInput{
 			InvoiceID:         in.InvoiceID,
 			PaymentMethodCode: method.Code,
 			ReceivedAmountVND: in.ReceivedAmountVND,
@@ -71,7 +67,7 @@ func (s *ProcessPayment) Handle(ctx context.Context, in ProcessPaymentRequest) (
 		if err != nil {
 			return err
 		}
-		if err := s.writePaymentCompleted(ctx, restaurantID, invoice, in.ActorID); err != nil {
+		if err := s.writePaymentCompleted(ctx, invoice, in.ActorID); err != nil {
 			return err
 		}
 		out = toResponse(invoice)
@@ -80,8 +76,8 @@ func (s *ProcessPayment) Handle(ctx context.Context, in ProcessPaymentRequest) (
 	return out, err
 }
 
-func (s *ProcessPayment) processAsync(ctx context.Context, restaurantID uuid.UUID, methodCode string, gateway domain.PaymentGateway, in ProcessPaymentRequest) (*domain.Invoice, error) {
-	prep, err := s.repo.PrepareAsyncPayment(ctx, restaurantID, domain.AsyncPaymentInput{InvoiceID: in.InvoiceID, PaymentMethodCode: methodCode, ProcessedBy: in.ActorID})
+func (s *ProcessPayment) processAsync(ctx context.Context, methodCode string, gateway domain.PaymentGateway, in ProcessPaymentRequest) (*domain.Invoice, error) {
+	prep, err := s.repo.PrepareAsyncPayment(ctx, s.defaultRestaurantID, domain.AsyncPaymentInput{InvoiceID: in.InvoiceID, PaymentMethodCode: methodCode, ProcessedBy: in.ActorID})
 	if err != nil {
 		return nil, err
 	}
@@ -105,13 +101,13 @@ func (s *ProcessPayment) processAsync(ctx context.Context, restaurantID uuid.UUI
 	if err != nil {
 		return nil, err
 	}
-	invoice, err := s.repo.AttachGatewayResult(ctx, restaurantID, prep.Payment.ID, result)
+	invoice, err := s.repo.AttachGatewayResult(ctx, s.defaultRestaurantID, prep.Payment.ID, result)
 	if err != nil {
 		return nil, err
 	}
 	if s.outbox != nil {
 		if err := s.outbox.Write(ctx, outbox.WriteEvent{
-			RestaurantID:  restaurantID,
+			RestaurantID:  s.defaultRestaurantID,
 			AggregateType: "invoice",
 			AggregateID:   invoice.ID,
 			EventType:     "billing.payment_initiated",
@@ -131,12 +127,12 @@ func (s *ProcessPayment) processAsync(ctx context.Context, restaurantID uuid.UUI
 	return invoice, nil
 }
 
-func (s *ProcessPayment) writePaymentCompleted(ctx context.Context, restaurantID uuid.UUID, invoice *domain.Invoice, actorID uuid.UUID) error {
+func (s *ProcessPayment) writePaymentCompleted(ctx context.Context, invoice *domain.Invoice, actorID uuid.UUID) error {
 	if s.outbox == nil || invoice == nil || invoice.Payment == nil {
 		return nil
 	}
 	if err := s.outbox.Write(ctx, outbox.WriteEvent{
-		RestaurantID:  restaurantID,
+		RestaurantID:  s.defaultRestaurantID,
 		AggregateType: "invoice",
 		AggregateID:   invoice.ID,
 		EventType:     "billing.payment_completed",
@@ -155,7 +151,7 @@ func (s *ProcessPayment) writePaymentCompleted(ctx context.Context, restaurantID
 		return err
 	}
 	return s.outbox.Write(ctx, outbox.WriteEvent{
-		RestaurantID:  restaurantID,
+		RestaurantID:  s.defaultRestaurantID,
 		AggregateType: "dining_session",
 		AggregateID:   invoice.DiningSessionID,
 		EventType:     "dining.session_closed",

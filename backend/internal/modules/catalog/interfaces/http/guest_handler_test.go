@@ -26,6 +26,12 @@ func (fakeMenuReadRepo) ListItems(context.Context, uuid.UUID, *uuid.UUID) ([]dom
 func (fakeMenuReadRepo) GetItem(context.Context, uuid.UUID, uuid.UUID) (*domain.MenuItemDetail, error) {
 	return nil, nil
 }
+func (fakeMenuReadRepo) ListItemsAdmin(context.Context, uuid.UUID, *uuid.UUID) ([]domain.AdminMenuItemSummary, error) {
+	return []domain.AdminMenuItemSummary{}, nil
+}
+func (fakeMenuReadRepo) GetItemAdmin(context.Context, uuid.UUID, uuid.UUID) (*domain.AdminMenuItemDetail, error) {
+	return nil, nil
+}
 
 type fakeSessionValidator struct {
 	err error
@@ -41,16 +47,16 @@ func (v fakeSessionValidator) ValidateSessionToken(context.Context, string) (aut
 func guestRouter(v auth.SessionValidator) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	repo := fakeMenuReadRepo{}
-	h := NewHandler(nil, nil, nil, nil, application.NewListCategories(repo), application.NewListMenuItems(repo), application.NewGetMenuItem(repo))
+	h := NewHandler(nil, nil, nil, nil, application.NewListCategories(repo, uuid.Nil), application.NewListMenuItems(repo, uuid.Nil), application.NewGetMenuItem(repo, uuid.Nil), application.NewListAdminMenuItems(repo, uuid.Nil), application.NewGetAdminMenuItem(repo, uuid.Nil), nil)
 	r := gin.New()
-	guestGroup := r.Group("/api/v1/guest", auth.QRSessionToken(v))
+	guestGroup := r.Group("/api/v1/customer", auth.QRSessionToken(v))
 	h.RegisterGuestRoutes(guestGroup)
 	return r
 }
 
 func TestGuestMenuRoutesRequireSessionToken(t *testing.T) {
 	r := guestRouter(fakeSessionValidator{})
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/guest/menu/categories", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/customer/menu/categories", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	require.Equal(t, http.StatusUnauthorized, w.Code)
@@ -58,7 +64,7 @@ func TestGuestMenuRoutesRequireSessionToken(t *testing.T) {
 
 func TestGuestMenuItemsBadCategoryIDReturns400(t *testing.T) {
 	r := guestRouter(fakeSessionValidator{})
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/guest/menu/items?category_id=bad", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/customer/menu/items?category_id=bad", nil)
 	req.Header.Set("X-Session-Token", "valid")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -67,7 +73,7 @@ func TestGuestMenuItemsBadCategoryIDReturns400(t *testing.T) {
 
 func TestGuestMenuItemBadPathIDReturns400(t *testing.T) {
 	r := guestRouter(fakeSessionValidator{})
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/guest/menu/items/bad", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/customer/menu/items/bad", nil)
 	req.Header.Set("X-Session-Token", "valid")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)

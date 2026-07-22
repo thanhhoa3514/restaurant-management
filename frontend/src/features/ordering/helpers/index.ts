@@ -1,18 +1,15 @@
 import type { CartLine } from '../types'
 
+const vndFormatter = new Intl.NumberFormat('vi-VN', {
+  style: 'currency',
+  currency: 'VND',
+})
+
 export function formatVND(price: number): string {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-  }).format(price)
+  return vndFormatter.format(price)
 }
 
-export function formatTime(date: Date): string {
-  return date.toLocaleTimeString('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
+export { fmtTime as formatTime } from '@/shared/date'
 
 // One-line summary of a cart line's variant + chosen options, for display.
 export function summarizeCartLine(line: CartLine): string {

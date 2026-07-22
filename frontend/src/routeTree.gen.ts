@@ -17,7 +17,10 @@ import { Route as CashierRouteImport } from './routes/cashier'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminTableQrsRouteImport } from './routes/admin.table-qrs'
-import { Route as AdminFloorPlanRouteImport } from './routes/admin.floor-plan'
+import { Route as AdminStaffRouteImport } from './routes/admin.staff'
+import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
+import { Route as AdminReportsRouteImport } from './routes/admin.reports'
+import { Route as AdminCatalogRouteImport } from './routes/admin.catalog'
 
 const WaiterRoute = WaiterRouteImport.update({
   id: '/waiter',
@@ -59,9 +62,24 @@ const AdminTableQrsRoute = AdminTableQrsRouteImport.update({
   path: '/table-qrs',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminFloorPlanRoute = AdminFloorPlanRouteImport.update({
-  id: '/floor-plan',
-  path: '/floor-plan',
+const AdminStaffRoute = AdminStaffRouteImport.update({
+  id: '/staff',
+  path: '/staff',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminReportsRoute = AdminReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCatalogRoute = AdminCatalogRouteImport.update({
+  id: '/catalog',
+  path: '/catalog',
   getParentRoute: () => AdminRoute,
 } as any)
 
@@ -73,7 +91,10 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/order': typeof OrderRoute
   '/waiter': typeof WaiterRoute
-  '/admin/floor-plan': typeof AdminFloorPlanRoute
+  '/admin/catalog': typeof AdminCatalogRoute
+  '/admin/reports': typeof AdminReportsRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/staff': typeof AdminStaffRoute
   '/admin/table-qrs': typeof AdminTableQrsRoute
 }
 export interface FileRoutesByTo {
@@ -84,7 +105,10 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/order': typeof OrderRoute
   '/waiter': typeof WaiterRoute
-  '/admin/floor-plan': typeof AdminFloorPlanRoute
+  '/admin/catalog': typeof AdminCatalogRoute
+  '/admin/reports': typeof AdminReportsRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/staff': typeof AdminStaffRoute
   '/admin/table-qrs': typeof AdminTableQrsRoute
 }
 export interface FileRoutesById {
@@ -96,7 +120,10 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/order': typeof OrderRoute
   '/waiter': typeof WaiterRoute
-  '/admin/floor-plan': typeof AdminFloorPlanRoute
+  '/admin/catalog': typeof AdminCatalogRoute
+  '/admin/reports': typeof AdminReportsRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/staff': typeof AdminStaffRoute
   '/admin/table-qrs': typeof AdminTableQrsRoute
 }
 export interface FileRouteTypes {
@@ -109,7 +136,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/order'
     | '/waiter'
-    | '/admin/floor-plan'
+    | '/admin/catalog'
+    | '/admin/reports'
+    | '/admin/settings'
+    | '/admin/staff'
     | '/admin/table-qrs'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -120,7 +150,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/order'
     | '/waiter'
-    | '/admin/floor-plan'
+    | '/admin/catalog'
+    | '/admin/reports'
+    | '/admin/settings'
+    | '/admin/staff'
     | '/admin/table-qrs'
   id:
     | '__root__'
@@ -131,7 +164,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/order'
     | '/waiter'
-    | '/admin/floor-plan'
+    | '/admin/catalog'
+    | '/admin/reports'
+    | '/admin/settings'
+    | '/admin/staff'
     | '/admin/table-qrs'
   fileRoutesById: FileRoutesById
 }
@@ -203,23 +239,50 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminTableQrsRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/floor-plan': {
-      id: '/admin/floor-plan'
-      path: '/floor-plan'
-      fullPath: '/admin/floor-plan'
-      preLoaderRoute: typeof AdminFloorPlanRouteImport
+    '/admin/staff': {
+      id: '/admin/staff'
+      path: '/staff'
+      fullPath: '/admin/staff'
+      preLoaderRoute: typeof AdminStaffRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/reports': {
+      id: '/admin/reports'
+      path: '/reports'
+      fullPath: '/admin/reports'
+      preLoaderRoute: typeof AdminReportsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/catalog': {
+      id: '/admin/catalog'
+      path: '/catalog'
+      fullPath: '/admin/catalog'
+      preLoaderRoute: typeof AdminCatalogRouteImport
       parentRoute: typeof AdminRoute
     }
   }
 }
 
 interface AdminRouteChildren {
-  AdminFloorPlanRoute: typeof AdminFloorPlanRoute
+  AdminCatalogRoute: typeof AdminCatalogRoute
+  AdminReportsRoute: typeof AdminReportsRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminStaffRoute: typeof AdminStaffRoute
   AdminTableQrsRoute: typeof AdminTableQrsRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
-  AdminFloorPlanRoute: AdminFloorPlanRoute,
+  AdminCatalogRoute: AdminCatalogRoute,
+  AdminReportsRoute: AdminReportsRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
+  AdminStaffRoute: AdminStaffRoute,
   AdminTableQrsRoute: AdminTableQrsRoute,
 }
 

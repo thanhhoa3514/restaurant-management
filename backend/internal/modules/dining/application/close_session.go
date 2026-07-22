@@ -7,7 +7,6 @@ import (
 
 	"restaurant-management/internal/modules/dining/domain"
 	"restaurant-management/internal/platform/outbox"
-	"restaurant-management/internal/platform/tenant"
 	"restaurant-management/internal/shared/apperr"
 )
 
@@ -22,13 +21,14 @@ type CloseSessionResponse struct {
 }
 
 type CloseSession struct {
-	tx     TxRunner
-	repo   domain.DiningRepository
-	outbox domain.OutboxWriter
+	tx                  TxRunner
+	repo                domain.DiningRepository
+	outbox              domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
 }
 
-func NewCloseSession(tx TxRunner, repo domain.DiningRepository, outbox domain.OutboxWriter) *CloseSession {
-	return &CloseSession{tx: tx, repo: repo, outbox: outbox}
+func NewCloseSession(tx TxRunner, repo domain.DiningRepository, outbox domain.OutboxWriter, defaultRestaurantID uuid.UUID) *CloseSession {
+	return &CloseSession{tx: tx, repo: repo, outbox: outbox, defaultRestaurantID: defaultRestaurantID}
 }
 
 func (s *CloseSession) Handle(ctx context.Context, in CloseSessionRequest) (CloseSessionResponse, error) {
@@ -39,12 +39,9 @@ func (s *CloseSession) Handle(ctx context.Context, in CloseSessionRequest) (Clos
 	if in.ActorID == uuid.Nil {
 		return out, apperr.New(apperr.CodeUnauthorized, "invalid user claim")
 	}
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return out, err
-	}
+	restaurantID := s.defaultRestaurantID
 	actor := in.ActorID
-	err = s.tx.Run(ctx, func(ctx context.Context) error {
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
 		session, closedNow, err := s.repo.CloseSession(ctx, restaurantID, in.SessionID, &actor)
 		if err != nil {
 			return err

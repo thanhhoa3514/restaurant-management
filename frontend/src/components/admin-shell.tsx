@@ -1,96 +1,49 @@
-/* eslint-disable react-refresh/only-export-components */
 import { useNavigate } from '@tanstack/react-router'
-import { LogOut, Menu, Search, SlidersHorizontal, UserRound } from 'lucide-react'
-import { useMemo, useState, useCallback, type CSSProperties, type ReactNode } from 'react'
+import { Loader2, LogOut, Menu, UserRound } from 'lucide-react'
+import {
+  useMemo,
+  useCallback,
+  useEffect,
+  useReducer,
+  use,
+  type CSSProperties,
+  type ReactNode,
+} from 'react'
 
 import { Button } from '@/components/ui/button'
 import { LanguageLoader } from '@/components/ui/language-loader'
 import { LanguageSwitcher } from '@/components/ui/language-switcher'
-import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet'
-import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { Sheet, SheetContent } from '@/components/ui/sheet'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { shellStrings } from '@/components/shell-i18n'
-import { getStaffSession, logoutStaff, type StaffRole } from '@/lib/auth'
-import { BRAND } from '@/lib/brand'
-import { usePermissions } from '@/lib/permission-context'
-import type { Lang } from '@/lib/use-lang'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { shellStrings } from '@/i18n'
+import { getStaffSession, type StaffRole } from '@/lib/auth'
+import { useLogout } from '@/features/login/mutations/useLogout'
+import { BRAND } from '@/constants/brand'
+import { usePermissions } from '@/contexts/permission'
+import {
+  ShellContext,
+  ShellProvider,
+  useShellConfig,
+  ShellHeaderCenter,
+  ShellHeaderActions,
+  type ShellConfig,
+} from '@/contexts/shell'
+import type { Lang } from '@/hooks/use-lang'
 import { cn } from '@/lib/utils'
-import { roleTint, navItems, adminTools, type StaffView, type AdminView } from './admin-config'
+import { roleTint, navItems, type StaffView, type AdminView } from './admin-config'
 import { SidebarContent } from './admin-sidebar'
 import { AdminCommandDialog, type CommandEntry } from './admin-search'
 
-import { createContext, useContext, useLayoutEffect } from 'react'
-
-export interface ShellConfig {
-  title?: string
-  subtitle?: string
-  eyebrow?: string
-  contentClassName?: string
-}
-
-export const ShellContext = createContext<{
-  config: ShellConfig
-  setConfig: (config: ShellConfig) => void
-} | null>(null)
-
-export function ShellProvider({ children }: { children: ReactNode }) {
-  const [config, setConfig] = useState<ShellConfig>({})
-  return <ShellContext.Provider value={{ config, setConfig }}>{children}</ShellContext.Provider>
-}
-
-export function useShellConfig(config: ShellConfig) {
-  const ctx = useContext(ShellContext)
-  useLayoutEffect(() => {
-    if (ctx) {
-      ctx.setConfig(config)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    ctx,
-    config.title,
-    config.subtitle,
-    config.eyebrow,
-    config.contentClassName,
-    // Note: We intentionally don't include ReactNodes to avoid infinite loops.
-    // Instead, we assume they update alongside other primitives or we rely on parent re-renders.
-  ])
-
-  // To handle ReactNodes updating without looping, we can use a ref to track them
-  // but for our simple dashboard, the initial layout effect is usually enough,
-  // or we can just force update if needed. Actually, a better approach is to just
-  // pass the setter to children. But let's stick to the simple effect.
-}
-
-import { createPortal } from 'react-dom'
-import { useEffect } from 'react'
-
-export function ShellHeaderCenter({ children }: { children: ReactNode }) {
-  const [target, setTarget] = useState<HTMLElement | null>(null)
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setTarget(document.getElementById('shell-header-center'))
-  }, [])
-  if (!target) return null
-  return createPortal(children, target)
-}
-
-export function ShellHeaderActions({ children }: { children: ReactNode }) {
-  const [target, setTarget] = useState<HTMLElement | null>(null)
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setTarget(document.getElementById('shell-header-actions'))
-  }, [])
-  if (!target) return null
-  return createPortal(children, target)
-}
+export { ShellProvider, useShellConfig, ShellHeaderCenter, ShellHeaderActions, type ShellConfig }
 
 interface AdminShellProps extends ShellConfig {
   role: StaffRole
@@ -122,15 +75,17 @@ export function AdminShell({
   const navigate = useNavigate()
   const { has } = usePermissions()
   const s = shellStrings(lang)
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [searchOpen, setSearchOpen] = useState(false)
-  const [configOpen, setConfigOpen] = useState(false)
-  const [profileOpen, setProfileOpen] = useState(false)
-  const [query, setQuery] = useState('')
-  const [changingLang, setChangingLang] = useState<Lang | null>(null)
+  const [state, dispatch] = useReducer((s: any, a: any) => ({ ...s, ...a }), {
+    mobileOpen: false,
+    searchOpen: false,
+    configOpen: false,
+    profileOpen: false,
+    query: '',
+    changingLang: null as Lang | null,
+  })
+  const { mobileOpen, searchOpen, profileOpen, query, changingLang } = state
 
-  // Merge with context config if we are hoisted
-  const ctx = useContext(ShellContext)
+  const ctx = use(ShellContext)
   const title = ctx?.config.title ?? _title
   const subtitle = ctx?.config.subtitle ?? _subtitle
   const eyebrow = ctx?.config.eyebrow ?? _eyebrow
@@ -138,12 +93,15 @@ export function AdminShell({
 
   const nav = useMemo(() => navItems.filter((item) => has(item.permission)), [has])
 
-  const handleCommand = useCallback((href?: string, view?: string) => {
-    if (href === '/admin') navigate({ to: '/admin', search: { view: view as AdminView | undefined } })
-    else if (href) navigate({ to: href })
-    setSearchOpen(false)
-    setMobileOpen(false)
-  }, [navigate])
+  const handleCommand = useCallback(
+    (href?: string, view?: string) => {
+      if (href === '/admin')
+        navigate({ to: '/admin', search: { view: view as AdminView | undefined } })
+      else if (href) navigate({ to: href })
+      dispatch({ searchOpen: false, mobileOpen: false })
+    },
+    [navigate],
+  )
 
   const commandItems = useMemo<CommandEntry[]>(() => {
     const navEntries: CommandEntry[] = nav.map((item) => ({
@@ -153,29 +111,19 @@ export function AdminShell({
       icon: item.icon,
       action: () => handleCommand(item.href, item.view),
     }))
-    const toolEntries: CommandEntry[] = adminTools
-      .filter((tool) => has(tool.permission))
-      .map((tool) => ({
-        key: tool.id,
-        label: s.toolLabel[tool.id],
-        description: s.toolDesc[tool.id],
-        icon: tool.icon,
-        action: () => handleCommand('/admin'),
-      }))
-    return [...navEntries, ...toolEntries].filter((item) =>
+    return navEntries.filter((item) =>
       `${item.label} ${item.description}`.toLowerCase().includes(query.trim().toLowerCase()),
     )
-  }, [has, nav, query, s, handleCommand])
+  }, [nav, query, s, handleCommand])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
-        setSearchOpen(true)
+        dispatch({ searchOpen: true })
       }
       if (event.key === 'Escape') {
-        setSearchOpen(false)
-        setProfileOpen(false)
+        dispatch({ profileOpen: false })
       }
     }
 
@@ -183,17 +131,19 @@ export function AdminShell({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
+  const logoutMutation = useLogout()
   const handleLogout = () => {
-    logoutStaff()
-    navigate({ to: '/login' })
+    logoutMutation.mutate(undefined, {
+      onSuccess: () => navigate({ to: '/login' }),
+    })
   }
 
   const handleLangChange = (next: Lang) => {
     if (!setLang) return
-    setChangingLang(next)
+    dispatch({ changingLang: next })
     setTimeout(() => {
       setLang(next)
-      setChangingLang(null)
+      dispatch({ changingLang: null })
     }, 750)
   }
 
@@ -217,90 +167,73 @@ export function AdminShell({
 
           <div className="flex min-w-0 flex-1 flex-col">
             <header className="safe-top sticky top-0 z-[var(--z-sticky)] border-b border-[var(--separator)] bg-[var(--material-regular)] backdrop-blur-2xl">
-              <div className="flex min-h-16 items-center gap-3 px-4 py-3 sm:px-5 lg:px-6">
+              <div className="flex min-h-16 items-center gap-3 px-3 py-2.5 sm:px-5 sm:py-3 lg:px-6">
                 {sidebar && (
                   <Button
                     type="button"
                     variant="secondary"
                     size="icon"
-                    className="size-11 shrink-0 rounded-full border border-[var(--separator)] bg-[var(--material-thin)] lg:hidden"
-                    onClick={() => setMobileOpen(true)}
                     aria-label={s.openNavAria}
+                    className="size-10 shrink-0 rounded-full border border-[var(--separator)] bg-[var(--surface-grouped)]/70 lg:hidden"
+                    onClick={() => dispatch({ mobileOpen: true })}
                   >
-                    <Menu />
+                    <Menu className="size-5" />
                   </Button>
                 )}
-
-                <div className="min-w-0">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--staff-tint)]">
-                    {eyebrow ?? s.roleLabel[role]}
-                  </p>
-                  <h1 className="truncate text-[22px] font-semibold leading-tight text-[var(--text)]">
-                    {title}
-                  </h1>
-                  {subtitle && (
-                    <p className="truncate text-[13px] font-medium text-[var(--text-secondary)]">
+                <div className="min-w-0 flex-1">
+                  {eyebrow ? (
+                    <div className="truncate text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-tertiary)]">
+                      {eyebrow}
+                    </div>
+                  ) : null}
+                  <div className="truncate text-[17px] font-bold leading-tight text-[var(--text)]">
+                    {title ?? s.roleLabel[role]}
+                  </div>
+                  {subtitle ? (
+                    <div className="hidden truncate text-xs text-[var(--text-tertiary)] sm:block">
                       {subtitle}
-                    </p>
-                  )}
+                    </div>
+                  ) : null}
                 </div>
-
-                <div
-                  id="shell-header-center"
-                  className="hidden min-w-0 flex-1 items-center justify-center xl:flex"
-                ></div>
-
-                <div id="shell-header-actions" className="ml-auto flex shrink-0 items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="hidden h-10 rounded-full border border-[var(--separator)] bg-[var(--surface-grouped)]/70 px-3 text-[13px] text-[var(--text-secondary)] backdrop-blur-md sm:inline-flex"
-                    onClick={() => setSearchOpen(true)}
-                  >
-                    <Search className="size-4" />
-                    <span>{s.search}</span>
-                    <kbd className="rounded-md bg-[var(--bg-elevated)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--text-tertiary)]">
-                      ⌘K
-                    </kbd>
-                  </Button>
-                  {setLang && (
-                    <LanguageSwitcher
-                      currentLang={lang}
-                      onLangChange={handleLangChange}
-                      className="hidden sm:inline-flex"
-                    />
-                  )}
+                <div id="shell-header-center" className="hidden min-w-0 shrink-0 md:block" />
+                <div id="shell-header-actions" className="flex shrink-0 items-center gap-2">
                   <ThemeToggle />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="icon"
-                    className="size-10 rounded-full border border-[var(--separator)] bg-[var(--material-thin)] backdrop-blur-md"
-                    onClick={() => setConfigOpen(true)}
-                    aria-label={s.openSettingsAria}
-                  >
-                    <SlidersHorizontal />
-                  </Button>
+                  {setLang && (
+                    <LanguageSwitcher currentLang={lang} onLangChange={handleLangChange} />
+                  )}
                   <div className="relative">
-                    <DropdownMenu open={profileOpen} onOpenChange={setProfileOpen}>
-                      <DropdownMenuTrigger>
-                        <button
-                          type="button"
-                          className="flex size-10 cursor-pointer items-center justify-center rounded-full bg-[var(--staff-tint)] text-sm font-bold text-white transition-opacity duration-[220ms] hover:opacity-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--staff-tint)]/20"
-                          aria-label={s.openProfileAria}
-                        >
-                          {(session?.name ?? s.roleLabel[role]).slice(0, 1).toUpperCase()}
-                        </button>
+                    <DropdownMenu
+                      open={profileOpen}
+                      onOpenChange={(v: boolean) => dispatch({ profileOpen: v })}
+                    >
+                      <DropdownMenuTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            className="relative h-10 w-10 rounded-full"
+                            aria-label={s.openProfileAria}
+                          />
+                        }
+                      >
+                        <Avatar className="size-10">
+                          <AvatarImage src="" />
+                          <AvatarFallback className="bg-[var(--staff-tint)] text-white text-sm font-bold">
+                            {(session?.name ?? s.roleLabel[role]).slice(0, 1).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent
                         align="end"
                         className="w-72 rounded-[18px] border-[var(--separator)] bg-[var(--material-thick)] p-2 text-[13px] backdrop-blur-2xl"
                       >
-                        <DropdownMenuLabel className="px-3 py-3">
+                        <div className="px-3 py-3">
                           <div className="flex items-center gap-3">
-                            <div className="flex size-10 items-center justify-center rounded-full bg-[var(--surface-grouped)] text-[var(--text-secondary)]">
-                              <UserRound className="size-5" />
-                            </div>
+                            <Avatar className="size-10">
+                              <AvatarImage src="" />
+                              <AvatarFallback className="bg-[var(--surface-grouped)] text-[var(--text-secondary)]">
+                                <UserRound className="size-5" />
+                              </AvatarFallback>
+                            </Avatar>
                             <div className="min-w-0">
                               <div className="truncate font-semibold text-[var(--text)]">
                                 {session?.name ?? s.staffFallback}
@@ -310,14 +243,19 @@ export function AdminShell({
                               </div>
                             </div>
                           </div>
-                        </DropdownMenuLabel>
+                        </div>
                         <DropdownMenuSeparator className="bg-[var(--separator)]" />
                         <DropdownMenuItem
+                          disabled={logoutMutation.isPending}
                           onClick={handleLogout}
                           className="flex min-h-11 cursor-pointer items-center gap-2 rounded-[12px] px-3 font-semibold text-[var(--system-red)] transition-colors duration-[220ms] focus:bg-[var(--system-red)]/10 focus:text-[var(--system-red)]"
                         >
-                          <LogOut className="size-4" />
-                          {s.logout}
+                          {logoutMutation.isPending ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <LogOut className="size-4" />
+                          )}
+                          {logoutMutation.isPending ? 'Đang đăng xuất...' : s.logout}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -337,7 +275,7 @@ export function AdminShell({
           </div>
         </div>
 
-        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <Sheet open={mobileOpen} onOpenChange={(v: boolean) => dispatch({ mobileOpen: v })}>
           <SheetContent
             side="left"
             className="max-w-[288px] bg-[var(--material-thick)] text-[var(--text)]"
@@ -349,33 +287,16 @@ export function AdminShell({
               activeView={activeView}
               brandName={brandName}
               s={s}
-              onNavigate={() => setMobileOpen(false)}
+              onNavigate={() => ((v: boolean) => dispatch({ mobileOpen: v }))(false)}
             />
-          </SheetContent>
-        </Sheet>
-
-        <Sheet open={configOpen} onOpenChange={setConfigOpen}>
-          <SheetContent side="right" className="bg-[var(--material-thick)] text-[var(--text)]">
-            <SheetHeader title={s.settingsTitle} />
-            <div className="space-y-4 px-5 pb-5 pt-2">
-              <div className="rounded-[18px] bg-[var(--surface-grouped)]/70 p-4">
-                <div className="mb-3 text-sm font-semibold text-[var(--text)]">{s.displayMode}</div>
-                <ThemeToggle />
-              </div>
-              {setLang && (
-                <div className="rounded-[18px] bg-[var(--surface-grouped)]/70 p-4">
-                  <LanguageSwitcher currentLang={lang} onLangChange={handleLangChange} />
-                </div>
-              )}
-            </div>
           </SheetContent>
         </Sheet>
 
         <AdminCommandDialog
           open={searchOpen}
-          onOpenChange={setSearchOpen}
+          onOpenChange={(v: boolean) => dispatch({ searchOpen: v })}
           query={query}
-          setQuery={setQuery}
+          setQuery={(v: string) => dispatch({ query: v })}
           s={s}
           commandItems={commandItems}
         />

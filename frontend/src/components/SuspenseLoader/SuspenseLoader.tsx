@@ -18,4 +18,4 @@ export const SuspenseLoader: React.FC<SuspenseLoaderProps> = ({
   fallback = <DefaultFallback />,
 }) => <Suspense fallback={fallback}>{children}</Suspense>
 
-export default SuspenseLoader
+

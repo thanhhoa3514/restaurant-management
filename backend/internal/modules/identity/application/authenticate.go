@@ -14,51 +14,46 @@ import (
 )
 
 type AuthenticateRequest struct {
-	RestaurantCode string `json:"restaurant_code"`
-	Username       string `json:"username"`
-	Password       string `json:"password"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 type AuthenticateResponse struct {
 	Token        string    `json:"token"`
+	RefreshToken string    `json:"refresh_token"`
 	UserID       uuid.UUID `json:"user_id"`
 	Role         string    `json:"role"`
 	Name         string    `json:"name"`
 	Permissions  []string  `json:"permissions"`
-	RestaurantID uuid.UUID `json:"restaurant_id"`
 	ExpiresAt    time.Time `json:"expires_at"`
 }
 
+var RefreshTokenTTL = 7 * 24 * time.Hour
+
 type Authenticate struct {
-	tx        TxRunner
-	repo      domain.UserRepository
-	outbox    domain.OutboxWriter
-	jwtSecret string
-	jwtTTL    time.Duration
+	tx                  TxRunner
+	repo                domain.UserRepository
+	sessions            domain.SessionRepository
+	outbox              domain.OutboxWriter
+	jwtSecret           string
+	jwtTTL              time.Duration
+	defaultRestaurantID uuid.UUID
 }
 
-func NewAuthenticate(tx TxRunner, repo domain.UserRepository, outbox domain.OutboxWriter, jwtSecret string, jwtTTL time.Duration) *Authenticate {
-	return &Authenticate{tx: tx, repo: repo, outbox: outbox, jwtSecret: jwtSecret, jwtTTL: jwtTTL}
+func NewAuthenticate(tx TxRunner, repo domain.UserRepository, sessions domain.SessionRepository, outbox domain.OutboxWriter, jwtSecret string, jwtTTL time.Duration, defaultRestaurantID uuid.UUID) *Authenticate {
+	return &Authenticate{tx: tx, repo: repo, sessions: sessions, outbox: outbox, jwtSecret: jwtSecret, jwtTTL: jwtTTL, defaultRestaurantID: defaultRestaurantID}
 }
 
 func (s *Authenticate) Handle(ctx context.Context, req AuthenticateRequest) (AuthenticateResponse, error) {
 	var out AuthenticateResponse
-	if strings.TrimSpace(req.RestaurantCode) == "" || strings.TrimSpace(req.Username) == "" || req.Password == "" {
-		return out, apperr.New(apperr.CodeInvalid, "restaurant_code, username, and password are required")
+	if strings.TrimSpace(req.Username) == "" || req.Password == "" {
+		return out, apperr.New(apperr.CodeInvalid, "username and password are required")
 	}
+
+	restaurantID := s.defaultRestaurantID
 
 	var authErr error
 	err := s.tx.Run(ctx, func(ctx context.Context) error {
-		// Login is the bootstrap exception: no JWT exists yet, so tenant is
-		// resolved from restaurant_code. Authenticated use-cases read tenant from context.
-		restaurantID, err := s.repo.ResolveRestaurantIDByCode(ctx, strings.TrimSpace(req.RestaurantCode))
-		if err != nil {
-			if apperr.Is(err, apperr.CodeNotFound) {
-				return apperr.New(apperr.CodeUnauthorized, "invalid credentials")
-			}
-			return err
-		}
-
 		user, err := s.repo.FindByUsername(ctx, restaurantID, strings.TrimSpace(req.Username))
 		if err != nil {
 			if apperr.Is(err, apperr.CodeNotFound) {
@@ -78,7 +73,28 @@ func (s *Authenticate) Handle(ctx context.Context, req AuthenticateRequest) (Aut
 		}
 
 		role := strings.ToUpper(user.RoleName)
-		token, err := auth.Issue(s.jwtSecret, auth.Claims{UserID: user.ID.String(), RestaurantID: restaurantID.String(), Role: role}, s.jwtTTL)
+		now := time.Now()
+
+		sessionID := uuid.New()
+		rawRefresh, hashedRefresh, err := auth.GenerateRefreshToken()
+		if err != nil {
+			return err
+		}
+		session := &domain.UserSession{
+			ID:               sessionID,
+			RestaurantID:     restaurantID,
+			UserID:           user.ID,
+			RefreshTokenHash: hashedRefresh,
+			ExpiresAt:        now.Add(RefreshTokenTTL),
+		}
+		if err := s.sessions.CreateSession(ctx, session); err != nil {
+			return err
+		}
+
+		token, err := auth.Issue(s.jwtSecret, auth.Claims{
+			UserID: user.ID.String(),
+			Role:   role, SessionID: sessionID.String(),
+		}, s.jwtTTL)
 		if err != nil {
 			return err
 		}
@@ -90,8 +106,8 @@ func (s *Authenticate) Handle(ctx context.Context, req AuthenticateRequest) (Aut
 			return err
 		}
 		out = AuthenticateResponse{
-			Token: token, UserID: user.ID, Role: role, Name: user.FullName,
-			Permissions: permissions, RestaurantID: restaurantID, ExpiresAt: time.Now().Add(s.jwtTTL),
+			Token: token, RefreshToken: rawRefresh, UserID: user.ID, Role: role, Name: user.FullName,
+			Permissions: permissions, ExpiresAt: now.Add(s.jwtTTL),
 		}
 		_ = s.outbox // reserved for later identity audit events; no outbox event in Batch A.
 		return nil

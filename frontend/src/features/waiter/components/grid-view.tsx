@@ -3,7 +3,12 @@ import { Bell, Check, Receipt, Users, Clock } from 'lucide-react'
 
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { wfFmtHMS, wfPriorityOf, wfPriorityRank, wfTimeSinceSignal } from '@/features/waiter/helpers'
+import {
+  wfFmtHMS,
+  wfPriorityOf,
+  wfPriorityRank,
+  wfTimeSinceSignal,
+} from '@/features/waiter/helpers'
 import { cn } from '@/lib/utils'
 import type { Lang, WFTable } from '@/features/waiter/types'
 import { priorityLabel, secondarySignals, signalDot, tableVisuals } from '@/features/waiter/helpers'
@@ -17,7 +22,13 @@ interface GridViewProps {
   justChangedIds: Set<string>
 }
 
-export const GridView: FC<GridViewProps> = ({ tables, now, lang, onSelectTable, justChangedIds }) => {
+export const GridView: FC<GridViewProps> = ({
+  tables,
+  now,
+  lang,
+  onSelectTable,
+  justChangedIds,
+}) => {
   const sortedTables = useMemo(() => {
     return tables
       .map((table) => {
@@ -45,14 +56,21 @@ export const GridView: FC<GridViewProps> = ({ tables, now, lang, onSelectTable, 
         const icons = {
           empty: null,
           occupied: <Users className="size-3.5 text-amber-500" />,
-          call: <Bell className="size-3.5 text-red-500 animate-bounce" />,
+          call: (
+            <Bell className="size-3.5 text-red-500 animate-in slide-in-from-bottom-1 fade-in duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]" />
+          ),
           ready: <Check className="size-3.5 text-emerald-500" />,
           bill: <Receipt className="size-3.5 text-blue-500" />,
           idle: <Clock className="size-3.5 text-amber-500" />,
         }
 
         return (
-          <button key={table.id} type="button" onClick={() => onSelectTable(table.id)} className="w-full text-left outline-none">
+          <button
+            key={table.id}
+            type="button"
+            onClick={() => onSelectTable(table.id)}
+            className="w-full text-left outline-none cursor-pointer"
+          >
             <Card
               className={cn(
                 'relative flex min-h-[148px] flex-col overflow-hidden rounded-[24px] border-2 p-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg active:scale-[0.99]',
@@ -67,24 +85,37 @@ export const GridView: FC<GridViewProps> = ({ tables, now, lang, onSelectTable, 
                   <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
                     {lang === 'vi' ? 'BÀN' : 'TABLE'}
                   </span>
-                  <div className={cn('text-3xl font-black tracking-tight leading-none mt-0.5', visual.text)}>
-                    {table.number}
+                  <div
+                    className={cn(
+                      'text-3xl font-black tracking-tight leading-none mt-0.5',
+                      visual.text,
+                    )}
+                  >
+                    {table.code}
                   </div>
                 </div>
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-xs border border-zinc-100 dark:bg-zinc-950 dark:border-zinc-800">
-                  {icons[priority] || <span className="text-xs text-zinc-400 dark:text-zinc-600">—</span>}
+                  {icons[priority] || (
+                    <span className="text-xs text-zinc-400 dark:text-zinc-600">—</span>
+                  )}
                 </div>
               </div>
 
               {/* Middle Section: Secondary signals & capacity */}
               <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                <Badge variant={visual.badge} className="rounded-full px-2 py-0.5 text-[9px] font-bold tracking-tight">
+                <Badge
+                  variant={visual.badge}
+                  className="rounded-full px-2 py-0.5 text-[10px] font-bold tracking-tight"
+                >
                   {priorityLabel(priority, lang)}
                 </Badge>
                 {secondaries.length > 0 && (
                   <div className="flex gap-0.5 bg-white/70 rounded-full px-1.5 py-0.5 border border-zinc-100 shadow-3xs dark:bg-zinc-950/60 dark:border-zinc-800">
                     {secondaries.map((signal) => (
-                      <span key={signal} className={cn('size-2 rounded-full shadow-sm', signalDot(signal))} />
+                      <span
+                        key={signal}
+                        className={cn('size-2 rounded-full shadow-sm', signalDot(signal))}
+                      />
                     ))}
                   </div>
                 )}
@@ -102,7 +133,12 @@ export const GridView: FC<GridViewProps> = ({ tables, now, lang, onSelectTable, 
                 </div>
 
                 {priority !== 'empty' && (
-                  <span className={cn('flex items-center gap-1 font-mono text-[10px] font-bold bg-white/80 px-2 py-0.5 rounded-full border border-zinc-100 shadow-3xs dark:bg-zinc-950 dark:border-zinc-800', visual.sub)}>
+                  <span
+                    className={cn(
+                      'flex items-center gap-1 font-mono text-[10px] font-bold bg-white/80 px-2 py-0.5 rounded-full border border-zinc-100 shadow-3xs dark:bg-zinc-950 dark:border-zinc-800',
+                      visual.sub,
+                    )}
+                  >
                     <Clock className="size-2.5 text-zinc-400" />
                     <span>{wfFmtHMS(waitSeconds)}</span>
                   </span>
@@ -115,5 +151,3 @@ export const GridView: FC<GridViewProps> = ({ tables, now, lang, onSelectTable, 
     </div>
   )
 }
-
-export default GridView

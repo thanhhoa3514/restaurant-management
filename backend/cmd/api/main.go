@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	billingapp "restaurant-management/internal/modules/billing/application"
@@ -35,7 +36,9 @@ import (
 	"restaurant-management/internal/platform/logger"
 	"restaurant-management/internal/platform/outbox"
 	"restaurant-management/internal/platform/postgres"
+	"restaurant-management/internal/platform/ratelimit"
 	"restaurant-management/internal/platform/realtime"
+	"restaurant-management/internal/platform/storage"
 	"restaurant-management/internal/platform/swaggerui"
 )
 
@@ -44,7 +47,7 @@ func main() {
 	defer stop()
 
 	cfg := config.Load()
-	log := logger.New(cfg.AppEnv, cfg.LogLevel)
+	log := logger.New(cfg.AppEnv, cfg.LogLevel, cfg.LogDir)
 	if err := cfg.Validate(); err != nil {
 		log.Error("invalid config", slog.Any("error", err))
 		return
@@ -56,21 +59,42 @@ func main() {
 	}
 	defer pool.Close()
 
+	// Resolve the single restaurant's UUID from the DB.
+	var rid uuid.UUID
+	if err := pool.QueryRow(ctx, `SELECT id FROM restaurants LIMIT 1`).Scan(&rid); err != nil {
+		log.Error("resolve default restaurant failed — run seed first?", slog.Any("error", err))
+		return
+	}
+	cfg.DefaultRestaurantID = rid
+
 	tx := postgres.NewTxManager(pool)
 	hub := realtime.NewHub(cfg.AllowedOrigins)
 	dispatcher := outbox.NewDispatcher(pool, hub, log)
 	go hub.Run(ctx)
 	go dispatcher.Start(ctx)
 
+	var s3Client *storage.Client
+	if c, err := storage.NewClient(ctx, storage.S3Config{
+		Endpoint:  cfg.S3Endpoint,
+		AccessKey: cfg.S3AccessKey,
+		SecretKey: cfg.S3SecretKey,
+		Bucket:    cfg.S3Bucket,
+		UseSSL:    cfg.S3UseSSL,
+		PublicURL: cfg.S3PublicURL,
+	}, log); err != nil {
+		log.Warn("s3 client init failed — upload will be unavailable", slog.Any("error", err))
+	} else {
+		s3Client = c
+	}
+
 	if cfg.AppEnv == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	router := gin.New()
 	router.Use(httpx.RequestID(), httpx.Logger(log), httpx.Recover(), httpx.CORS(cfg.AllowedOrigins), httpx.MaxBodyBytes(1<<20))
-	// Liveness: process is up. Must NOT touch the DB — a DB blip should not
-	// trigger a pod restart.
+
 	router.GET("/health", func(c *gin.Context) { httpx.Respond(c, http.StatusOK, gin.H{"status": "ok"}, nil) })
-	// Readiness: can serve traffic. Pings the DB with a short timeout.
+
 	router.GET("/health/ready", func(c *gin.Context) {
 		pingCtx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
 		defer cancel()
@@ -84,11 +108,8 @@ func main() {
 	swaggerui.Register(router)
 
 	api := router.Group("/api/v1")
-	wireRoutes(api, tx, dispatcher, pool, cfg)
+	wireRoutes(api, tx, dispatcher, pool, cfg, s3Client)
 
-	// ReadHeaderTimeout defends against Slowloris; IdleTimeout reaps idle
-	// keep-alives. ReadTimeout/WriteTimeout are intentionally omitted — they
-	// would tear down the long-lived /ws websocket connection.
 	server := &http.Server{
 		Addr:              cfg.HTTPAddr,
 		Handler:           router,
@@ -109,57 +130,99 @@ func main() {
 	}
 }
 
-func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outbox.Dispatcher, pool *pgxpool.Pool, cfg config.Config) {
+func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outbox.Dispatcher, pool *pgxpool.Pool, cfg config.Config, s3Client *storage.Client) {
 	secret := cfg.JWTSecret
-	identityRepo := identityrepo.NewRepository(pool)
+	defaultRID := cfg.DefaultRestaurantID
+
+	identityRepo := identityrepo.NewRepository(pool, defaultRID)
+	sessionRepo := identityrepo.NewSessionRepository(pool, defaultRID)
 	identityHandler := identityhttp.NewHandler(
-		identityapp.NewAuthenticate(tx, identityRepo, outboxWriter, secret, cfg.JWTTTL),
+		identityapp.NewAuthenticate(tx, identityRepo, sessionRepo, outboxWriter, secret, cfg.JWTTTL, defaultRID),
 		identityapp.NewGetSession(identityRepo),
 		identityapp.NewManageUsers(tx, identityRepo, outboxWriter),
+		identityapp.NewListStaff(identityRepo),
+		identityapp.NewListRoles(identityRepo),
+		identityapp.NewRefreshSession(sessionRepo, identityRepo, secret, cfg.JWTTTL, defaultRID),
+		identityapp.NewLogout(sessionRepo, defaultRID),
+		defaultRID,
 	)
-	identityHandler.RegisterRoutes(api, secret, identityRepo)
 
-	catalogRepo := catalogrepo.NewRepository(pool)
-	catalogHandler := cataloghttp.NewHandler(catalogapp.NewCreateMenuItem(tx, catalogRepo, outboxWriter), catalogapp.NewUpdateMenuItem(tx, catalogRepo, outboxWriter), catalogapp.NewDeleteMenuItem(tx, catalogRepo, outboxWriter), catalogapp.NewToggleAvailability(tx, catalogRepo, outboxWriter), catalogapp.NewListCategories(catalogRepo), catalogapp.NewListMenuItems(catalogRepo), catalogapp.NewGetMenuItem(catalogRepo))
-	catalogHandler.RegisterRoutes(api, secret, identityRepo)
+	catalogRepo := catalogrepo.NewRepository(pool, defaultRID)
+	catalogHandler := cataloghttp.NewHandler(catalogapp.NewCreateMenuItem(tx, catalogRepo, outboxWriter, defaultRID), catalogapp.NewUpdateMenuItem(tx, catalogRepo, outboxWriter, defaultRID), catalogapp.NewDeleteMenuItem(tx, catalogRepo, outboxWriter, defaultRID), catalogapp.NewToggleAvailability(tx, catalogRepo, outboxWriter, defaultRID), catalogapp.NewListCategories(catalogRepo, defaultRID), catalogapp.NewListMenuItems(catalogRepo, defaultRID), catalogapp.NewGetMenuItem(catalogRepo, defaultRID), catalogapp.NewListAdminMenuItems(catalogRepo, defaultRID), catalogapp.NewGetAdminMenuItem(catalogRepo, defaultRID), s3Client)
 
-	diningRepo := diningrepo.NewRepository(pool)
-	diningHandler := dininghttp.NewHandler(diningapp.NewOpenSession(tx, diningRepo, outboxWriter), diningapp.NewJoinSession(tx, diningRepo, outboxWriter), diningapp.NewCloseSession(tx, diningRepo, outboxWriter), diningapp.NewManageTableQR(tx, diningRepo, outboxWriter), diningapp.NewListTableQRs(diningRepo))
-	diningHandler.RegisterRoutes(api, secret, identityRepo)
-	guestGroup := api.Group("/guest", auth.QRSessionToken(diningRepo))
-	catalogHandler.RegisterGuestRoutes(guestGroup)
+	diningRepo := diningrepo.NewRepository(pool, defaultRID)
+	diningHandler := &dininghttp.Handler{
+		OpenSession:         diningapp.NewOpenSession(tx, diningRepo, outboxWriter, defaultRID),
+		JoinSession:         diningapp.NewJoinSession(tx, diningRepo, outboxWriter),
+		CloseSession:        diningapp.NewCloseSession(tx, diningRepo, outboxWriter, defaultRID),
+		ManageTableQR:       diningapp.NewManageTableQR(tx, diningRepo, outboxWriter, defaultRID),
+		ListTableQRs:        diningapp.NewListTableQRs(diningRepo, defaultRID),
+		ListGuestTables:     diningapp.NewListGuestTables(diningRepo, defaultRID),
+		MergeSessions:       diningapp.NewMergeSessions(tx, diningRepo, outboxWriter, defaultRID),
+		SplitSessions:       diningapp.NewSplitSessions(tx, diningRepo, outboxWriter, defaultRID),
+		ListPendingSessions: diningapp.NewListPendingSessions(diningRepo, defaultRID),
+		StaffVerifySession:  diningapp.NewStaffVerifySession(tx, diningRepo, outboxWriter, defaultRID),
+		SaveTable:           diningapp.NewSaveTable(tx, diningRepo, defaultRID),
+		DeleteTable:         diningapp.NewDeleteTable(tx, diningRepo, defaultRID),
+		ListAreas:           diningapp.NewListAreas(diningRepo, defaultRID),
+		SaveArea:            diningapp.NewSaveArea(tx, diningRepo, defaultRID),
+		DeleteArea:          diningapp.NewDeleteArea(tx, diningRepo, defaultRID),
+	}
 
-	orderingRepo := orderingrepo.NewRepository(pool)
+	orderingRepo := orderingrepo.NewRepository(pool, defaultRID)
 	orderingHandler := orderinghttp.NewHandler(
-		orderingapp.NewPlaceOrder(tx, orderingRepo, outboxWriter),
-		orderingapp.NewCancelOrEditItem(tx, orderingRepo, outboxWriter),
-		orderingapp.NewUpdateItemStatus(tx, orderingRepo, outboxWriter),
-		orderingapp.NewReviewCancelRequest(tx, orderingRepo, outboxWriter),
-		orderingapp.NewGuestPlaceOrder(tx, orderingRepo, outboxWriter),
-		orderingapp.NewGuestViewOrders(orderingRepo),
-		orderingapp.NewGuestEditOrder(tx, orderingRepo, outboxWriter),
-		orderingapp.NewGuestCancelOrder(tx, orderingRepo, outboxWriter),
-		orderingapp.NewGuestRequestCancel(tx, orderingRepo, outboxWriter),
-		orderingapp.NewStaffTables(orderingRepo),
-		orderingapp.NewStaffRequestBill(tx, orderingRepo, outboxWriter),
-		orderingapp.NewStaffUpdateItemStatus(tx, orderingRepo, outboxWriter),
-		orderingapp.NewKitchenQueue(orderingRepo),
+		orderingapp.NewGuestPlaceOrder(tx, orderingRepo, outboxWriter, defaultRID),
+		orderingapp.NewGuestViewOrders(orderingRepo, defaultRID),
+		orderingapp.NewGuestEditOrder(tx, orderingRepo, outboxWriter, defaultRID),
+		orderingapp.NewGuestCancelOrder(tx, orderingRepo, outboxWriter, defaultRID),
+		orderingapp.NewGuestRequestCancel(tx, orderingRepo, outboxWriter, defaultRID),
+		orderingapp.NewStaffTables(orderingRepo, defaultRID),
+		orderingapp.NewStaffRequestBill(tx, orderingRepo, outboxWriter, defaultRID),
+		orderingapp.NewStaffReopenSession(tx, orderingRepo, outboxWriter, defaultRID),
+		orderingapp.NewGuestCallWaiter(tx, orderingRepo, outboxWriter, defaultRID),
+		orderingapp.NewStaffAckWaiterCall(tx, orderingRepo, outboxWriter, defaultRID),
+		orderingapp.NewStaffUpdateItemStatus(tx, orderingRepo, outboxWriter, defaultRID),
+		orderingapp.NewServerReviewOrderItem(tx, orderingRepo, outboxWriter, defaultRID),
+		orderingapp.NewStaffMarkUnavailable(tx, orderingRepo, outboxWriter, defaultRID),
+		orderingapp.NewStaffTakeawayOrder(tx, orderingRepo, outboxWriter, defaultRID),
+		orderingapp.NewStaffAddTakeawayItems(tx, orderingRepo, outboxWriter, defaultRID),
+		orderingapp.NewKitchenQueue(orderingRepo, defaultRID),
+		orderingapp.NewKitchenListCancelRequests(orderingRepo, defaultRID),
+		orderingapp.NewKitchenReviewCancelRequest(tx, orderingRepo, outboxWriter, defaultRID),
 	)
-	orderingHandler.RegisterRoutes(api, secret, identityRepo)
-	orderingHandler.RegisterStaffRoutes(api, secret, identityRepo)
-	orderingHandler.RegisterGuestRoutes(guestGroup)
-	orderingHandler.RegisterKitchenRoutes(api, secret, identityRepo)
 
-	billingRepo := billingrepo.NewRepository(pool)
+	billingRepo := billingrepo.NewRepository(pool, defaultRID)
 	gateways := buildGatewayRegistry(cfg)
 	billingHandler := billinghttp.NewHandler(
-		billingapp.NewBuildInvoice(tx, billingRepo, outboxWriter),
-		billingapp.NewAdjustInvoice(tx, billingRepo, outboxWriter),
-		billingapp.NewProcessPayment(tx, billingRepo, outboxWriter, gateways, cfg.PublicBaseURL),
-		billingapp.NewHandleWebhook(tx, billingRepo, outboxWriter, gateways, cfg.MockWebhookSecret),
+		billingapp.NewBuildInvoice(tx, billingRepo, outboxWriter, defaultRID),
+		billingapp.NewAdjustInvoice(tx, billingRepo, outboxWriter, defaultRID),
+		billingapp.NewProcessPayment(tx, billingRepo, outboxWriter, gateways, cfg.PublicBaseURL, defaultRID),
+		billingapp.NewProcessPartialPayment(tx, billingRepo, outboxWriter, defaultRID),
+		billingapp.NewHandleWebhook(tx, billingRepo, outboxWriter, gateways, cfg.MockWebhookSecret, defaultRID),
+		billingapp.NewVoidInvoice(tx, billingRepo, outboxWriter, defaultRID),
+		billingapp.NewSplitInvoice(tx, billingRepo, outboxWriter, defaultRID),
+		billingapp.NewListSessionInvoices(billingRepo, defaultRID),
 		cfg.AppEnv,
 	)
-	billingHandler.RegisterRoutes(api, secret, identityRepo)
+
+	orderRateLimiter := ratelimit.NewSlidingWindow(30, 1*time.Minute)
+	defer orderRateLimiter.Stop()
+
+	customer := api.Group("/customer")
+	diningHandler.RegisterGuestRoutes(customer)
+	catalogHandler.RegisterGuestRoutes(customer)
+
+	orders := api.Group("/customer", auth.QRSessionToken(diningRepo), orderRateLimiter.Middleware(ratelimit.GuestSessionKey))
+	orderingHandler.RegisterGuestRoutes(orders)
+
+	restaurant := api.Group("/restaurant")
+	identityHandler.RegisterRoutes(restaurant, secret, identityRepo, sessionRepo, defaultRID)
+	catalogHandler.RegisterStaffRoutes(restaurant, secret, identityRepo, defaultRID)
+	diningHandler.RegisterStaffRoutes(restaurant, secret, identityRepo, defaultRID)
+	orderingHandler.RegisterStaffRoutes(restaurant, secret, identityRepo, defaultRID)
+	orderingHandler.RegisterKitchenRoutes(restaurant, secret, identityRepo, defaultRID)
+	billingHandler.RegisterStaffRoutes(restaurant, secret, identityRepo, defaultRID)
+
 	billingHandler.RegisterWebhookRoutes(api)
 }
 

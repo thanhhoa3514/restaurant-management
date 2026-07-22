@@ -1,0 +1,137 @@
+<mxfile host="65bd71144e">
+    <diagram name="Tiep nhan - Mo phien (flowchart ngang)" id="bp-flowchart">
+        <mxGraphModel dx="1754" dy="832" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3960" pageHeight="820" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="S0" value="Khách bước vào nhà hàng" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="220" y="390" width="200" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="S_scan" value="Dùng điện thoại quét mã QR tại bàn&amp;nbsp;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="460" y="390" width="200" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="D_qr" value="[HT] Mã QR hợp lệ / chưa thu hồi?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="720" y="385" width="200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="D_active" value="[HT] Bàn đang có phiên ACTIVE?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="1000" y="385" width="200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="S_create_pending" value="Tạo phiên mới trạng thái PENDING_VERIFICATION&amp;nbsp;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="1300" y="385" width="200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="S_wait" value="Khách nhận thông báo phiên đang chờ xác nhận&amp;nbsp;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="1300" y="530" width="200" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="S_verify" value="Phục vụ mở danh sách phiên chờ xác minh, đối chiếu thực tế tại bàn và xác nhận phiên" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="950" y="530" width="200" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="S_activate" value="Phiên chuyển PENDING_VERIFICATION sang ACTIVE và bàn OCCUPIED" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="670" y="530" width="200" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="S_ready" value="Phiên ACTIVE&amp;nbsp; sẵn sàng phục vụ" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="290" y="530" width="200" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="S_req" value="Khách bắt đầu yêu cầu gọi món" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="410" y="765" width="200" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="D_token" value="[HT] Mã phiên hợp lệ?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="720" y="760" width="200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="S_bind" value="Lưu mã phiên vào điện thoại" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="1040" y="775" width="170" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="E0" value="Khách thao tác an toàn trong đúng phiên của mình" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1320" y="765" width="200" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="X_reject" value="Từ chối yêu cầu&amp;nbsp;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="720" y="180" width="200" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="E_qrfail" value="Kết thúc&amp;nbsp;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="730" y="80" width="180" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="S_active_return" value="[HT] Trả mã phiên + thông tin định danh (bàn, phiên)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="1000" y="170" width="200" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="X_token" value="Hệ thống từ chối yêu cầu&amp;nbsp;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="780" y="640" width="200" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_S0_scan" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="S0" target="S_scan">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_scan_hand" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="S_scan">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="700" y="435" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e_Dqr_reject" value="Không hợp lệ / thu hồi" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=0;exitDx=0;exitDy=0;" edge="1" parent="1" source="D_qr" target="X_reject">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_reject_end" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="X_reject" target="E_qrfail">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_Dqr_Dactive" value="Hợp lệ" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;" edge="1" parent="1" source="D_qr" target="D_active">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_Dactive_active" value="Có" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=0;exitDx=0;exitDy=0;" edge="1" parent="1" source="D_active" target="S_active_return">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_Dactive_Dpending" value="Không" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="D_active" target="S_create_pending">
+                    <mxGeometry x="0.0111" relative="1" as="geometry">
+                        <mxPoint x="1240" y="430" as="targetPoint"/>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e_create_wait" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="S_create_pending" target="S_wait">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_wait_verify" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="S_wait" target="S_verify">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_verify_activate" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="S_verify" target="S_activate">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_activate_ready" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="S_activate" target="S_ready">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_ready_store" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="S_ready" target="S_req">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="2680" y="435" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e_req_Dtoken" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="S_req" target="D_token">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_Dtoken_x" value="Không" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=0;exitDx=0;exitDy=0;" edge="1" parent="1" source="D_token" target="X_token">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1010" y="710"/>
+                            <mxPoint x="1010" y="700"/>
+                            <mxPoint x="1250" y="700"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e_x_req" value="Lấy lại mã phiên" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;fontSize=10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="X_token" target="S_req">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_bind_E0" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="S_bind" target="E0">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="2" style="edgeStyle=none;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=1.005;entryY=0.652;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="S_active_return" target="E_qrfail">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1100" y="120"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="3" style="edgeStyle=none;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.034;entryY=0.433;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="D_token" target="S_bind">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="4" value="hợp lệ" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="3">
+                    <mxGeometry x="-0.0699" y="3" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

@@ -50,6 +50,7 @@ type InvoiceDTO struct {
 	Version                  int              `json:"version"`
 	Items                    []InvoiceItemDTO `json:"items"`
 	Payment                  *PaymentDTO      `json:"payment"`
+	Payments                 []PaymentDTO     `json:"payments"`
 }
 
 type InvoiceItemDTO struct {
@@ -111,6 +112,21 @@ func toResponse(inv *domain.Invoice) InvoiceResponse {
 			QRCodeURL:         inv.Payment.QRCodeURL,
 		}
 	}
+	allPayments := make([]PaymentDTO, 0, len(inv.Payments))
+	for _, p := range inv.Payments {
+		allPayments = append(allPayments, PaymentDTO{
+			ID:                p.ID,
+			PaymentNumber:     p.PaymentNumber,
+			MethodCode:        p.MethodCode,
+			MethodType:        p.MethodType,
+			AmountVND:         p.AmountVND,
+			ReceivedAmountVND: p.ReceivedAmountVND,
+			ChangeAmountVND:   p.ChangeAmountVND,
+			Status:            string(p.Status),
+			ReferenceCode:     p.ReferenceCode,
+			ProcessedAt:       p.ProcessedAt,
+		})
+	}
 	return InvoiceResponse{Invoice: InvoiceDTO{
 		ID:                       inv.ID,
 		InvoiceNumber:            inv.InvoiceNumber,
@@ -131,5 +147,6 @@ func toResponse(inv *domain.Invoice) InvoiceResponse {
 		Version:                  inv.Version,
 		Items:                    items,
 		Payment:                  payment,
+		Payments:                 allPayments,
 	}}
 }

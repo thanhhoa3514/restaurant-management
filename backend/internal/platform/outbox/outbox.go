@@ -34,19 +34,16 @@ type Dispatcher struct {
 }
 
 type WriteEvent struct {
-	RestaurantID  uuid.UUID
-	AggregateType string
-	AggregateID   uuid.UUID
-	EventType     string
-	Payload       any
-	Metadata      any
-	Priority      int
-	// DedupeKey suppresses duplicate event rows for a short window. It is
-	// useful for client-driven retries/reloads such as QR scans. The key is
-	// persisted in metadata as dedupe_key so downstream consumers can keep the
-	// same idempotency boundary.
-	DedupeKey    string
-	DedupeWindow time.Duration
+	RestaurantID     uuid.UUID
+	AggregateType    string
+	AggregateID      uuid.UUID
+	EventType        string
+	Payload          any
+	Metadata         any
+	Priority         int
+	SuppressRealtime bool
+	DedupeKey        string
+	DedupeWindow     time.Duration
 }
 
 func NewDispatcher(pool *pgxpool.Pool, hub *realtime.Hub, logger *slog.Logger) *Dispatcher {
@@ -61,8 +58,8 @@ func (d *Dispatcher) Start(ctx context.Context) {
 			return
 		case <-ticker.C:
 			d.logger.Debug("outbox tick")
-			if err := d.processQRScanAudits(ctx); err != nil {
-				d.logger.Warn("outbox qr scan audit processing failed", slog.Any("error", err))
+			if err := d.processPendingEvents(ctx); err != nil {
+				d.logger.Warn("outbox processing failed", slog.Any("error", err))
 			}
 		}
 	}
@@ -73,6 +70,9 @@ func (d *Dispatcher) Write(ctx context.Context, event any) error {
 		return nil
 	}
 	metadataValue := withDedupeMetadata(e.Metadata, e.DedupeKey)
+	if e.SuppressRealtime {
+		metadataValue = withMetadataValue(metadataValue, "suppress_realtime", true)
+	}
 	if e.DedupeKey != "" && e.DedupeWindow > 0 {
 		var exists bool
 		seconds := int(e.DedupeWindow.Seconds())
@@ -114,11 +114,6 @@ func (d *Dispatcher) Write(ctx context.Context, event any) error {
 	if err != nil {
 		return err
 	}
-	if d.hub != nil {
-		if err := d.hub.Broadcast(realtime.Topic{RestaurantID: e.RestaurantID}, realtime.Event{Type: e.EventType, Payload: e.Payload}); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
@@ -143,13 +138,31 @@ func withDedupeMetadata(metadata any, dedupeKey string) any {
 	}
 }
 
-func (d *Dispatcher) processQRScanAudits(ctx context.Context) error {
+func withMetadataValue(metadata any, key string, value any) any {
+	switch m := metadata.(type) {
+	case nil:
+		return map[string]any{key: value}
+	case map[string]any:
+		clone := make(map[string]any, len(m)+1)
+		for k, v := range m {
+			clone[k] = v
+		}
+		clone[key] = value
+		return clone
+	default:
+		return map[string]any{key: value, "metadata": m}
+	}
+}
+
+func (d *Dispatcher) processPendingEvents(ctx context.Context) error {
 	rows, err := d.pool.Query(ctx, `
 		WITH picked AS (
 			SELECT id
 			FROM event_outbox
-			WHERE status = 'PENDING'
-			  AND event_type = 'dining.qr_scanned'
+			WHERE (
+				status = 'PENDING'
+				OR (status = 'PROCESSING' AND lock_expires_at < NOW())
+			  )
 			  AND available_at <= NOW()
 			ORDER BY priority ASC, created_at ASC
 			LIMIT 25
@@ -159,7 +172,7 @@ func (d *Dispatcher) processQRScanAudits(ctx context.Context) error {
 		SET status = 'PROCESSING',
 		    attempts = attempts + 1,
 		    locked_at = NOW(),
-		    locked_by = 'qr-scan-audit',
+		    locked_by = 'outbox-dispatcher',
 		    lock_expires_at = NOW() + INTERVAL '30 seconds'
 		FROM picked
 		WHERE e.id = picked.id
@@ -183,17 +196,53 @@ func (d *Dispatcher) processQRScanAudits(ctx context.Context) error {
 	}
 
 	for _, e := range events {
-		if err := d.writeQRScanAudit(ctx, e); err != nil {
-			if markErr := d.markFailed(ctx, e.ID, err); markErr != nil {
-				return fmt.Errorf("qr scan audit failed: %w; mark failed: %v", err, markErr)
+		if e.Type == "dining.qr_scanned" {
+			if err := d.writeQRScanAudit(ctx, e); err != nil {
+				if markErr := d.markFailed(ctx, e.ID, err); markErr != nil {
+					return fmt.Errorf("qr scan audit failed: %w; mark failed: %v", err, markErr)
+				}
+				continue
 			}
-			continue
+		}
+		if d.hub != nil && !suppressRealtime(e.Metadata) {
+			var payload any
+			if len(e.Payload) > 0 {
+				if err := json.Unmarshal(e.Payload, &payload); err != nil {
+
+					if markErr := d.markFailed(ctx, e.ID, err); markErr != nil {
+						return fmt.Errorf("decode event payload failed: %w; mark failed: %v", err, markErr)
+					}
+					continue
+				}
+			}
+
+			if err := d.hub.Broadcast(
+				realtime.Topic{RestaurantID: e.RestaurantID},
+				realtime.Event{Type: e.Type, Payload: payload},
+			); err != nil {
+				d.logger.Warn("outbox broadcast failed",
+					slog.String("event_id", e.ID.String()),
+					slog.String("event_type", e.Type),
+					slog.Any("error", err))
+			}
 		}
 		if err := d.markCompleted(ctx, e.ID); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func suppressRealtime(raw json.RawMessage) bool {
+	if len(raw) == 0 {
+		return false
+	}
+	var metadata map[string]any
+	if err := json.Unmarshal(raw, &metadata); err != nil {
+		return false
+	}
+	value, _ := metadata["suppress_realtime"].(bool)
+	return value
 }
 
 func (d *Dispatcher) writeQRScanAudit(ctx context.Context, e Event) error {
@@ -250,6 +299,7 @@ func (d *Dispatcher) markFailed(ctx context.Context, eventID uuid.UUID, cause er
 		SET status = CASE WHEN attempts >= max_attempts THEN 'DEAD' ELSE 'PENDING' END,
 		    failed_at = NOW(),
 		    last_error = $2,
+		    available_at = NOW() + (LEAST(attempts, 30) * INTERVAL '1 second'),
 		    locked_at = NULL,
 		    locked_by = NULL,
 		    lock_expires_at = NULL

@@ -1,7 +1,7 @@
 # Kiến trúc Backend — Hệ thống quản lý nhà hàng gọi món qua QR
 
 > Phạm vi tài liệu: **chỉ định nghĩa kiến trúc & cấu trúc dự án (DDD)**. Code nghiệp vụ viết sau.
-> Stack: Go (Gin) · PostgreSQL 15+ · Goose · gorilla/websocket · Outbox + LISTEN/NOTIFY · OpenAPI 3.0.
+> Stack: Go (Gin) · PostgreSQL 15+ · MinIO/R2 (S3-compatible storage) · Goose · gorilla/websocket · Outbox + LISTEN/NOTIFY · OpenAPI 3.0.
 
 ## 1. Lựa chọn kiến trúc
 
@@ -29,6 +29,7 @@ restaurant-backend/
 │   │   ├── httpx/                   # envelope response, error mapping, middleware (request id, recover, CORS)
 │   │   ├── auth/                    # JWT cho nhân viên; session token (QR) cho khách; RBAC middleware
 │   │   ├── tenant/                  # trích & truyền restaurant_id qua context
+│   │   ├── storage/                 # S3-compatible: presigned URL, delete object
 │   │   └── logger/                  # slog/zap
 │   ├── modules/                     # các bounded context
 │   │   ├── identity/                # tài khoản nhân viên, vai trò, đăng nhập
@@ -43,11 +44,11 @@ restaurant-backend/
 ├── migrations/                      # *.sql goose
 ├── api/
 │   └── openapi.yaml                 # OpenAPI 3.0
-├── deployments/
-│   ├── Dockerfile
-│   └── docker-compose.yml           # app + postgres
+├── Dockerfile                       # multi-stage Go build
+├── docker-compose.yml               # postgres + minio + migrate + app
 ├── go.mod
-└── Makefile                         # build, run, migrate, lint, test, swagger
+├── Makefile                         # build, run, migrate, lint, test, swagger
+└── .env.example                     # biến môi trường (copy → .env)
 ```
 
 ### Cấu trúc bên trong MỖI module (ví dụ `ordering/`)
@@ -122,6 +123,41 @@ Một số hành động có thể ảnh hưởng toàn hệ thống — ví d�
 1. **Truyền trạng thái đích tường minh, không "blind toggle".** Client gửi giá trị muốn đặt (vd `{ "item_id", "available": false }`), không gửi lệnh "đảo trạng thái". Tránh hai người sửa đồng thời triệt tiêu lẫn nhau và giúp truy vết.
 2. **Bắt buộc ghi audit log.** Trong cùng transaction với thay đổi domain, ghi một bản ghi audit/outbox: **ai · hành động gì · trên tài nguyên nào · khi nào · giá trị trước→sau**. Không cho hành động high-impact diễn ra "âm thầm".
 3. **UI có bước xác nhận** (phía frontend): dialog confirm trước khi commit; hiển thị trạng thái thật từ server, không tự đảo lạc quan. Đây là yêu cầu của chủ dự án — coi mỗi bước high-impact như một mối đe dọa, ưu tiên khả năng đảo ngược + truy vết hơn là tiện lợi.
+
+### 5.7 S3-compatible storage (image upload)
+
+Dùng **MinIO** (local dev) hoặc **Cloudflare R2** (production) — cả 2 đều S3-compatible, cùng API.
+
+**Cơ chế Presigned URL (không upload qua server):**
+
+```
+Client chọn ảnh
+  → POST /api/catalog/upload/presign { extension, content_type }
+    → server kiểm tra auth, gọi MinIO PresignedPutURL()
+    → trả về { presigned_url, public_url }
+  → Client PUT ảnh thẳng lên MinIO qua presigned_url
+  → Lưu public_url vào form (MenuItem.ImageURL / SubImages)
+```
+
+- Server **không xử lý file binary** — không tốn RAM/CPU, không nghẽn.
+- Presigned URL có **TTL 15 phút**, hết hạn tự động khoá.
+- Bucket **public-read** để URL ảnh truy cập trực tiếp (không cần proxy qua server).
+
+**File cấu hình:**
+| Biến | Mặc định | Ghi chú |
+|---|---|---|
+| `S3_ENDPOINT` | `localhost:9000` | MinIO endpoint |
+| `S3_ACCESS_KEY` | `minioadmin` | match MINIO_ROOT_USER |
+| `S3_SECRET_KEY` | `minio-secret` | match MINIO_ROOT_PASSWORD |
+| `S3_BUCKET` | `restaurant-images` | bucket tự động tạo + set public-read policy |
+| `S3_USE_SSL` | `false` | `true` cho R2 (production) |
+| `S3_PUBLIC_URL` | `http://localhost:9000/restaurant-images` | URL prefix để client hiển thị ảnh |
+
+**File liên quan:**
+- `internal/platform/storage/s3.go` — MinIO wrapper, PresignedPutURL + DeleteObject
+- `internal/modules/catalog/interfaces/http/handler.go` — endpoint `/upload/presign`
+- `frontend/src/features/catalog/api.ts` — `presignUpload()` gọi server
+- `frontend/src/features/catalog/components/image-uploader.tsx` — widget upload (file picker → presign → PUT → preview)
 
 ## 6. Vài snippet minh họa (tham khảo, không phải code đầy đủ)
 
@@ -203,7 +239,7 @@ func (s *PlaceOrder) Handle(ctx context.Context, in PlaceOrderInput) (PlaceOrder
 
 ## 8. Thư viện đề xuất
 
-`gin-gonic/gin` · `jackc/pgx/v5` · `pressly/goose/v3` · `gorilla/websocket` · `google/uuid` · `golang-jwt/jwt/v5` · `go-playground/validator/v10` · `log/slog` (chuẩn) · `swaggo/swag` (sinh OpenAPI từ annotation) · `stretchr/testify` (test).
+`gin-gonic/gin` · `jackc/pgx/v5` · `pressly/goose/v3` · `gorilla/websocket` · `google/uuid` · `golang-jwt/jwt/v5` · `go-playground/validator/v10` · `log/slog` (chuẩn) · `swaggo/swag` (sinh OpenAPI từ annotation) · `stretchr/testify` (test) · `minio/minio-go/v7` (S3 client).
 
 ## 9. Nguyên tắc bất biến cần giữ khi code
 

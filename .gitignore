@@ -32,3 +32,5 @@ dist-ssr
 .code*/
 .wo*/
 .cur*/
+# release tarballs
+release/

@@ -1,6 +1,7 @@
+/* eslint-disable react-doctor/prefer-dynamic-import */
 import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
 import type { CashierSession } from '@/features/cashier/types';
-import { fmtDateTime, fmtVND, providerName } from '@/features/cashier/helpers';
+import { activeInvoice, fmtDateTime, fmtVND, providerName } from '@/features/cashier/helpers';
 
 // Register fonts to support Vietnamese characters
 Font.register({
@@ -113,10 +114,10 @@ interface InvoicePDFProps {
 }
 
 export const InvoicePDF = ({ session, t, lang }: InvoicePDFProps) => {
-  const invoice = session.invoice;
+  const invoice = activeInvoice(session);
 
   const methodLabel = (() => {
-    const payment = session.payment;
+    const payment = invoice.payment;
     if (!payment) return '—';
     if (payment.method === 'cash') return t('method_cash');
     if (payment.method === 'card') return `${t('method_card')}${payment.last4 ? ` · •••• ${payment.last4}` : ''}`;
@@ -130,12 +131,12 @@ export const InvoicePDF = ({ session, t, lang }: InvoicePDFProps) => {
         <View style={styles.header}>
           <View>
             <Text style={styles.restaurantName}>{t('restaurant')}</Text>
-            <Text style={{ fontSize: 8, color: '#6b7280' }}>{t('restaurant_address')}</Text>
-            <Text style={{ fontSize: 8, color: '#6b7280' }}>{t('restaurant_phone')}</Text>
+            <Text style={{ fontSize: 12, color: '#6b7280' }}>{t('restaurant_address')}</Text>
+            <Text style={{ fontSize: 12, color: '#6b7280' }}>{t('restaurant_phone')}</Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={styles.invoiceTitle}>{t('receipt_title').toUpperCase()}</Text>
-            <Text style={{ fontSize: 8, color: '#6b7280', marginTop: 2 }}>{invoice.number}</Text>
+            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{invoice.number}</Text>
           </View>
         </View>
 
@@ -144,7 +145,7 @@ export const InvoicePDF = ({ session, t, lang }: InvoicePDFProps) => {
           <View style={styles.metaCol}>
             <Text>
               <Text style={{ fontFamily: 'Roboto-Bold' }}>{t('receipt_table')}: </Text>
-              {session.table_number} · {lang === 'vi' ? session.area_name_vi : session.area_name_en}
+              {session.table_label} · {lang === 'vi' ? session.area_name_vi : session.area_name_en}
             </Text>
             <Text>
               <Text style={{ fontFamily: 'Roboto-Bold' }}>{t('receipt_cashier')}: </Text>
@@ -154,7 +155,7 @@ export const InvoicePDF = ({ session, t, lang }: InvoicePDFProps) => {
           <View style={[styles.metaCol, { alignItems: 'flex-end' }]}>
             <Text>
               <Text style={{ fontFamily: 'Roboto-Bold' }}>{t('receipt_date')}: </Text>
-              {fmtDateTime(session.payment?.completed_at ?? new Date())}
+              {invoice.payment?.completed_at ? fmtDateTime(invoice.payment.completed_at) : ''}
             </Text>
             <Text>
               <Text style={{ fontFamily: 'Roboto-Bold' }}>{t('receipt_method')}: </Text>
@@ -223,11 +224,11 @@ export const InvoicePDF = ({ session, t, lang }: InvoicePDFProps) => {
         {/* Footer */}
         <View style={styles.footer}>
           <Text>{t('receipt_thanks')}</Text>
-          <Text style={{ fontSize: 6, color: '#d1d5db', marginTop: 4 }}>Powered by Smart QR System</Text>
+          <Text style={{ fontSize: 12, color: '#d1d5db', marginTop: 4 }}>Powered by Smart QR System</Text>
         </View>
       </Page>
     </Document>
   );
 };
 
-export default InvoicePDF;
+

@@ -61,8 +61,14 @@ export function wfTimeSinceSignal(table: WFTable, priority: WFPriority, now: Dat
     for (const o of s.orders) {
       for (const it of o.items) {
         if (it.status === 'ready') {
-          const h = it.status_history.find((x) => x.status === 'ready')
-          if (h && h.timestamp.getTime() < earliest) earliest = h.timestamp.getTime()
+          let readyTime: number | null = null
+          for (const x of it.status_history) {
+            if (x.status === 'ready') {
+              readyTime = x.timestamp.getTime()
+              break
+            }
+          }
+          if (readyTime !== null && readyTime < earliest) earliest = readyTime
         }
       }
     }
@@ -81,11 +87,7 @@ export function wfFmtClock(d: Date): string {
   return `${h}:${m}`
 }
 
-export function wfFmtTimestamp(d: Date): string {
-  const h = String(d.getHours()).padStart(2, '0')
-  const m = String(d.getMinutes()).padStart(2, '0')
-  return `${h}:${m}`
-}
+export const wfFmtTime = wfFmtClock
 
 export function wfFmtHMS(seconds: number | null): string {
   if (seconds == null) return ''
@@ -104,10 +106,6 @@ export function wfFmtMin(seconds: number): number {
 export function wfFmtVND(amount: number): string {
   const r = Math.round(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
   return r + 'đ'
-}
-
-export function makeTxnId(): string {
-  return 'TXN' + Math.random().toString(36).substr(2, 9).toUpperCase()
 }
 
 export type Signal = 'call' | 'ready' | 'bill'

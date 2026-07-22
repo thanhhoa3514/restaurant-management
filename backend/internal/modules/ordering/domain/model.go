@@ -10,15 +10,20 @@ import (
 type OrderItemStatus string
 
 const (
+	StatusPlaced       OrderItemStatus = "PLACED"
 	StatusPending      OrderItemStatus = "PENDING"
 	StatusAcknowledged OrderItemStatus = "ACKNOWLEDGED"
 	StatusPreparing    OrderItemStatus = "PREPARING"
 	StatusReady        OrderItemStatus = "READY"
 	StatusServed       OrderItemStatus = "SERVED"
+	StatusUnavailable  OrderItemStatus = "UNAVAILABLE"
 )
 
 var allowedTransitions = map[OrderItemStatus][]OrderItemStatus{
-	StatusPending: {StatusAcknowledged}, StatusAcknowledged: {StatusPreparing}, StatusPreparing: {StatusReady}, StatusReady: {StatusServed},
+	StatusPending:      {StatusAcknowledged, StatusUnavailable},
+	StatusAcknowledged: {StatusPreparing, StatusUnavailable},
+	StatusPreparing:    {StatusReady},
+	StatusReady:        {StatusServed},
 }
 
 func (s OrderItemStatus) CanMoveTo(next OrderItemStatus) bool {
@@ -28,32 +33,6 @@ func (s OrderItemStatus) CanMoveTo(next OrderItemStatus) bool {
 		}
 	}
 	return false
-}
-
-type Order struct {
-	ID           uuid.UUID
-	RestaurantID uuid.UUID
-	SessionID    uuid.UUID
-	Items        []OrderItem
-	Version      int
-}
-
-type OrderItem struct {
-	ID               uuid.UUID
-	OrderID          uuid.UUID
-	MenuItemID       uuid.UUID
-	NameSnapshot     string
-	PriceSnapshotVND int64
-	Status           OrderItemStatus
-	Version          int
-}
-
-type CancelRequest struct {
-	ID          uuid.UUID
-	OrderItemID uuid.UUID
-	Reason      string
-	Approved    *bool
-	CreatedAt   time.Time
 }
 
 type SessionForOrder struct {
@@ -106,6 +85,11 @@ type OrderCreate struct {
 	OrderNumber     string
 	OrderType       string
 	Note            string
+	PlacedBy        string // GUEST or STAFF
+	PlacedByUserID  *uuid.UUID
+	CustomerName    string  // takeaway: customer name
+	CustomerPhone   string  // takeaway: customer phone
+	PickupTime      *time.Time
 	Lines           []OrderLineCreate
 	KitchenTickets  []KitchenTicketCreate
 	SessionTotalVND int64
@@ -127,6 +111,7 @@ type OrderLineCreate struct {
 	Status              string
 	Station             string
 	Note                string
+	IsTakeaway          bool
 	Options             []OrderOptionCreate
 }
 
@@ -176,10 +161,14 @@ type OrderItemRead struct {
 	Status              string
 	Station             string
 	Note                string
+	IsTakeaway          bool
+	UnavailableReason   *string
 	Options             []OrderOptionRead
 }
 
 type OrderOptionRead struct {
+	OptionID                uuid.UUID
+	OptionGroupID           uuid.UUID
 	NameSnapshot            string
 	OptionGroupNameSnapshot string
 	PriceDeltaSnapshotVND   int64
@@ -216,28 +205,11 @@ type OrderLineOptionForEdit struct {
 	Quantity                int
 }
 
-type OrderLineUpdate struct {
-	Line OrderLineCreate
-}
-
 type CancelRequestCreate struct {
 	ID          uuid.UUID
 	OrderItemID uuid.UUID
 	Reason      string
 	Status      string
-}
-
-type Event struct {
-	ID           uuid.UUID
-	RestaurantID uuid.UUID
-	Type         string
-	Payload      any
-	OccurredAt   time.Time
-}
-
-type OrderRepository interface {
-	Save(ctx context.Context, aggregate *Order) error
-	Get(ctx context.Context, restaurantID uuid.UUID, id uuid.UUID) (*Order, error)
 }
 
 type OrderPlacementRepository interface {

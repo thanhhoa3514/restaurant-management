@@ -3,20 +3,22 @@ package application
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	"restaurant-management/internal/modules/billing/domain"
 	"restaurant-management/internal/platform/outbox"
-	"restaurant-management/internal/platform/tenant"
 	"restaurant-management/internal/shared/apperr"
 )
 
 type BuildInvoice struct {
-	tx     TxRunner
-	repo   domain.InvoiceRepository
-	outbox domain.OutboxWriter
+	tx                 TxRunner
+	repo               domain.InvoiceRepository
+	outbox             domain.OutboxWriter
+	defaultRestaurantID uuid.UUID
 }
 
-func NewBuildInvoice(tx TxRunner, repo domain.InvoiceRepository, outbox domain.OutboxWriter) *BuildInvoice {
-	return &BuildInvoice{tx: tx, repo: repo, outbox: outbox}
+func NewBuildInvoice(tx TxRunner, repo domain.InvoiceRepository, outbox domain.OutboxWriter, defaultRestaurantID uuid.UUID) *BuildInvoice {
+	return &BuildInvoice{tx: tx, repo: repo, outbox: outbox, defaultRestaurantID: defaultRestaurantID}
 }
 
 func (s *BuildInvoice) Handle(ctx context.Context, in BuildInvoiceRequest) (InvoiceResponse, error) {
@@ -24,18 +26,14 @@ func (s *BuildInvoice) Handle(ctx context.Context, in BuildInvoiceRequest) (Invo
 	if in.DiningSessionID == uuidNil {
 		return out, apperr.New(apperr.CodeInvalid, "dining_session_id is required")
 	}
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return out, err
-	}
-	err = s.tx.Run(ctx, func(ctx context.Context) error {
-		invoice, created, err := s.repo.BuildInvoice(ctx, restaurantID, in.DiningSessionID)
+	err := s.tx.Run(ctx, func(ctx context.Context) error {
+		invoice, created, err := s.repo.BuildInvoice(ctx, s.defaultRestaurantID, in.DiningSessionID)
 		if err != nil {
 			return err
 		}
 		if created && s.outbox != nil {
 			if err := s.outbox.Write(ctx, outbox.WriteEvent{
-				RestaurantID:  restaurantID,
+				RestaurantID:  s.defaultRestaurantID,
 				AggregateType: "invoice",
 				AggregateID:   invoice.ID,
 				EventType:     "billing.invoice_built",

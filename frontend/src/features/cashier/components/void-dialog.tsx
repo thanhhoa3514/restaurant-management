@@ -26,7 +26,7 @@ export const VoidDialog: FC<VoidDialogProps> = ({
       description={t('void_dialog_desc')}
       confirmText={t('void_confirm')}
       cancelText={t('cancel')}
-      requireConfirmationText={String(session.table_number)}
+      requireConfirmationText={String(session.table_label)}
       inputPlaceholder={t('void_input_label')}
       variant="destructive"
       onOpenChange={onOpenChange}
@@ -35,4 +35,4 @@ export const VoidDialog: FC<VoidDialogProps> = ({
   )
 }
 
-export default VoidDialog
+

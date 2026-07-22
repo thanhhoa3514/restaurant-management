@@ -13,7 +13,8 @@ import (
 )
 
 type JoinSessionRequest struct {
-	QRToken string `json:"qr_token"`
+	QRToken   string `json:"qr_token"`
+	GuestName string `json:"guest_name"`
 	// Server-observed request metadata. The HTTP handler populates these
 	// fields; they are never trusted from JSON.
 	IPHash    string `json:"-"`
@@ -26,7 +27,8 @@ type JoinSessionResponse struct {
 	SessionToken string     `json:"session_token,omitempty"`
 	SessionID    *uuid.UUID `json:"session_id,omitempty"`
 	TableID      *uuid.UUID `json:"table_id,omitempty"`
-	RestaurantID *uuid.UUID `json:"restaurant_id,omitempty"`
+	TableCode    string     `json:"table_code,omitempty"`
+	TableName    string     `json:"table_name,omitempty"`
 }
 
 type JoinSession struct {
@@ -61,21 +63,60 @@ func (s *JoinSession) Handle(ctx context.Context, req JoinSessionRequest) (JoinS
 
 		session, err := s.repo.FindActiveSessionByTable(ctx, qr.RestaurantID, qr.TableID)
 		if err != nil {
-			if apperr.Is(err, apperr.CodeNotFound) {
-				out = JoinSessionResponse{Status: "not_opened"}
-				if err := s.writeQRScanEvent(ctx, qr, nil, "not_opened", req); err != nil {
-					return err
-				}
-				return nil
+			if !apperr.Is(err, apperr.CodeNotFound) {
+				return err
 			}
-			return err
+			// No active session — create a new one in PENDING_VERIFICATION.
+			sessionCode, codeErr := randomCode("S", 12)
+			if codeErr != nil {
+				return codeErr
+			}
+			sessionToken, tokenErr := randomToken(32)
+			if tokenErr != nil {
+				return tokenErr
+			}
+			session = &domain.DiningSession{
+				RestaurantID: qr.RestaurantID,
+				TableID:      qr.TableID,
+				QRCodeID:     &qr.ID,
+				SessionCode:  sessionCode,
+				SessionToken: sessionToken,
+				Status:       domain.SessionPendingVerification,
+				OpenedVia:    domain.OpenedViaQRScan,
+			}
+			if name := strings.TrimSpace(req.GuestName); name != "" {
+				session.CustomerName = name
+			}
+			if err := s.repo.CreateSession(ctx, session); err != nil {
+				return err
+			}
+			out = JoinSessionResponse{
+				Status:       string(session.Status),
+				SessionToken: session.SessionToken,
+				SessionID:    &session.ID,
+				TableID:      &session.TableID,
+			}
+			if table, tableErr := s.repo.FindTable(ctx, qr.RestaurantID, qr.TableID); tableErr == nil && table != nil {
+				out.TableCode = table.Code
+				out.TableName = table.Name
+			}
+			return s.writeQRScanEvent(ctx, qr, session, "pending_verification", req)
 		}
 		out = JoinSessionResponse{
 			Status:       string(session.Status),
 			SessionToken: session.SessionToken,
 			SessionID:    &session.ID,
 			TableID:      &session.TableID,
-			RestaurantID: &session.RestaurantID,
+		}
+		if table, err := s.repo.FindTable(ctx, qr.RestaurantID, qr.TableID); err == nil && table != nil {
+			out.TableCode = table.Code
+			out.TableName = table.Name
+		}
+		if name := strings.TrimSpace(req.GuestName); name != "" {
+			if err := s.repo.UpdateSessionCustomerName(ctx, session.ID, name); err != nil {
+				return err
+			}
+			session.CustomerName = name
 		}
 		return s.writeQRScanEvent(ctx, qr, session, scanOutcome(session.Status), req)
 	})
@@ -102,6 +143,7 @@ func (s *JoinSession) writeQRScanEvent(ctx context.Context, qr *domain.QRCode, s
 		"qr_code_id": qr.ID,
 		"table_id":   qr.TableID,
 		"outcome":    outcome,
+		"guest_name": req.GuestName,
 	}
 	dedupeKey := "qr_scan:" + qr.ID.String() + ":" + outcome + ":" + req.IPHash
 	window := 5 * time.Minute

@@ -51,6 +51,8 @@ func statusFor(code apperr.Code) int {
 		return http.StatusConflict
 	case apperr.CodeNotImplemented:
 		return http.StatusNotImplemented
+	case apperr.CodeRateLimited:
+		return http.StatusTooManyRequests
 	default:
 		return http.StatusInternalServerError
 	}

@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, type ReactNode } from 'react'
+import { createContext, use, useMemo, useReducer, type ReactNode } from 'react'
 import type { CartLine, Screen, Session, Lang } from '../types'
 
 interface OrderingState {
@@ -47,9 +47,6 @@ function orderingReducer(state: OrderingState, action: Action): OrderingState {
 
     case 'PLACE_ORDER':
       return { ...state, placing: true }
-
-    // Server is the source of truth for placed orders; on success we just clear
-    // the local cart and let the order screens refetch.
     case 'ORDER_PLACED':
       return { ...state, cart: [], placing: false, cartOpen: false }
 
@@ -97,15 +94,13 @@ export function OrderingProvider({ children }: { children: ReactNode }) {
     placing: false,
   })
 
-  return (
-    <OrderingContext.Provider value={{ state, dispatch }}>
-      {children}
-    </OrderingContext.Provider>
-  )
+  const value = useMemo(() => ({ state, dispatch }), [state, dispatch])
+
+  return <OrderingContext.Provider value={value}>{children}</OrderingContext.Provider>
 }
 
 export function useOrdering(): OrderingContextValue {
-  const ctx = useContext(OrderingContext)
+  const ctx = use(OrderingContext)
   if (!ctx) throw new Error('useOrdering must be used within OrderingProvider')
   return ctx
 }

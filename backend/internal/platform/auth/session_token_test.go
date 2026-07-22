@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"restaurant-management/internal/platform/guest"
-	"restaurant-management/internal/platform/tenant"
 	"restaurant-management/internal/shared/apperr"
 )
 
@@ -39,18 +38,15 @@ func runSessionMiddleware(v SessionValidator, token string, next gin.HandlerFunc
 	return w
 }
 
-func TestQRSessionTokenValidInjectsTenantAndGuestSession(t *testing.T) {
+func TestQRSessionTokenValidInjectsGuestSession(t *testing.T) {
 	rid := uuid.New()
 	sid := uuid.New()
 	tableID := uuid.New()
 	v := fakeSessionValidator{session: SessionAuth{RestaurantID: rid, SessionID: sid, TableID: tableID}}
 
 	w := runSessionMiddleware(v, "session-token", func(c *gin.Context) {
-		gotTenant, err := tenant.MustRestaurantID(c.Request.Context())
-		require.NoError(t, err)
 		gotGuest, ok := guest.SessionFromContext(c.Request.Context())
 		require.True(t, ok)
-		require.Equal(t, rid, gotTenant)
 		require.Equal(t, sid, gotGuest.SessionID)
 		require.Equal(t, tableID, gotGuest.TableID)
 		c.Status(http.StatusOK)

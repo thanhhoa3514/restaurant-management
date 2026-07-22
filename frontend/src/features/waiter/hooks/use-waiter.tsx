@@ -1,69 +1,22 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type Dispatch,
-  type SetStateAction,
-} from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 
-import { openDiningSession } from '@/features/dining/api'
 import { WF_DICT } from '@/features/waiter/data/i18n'
-import {
-  fetchStaffTables,
-  requestSessionBill,
-  updateStaffOrderItemStatus,
-} from '@/features/staff/api'
-import { toWaiterTables } from '@/features/staff/mappers'
-import type { Lang, WFCounts, WFTable } from '@/features/waiter/types'
-
-export type WaiterView = 'plan' | 'grid'
+import type {
+  Lang,
+  WFCounts,
+  WaiterView,
+  UseWaiterValue,
+} from '@/features/waiter/types'
+import { useStaffTables } from '@/features/waiter/queries/useStaffTables'
+import { useUpdateItemStatus } from '@/features/waiter/mutations/useUpdateItemStatus'
+import { useReviewOrderItem } from '@/features/waiter/mutations/useReviewOrderItem'
+import { useRequestBill } from '@/features/waiter/mutations/useRequestBill'
+import { useAckWaiterCall } from '@/features/waiter/mutations/useAckWaiterCall'
+import { useOpenSession } from '@/features/waiter/mutations/useOpenSession'
+import { useMergeSessions, useSplitSessions } from '@/features/waiter/mutations/useMergeSessions'
 
 type DictArgs = Array<string | number>
-
-export interface WaiterState {
-  tables: WFTable[]
-  now: Date
-  timeMultiplier: number
-  autoOn: boolean
-  lang: Lang
-  soundOn: boolean
-  view: WaiterView
-  selectedTableId: string | null
-  justChangedIds: Set<string>
-  demoOpen: boolean
-}
-
-export interface WaiterActions {
-  selectTable: (tableId: string | null) => void
-  acknowledgeCall: (tableId: string) => void
-  notifyCashier: (tableId: string) => void
-  markItemServed: (tableId: string, itemId: string) => void
-  markAllServed: (tableId: string) => void
-  requestBill: (tableId: string) => void
-  openSession: (tableId: string, guestCount: number, notes: string) => void
-  injectItemReady: () => void
-  injectCall: () => void
-  injectBill: () => void
-  injectNewSession: () => void
-  setAutoOn: Dispatch<SetStateAction<boolean>>
-  setTimeMultiplier: Dispatch<SetStateAction<number>>
-  setLang: (lang: Lang) => void
-  setSoundOn: Dispatch<SetStateAction<boolean>>
-  setView: Dispatch<SetStateAction<WaiterView>>
-  setDemoOpen: Dispatch<SetStateAction<boolean>>
-}
-
-export interface UseWaiterValue {
-  state: WaiterState
-  actions: WaiterActions
-  counts: WFCounts
-  selectedTable: WFTable | null
-  t: (key: string, ...args: DictArgs) => string
-}
-
-const STAFF_TABLES_QUERY_KEY = ['staff', 'tables'] as const
 
 export function useWaiter(): UseWaiterValue {
   const [now, setNow] = useState<Date>(() => new Date())
@@ -73,18 +26,23 @@ export function useWaiter(): UseWaiterValue {
     () => (localStorage.getItem('rest_lang_waiter') as Lang) || 'vi',
   )
   const [soundOn, setSoundOn] = useState(true)
-  const [view, setView] = useState<WaiterView>('plan')
+  const [view, setView] = useState<WaiterView>(() =>
+    typeof window !== 'undefined' && window.innerWidth < 640 ? 'grid' : 'plan',
+  )
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null)
   const [justChangedIds, setJustChangedIds] = useState<Set<string>>(() => new Set())
   const [demoOpen, setDemoOpen] = useState(false)
+  const [mergeMode, setMergeMode] = useState(false)
+  const [mergeSelectedIds, setMergeSelectedIds] = useState<string[]>([])
 
-  const tablesQuery = useQuery({
-    queryKey: STAFF_TABLES_QUERY_KEY,
-    queryFn: fetchStaffTables,
-    refetchInterval: 8_000,
-  })
-
-  const tables = useMemo(() => toWaiterTables(tablesQuery.data?.tables ?? []), [tablesQuery.data])
+  const { tables, refetch } = useStaffTables()
+  const updateItemStatus = useUpdateItemStatus()
+  const reviewItem = useReviewOrderItem()
+  const requestBillMutation = useRequestBill()
+  const ackWaiterCallMutation = useAckWaiterCall()
+  const openSessionMutation = useOpenSession()
+  const mergeSessionsMutation = useMergeSessions()
+  const splitSessionsMutation = useSplitSessions()
 
   const setLang = useCallback((newLang: Lang) => {
     localStorage.setItem('rest_lang_waiter', newLang)
@@ -100,6 +58,13 @@ export function useWaiter(): UseWaiterValue {
     [lang],
   )
 
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNow((current) => new Date(current.getTime() + 1000 * timeMultiplier))
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [timeMultiplier])
+
   const markJustChanged = useCallback((tableId: string) => {
     setJustChangedIds((current) => new Set(current).add(tableId))
     window.setTimeout(() => {
@@ -111,37 +76,71 @@ export function useWaiter(): UseWaiterValue {
     }, 500)
   }, [])
 
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setNow((current) => new Date(current.getTime() + 1000 * timeMultiplier))
-    }, 1000)
-    return () => window.clearInterval(timer)
-  }, [timeMultiplier])
-
-  const refetchTables = useCallback(() => {
-    void tablesQuery.refetch()
-  }, [tablesQuery])
-
   const selectTable = useCallback((tableId: string | null) => {
     setSelectedTableId(tableId)
   }, [])
 
-  const acknowledgeCall = useCallback(() => {
-    refetchTables()
-  }, [refetchTables])
+  const acknowledgeCall = useCallback(
+    (tableId: string) => {
+      const table = tables.find((item) => item.id === tableId)
+      const sessionId = table?.session?.id
+      if (!sessionId) return
+      ackWaiterCallMutation.mutateAsync(sessionId).then(() => {
+        markJustChanged(tableId)
+        if (table) toast(t('toast_acknowledged', table.code))
+      })
+    },
+    [ackWaiterCallMutation, markJustChanged, t, tables],
+  )
 
-  const notifyCashier = useCallback(() => {
-    refetchTables()
-  }, [refetchTables])
+  const notifyCashier = useCallback(
+    (_tableId: string) => {
+      toast(t('toast_bill_sent'))
+    },
+    [t],
+  )
 
   const markItemServed = useCallback(
     (tableId: string, itemId: string) => {
-      void updateStaffOrderItemStatus(itemId, 'SERVED').then(() => {
+      const table = tables.find((item) => item.id === tableId)
+      const item = table?.session?.orders
+        .flatMap((order) => order.items)
+        .find((i) => i.id === itemId)
+      const itemName = item ? (lang === 'vi' ? item.name_vi : item.name_en) : ''
+      updateItemStatus.mutateAsync({ itemId, status: 'SERVED' }).then(() => {
         markJustChanged(tableId)
-        refetchTables()
+        if (table) toast(t('toast_served', itemName, table.code))
       })
     },
-    [markJustChanged, refetchTables],
+    [markJustChanged, updateItemStatus, tables, t, lang],
+  )
+
+  const confirmItem = useCallback(
+    (tableId: string, itemId: string) => {
+      const table = tables.find((item) => item.id === tableId)
+      reviewItem.confirm
+        .mutateAsync(itemId)
+        .then(() => {
+          markJustChanged(tableId)
+          if (table) toast(t('toast_item_confirmed', table.code))
+        })
+        .catch((error: Error) => toast.error(error.message))
+    },
+    [markJustChanged, reviewItem.confirm, tables, t],
+  )
+
+  const rejectItem = useCallback(
+    (tableId: string, itemId: string, reason: string) => {
+      const table = tables.find((item) => item.id === tableId)
+      reviewItem.reject
+        .mutateAsync({ itemId, reason })
+        .then(() => {
+          markJustChanged(tableId)
+          if (table) toast(t('toast_item_rejected', table.code))
+        })
+        .catch((error: Error) => toast.error(error.message))
+    },
+    [markJustChanged, reviewItem.reject, tables, t],
   )
 
   const markAllServed = useCallback(
@@ -152,35 +151,94 @@ export function useWaiter(): UseWaiterValue {
           order.items.filter((item) => item.status === 'ready'),
         ) ?? []
       void Promise.all(
-        readyItems.map((item) => updateStaffOrderItemStatus(item.id, 'SERVED')),
+        readyItems.map((item) =>
+          updateItemStatus.mutateAsync({ itemId: item.id, status: 'SERVED' }),
+        ),
       ).then(() => {
         markJustChanged(tableId)
-        refetchTables()
+        if (table) toast(t('toast_all_served', table.code))
       })
     },
-    [markJustChanged, refetchTables, tables],
+    [markJustChanged, updateItemStatus, tables, t],
   )
 
   const requestBill = useCallback(
     (tableId: string) => {
-      const sessionId = tables.find((table) => table.id === tableId)?.session?.id
+      const table = tables.find((t) => t.id === tableId)
+      const sessionId = table?.session?.id
       if (!sessionId) return
-      void requestSessionBill(sessionId).then(() => {
+      requestBillMutation.mutateAsync(sessionId).then(() => {
         markJustChanged(tableId)
-        refetchTables()
+        toast(t('toast_bill_sent'))
       })
     },
-    [markJustChanged, refetchTables, tables],
+    [markJustChanged, requestBillMutation, tables, t],
   )
 
   const openSession = useCallback(
     (tableId: string) => {
-      void openDiningSession(tableId).then(() => {
+      const table = tables.find((t) => t.id === tableId)
+      openSessionMutation.mutateAsync(tableId).then(() => {
         markJustChanged(tableId)
-        refetchTables()
+        if (table) toast(t('toast_session_opened', table.code))
       })
     },
-    [markJustChanged, refetchTables],
+    [markJustChanged, openSessionMutation, tables, t],
+  )
+
+  const toggleMergeMode = useCallback(() => {
+    setMergeMode((current) => !current)
+    setMergeSelectedIds([])
+    setSelectedTableId(null)
+  }, [])
+
+  // Chỉ gộp được bàn đang có phiên và chưa nằm trong nhóm gộp nào
+  const toggleMergeSelection = useCallback(
+    (tableId: string) => {
+      const table = tables.find((item) => item.id === tableId)
+      if (!table?.session) return
+      if (table.session.merge_group_id) {
+        toast(t('merge_already_grouped'))
+        return
+      }
+      setMergeSelectedIds((current) =>
+        current.includes(tableId)
+          ? current.filter((id) => id !== tableId)
+          : [...current, tableId],
+      )
+    },
+    [t, tables],
+  )
+
+  const confirmMerge = useCallback(() => {
+    const sessionIds = mergeSelectedIds
+      .map((id) => tables.find((table) => table.id === id)?.session?.id)
+      .filter((id): id is string => Boolean(id))
+    if (sessionIds.length < 2) return
+    mergeSessionsMutation
+      .mutateAsync(sessionIds)
+      .then(() => {
+        mergeSelectedIds.forEach(markJustChanged)
+        setMergeSelectedIds([])
+        setMergeMode(false)
+        toast(t('toast_merged', sessionIds.length))
+      })
+      .catch((error: Error) => toast.error(error.message))
+  }, [markJustChanged, mergeSelectedIds, mergeSessionsMutation, t, tables])
+
+  const splitGroup = useCallback(
+    (tableId: string) => {
+      const groupId = tables.find((table) => table.id === tableId)?.session?.merge_group_id
+      if (!groupId) return
+      splitSessionsMutation
+        .mutateAsync(groupId)
+        .then(() => {
+          markJustChanged(tableId)
+          toast(t('toast_split'))
+        })
+        .catch((error: Error) => toast.error(error.message))
+    },
+    [markJustChanged, splitSessionsMutation, t, tables],
   )
 
   const counts = useMemo<WFCounts>(() => {
@@ -194,10 +252,14 @@ export function useWaiter(): UseWaiterValue {
             (sum, order) => sum + order.items.filter((item) => item.status === 'ready').length,
             0,
           )
+          acc.pending += table.session.orders.reduce(
+            (sum, order) => sum + order.items.filter((item) => item.status === 'placed').length,
+            0,
+          )
         }
         return acc
       },
-      { calls: 0, ready: 0, bills: 0, occupied: 0, total: tables.length },
+      { calls: 0, ready: 0, bills: 0, occupied: 0, total: tables.length, pending: 0 },
     )
   }, [tables])
 
@@ -218,6 +280,8 @@ export function useWaiter(): UseWaiterValue {
       selectedTableId,
       justChangedIds,
       demoOpen,
+      mergeMode,
+      mergeSelectedIds,
     },
     actions: {
       selectTable,
@@ -225,18 +289,24 @@ export function useWaiter(): UseWaiterValue {
       notifyCashier,
       markItemServed,
       markAllServed,
+      confirmItem,
+      rejectItem,
       requestBill,
       openSession,
-      injectItemReady: refetchTables,
-      injectCall: refetchTables,
-      injectBill: refetchTables,
-      injectNewSession: refetchTables,
+      injectItemReady: refetch,
+      injectCall: refetch,
+      injectBill: refetch,
+      injectNewSession: refetch,
       setAutoOn,
       setTimeMultiplier,
       setLang,
       setSoundOn,
       setView,
       setDemoOpen,
+      toggleMergeMode,
+      toggleMergeSelection,
+      confirmMerge,
+      splitGroup,
     },
     counts,
     selectedTable,

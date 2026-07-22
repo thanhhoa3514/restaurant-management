@@ -1,14 +1,18 @@
 import { useState, type FC } from 'react'
+import { Loader2 } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { DiscountDialog } from '@/features/cashier/components/discount-dialog'
+import { SplitDialog } from '@/features/cashier/components/split-dialog'
 import { VoidDialog } from '@/features/cashier/components/void-dialog'
-import { fmtClock, fmtVND } from '@/features/cashier/helpers'
+import { activeInvoice, fmtClock, fmtVND } from '@/features/cashier/helpers'
 import type { CashierSession, Lang } from '@/features/cashier/types'
+import { useReopenSession } from '@/features/cashier/mutations/useReopenSession'
 
 interface InvoicePanelProps {
   session: CashierSession | null
@@ -18,6 +22,9 @@ interface InvoicePanelProps {
   onApplyDiscount: (sessionId: string, amount: number, reason: string) => void
   onRemoveDiscount: (sessionId: string) => void
   onCloseSession: (sessionId: string) => void
+  onSelectInvoice: (sessionId: string, invoiceId: string) => void
+  onSplit: (sessionId: string, groups: { label: string; order_item_ids: string[] }[]) => void
+  onSessionReopened?: () => void
 }
 
 export const InvoicePanel: FC<InvoicePanelProps> = ({
@@ -28,9 +35,14 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
   onApplyDiscount,
   onRemoveDiscount,
   onCloseSession,
+  onSelectInvoice,
+  onSplit,
+  onSessionReopened,
 }) => {
   const [discountOpen, setDiscountOpen] = useState(false)
   const [voidOpen, setVoidOpen] = useState(false)
+  const [splitOpen, setSplitOpen] = useState(false)
+  const reopenMutation = useReopenSession()
 
   if (!session) {
     return (
@@ -43,9 +55,13 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
     )
   }
 
-  const invoice = session.invoice
+  const invoice = activeInvoice(session)
   const terminal = session.status === 'paid' || session.status === 'closed' || session.status === 'voided'
   const elapsedMinutes = Math.max(0, Math.round((now.getTime() - session.started_at.getTime()) / 60000))
+  const split = session.invoices.length > 1
+  const anyInvoicePaidOrPaying = session.invoices.some(
+    (inv) => inv.status === 'PAID' || inv.payment?.status === 'processing',
+  )
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -54,7 +70,7 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <CardTitle className="text-2xl">{t('table')} {session.table_number}</CardTitle>
+                <CardTitle className="text-2xl">{t('table')} {session.table_label}</CardTitle>
                 <div className="mt-2 flex flex-wrap gap-2 text-sm text-[var(--text-tertiary)]">
                   <span>{lang === 'vi' ? session.area_name_vi : session.area_name_en}</span>
                   <span>·</span>
@@ -70,6 +86,24 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
             <div className="mt-2 text-xs font-semibold text-[var(--text-tertiary)]">
               {t('invoice_number')}: {invoice.number} · {t('invoice_opened_at')} {fmtClock(session.started_at)}
             </div>
+            {split ? (
+              <Tabs
+                value={invoice.id}
+                onValueChange={(value) => onSelectInvoice(session.id, value as string)}
+                className="mt-3 w-full"
+              >
+                <TabsList className="w-full flex-wrap bg-[var(--surface-grouped)]">
+                  {session.invoices.map((inv) => (
+                    <TabsTrigger key={inv.id} value={inv.id ?? ''} className="flex-1 gap-1.5">
+                      {inv.number}
+                      {inv.status === 'PAID' ? (
+                        <Badge className="rounded-full border-0 bg-[var(--system-green)]/10 px-1.5 text-[10px] text-[var(--system-green)]">✓</Badge>
+                      ) : null}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            ) : null}
           </CardHeader>
         </Card>
       </div>
@@ -134,10 +168,33 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
               <Button variant="secondary" className="flex-1 rounded-[var(--radius-lg)]" disabled={!invoice.discount || terminal} onClick={() => onRemoveDiscount(session.id)}>
                 {t('remove_discount')}
               </Button>
-              <Button variant="destructive" className="flex-1 rounded-[var(--radius-lg)]" disabled={session.payment?.status === 'pending' || terminal} onClick={() => setVoidOpen(true)}>
+              <Button variant="destructive" className="flex-1 rounded-[var(--radius-lg)]" disabled={invoice.payment?.status === 'pending' || terminal} onClick={() => setVoidOpen(true)}>
                 {t('void_session')}
               </Button>
             </div>
+            <Button
+              variant="ghost"
+              className="w-full rounded-[var(--radius-lg)] text-[var(--system-blue)]"
+              disabled={terminal || anyInvoicePaidOrPaying}
+              onClick={() => setSplitOpen(true)}
+            >
+              {t('split_invoice')}
+            </Button>
+            {(session.status === 'bill_requested' || session.status === 'in_payment') && (
+              <Button
+                variant="secondary"
+                className="w-full rounded-[var(--radius-lg)] text-[var(--system-green)]"
+                disabled={reopenMutation.isPending}
+                onClick={() => {
+                  if (window.confirm(t('reopen_session_confirm'))) {
+                    reopenMutation.mutate(session.id, { onSuccess: onSessionReopened })
+                  }
+                }}
+              >
+                {reopenMutation.isPending && <Loader2 className="size-4 animate-spin" />}
+                {t('reopen_session')}
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -163,6 +220,17 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
         onOpenChange={setVoidOpen}
         onConfirm={() => onCloseSession(session.id)}
       />
+      <SplitDialog
+        open={splitOpen}
+        session={session}
+        lang={lang}
+        t={t}
+        onOpenChange={setSplitOpen}
+        onConfirm={(groups) => {
+          onSplit(session.id, groups)
+          setSplitOpen(false)
+        }}
+      />
     </div>
   )
 }
@@ -176,4 +244,4 @@ function PriceRow({ label, value, tone }: { label: string; value: string; tone?:
   )
 }
 
-export default InvoicePanel
+

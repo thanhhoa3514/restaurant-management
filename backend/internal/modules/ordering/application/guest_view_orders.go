@@ -8,7 +8,6 @@ import (
 
 	"restaurant-management/internal/modules/ordering/domain"
 	"restaurant-management/internal/platform/guest"
-	"restaurant-management/internal/platform/tenant"
 	"restaurant-management/internal/shared/apperr"
 )
 
@@ -24,21 +23,22 @@ type GuestOrderDTO struct {
 	Status      string              `json:"status"`
 	SubmittedAt time.Time           `json:"submitted_at"`
 	Note        string              `json:"note"`
+	Version     int                 `json:"version"`
 	Items       []GuestOrderItemDTO `json:"items"`
 }
 
-type GuestViewOrders struct{ repo domain.OrderReadRepository }
+type GuestViewOrders struct {
+	repo                domain.OrderReadRepository
+	defaultRestaurantID uuid.UUID
+}
 
-func NewGuestViewOrders(repo domain.OrderReadRepository) *GuestViewOrders {
-	return &GuestViewOrders{repo: repo}
+func NewGuestViewOrders(repo domain.OrderReadRepository, defaultRestaurantID uuid.UUID) *GuestViewOrders {
+	return &GuestViewOrders{repo: repo, defaultRestaurantID: defaultRestaurantID}
 }
 
 func (s *GuestViewOrders) Handle(ctx context.Context) (GuestOrdersResponse, error) {
 	var out GuestOrdersResponse
-	restaurantID, err := tenant.MustRestaurantID(ctx)
-	if err != nil {
-		return out, apperr.New(apperr.CodeUnauthorized, "missing restaurant tenant")
-	}
+	restaurantID := s.defaultRestaurantID
 	gs, ok := guest.SessionFromContext(ctx)
 	if !ok || gs.SessionID == uuid.Nil {
 		return out, apperr.New(apperr.CodeUnauthorized, "missing guest session")
@@ -53,11 +53,11 @@ func (s *GuestViewOrders) Handle(ctx context.Context) (GuestOrdersResponse, erro
 		for _, item := range order.Items {
 			options := make([]GuestOrderOptionDTO, 0, len(item.Options))
 			for _, opt := range item.Options {
-				options = append(options, GuestOrderOptionDTO{NameSnapshot: opt.NameSnapshot, PriceDeltaSnapshotVND: opt.PriceDeltaSnapshotVND, Quantity: opt.Quantity})
+				options = append(options, GuestOrderOptionDTO{OptionID: opt.OptionID, OptionGroupID: opt.OptionGroupID, NameSnapshot: opt.NameSnapshot, PriceDeltaSnapshotVND: opt.PriceDeltaSnapshotVND, Quantity: opt.Quantity})
 			}
-			items = append(items, GuestOrderItemDTO{OrderItemID: item.ID, MenuItemID: item.MenuItemID, NameSnapshot: item.NameSnapshot, VariantNameSnapshot: item.VariantNameSnapshot, Quantity: item.Quantity, UnitPriceVND: item.UnitPriceVND, OptionsTotalVND: item.OptionsTotalVND, SubtotalVND: item.SubtotalVND, TotalAmountVND: item.TotalAmountVND, Status: item.Status, Station: item.Station, Options: options})
+			items = append(items, GuestOrderItemDTO{OrderItemID: item.ID, MenuItemID: item.MenuItemID, NameSnapshot: item.NameSnapshot, VariantNameSnapshot: item.VariantNameSnapshot, Quantity: item.Quantity, UnitPriceVND: item.UnitPriceVND, OptionsTotalVND: item.OptionsTotalVND, SubtotalVND: item.SubtotalVND, TotalAmountVND: item.TotalAmountVND, Status: item.Status, Station: item.Station, Options: options, UnavailableReason: item.UnavailableReason})
 		}
-		orders = append(orders, GuestOrderDTO{ID: order.ID, OrderNumber: order.OrderNumber, OrderType: order.OrderType, Status: order.Status, SubmittedAt: order.SubmittedAt, Note: order.Note, Items: items})
+		orders = append(orders, GuestOrderDTO{ID: order.ID, OrderNumber: order.OrderNumber, OrderType: order.OrderType, Status: order.Status, SubmittedAt: order.SubmittedAt, Note: order.Note, Version: order.Version, Items: items})
 	}
 	return GuestOrdersResponse{Orders: orders, SessionTotalVND: view.SessionTotalVND}, nil
 }

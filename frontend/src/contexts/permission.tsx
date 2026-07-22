@@ -1,0 +1,110 @@
+import { createContext, useEffect, useMemo, useReducer, use, type ReactNode } from 'react'
+
+import { ApiError, apiRequest } from '@/lib/api'
+import {
+  clearStaffSession,
+  getStaffSession,
+  logoutStaff,
+  subscribeStaffSession,
+  updateStaffSession,
+} from '@/lib/auth'
+import type { PermissionCode, StaffSession } from '@/types/auth'
+
+interface MeResponse {
+  user_id: string
+  username: string
+  name: string
+  role: string
+  permissions: PermissionCode[]
+}
+
+export interface PermissionContextValue {
+  permissions: ReadonlySet<PermissionCode>
+  loading: boolean
+  has: (permission: PermissionCode) => boolean
+  hasAny: (permissions: PermissionCode[]) => boolean
+}
+
+const PermissionContext = createContext<PermissionContextValue | null>(null)
+
+function initPermissionState(): { session: StaffSession | null; loading: boolean } {
+  const initSession = getStaffSession()
+  if (
+    initSession &&
+    (Number.isNaN(Date.parse(initSession.expiresAt)) ||
+      new Date(initSession.expiresAt).getTime() <= Date.now())
+  ) {
+    clearStaffSession()
+    return { session: null, loading: false }
+  }
+  return { session: initSession, loading: Boolean(initSession?.token) }
+}
+
+export function PermissionProvider({ children }: { children: ReactNode }) {
+  const [{ session, loading }, dispatch] = useReducer(
+    (s: { session: StaffSession | null; loading: boolean }, a: Partial<typeof s>) => ({
+      ...s,
+      ...a,
+    }),
+    initPermissionState(),
+  )
+
+  useEffect(
+    () =>
+      subscribeStaffSession((next) => {
+        dispatch({ session: next, loading: Boolean(next?.token) })
+      }),
+    [],
+  )
+
+  useEffect(() => {
+    if (!session?.token) return
+    let active = true
+    apiRequest<MeResponse>('/api/v1/restaurant/auth/me')
+      .then((me) => {
+        if (!active) return
+        const next = updateStaffSession({
+          name: me.name,
+          permissions: me.permissions,
+        })
+        dispatch({ session: next, loading: false })
+      })
+      .catch(async (error: unknown) => {
+        if (!active) return
+        if (error instanceof ApiError && error.status === 401) {
+          await logoutStaff()
+          dispatch({ session: null, loading: false })
+        } else {
+          dispatch({ loading: false })
+        }
+      })
+      .finally(() => {
+        if (active) dispatch({ loading: false })
+      })
+    return () => {
+      active = false
+    }
+  }, [session?.token])
+
+  const permissions = useMemo(
+    () => new Set<PermissionCode>(session?.permissions ?? []),
+    [session?.permissions],
+  )
+  const value = useMemo<PermissionContextValue>(
+    () => ({
+      permissions,
+      loading,
+      has: (permission) => permissions.has(permission),
+      hasAny: (codes) => codes.some((code) => permissions.has(code)),
+    }),
+    [loading, permissions],
+  )
+
+  return <PermissionContext.Provider value={value}>{children}</PermissionContext.Provider>
+}
+
+export function usePermissions(): PermissionContextValue {
+  const value = use(PermissionContext)
+  if (!value) throw new Error('usePermissions must be used inside PermissionProvider')
+  return value
+}

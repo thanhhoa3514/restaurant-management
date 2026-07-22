@@ -1,4 +1,4 @@
-import { useMemo, useState, type FC } from 'react'
+import { useMemo, useReducer, useRef, type FC } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -22,8 +22,13 @@ interface TableSheetProps {
   onNotifyCashier: (tableId: string) => void
   onMarkItemServed: (tableId: string, itemId: string) => void
   onMarkAllServed: (tableId: string) => void
+  onConfirmItem: (tableId: string, itemId: string) => void
+  onRejectItem: (tableId: string, itemId: string, reason: string) => void
   onRequestBill: (tableId: string) => void
   onOpenSession: (tableId: string, guestCount: number, notes: string) => void
+  onSplitGroup: (tableId: string) => void
+  /** Mã các bàn khác trong cùng nhóm gộp, rỗng nếu bàn không được gộp */
+  mergeSiblings: string[]
 }
 
 interface ReadyItem {
@@ -42,28 +47,47 @@ export const TableSheet: FC<TableSheetProps> = ({
   onNotifyCashier,
   onMarkItemServed,
   onMarkAllServed,
+  onConfirmItem,
+  onRejectItem,
   onRequestBill,
   onOpenSession,
+  onSplitGroup,
+  mergeSiblings,
 }) => {
-  const [confirmBill, setConfirmBill] = useState(false)
-  const [showOpenForm, setShowOpenForm] = useState(false)
-  const [guestCount, setGuestCount] = useState(2)
-  const [notes, setNotes] = useState('')
+  const [{ confirmBill, showOpenForm, guestCount, notes }, dispatch] = useReducer(
+    (s: any, a: any) => ({ ...s, ...a }),
+    { confirmBill: false, showOpenForm: false, guestCount: 2, notes: '' }
+  )
 
-  const [prevTableId, setPrevTableId] = useState(table?.id)
+  const prevTableIdRef = useRef(table?.id)
 
-  if (table?.id !== prevTableId) {
-    setPrevTableId(table?.id)
-    setConfirmBill(false)
-    setShowOpenForm(false)
-    setGuestCount(table?.capacity ? Math.min(2, table.capacity) : 2)
-    setNotes('')
+  if (table?.id !== prevTableIdRef.current) {
+    prevTableIdRef.current = table?.id
+    dispatch({
+      confirmBill: false,
+      showOpenForm: false,
+      guestCount: table?.capacity ? Math.min(2, table.capacity) : 2,
+      notes: ''
+    })
   }
 
   const readyItems = useMemo<ReadyItem[]>(() => {
     if (!table?.session) return []
     return table.session.orders.flatMap((order) =>
-      order.items.filter((item) => item.status === 'ready').map((item) => ({ item, orderId: order.id })),
+      order.items.reduce<ReadyItem[]>((acc, item) => {
+        if (item.status === 'ready') acc.push({ item, orderId: order.id })
+        return acc
+      }, [])
+    )
+  }, [table])
+
+  const placedItems = useMemo<ReadyItem[]>(() => {
+    if (!table?.session) return []
+    return table.session.orders.flatMap((order) =>
+      order.items.reduce<ReadyItem[]>((acc, item) => {
+        if (item.status === 'placed') acc.push({ item, orderId: order.id })
+        return acc
+      }, [])
     )
   }, [table])
 
@@ -82,21 +106,31 @@ export const TableSheet: FC<TableSheetProps> = ({
 
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
-      <SheetContent side="right" hideClose className="w-full max-w-[31rem] rounded-l-[28px] border-l border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-950">
+      <SheetContent side="right" hideClose className="w-full max-w-[31rem] gap-0 rounded-l-[28px] border-l border-zinc-200 bg-white shadow-xl max-sm:max-w-full max-sm:rounded-none dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex items-start justify-between gap-4 border-b border-[var(--separator)] px-6 pb-4 pt-6">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-[32px] font-bold leading-none text-[var(--text)]">
-                {t('table')} {table.number}
+                {t('table')} {table.code}
               </h2>
               {isEmpty ? (
                 <Badge variant="secondary" className="rounded-full">
                   {t('empty')}
                 </Badge>
               ) : (
-                <span className="text-sm font-semibold text-[var(--text-secondary)]">• {t('guests', table.session?.guest_count ?? 0)}</span>
+                <>
+                  <span className="text-sm font-semibold text-[var(--text-secondary)]">• {t('guests', table.session?.guest_count ?? 0)}</span>
+                  {table.session?.guest_name && (
+                    <span className="ml-2 text-sm text-[var(--text-tertiary)]">· {table.session.guest_name}</span>
+                  )}
+                </>
               )}
             </div>
+            {mergeSiblings.length > 0 && (
+              <Badge className="mt-2 rounded-full border-0 bg-purple-500/12 text-purple-600 dark:text-purple-400">
+                {t('merge_with', mergeSiblings.join(', '))}
+              </Badge>
+            )}
             <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">
               {isEmpty
                 ? `${table.capacity} ${lang === 'vi' ? 'chỗ ngồi' : 'seats'}`
@@ -115,14 +149,14 @@ export const TableSheet: FC<TableSheetProps> = ({
               lang={lang}
               t={t}
               showOpenForm={showOpenForm}
-              setShowOpenForm={setShowOpenForm}
+              setShowOpenForm={(v) => dispatch({ showOpenForm: v })}
               guestCount={guestCount}
-              setGuestCount={setGuestCount}
+              setGuestCount={(v) => dispatch({ guestCount: v })}
               notes={notes}
-              setNotes={setNotes}
+              setNotes={(v) => dispatch({ notes: v })}
               onSubmit={() => {
                 onOpenSession(table.id, guestCount, notes)
-                setShowOpenForm(false)
+                dispatch({ showOpenForm: false })
               }}
             />
           ) : (
@@ -133,30 +167,45 @@ export const TableSheet: FC<TableSheetProps> = ({
               lang={lang}
               t={t}
               readyItems={readyItems}
+              placedItems={placedItems}
               onAcknowledgeCall={onAcknowledgeCall}
               onNotifyCashier={onNotifyCashier}
               onMarkItemServed={onMarkItemServed}
               onMarkAllServed={onMarkAllServed}
+              onConfirmItem={onConfirmItem}
+              onRejectItem={onRejectItem}
             />
           )}
         </div>
 
         {!isEmpty && (
-          <div className="border-t border-[var(--separator)] bg-white/45 px-6 py-4 backdrop-blur-xl">
-            <div className="flex items-center justify-between gap-4">
-              <div>
+          <div className="border-t border-[var(--separator)] bg-white/45 px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+              <div className="min-w-0">
                 <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--text-tertiary)]">{t('subtotal_label')}</div>
                 <div className="mt-1 text-2xl font-bold tabular-nums text-[var(--text)]">{wfFmtVND(subtotal)}</div>
                 <div className="text-xs font-medium text-[var(--text-secondary)]">
                   {table.session?.orders.length ?? 0} {lang === 'vi' ? 'lượt gọi món' : 'orders'}
                 </div>
               </div>
+              {table.session?.merge_group_id && (
+                <Button
+                  variant="outline"
+                  className="rounded-2xl max-sm:h-11 max-sm:w-full"
+                  onClick={() => onSplitGroup(table.id)}
+                >
+                  {t('merge_split')}
+                </Button>
+              )}
               {table.session?.bill_requested_at ? (
-                <Badge variant="default" className="rounded-full px-3 py-1.5">
+                <Badge variant="default" className="shrink-0 rounded-full px-3 py-1.5">
                   {t('signal_bill')}
                 </Badge>
               ) : (
-                <Button className="rounded-2xl" onClick={() => setConfirmBill(true)}>
+                <Button
+                  className="rounded-2xl max-sm:h-11 max-sm:w-full"
+                  onClick={() => dispatch({ confirmBill: true })}
+                >
                   {t('btn_request_bill')}
                 </Button>
               )}
@@ -167,10 +216,10 @@ export const TableSheet: FC<TableSheetProps> = ({
         {confirmBill && (
           <ConfirmBillDialog
             t={t}
-            onCancel={() => setConfirmBill(false)}
+            onCancel={() => dispatch({ confirmBill: false })}
             onConfirm={() => {
               onRequestBill(table.id)
-              setConfirmBill(false)
+              dispatch({ confirmBill: false })
             }}
           />
         )}
@@ -186,10 +235,13 @@ interface OccupiedBodyProps {
   lang: Lang
   t: (key: string, ...args: Array<string | number>) => string
   readyItems: ReadyItem[]
+  placedItems: ReadyItem[]
   onAcknowledgeCall: (tableId: string) => void
   onNotifyCashier: (tableId: string) => void
   onMarkItemServed: (tableId: string, itemId: string) => void
   onMarkAllServed: (tableId: string) => void
+  onConfirmItem: (tableId: string, itemId: string) => void
+  onRejectItem: (tableId: string, itemId: string, reason: string) => void
 }
 
 const OccupiedBody: FC<OccupiedBodyProps> = ({
@@ -199,10 +251,13 @@ const OccupiedBody: FC<OccupiedBodyProps> = ({
   lang,
   t,
   readyItems,
+  placedItems,
   onAcknowledgeCall,
   onNotifyCashier,
   onMarkItemServed,
   onMarkAllServed,
+  onConfirmItem,
+  onRejectItem,
 }) => (
   <div className="space-y-5">
     {session.waiter_called_at && (
@@ -222,6 +277,29 @@ const OccupiedBody: FC<OccupiedBodyProps> = ({
         buttonLabel={t('btn_notify_cashier')}
         onClick={() => onNotifyCashier(table.id)}
       />
+    )}
+
+    {placedItems.length > 0 && (
+      <section>
+        <div className="mb-3 flex items-center gap-2">
+          <h3 className="flex items-center gap-2 text-base font-bold text-amber-800 dark:text-amber-400">
+            <span className="size-2.5 rounded-full bg-amber-500" />
+            {t('awaiting_confirm', placedItems.length)}
+          </h3>
+        </div>
+        <Card className="overflow-hidden rounded-[24px] border-2 border-amber-500/25 bg-amber-500/10">
+          {placedItems.map(({ item }) => (
+            <PlacedItemRow
+              key={item.id}
+              item={item}
+              lang={lang}
+              t={t}
+              onConfirm={() => onConfirmItem(table.id, item.id)}
+              onReject={(reason) => onRejectItem(table.id, item.id, reason)}
+            />
+          ))}
+        </Card>
+      </section>
     )}
 
     {readyItems.length > 0 && (
@@ -304,18 +382,23 @@ const SignalBanner: FC<SignalBannerProps> = ({ tone, title, time, buttonLabel, o
   return (
     <div
       className={cn(
-        'flex items-center justify-between gap-3 rounded-[24px] border-2 p-4 shadow-sm',
+        'flex flex-col gap-3 rounded-[24px] border-2 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between',
         red ? 'border-red-500/30 bg-red-500/10 text-red-950 animate-pulse' : 'border-blue-500/30 bg-blue-500/10 text-blue-950',
       )}
     >
-      <div className="flex min-w-0 items-start gap-3">
-        <span className={cn('mt-2 size-3 rounded-full', red ? 'bg-red-500' : 'bg-blue-500')} />
+      <div className="flex min-w-0 items-center gap-3">
+        <span className={cn('size-3 shrink-0 rounded-full', red ? 'bg-red-500' : 'bg-blue-500')} />
         <div className="min-w-0">
           <div className="font-bold">{title}</div>
-          <div className={cn('mt-1 font-mono text-sm font-semibold tabular-nums', red ? 'text-red-700' : 'text-blue-700')}>{time}</div>
+          <div className={cn('mt-0.5 font-mono text-sm font-semibold tabular-nums', red ? 'text-red-700' : 'text-blue-700')}>{time}</div>
         </div>
       </div>
-      <Button variant={red ? 'destructive' : 'default'} size="sm" className="rounded-full" onClick={onClick}>
+      <Button
+        variant={red ? 'destructive' : 'default'}
+        size="sm"
+        className="w-full shrink-0 rounded-full sm:w-auto"
+        onClick={onClick}
+      >
         {buttonLabel}
       </Button>
     </div>
@@ -347,6 +430,64 @@ const OrderItemRow: FC<OrderItemRowProps> = ({ item, lang, t }) => {
   )
 }
 
+interface PlacedItemRowProps {
+  item: WFItem
+  lang: Lang
+  t: (key: string, ...args: Array<string | number>) => string
+  onConfirm: () => void
+  onReject: (reason: string) => void
+}
+
+// A PLACED item awaiting the server's confirm/reject decision. Reject reveals
+// an inline optional-reason field so staff can note why (e.g. out of stock).
+const PlacedItemRow: FC<PlacedItemRowProps> = ({ item, lang, t, onConfirm, onReject }) => {
+  const [rejecting, setRejecting] = useReducer((s: boolean) => !s, false)
+  const [reason, setReason] = useReducer(
+    (_: string, next: string) => next,
+    '',
+  )
+  return (
+    <div className="space-y-3 border-b border-amber-500/15 p-4 last:border-b-0">
+      <div className="flex items-start gap-3">
+        <QuantityPill qty={item.qty} />
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold leading-tight text-[var(--text)]">{lang === 'vi' ? item.name_vi : item.name_en}</div>
+          <div className="mt-1 text-sm text-[var(--text-secondary)]">{lang === 'vi' ? item.options_text_vi : item.options_text_en}</div>
+          {item.notes && <div className="mt-1 text-xs italic text-amber-700">“{item.notes}”</div>}
+        </div>
+      </div>
+      {rejecting ? (
+        <div className="space-y-2">
+          <Input
+            autoFocus
+            value={reason}
+            placeholder={t('reject_reason_ph')}
+            onChange={(event) => setReason(event.target.value)}
+            className="h-10 rounded-xl"
+          />
+          <div className="flex gap-2">
+            <Button variant="secondary" size="sm" className="flex-1 rounded-full" onClick={() => setRejecting()}>
+              {t('cancel')}
+            </Button>
+            <Button variant="destructive" size="sm" className="flex-1 rounded-full" onClick={() => onReject(reason.trim())}>
+              {t('btn_reject_send')}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex gap-2">
+          <Button variant="secondary" size="sm" className="flex-1 rounded-full text-red-600" onClick={() => setRejecting()}>
+            {t('btn_reject_item')}
+          </Button>
+          <Button size="sm" className="flex-1 rounded-full bg-amber-600 hover:bg-amber-700" onClick={onConfirm}>
+            {t('btn_confirm_item')}
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const QuantityPill: FC<{ qty: number; muted?: boolean }> = ({ qty, muted }) => (
   <span
     className={cn(
@@ -358,16 +499,19 @@ const QuantityPill: FC<{ qty: number; muted?: boolean }> = ({ qty, muted }) => (
   </span>
 )
 
+const CHIP_VARIANTS: Record<ItemStatus, 'default' | 'secondary' | 'outline' | 'success' | 'warning'> = {
+  placed: 'warning',
+  cancelled: 'outline',
+  pending: 'secondary',
+  acknowledged: 'default',
+  preparing: 'warning',
+  ready: 'success',
+  served: 'outline',
+}
+
 const StatusChip: FC<{ status: ItemStatus; t: (key: string, ...args: Array<string | number>) => string }> = ({ status, t }) => {
-  const variantByStatus: Record<ItemStatus, 'default' | 'secondary' | 'outline' | 'success' | 'warning'> = {
-    pending: 'secondary',
-    acknowledged: 'default',
-    preparing: 'warning',
-    ready: 'success',
-    served: 'outline',
-  }
   return (
-    <Badge variant={variantByStatus[status]} className="shrink-0 rounded-full">
+    <Badge variant={CHIP_VARIANTS[status]} className="shrink-0 rounded-full">
       {t(`status_${status}`)}
     </Badge>
   )
@@ -402,7 +546,7 @@ const EmptyTableBody: FC<EmptyTableBodyProps> = ({
     return (
       <div className="py-12 text-center">
         <div className="mx-auto flex size-24 items-center justify-center rounded-[28px] bg-[var(--surface-grouped)] text-4xl font-bold text-[var(--text-tertiary)]">
-          {table.number}
+          {table.code}
         </div>
         <div className="mt-5 text-xl font-bold text-[var(--text)]">{t('empty')}</div>
         <p className="mt-1 text-sm text-[var(--text-secondary)]">
@@ -419,11 +563,11 @@ const EmptyTableBody: FC<EmptyTableBodyProps> = ({
     <div>
       <h3 className="text-lg font-bold text-[var(--text)]">{t('open_session_title')}</h3>
       <p className="mt-1 text-sm text-[var(--text-secondary)]">
-        {t('table')} {table.number} • {table.capacity} {lang === 'vi' ? 'chỗ ngồi' : 'seats'}
+        {t('table')} {table.code} • {table.capacity} {lang === 'vi' ? 'chỗ ngồi' : 'seats'}
       </p>
 
       <div className="mt-5 space-y-5">
-        <Input value={`${t('table')} ${table.number}`} readOnly aria-label="Table" className="h-12 rounded-2xl font-semibold" />
+        <Input value={`${t('table')} ${table.code}`} readOnly aria-label="Table" className="h-12 rounded-2xl font-semibold" />
         <div>
           <label className="mb-2 block text-sm font-semibold text-[var(--text-secondary)]">{t('guest_count_label')}</label>
           <div className="flex flex-wrap gap-2">
@@ -480,4 +624,4 @@ const ConfirmBillDialog: FC<{
   </div>
 )
 
-export default TableSheet
+

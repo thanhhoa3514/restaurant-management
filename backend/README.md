@@ -58,12 +58,14 @@ Go 1.22+ · Gin · PostgreSQL 15+ · pgx/v5 · Goose (migrations) · gorilla/web
 
 ```
 cmd/api/           entrypoint + wiring (DI)
-internal/platform/ cross-cutting infra (config, postgres, outbox, realtime, httpx, auth, tenant, logger)
+internal/platform/ cross-cutting infra (config, postgres, outbox, realtime, httpx, auth, tenant, storage, logger)
 internal/modules/  bounded contexts, each with domain/ application/ infrastructure/ interfaces/
 internal/shared/   shared kernel (money, id, apperr)
 migrations/        goose *.sql
 api/openapi.yaml   API spec
-deployments/       Dockerfile, docker-compose.yml
+Dockerfile         multi-stage Go build
+docker-compose.yml postgres + minio + migrate + app
+.env.example       biến môi trường (copy → .env)
 ```
 
 ## Getting started (dev)
