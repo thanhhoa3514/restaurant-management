@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type Dispatch, type FC, type SetStateActi
 import { ChevronLeft, Minus, Plus, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useOrdering } from '../hooks/use-ordering'
-import { DICT, type Dict } from '../data/i18n'
+import { DICT, type OrderingDict as Dict } from '@/i18n'
 import { formatVND } from '../helpers'
 import { useGuestItemDetail } from '../queries/useGuestItemDetail'
 import type { ApiMenuItemDetail, ApiOptionGroup, CartLine, CartOption, Lang } from '../types'

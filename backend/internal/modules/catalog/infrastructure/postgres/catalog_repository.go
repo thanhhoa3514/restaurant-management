@@ -300,6 +300,14 @@ func (r *Repository) CreateItem(ctx context.Context, restaurantID uuid.UUID, ite
 	if pg.IsUniqueViolation(err) {
 		return out, apperr.New(apperr.CodeConflict, "menu item code or slug already exists")
 	}
+	if err == nil {
+		if errV := r.saveVariants(ctx, restaurantID, item.ID, item.Variants); errV != nil {
+			return out, errV
+		}
+		if errG := r.saveOptionGroups(ctx, restaurantID, item.ID, item.OptionGroups); errG != nil {
+			return out, errG
+		}
+	}
 	return out, err
 }
 
@@ -336,7 +344,105 @@ func (r *Repository) UpdateItem(ctx context.Context, restaurantID uuid.UUID, ite
 	if pg.IsUniqueViolation(err) {
 		return out, apperr.New(apperr.CodeConflict, "menu item slug already exists")
 	}
+	if err == nil {
+		if errV := r.saveVariants(ctx, restaurantID, item.ID, item.Variants); errV != nil {
+			return out, errV
+		}
+		if errG := r.saveOptionGroups(ctx, restaurantID, item.ID, item.OptionGroups); errG != nil {
+			return out, errG
+		}
+	}
 	return out, err
+}
+
+func (r *Repository) saveVariants(ctx context.Context, restaurantID, itemID uuid.UUID, variants []domain.VariantWrite) error {
+	if _, err := r.q(ctx).Exec(ctx, `DELETE FROM menu_item_variants WHERE restaurant_id = $1 AND menu_item_id = $2`, restaurantID, itemID); err != nil {
+		return err
+	}
+	for i, v := range variants {
+		vID := v.ID
+		if vID == uuid.Nil {
+			vID = uuid.New()
+		}
+		dispOrder := v.DisplayOrder
+		if dispOrder <= 0 {
+			dispOrder = i + 1
+		}
+		if _, err := r.q(ctx).Exec(ctx, `
+			INSERT INTO menu_item_variants (
+				id, restaurant_id, menu_item_id, name, unit, price_vnd, is_default, is_available, display_order
+			)
+			VALUES ($1, $2, $3, $4, NULLIF($5, ''), $6, $7, $8, $9)
+		`, vID, restaurantID, itemID, v.Name, v.Unit, v.PriceVND, v.IsDefault, v.IsAvailable, dispOrder); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *Repository) saveOptionGroups(ctx context.Context, restaurantID, itemID uuid.UUID, groups []domain.OptionGroupWrite) error {
+	if _, err := r.q(ctx).Exec(ctx, `DELETE FROM menu_item_option_groups WHERE restaurant_id = $1 AND menu_item_id = $2`, restaurantID, itemID); err != nil {
+		return err
+	}
+	for gIdx, g := range groups {
+		gID := g.ID
+		if gID == uuid.Nil {
+			gID = uuid.New()
+		}
+		selType := g.SelectionType
+		if selType != "MULTIPLE" {
+			selType = "SINGLE"
+		}
+		dispOrder := g.DisplayOrder
+		if dispOrder <= 0 {
+			dispOrder = gIdx + 1
+		}
+		if _, err := r.q(ctx).Exec(ctx, `
+			INSERT INTO option_groups (
+				id, restaurant_id, name, description, selection_type, is_required, min_selections, max_selections, display_order
+			)
+			VALUES ($1, $2, $3, NULLIF($4, ''), $5, $6, $7, $8, $9)
+			ON CONFLICT (id) DO UPDATE SET
+				name = EXCLUDED.name,
+				selection_type = EXCLUDED.selection_type,
+				is_required = EXCLUDED.is_required,
+				display_order = EXCLUDED.display_order
+		`, gID, restaurantID, g.Name, g.Description, selType, g.IsRequired, g.MinSelections, g.MaxSelections, dispOrder); err != nil {
+			return err
+		}
+
+		if _, err := r.q(ctx).Exec(ctx, `
+			INSERT INTO menu_item_option_groups (restaurant_id, menu_item_id, option_group_id, display_order)
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT (restaurant_id, menu_item_id, option_group_id) DO UPDATE SET display_order = EXCLUDED.display_order
+		`, restaurantID, itemID, gID, dispOrder); err != nil {
+			return err
+		}
+
+		if _, err := r.q(ctx).Exec(ctx, `DELETE FROM options WHERE restaurant_id = $1 AND option_group_id = $2`, restaurantID, gID); err != nil {
+			return err
+		}
+
+		for oIdx, o := range g.Options {
+			oID := o.ID
+			if oID == uuid.Nil {
+				oID = uuid.New()
+			}
+			oDispOrder := o.DisplayOrder
+			if oDispOrder <= 0 {
+				oDispOrder = oIdx + 1
+			}
+			if _, err := r.q(ctx).Exec(ctx, `
+				INSERT INTO options (
+					id, restaurant_id, option_group_id, name, price_delta_vnd, is_default, is_available, display_order
+				)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			`, oID, restaurantID, gID, o.Name, o.PriceDeltaVND, o.IsDefault, o.IsAvailable, oDispOrder); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (r *Repository) SoftDeleteItem(ctx context.Context, restaurantID, itemID uuid.UUID, version int, actorID uuid.UUID) (domain.MenuItemForUpdate, error) {

@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { makeAdminT, type AdminT } from '@/features/admin/data/i18n'
+import { makeAdminT, type AdminT } from '@/i18n'
 import { useStaffRolesQuery, useStaffUsersQuery } from '@/features/admin/queries'
 import { useManageStaffMutation } from '@/features/admin/mutations'
 import { staffQueryKeys } from '@/features/admin/api'

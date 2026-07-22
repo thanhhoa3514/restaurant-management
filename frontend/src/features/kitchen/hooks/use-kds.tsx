@@ -9,7 +9,7 @@ import {
 } from 'react'
 import { toast } from 'sonner'
 
-import { KDS_DICT } from '@/features/kitchen/data/i18n'
+import { KDS_DICT } from '@/i18n'
 import { minStatus, nextStatus, urgencyFor } from '@/features/kitchen/helpers'
 import type { ItemStatus, KDSStats, Lang, Ticket, Urgency } from '@/features/kitchen/types'
 import { ApiError, errorMessage } from '@/lib/api'

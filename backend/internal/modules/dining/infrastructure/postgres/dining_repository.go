@@ -137,7 +137,14 @@ func (r *Repository) ListTablesWithActiveQR(ctx context.Context, restaurantID uu
 	rows, err := r.q(ctx).Query(ctx, `
 		SELECT t.id, t.code, t.name, t.status, t.capacity,
 		       a.id, COALESCE(a.name, ''), COALESCE(a.display_order, 0),
-		       q.id, q.token
+		       q.id, q.token,
+		       EXISTS (
+		           SELECT 1 FROM dining_sessions ds
+		           WHERE ds.restaurant_id = t.restaurant_id
+		             AND ds.table_id = t.id
+		             AND ds.status IN ('ACTIVE', 'AWAITING_PAYMENT')
+		             AND ds.deleted_at IS NULL
+		       ) AS has_active_session
 		FROM tables t
 		LEFT JOIN areas a
 		  ON a.id = t.area_id
@@ -161,7 +168,7 @@ func (r *Repository) ListTablesWithActiveQR(ctx context.Context, restaurantID uu
 		var qrID pgtype.UUID
 		var areaID pgtype.UUID
 		var token pgtype.Text
-		if err := rows.Scan(&row.TableID, &row.TableCode, &row.TableName, &row.Status, &row.Capacity, &areaID, &row.AreaName, &row.AreaOrder, &qrID, &token); err != nil {
+		if err := rows.Scan(&row.TableID, &row.TableCode, &row.TableName, &row.Status, &row.Capacity, &areaID, &row.AreaName, &row.AreaOrder, &qrID, &token, &row.HasActiveSession); err != nil {
 			return nil, err
 		}
 		if areaID.Valid {

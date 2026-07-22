@@ -15,6 +15,37 @@ export const AVAILABILITY_OPTIONS: MenuItemAvailabilityStatus[] = [
 ]
 export const STATION_OPTIONS = ['HOTPOT', 'GRILL', 'NOODLE', 'DRINK', 'DESSERT', 'GENERAL'] as const
 
+const variantSchema = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  unit: z.string().optional().nullable(),
+  price_vnd: z.coerce.number().min(0),
+  is_default: z.boolean().optional(),
+  is_available: z.boolean().optional(),
+  display_order: z.number().optional(),
+})
+
+const optionSchema = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  price_delta_vnd: z.coerce.number().min(0),
+  is_default: z.boolean().optional(),
+  is_available: z.boolean().optional(),
+  display_order: z.number().optional(),
+})
+
+const optionGroupSchema = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  description: z.string().optional().nullable(),
+  selection_type: z.string(),
+  is_required: z.boolean().optional(),
+  min_selections: z.number().optional(),
+  max_selections: z.number().optional().nullable(),
+  display_order: z.number().optional(),
+  options: z.array(optionSchema).default([]),
+})
+
 export const catalogFormSchema = z.object({
   category_id: z.string().min(1, 'Category is required'),
   name: z.string().min(1, 'Name is required'),
@@ -29,6 +60,8 @@ export const catalogFormSchema = z.object({
   is_spicy: z.boolean().default(false),
   station: z.string().optional().default(''),
   display_order: z.coerce.number().default(0),
+  variants: z.array(variantSchema).optional().default([]),
+  option_groups: z.array(optionGroupSchema).optional().default([]),
 })
 
 export const blankForm = (categoryId = ''): MenuItemFormBody => ({
@@ -45,6 +78,8 @@ export const blankForm = (categoryId = ''): MenuItemFormBody => ({
   is_spicy: false,
   station: '',
   display_order: 0,
+  variants: [],
+  option_groups: [],
 })
 
 export const formFromDetail = (item: AdminMenuItemDetailDTO): MenuItemFormBody => ({
@@ -61,6 +96,8 @@ export const formFromDetail = (item: AdminMenuItemDetailDTO): MenuItemFormBody =
   is_spicy: item.is_spicy,
   station: item.station ?? '',
   display_order: item.display_order,
+  variants: item.variants ?? [],
+  option_groups: item.option_groups ?? [],
 })
 
 export function normalizeForm(form: MenuItemFormBody): MenuItemFormBody {
@@ -73,5 +110,29 @@ export function normalizeForm(form: MenuItemFormBody): MenuItemFormBody {
     station: form.station.trim(),
     base_price_vnd: Math.max(0, Math.round(Number(form.base_price_vnd) || 0)),
     display_order: Math.round(Number(form.display_order) || 0),
+    variants: (form.variants ?? [])
+      .filter((v) => v.name.trim().length > 0)
+      .map((v, i) => ({
+        ...v,
+        name: v.name.trim(),
+        unit: v.unit ? v.unit.trim() : null,
+        price_vnd: Math.max(0, Math.round(Number(v.price_vnd) || 0)),
+        display_order: i + 1,
+      })),
+    option_groups: (form.option_groups ?? [])
+      .filter((g) => g.name.trim().length > 0)
+      .map((g, gIdx) => ({
+        ...g,
+        name: g.name.trim(),
+        display_order: gIdx + 1,
+        options: (g.options ?? [])
+          .filter((o) => o.name.trim().length > 0)
+          .map((o, oIdx) => ({
+            ...o,
+            name: o.name.trim(),
+            price_delta_vnd: Math.max(0, Math.round(Number(o.price_delta_vnd) || 0)),
+            display_order: oIdx + 1,
+          })),
+      })),
   }
 }

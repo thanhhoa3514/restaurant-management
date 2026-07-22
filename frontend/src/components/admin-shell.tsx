@@ -1,12 +1,11 @@
-/* eslint-disable react-refresh/only-export-components, react-doctor/only-export-components */
 import { useNavigate } from '@tanstack/react-router'
-import { Loader2, LogOut, Menu, Search, UserRound } from 'lucide-react'
+import { Loader2, LogOut, Menu, UserRound } from 'lucide-react'
 import {
   useMemo,
-  useState,
   useCallback,
   useEffect,
   useReducer,
+  use,
   type CSSProperties,
   type ReactNode,
 } from 'react'
@@ -25,78 +24,26 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
-import { shellStrings } from '@/components/shell-i18n'
+import { shellStrings } from '@/i18n'
 import { getStaffSession, type StaffRole } from '@/lib/auth'
 import { useLogout } from '@/features/login/mutations/useLogout'
 import { BRAND } from '@/constants/brand'
 import { usePermissions } from '@/contexts/permission'
+import {
+  ShellContext,
+  ShellProvider,
+  useShellConfig,
+  ShellHeaderCenter,
+  ShellHeaderActions,
+  type ShellConfig,
+} from '@/contexts/shell'
 import type { Lang } from '@/hooks/use-lang'
 import { cn } from '@/lib/utils'
 import { roleTint, navItems, type StaffView, type AdminView } from './admin-config'
 import { SidebarContent } from './admin-sidebar'
 import { AdminCommandDialog, type CommandEntry } from './admin-search'
 
-import { createContext, use, useLayoutEffect } from 'react'
-
-export interface ShellConfig {
-  title?: string
-  subtitle?: string
-  eyebrow?: string
-  contentClassName?: string
-}
-
-const ShellContext = createContext<{
-  config: ShellConfig
-  setConfig: (config: ShellConfig) => void
-} | null>(null)
-
-export function ShellProvider({ children }: { children: ReactNode }) {
-  const [config, setConfig] = useState<ShellConfig>({})
-  // Memoize the context value so it only changes when `config` actually changes,
-  // not on every provider render — keeps consumers from re-rendering needlessly.
-  const value = useMemo(() => ({ config, setConfig }), [config])
-  return <ShellContext.Provider value={value}>{children}</ShellContext.Provider>
-}
-
-export function useShellConfig(config: ShellConfig) {
-  const ctx = use(ShellContext)
-  // Depend ONLY on the stable setter (from useState) and the primitive config
-  // values — never on `ctx` itself. The context value object is recreated when
-  // `config` state changes, so listing `ctx` in the deps would re-fire this
-  // effect on every setConfig and spin into an infinite update loop.
-  const setConfig = ctx?.setConfig
-  const { title, subtitle, eyebrow, contentClassName } = config
-  useLayoutEffect(() => {
-    setConfig?.({ title, subtitle, eyebrow, contentClassName })
-  }, [setConfig, title, subtitle, eyebrow, contentClassName])
-}
-
-import { createPortal } from 'react-dom'
-import { useSyncExternalStore } from 'react'
-
-const emptySubscribe = () => () => {}
-
-export function ShellHeaderCenter({ children }: { children: ReactNode }) {
-  const isClient = useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false,
-  )
-  const target = isClient ? document.getElementById('shell-header-center') : null
-  if (!target) return null
-  return createPortal(children, target)
-}
-
-export function ShellHeaderActions({ children }: { children: ReactNode }) {
-  const isClient = useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false,
-  )
-  const target = isClient ? document.getElementById('shell-header-actions') : null
-  if (!target) return null
-  return createPortal(children, target)
-}
+export { ShellProvider, useShellConfig, ShellHeaderCenter, ShellHeaderActions, type ShellConfig }
 
 interface AdminShellProps extends ShellConfig {
   role: StaffRole
@@ -138,7 +85,6 @@ export function AdminShell({
   })
   const { mobileOpen, searchOpen, profileOpen, query, changingLang } = state
 
-  // Merge with context config if we are hoisted
   const ctx = use(ShellContext)
   const title = ctx?.config.title ?? _title
   const subtitle = ctx?.config.subtitle ?? _subtitle
@@ -251,18 +197,6 @@ export function AdminShell({
                 </div>
                 <div id="shell-header-center" className="hidden min-w-0 shrink-0 md:block" />
                 <div id="shell-header-actions" className="flex shrink-0 items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="h-10 rounded-full border border-[var(--separator)] bg-[var(--surface-grouped)]/70 px-3 text-[13px] text-[var(--text-secondary)] backdrop-blur-md"
-                    onClick={() => ((v: boolean) => dispatch({ searchOpen: v }))(true)}
-                  >
-                    <Search className="size-4" />
-                    <span className="hidden sm:inline">{s.search}</span>
-                    <kbd className="hidden sm:inline rounded-md bg-[var(--bg-elevated)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--text-tertiary)]">
-                      ⌘K
-                    </kbd>
-                  </Button>
                   <ThemeToggle />
                   {setLang && (
                     <LanguageSwitcher currentLang={lang} onLangChange={handleLangChange} />

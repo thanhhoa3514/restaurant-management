@@ -4,7 +4,7 @@ import { PDFDownloadLink } from '@react-pdf/renderer'
 import { Button } from '@/components/ui/button'
 import { Printer } from 'lucide-react'
 import type { Ticket } from '@/features/kitchen/types'
-import type { KDS_DICT } from '@/features/kitchen/data/i18n'
+import type { KDS_DICT } from '@/i18n'
 
 type KdsKey = keyof (typeof KDS_DICT)['vi']
 type Translate = (key: KdsKey, ...args: Array<number | string>) => string

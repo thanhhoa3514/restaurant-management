@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { makeAdminT } from '@/features/admin/data/i18n'
+import { makeAdminT } from '@/i18n'
 import { getStaffSession } from '@/lib/auth'
 import { useLang } from '@/hooks/use-lang'
 import { cn } from '@/lib/utils'

@@ -3,7 +3,7 @@ import { ChevronLeft, Plus, Pencil, ShoppingBag, UtensilsCrossed, RefreshCw, Rec
 import { toast } from 'sonner'
 import { useOrdering } from '../hooks/use-ordering'
 import { useRequestBill } from '../mutations/useRequestBill'
-import { DICT } from '../data/i18n'
+import { DICT } from '@/i18n'
 import { formatTime } from '../helpers'
 import type { Lang, OrderItemDTO, GuestOrderDTO } from '../types'
 import { useGuestOrders } from '../queries/useGuestOrders'
@@ -146,7 +146,7 @@ export const OrderStatusScreen: FC = () => {
           <Button
             size="lg"
             disabled={requestBill.isPending}
-            className="flex-1 rounded-2xl h-14 text-[14px] sm:text-base font-bold text-white shadow-lg shadow-[var(--system-blue)]/25 bg-gradient-to-r from-[var(--system-blue)] to-[var(--system-purple)] hover:opacity-90 border-0"
+            className="flex-1 rounded-2xl h-14 text-[14px] sm:text-base font-bold bg-[var(--text)] text-[var(--bg)] hover:opacity-90 transition-all shadow-md active:scale-[0.98] border-0"
             onClick={() => {
               if (window.confirm(state.lang === 'vi' ? 'Bạn có chắc chắn muốn yêu cầu thanh toán không? Bàn sẽ được khóa để tính tiền.' : 'Are you sure you want to request the bill? The table will be locked.')) {
                 if (!sessionToken) return

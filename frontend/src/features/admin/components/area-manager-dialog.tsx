@@ -16,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { errorMessage } from '@/lib/api'
 import { deleteArea, listAreas, saveArea, type Area } from '@/features/dining/api'
 import { AREAS_KEY, TABLE_QRS_KEY } from '@/features/dining/keys'
-import type { AdminT } from '@/features/admin/data/i18n'
+import type { AdminT } from '@/i18n'
 import { cn } from '@/lib/utils'
 
 // Local editor state: null = list mode, 'new' = create form, Area = edit form.

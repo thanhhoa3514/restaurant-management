@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import type { AdminT } from '@/features/admin/data/i18n'
+import type { AdminT } from '@/i18n'
 import type { AdminMenuItemSummaryDTO, AdminCategoryDTO } from '@/features/catalog/types'
 import { money } from '@/features/catalog/helper/utils'
 import { StatusBadge, AvailabilityBadge } from './catalog-badges'
@@ -36,7 +36,7 @@ export function ItemCard({
     >
       <CardContent className="p-0">
         <div className="grid grid-cols-[96px_minmax(0,1fr)] gap-4 p-4">
-          <div className="relative overflow-hidden rounded-[18px] bg-[var(--surface-grouped)]">
+          <div className="relative size-24 shrink-0 self-start overflow-hidden rounded-[18px] bg-[var(--surface-grouped)]">
             {item.image_url ? (
               <img
                 src={item.image_url}

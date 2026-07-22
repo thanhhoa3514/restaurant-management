@@ -2,7 +2,7 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useShellConfig } from '@/components/admin-shell'
 import { TableQRManager } from '@/features/admin/components/table-qr-manager'
-import { makeAdminT } from '@/features/admin/data/i18n'
+import { makeAdminT } from '@/i18n'
 import { hasStaffPermission, isStaffAuthenticated } from '@/lib/auth'
 import { useLang } from '@/hooks/use-lang'
 

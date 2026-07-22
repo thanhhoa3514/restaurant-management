@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import QRCodeLib from 'qrcode'
 import { ApiError, errorMessage } from '@/lib/api'
 import { useOrdering } from '../hooks/use-ordering'
-import { DICT, type Dict } from '../data/i18n'
+import { DICT, type OrderingDict as Dict } from '@/i18n'
 import { useJoinSession } from '@/features/ordering/mutations/useJoinSession'
 import { useGuestTables } from '@/features/ordering/queries/useGuestTables'
 import { buildQROrderURL } from '@/features/dining/api'
@@ -586,7 +586,11 @@ function WaitingForStaff() {
 // ── Table card ───────────────────────────────────────────────────────────────
 
 function TableCard({ table, onClick, t }: { table: GuestTable; onClick: () => void; t: Dict }) {
-  const isActive = table.has_active_qr
+  const hasQr = table.has_active_qr
+  const hasSession = table.has_active_session ?? true
+  const isOpened = hasQr && hasSession
+  const isDisabled = !hasQr
+
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const [showQrModal, setShowQrModal] = useState(false)
 
@@ -621,19 +625,21 @@ function TableCard({ table, onClick, t }: { table: GuestTable; onClick: () => vo
     <>
       <button
         type="button"
-        disabled={!isActive}
-        onClick={isActive ? onClick : undefined}
+        disabled={isDisabled}
+        onClick={hasQr ? onClick : undefined}
         className={cn(
           'group relative flex flex-col items-center gap-2 rounded-xl border border-[var(--separator)] bg-[var(--material-thin)] p-4 transition-all',
-          isActive
+          isOpened
             ? 'cursor-pointer hover:border-blue-300 hover:shadow-sm active:scale-[0.97] dark:hover:border-blue-700'
-            : 'cursor-not-allowed',
+            : hasQr
+              ? 'cursor-pointer opacity-60 hover:opacity-80 active:scale-[0.98]'
+              : 'cursor-not-allowed opacity-40',
         )}
       >
         <div
           className="relative flex size-28 items-center justify-center rounded-lg bg-white p-2 shadow-sm"
           onClick={(e) => {
-            if (!isActive || !qrDataUrl) return
+            if (!hasQr || !qrDataUrl) return
             e.stopPropagation()
             setShowQrModal(true)
           }}
@@ -643,21 +649,25 @@ function TableCard({ table, onClick, t }: { table: GuestTable; onClick: () => vo
               src={qrDataUrl}
               alt=""
               className={cn(
-                'size-full object-contain',
-                !isActive && 'opacity-25 blur-[2px] grayscale',
-                isActive && 'cursor-zoom-in',
+                'size-full object-contain transition-all',
+                !isOpened && 'opacity-30 blur-[1px] grayscale-[60%]',
+                isOpened && 'cursor-zoom-in',
               )}
             />
           ) : (
             <QrCode size={36} className="text-gray-300" />
           )}
-          {!isActive && (
-            <span className="absolute inset-x-1 top-1/2 -translate-y-1/2 rounded-md bg-[var(--text)]/75 px-1.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--bg)]">
+          {!hasQr ? (
+            <span className="absolute inset-x-1 top-1/2 -translate-y-1/2 rounded-md bg-[var(--text)]/75 px-1.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--bg)] text-center">
               {t.qr_inactive}
             </span>
-          )}
+          ) : !hasSession ? (
+            <span className="absolute inset-x-1 top-1/2 -translate-y-1/2 rounded-md bg-amber-500/95 px-1.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white text-center shadow-sm backdrop-blur-sm">
+              {t.qr_not_opened_badge}
+            </span>
+          ) : null}
         </div>
-        <div className={cn('text-center', !isActive && 'opacity-45')}>
+        <div className={cn('text-center', !isOpened && 'opacity-60')}>
           <div className="text-sm font-semibold text-[var(--text)]">{table.table_name}</div>
           <div className="mt-0.5 flex items-center justify-center gap-1 text-[11px] text-[var(--text-tertiary)]">
             <Users size={11} />

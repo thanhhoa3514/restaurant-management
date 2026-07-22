@@ -34,24 +34,16 @@ type Dispatcher struct {
 }
 
 type WriteEvent struct {
-	RestaurantID  uuid.UUID
-	AggregateType string
-	AggregateID   uuid.UUID
-	EventType     string
-	Payload       any
-	Metadata      any
-	Priority      int
-	// SuppressRealtime persists the event for durable consumers/audit without
-	// publishing it to the current global websocket hub. Use this for
-	// tenant-sensitive events until websocket subscriptions are authenticated
-	// and topic-filtered.
+	RestaurantID     uuid.UUID
+	AggregateType    string
+	AggregateID      uuid.UUID
+	EventType        string
+	Payload          any
+	Metadata         any
+	Priority         int
 	SuppressRealtime bool
-	// DedupeKey suppresses duplicate event rows for a short window. It is
-	// useful for client-driven retries/reloads such as QR scans. The key is
-	// persisted in metadata as dedupe_key so downstream consumers can keep the
-	// same idempotency boundary.
-	DedupeKey    string
-	DedupeWindow time.Duration
+	DedupeKey        string
+	DedupeWindow     time.Duration
 }
 
 func NewDispatcher(pool *pgxpool.Pool, hub *realtime.Hub, logger *slog.Logger) *Dispatcher {

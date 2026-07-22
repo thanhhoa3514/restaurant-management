@@ -2,7 +2,7 @@ import { useNavigate } from '@tanstack/react-router'
 import type { CSSProperties } from 'react'
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import type { shellStrings } from '@/components/shell-i18n'
+import type { ShellStrings } from '@/i18n'
 import type { StaffRole } from '@/lib/auth'
 import { BRAND } from '@/constants/brand'
 import { cn } from '@/lib/utils'
@@ -13,7 +13,7 @@ interface SidebarContentProps {
   role: StaffRole
   activeView: StaffView
   brandName: string
-  s: ReturnType<typeof shellStrings>
+  s: ShellStrings
   onNavigate?: () => void
 }
 

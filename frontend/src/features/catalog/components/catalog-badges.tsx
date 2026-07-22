@@ -1,5 +1,5 @@
 import { Badge } from '@/components/ui/badge'
-import type { AdminT } from '@/features/admin/data/i18n'
+import type { AdminT } from '@/i18n'
 import type { AdminMenuItemSummaryDTO, MenuItemStatus } from '@/features/catalog/types'
 
 export function StatusBadge({ status, t }: { status: MenuItemStatus; t: AdminT }) {

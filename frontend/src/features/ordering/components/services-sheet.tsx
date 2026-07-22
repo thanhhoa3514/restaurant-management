@@ -7,7 +7,6 @@ import {
   Check,
   Droplet,
   Utensils,
-  MessageSquare,
   Loader2,
 } from 'lucide-react'
 import { toast } from 'sonner'

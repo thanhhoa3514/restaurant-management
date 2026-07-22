@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/select'
 import { errorMessage } from '@/lib/api'
 import { listAreas, saveTable } from '@/features/dining/api'
-import type { AdminT } from '@/features/admin/data/i18n'
+import type { AdminT } from '@/i18n'
 import type { TableQR } from '@/features/dining/types'
 import { AREAS_KEY, TABLE_QRS_KEY } from '@/features/dining/keys'
 

@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import type { CancelRequestDTO } from '@/features/kitchen/api'
-import { KDS_DICT } from '@/features/kitchen/data/i18n'
+import { KDS_DICT } from '@/i18n'
 
 type KdsKey = keyof (typeof KDS_DICT)['vi']
 type Translate = (key: KdsKey, ...args: Array<number | string>) => string

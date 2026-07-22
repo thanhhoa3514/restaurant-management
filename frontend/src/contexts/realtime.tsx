@@ -1,12 +1,18 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import {
+  playNewOrderSound,
+  playKitchenReadySound,
+  playCallWaiterSound,
+} from '@/lib/sound'
 
 const PING_INTERVAL = 25_000
 const INACTIVITY_TIMEOUT = 60_000
 
-interface RealtimeEvent {
+export interface RealtimeEvent {
   type: string
-  payload?: unknown
+  payload?: any
 }
 
 function realtimeURL(): string {
@@ -55,21 +61,62 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   const activityTimerRef = useRef<number | undefined>(undefined)
   const lastActivityRef = useRef(Date.now())
 
-  const invalidateFor = (event: RealtimeEvent) => {
-    if (shouldInvalidateStaff(event.type)) {
+  const invalidateAndNotify = (event: RealtimeEvent) => {
+    const type = event.type || ''
+    const payload = event.payload || {}
+
+    // Invalidate TanStack Query caches
+    if (shouldInvalidateStaff(type)) {
       void queryClient.invalidateQueries({ queryKey: ['staff'] })
       void queryClient.invalidateQueries({ queryKey: ['dining'] })
+      void queryClient.invalidateQueries({ queryKey: ['cashier'] })
+      void queryClient.invalidateQueries({ queryKey: ['orders'] })
     }
-    if (shouldInvalidateKitchen(event.type)) {
+    if (shouldInvalidateKitchen(type)) {
       void queryClient.invalidateQueries({ queryKey: ['kitchen'] })
     }
-    if (event.type.startsWith('catalog.')) {
+    if (type.startsWith('catalog.')) {
       void queryClient.invalidateQueries({ queryKey: ['catalog'] })
+      void queryClient.invalidateQueries({ queryKey: ['guest-categories'] })
+      void queryClient.invalidateQueries({ queryKey: ['guest-items'] })
     }
-    if (event.type.startsWith('ordering.') || event.type.startsWith('dining.')) {
+    if (type.startsWith('ordering.') || type.startsWith('dining.')) {
       void queryClient.invalidateQueries({ queryKey: ['guest-orders'] })
       void queryClient.invalidateQueries({ queryKey: ['guest-items'] })
-      void queryClient.invalidateQueries({ queryKey: ['orders'] })
+    }
+
+    // Play Sound & Toast Notifications based on event type
+    if (type === 'ordering.order_placed' || type === 'ordering.item_placed') {
+      playNewOrderSound()
+      const tableName = payload?.table_code || payload?.table_number || payload?.table_id
+      toast.info(tableName ? `Đơn mới từ Bàn ${tableName}` : 'Có đơn hàng mới!', {
+        description: 'Hệ thống đã tự động cập nhật danh sách đơn.',
+      })
+    } else if (type === 'ordering.item_ready' || type === 'ordering.item_status_changed' && payload?.status === 'READY') {
+      playKitchenReadySound()
+      const tableName = payload?.table_code || payload?.table_number
+      const itemName = payload?.item_name || 'Món ăn'
+      toast.success(tableName ? `Bếp báo món "${itemName}" của Bàn ${tableName} đã xong!` : `Món "${itemName}" đã sẵn sàng!`, {
+        description: 'Vui lòng nhận món và phục vụ cho khách.',
+      })
+    } else if (type === 'dining.call_waiter') {
+      playCallWaiterSound()
+      const tableName = payload?.table_code || payload?.table_number
+      toast.warning(tableName ? `Bàn ${tableName} gọi phục vụ!` : 'Có yêu cầu trợ giúp tại bàn!', {
+        description: 'Vui lòng kiểm tra bàn khách.',
+      })
+    } else if (type === 'dining.request_bill') {
+      playCallWaiterSound()
+      const tableName = payload?.table_code || payload?.table_number
+      toast.warning(tableName ? `Bàn ${tableName} yêu cầu thanh toán!` : 'Khách vừa yêu cầu thanh toán!', {
+        description: 'Đã báo quầy thu ngân.',
+      })
+    } else if (type === 'dining.session_opened' || type === 'dining.session_joined') {
+      playNewOrderSound()
+      const tableName = payload?.table_code || payload?.table_number
+      if (tableName) {
+        toast.info(`Bàn ${tableName} vừa mở phiên gọi món.`)
+      }
     }
   }
 
@@ -99,7 +146,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       attemptRef.current = 0
       lastActivityRef.current = Date.now()
 
-      // Gửi ping định kỳ để server biết mình còn sống (và ngược lại)
+      // Send periodic ping to keep connection alive
       clearInterval(pingTimerRef.current)
       pingTimerRef.current = window.setInterval(() => {
         if (socket.readyState === WebSocket.OPEN) {
@@ -115,8 +162,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       try {
         const event = JSON.parse(message.data) as RealtimeEvent
         if (event.type && !event.type.startsWith('_')) {
-          // event _ping / _pong là internal, không broadcast
-          invalidateFor(event)
+          invalidateAndNotify(event)
           window.dispatchEvent(new CustomEvent(event.type, { detail: event.payload }))
         }
       } catch {

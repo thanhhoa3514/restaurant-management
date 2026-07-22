@@ -123,6 +123,63 @@ func shortID(id uuid.UUID) string {
 	return strings.ReplaceAll(id.String(), "-", "")[:8]
 }
 
+func mapVariants(dtos []WriteVariantDTO) []domain.VariantWrite {
+	out := make([]domain.VariantWrite, 0, len(dtos))
+	for _, v := range dtos {
+		id := uuid.New()
+		if v.ID != nil && *v.ID != uuid.Nil {
+			id = *v.ID
+		}
+		out = append(out, domain.VariantWrite{
+			ID:           id,
+			Name:         v.Name,
+			Unit:         v.Unit,
+			PriceVND:     v.PriceVND,
+			IsDefault:    v.IsDefault,
+			IsAvailable:  v.IsAvailable,
+			DisplayOrder: v.DisplayOrder,
+		})
+	}
+	return out
+}
+
+func mapOptionGroups(dtos []WriteOptionGroupDTO) []domain.OptionGroupWrite {
+	out := make([]domain.OptionGroupWrite, 0, len(dtos))
+	for _, g := range dtos {
+		gID := uuid.New()
+		if g.ID != nil && *g.ID != uuid.Nil {
+			gID = *g.ID
+		}
+		opts := make([]domain.OptionWrite, 0, len(g.Options))
+		for _, o := range g.Options {
+			oID := uuid.New()
+			if o.ID != nil && *o.ID != uuid.Nil {
+				oID = *o.ID
+			}
+			opts = append(opts, domain.OptionWrite{
+				ID:            oID,
+				Name:          o.Name,
+				PriceDeltaVND: o.PriceDeltaVND,
+				IsDefault:     o.IsDefault,
+				IsAvailable:   o.IsAvailable,
+				DisplayOrder:  o.DisplayOrder,
+			})
+		}
+		out = append(out, domain.OptionGroupWrite{
+			ID:            gID,
+			Name:          g.Name,
+			Description:   g.Description,
+			SelectionType: g.SelectionType,
+			IsRequired:    g.IsRequired,
+			MinSelections: g.MinSelections,
+			MaxSelections: g.MaxSelections,
+			DisplayOrder:  g.DisplayOrder,
+			Options:       opts,
+		})
+	}
+	return out
+}
+
 func buildWrite(req CreateMenuItemRequest, id uuid.UUID) domain.MenuItemWrite {
 	return domain.MenuItemWrite{
 		ID:                 id,
@@ -143,6 +200,8 @@ func buildWrite(req CreateMenuItemRequest, id uuid.UUID) domain.MenuItemWrite {
 		DisplayOrder:       req.DisplayOrder,
 		ActorID:            req.ActorID,
 		Version:            1,
+		Variants:           mapVariants(req.Variants),
+		OptionGroups:       mapOptionGroups(req.OptionGroups),
 	}
 }
 
@@ -165,6 +224,8 @@ func buildUpdate(req UpdateMenuItemRequest) domain.MenuItemWrite {
 		DisplayOrder:       req.DisplayOrder,
 		ActorID:            req.ActorID,
 		Version:            req.Version,
+		Variants:           mapVariants(req.Variants),
+		OptionGroups:       mapOptionGroups(req.OptionGroups),
 	}
 }
 

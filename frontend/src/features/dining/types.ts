@@ -6,6 +6,7 @@ export interface GuestTable {
   area_name: string
   capacity: number
   has_active_qr: boolean
+  has_active_session?: boolean
   qr_token?: string
 }
 

@@ -1,7 +1,7 @@
 import { type FC, useMemo, lazy, Suspense } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useOrdering } from '../hooks/use-ordering'
-import { DICT } from '../data/i18n'
+import { DICT } from '@/i18n'
 import { formatVND } from '../helpers'
 import { useGuestOrders } from '../queries/useGuestOrders'
 import { fmtDateTime } from '@/shared/date'

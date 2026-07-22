@@ -62,8 +62,9 @@ type TableWithQR struct {
 	AreaID    *uuid.UUID
 	AreaName  string
 	AreaOrder int
-	QRCodeID  *uuid.UUID
-	QRToken   *string
+	QRCodeID         *uuid.UUID
+	QRToken          *string
+	HasActiveSession bool
 }
 
 type DiningSession struct {

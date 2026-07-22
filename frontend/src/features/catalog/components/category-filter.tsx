@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import type { AdminT } from '@/features/admin/data/i18n'
+import type { AdminT } from '@/i18n'
 import type { AdminCategoryDTO } from '@/features/catalog/types'
 
 export function CategoryFilter({

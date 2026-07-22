@@ -7,7 +7,7 @@ import {
   type BillingInvoiceDTO,
   type BillingPaymentDTO,
 } from '@/features/billing/api'
-import { CS_DICT } from '@/features/cashier/data/i18n'
+import { CS_DICT } from '@/i18n'
 import { activeInvoice, fmtVND, makeTxnId } from '@/features/cashier/helpers'
 import { fetchStaffTables } from '@/features/waiter/api'
 import { useCreateInvoice } from '@/features/cashier/mutations/useCreateInvoice'

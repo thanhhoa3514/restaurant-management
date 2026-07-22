@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet'
-import { KDS_DICT } from '@/features/kitchen/data/i18n'
+import { KDS_DICT } from '@/i18n'
 
 import type {
   ItemStatus,

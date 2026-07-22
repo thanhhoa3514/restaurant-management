@@ -6,7 +6,7 @@ import {
   CommandGroup,
   CommandItem,
 } from '@/components/ui/command'
-import type { shellStrings } from '@/components/shell-i18n'
+import type { ShellStrings } from '@/i18n'
 import type { LucideIcon } from 'lucide-react'
 
 export interface CommandEntry {
@@ -22,7 +22,7 @@ interface StaffCommandDialogProps {
   onOpenChange: (open: boolean) => void
   query: string
   setQuery: (query: string) => void
-  s: ReturnType<typeof shellStrings>
+  s: ShellStrings
   commandItems: CommandEntry[]
 }
 

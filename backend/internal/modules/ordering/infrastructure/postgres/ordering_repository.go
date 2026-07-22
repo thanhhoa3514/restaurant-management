@@ -16,11 +16,13 @@ import (
 )
 
 type Repository struct {
-	pool      *pgxpool.Pool
+	pool       *pgxpool.Pool
 	defaultRID uuid.UUID
 }
 
-func NewRepository(pool *pgxpool.Pool, defaultRID uuid.UUID) *Repository { return &Repository{pool: pool, defaultRID: defaultRID} }
+func NewRepository(pool *pgxpool.Pool, defaultRID uuid.UUID) *Repository {
+	return &Repository{pool: pool, defaultRID: defaultRID}
+}
 
 func (r *Repository) q(ctx context.Context) pg.Querier { return pg.QuerierFromContext(ctx, r.pool) }
 
@@ -145,10 +147,7 @@ func (r *Repository) CreateOrderGraph(ctx context.Context, order *domain.OrderCr
 	if order.SessionID != uuid.Nil {
 		sessionID = order.SessionID
 	}
-	// Guest orders land in PLACED and wait for a server to confirm them into the
-	// kitchen queue (server-confirmation gate, migration 00012). Staff-placed
-	// orders (takeaway at the cashier) have no table/waiter queue to surface in,
-	// and the staff member placing them is confirming them — so they skip the
+
 	// gate and go straight to PENDING.
 	itemStatus := "PLACED"
 	if placedBy == "STAFF" {

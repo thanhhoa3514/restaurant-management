@@ -157,6 +157,37 @@ type Event struct {
 	OccurredAt   time.Time
 }
 
+type VariantWrite struct {
+	ID           uuid.UUID
+	Name         string
+	Unit         *string
+	PriceVND     int64
+	IsDefault    bool
+	IsAvailable  bool
+	DisplayOrder int
+}
+
+type OptionWrite struct {
+	ID            uuid.UUID
+	Name          string
+	PriceDeltaVND int64
+	IsDefault     bool
+	IsAvailable   bool
+	DisplayOrder  int
+}
+
+type OptionGroupWrite struct {
+	ID            uuid.UUID
+	Name          string
+	Description   *string
+	SelectionType string
+	IsRequired    bool
+	MinSelections int
+	MaxSelections *int
+	DisplayOrder  int
+	Options       []OptionWrite
+}
+
 type MenuItemWrite struct {
 	ID                 uuid.UUID
 	CategoryID         uuid.UUID
@@ -176,6 +207,8 @@ type MenuItemWrite struct {
 	DisplayOrder       int
 	ActorID            uuid.UUID
 	Version            int
+	Variants           []VariantWrite
+	OptionGroups       []OptionGroupWrite
 }
 
 type MenuItemForUpdate struct {

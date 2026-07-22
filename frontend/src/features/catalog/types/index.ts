@@ -16,33 +16,33 @@ export interface AdminCategoryDTO {
 }
 
 export interface AdminMenuVariantDTO {
-  id: string
+  id?: string
   name: string
   unit?: string | null
   price_vnd: number
-  is_default: boolean
-  is_available: boolean
-  display_order: number
+  is_default?: boolean
+  is_available?: boolean
+  display_order?: number
 }
 
 export interface AdminMenuOptionDTO {
-  id: string
+  id?: string
   name: string
   price_delta_vnd: number
-  is_default: boolean
-  is_available: boolean
-  display_order: number
+  is_default?: boolean
+  is_available?: boolean
+  display_order?: number
 }
 
 export interface AdminMenuOptionGroupDTO {
-  id: string
+  id?: string
   name: string
   description?: string | null
   selection_type: string
-  is_required: boolean
-  min_selections: number
-  max_selections: number | null
-  display_order: number
+  is_required?: boolean
+  min_selections?: number
+  max_selections?: number | null
+  display_order?: number
   options: AdminMenuOptionDTO[]
 }
 
@@ -88,6 +88,8 @@ export interface MenuItemFormBody {
   is_spicy: boolean
   station: string
   display_order: number
+  variants?: AdminMenuVariantDTO[]
+  option_groups?: AdminMenuOptionGroupDTO[]
 }
 
 export type CreateMenuItemRequest = MenuItemFormBody
@@ -99,19 +101,12 @@ export interface UpdateMenuItemRequest extends MenuItemFormBody {
 
 export interface MenuItemMutationResult {
   id: string
-  status: string
-  version: number
-}
-
-export interface ToggleAvailabilityRequest {
-  id: string
-  is_available: boolean
-  availability_status?: MenuItemAvailabilityStatus
   version: number
 }
 
 export interface PresignResult {
   presigned_url: string
   public_url: string
-  object_key: string
+  upload_url?: string
+  fields?: Record<string, string>
 }

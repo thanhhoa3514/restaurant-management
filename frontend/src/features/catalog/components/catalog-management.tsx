@@ -5,7 +5,7 @@ import { SecureActionDialog } from '@/components/SecureActionDialog'
 import { ShellHeaderActions, ShellHeaderCenter, useShellConfig } from '@/components/admin-shell'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { makeAdminT } from '@/features/admin/data/i18n'
+import { makeAdminT } from '@/i18n'
 import { useCategoriesQuery, useMenuItemsQuery } from '@/features/catalog/queries'
 import { useDeleteItemMutation, useToggleItemMutation } from '@/features/catalog/mutations'
 import type { AdminMenuItemSummaryDTO } from '@/features/catalog/types'
@@ -67,7 +67,11 @@ export function CatalogManagement() {
     <>
       <ShellHeaderCenter>
         <div className="rounded-full bg-[var(--surface-grouped)]/70 px-4 py-2 text-sm font-semibold text-[var(--text-secondary)]">
-          {t('catalog_summary', items.length, visible, unavailable)}
+          {isItemsLoading || isItemsFetching ? (
+            <span className="inline-block h-4 w-36 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700 font-normal align-middle" />
+          ) : (
+            t('catalog_summary', items.length, visible, unavailable)
+          )}
         </div>
       </ShellHeaderCenter>
       <ShellHeaderActions>

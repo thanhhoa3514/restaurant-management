@@ -1,9 +1,9 @@
-import { useMemo, useState, type FC } from 'react'
+import { useEffect, useMemo, useState, type FC } from 'react'
 import { Search, ShoppingBag, Plus, ChevronRight, Grid2x2 } from 'lucide-react'
 import { useOrdering } from '../hooks/use-ordering'
-import { DICT } from '../data/i18n'
+import { DICT } from '@/i18n'
 import { formatVND, totalItems } from '../helpers'
-import type { ApiMenuItemSummary, Lang } from '../types'
+import type { ApiMenuItemSummary, CartLine, Lang } from '../types'
 import { useGuestCategories } from '../queries/useGuestCategories'
 import { useGuestItems } from '../queries/useGuestItems'
 import { Button } from '@/components/ui/button'
@@ -16,17 +16,26 @@ import { CartSheet } from './cart-sheet'
 import { ServicesSheet } from './services-sheet'
 import { cn } from '@/lib/utils'
 
+const SEARCH_DEBOUNCE_MS = 200
+
 export const MenuScreen: FC = () => {
   const { state, dispatch } = useOrdering()
   const t = DICT[state.lang]
   const sessionToken = state.session?.token
   const [activeCategory, setActiveCategory] = useState('all')
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [changingLang, setChangingLang] = useState<'vi' | 'en' | null>(null)
   const [servicesOpen, setServicesOpen] = useState(false)
 
-  const { data: categoriesData } = useGuestCategories(sessionToken)
+  // Debounce search input so we don't re-filter on every keystroke.
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearch(search), SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(id)
+  }, [search])
+
+  const { data: categoriesData, isError: isCategoriesError } = useGuestCategories(sessionToken)
 
   const {
     data: itemsData,
@@ -38,111 +47,136 @@ export const MenuScreen: FC = () => {
   const filtered = useMemo(
     () => {
       const items = itemsData ?? []
-      return (
-      items.filter((item) => {
+      return items.filter((item) => {
         if (!item.is_available) return false
         if (activeCategory !== 'all' && item.category_id !== activeCategory) return false
-        if (search && !item.name.toLowerCase().includes(search.toLowerCase())) return false
+        if (debouncedSearch && !item.name.toLowerCase().includes(debouncedSearch.toLowerCase())) return false
         return true
       })
-      )
     },
-    [itemsData, activeCategory, search],
+    [itemsData, activeCategory, debouncedSearch],
   )
 
   const cartCount = totalItems(state.cart)
 
+  // Map of menuItemId -> total quantity already in cart
+  const cartQtyByItemId = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const line of state.cart) {
+      map.set(line.menuItemId, (map.get(line.menuItemId) ?? 0) + line.quantity)
+    }
+    return map
+  }, [state.cart])
+
+  const handleQuickAdd = (item: ApiMenuItemSummary) => {
+    const line: CartLine = {
+      menuItemId: item.id,
+      quantity: 1,
+      note: '',
+      nameSnapshot: item.name,
+      imageUrl: item.image_url ?? '',
+      estUnitPriceVnd: item.base_price_vnd,
+      options: [],
+    }
+    dispatch({ type: 'ADD_TO_CART', payload: line })
+  }
+
   return (
     <div className="flex min-h-dvh flex-col pb-28 bg-[var(--bg)] font-sans">
-      {/* Sticky top: header + category bar pinned together (no magic offset) */}
+      {/* Sticky top: header + category bar pinned together */}
       <div className="sticky top-0 z-[var(--z-sticky)]">
-      {/* Premium Glass Header */}
-      <header className="bg-[var(--material-thin)]/80 backdrop-blur-2xl border-b border-[var(--separator)] shadow-sm">
-        <div className="px-4 pt-5 pb-4 flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col">
-              <img src="/zenith-logo-transparent.png" alt="Zenith Logo" className="h-8 w-auto object-contain" />
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-xs font-medium text-[var(--text-tertiary)]">{t.floor}</span>
-                <span className="inline-block size-1 rounded-full bg-[var(--text-tertiary)] opacity-40" />
-                <span className="inline-flex items-center rounded-full bg-[var(--system-purple)]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[var(--system-purple)]">
-                  {t.table} {state.session?.table}
-                </span>
+        {/* Premium Glass Header */}
+        <header className="bg-[var(--material-thin)]/80 backdrop-blur-2xl border-b border-[var(--separator)] shadow-sm">
+          <div className="px-4 pt-5 pb-4 flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col">
+                <img src="/zenith-logo-transparent.png" alt="Zenith Logo" className="h-8 w-auto object-contain" />
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs font-medium text-[var(--text-tertiary)]">{t.floor}</span>
+                  <span className="inline-block size-1 rounded-full bg-[var(--text-tertiary)] opacity-40" />
+                  <span className="inline-flex items-center rounded-full bg-[var(--system-purple)]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[var(--system-purple)]">
+                    {t.table} {state.session?.table}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  aria-label={state.lang === 'vi' ? 'Dịch vụ' : 'Services'}
+                  className="relative flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surface-grouped)] text-[var(--text)] transition-colors hover:bg-[var(--separator)]/50 active:scale-95 cursor-pointer"
+                  onClick={() => setServicesOpen(true)}
+                >
+                  <Grid2x2 size={20} strokeWidth={2.5} />
+                </button>
+                <button
+                  type="button"
+                  aria-label={t.view_cart}
+                  className="relative flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surface-grouped)] text-[var(--text)] transition-colors hover:bg-[var(--separator)]/50 active:scale-95 cursor-pointer"
+                  onClick={() => dispatch({ type: 'OPEN_CART' })}
+                >
+                  <ShoppingBag size={20} strokeWidth={2.5} />
+                  {cartCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-[var(--system-red)] text-[9px] font-bold text-white ring-2 ring-[var(--bg)]">
+                      {cartCount}
+                    </span>
+                  )}
+                </button>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                aria-label={state.lang === 'vi' ? 'Dịch vụ' : 'Services'}
-                className="relative flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface-grouped)] text-[var(--text)] transition-colors hover:bg-[var(--separator)]/50 active:scale-95 cursor-pointer"
-                onClick={() => setServicesOpen(true)}
-              >
-                <Grid2x2 size={20} strokeWidth={2.5} />
-              </button>
-              <button
-                type="button"
-                aria-label={t.view_cart}
-                className="relative flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface-grouped)] text-[var(--text)] transition-colors hover:bg-[var(--separator)]/50 active:scale-95 cursor-pointer"
-                onClick={() => dispatch({ type: 'OPEN_CART' })}
-              >
-                <ShoppingBag size={20} strokeWidth={2.5} />
-                {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-[var(--system-red)] text-[9px] font-bold text-white ring-2 ring-[var(--bg)]">
-                    {cartCount}
-                  </span>
-                )}
-              </button>
+
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-[var(--text-tertiary)] group-focus-within:text-[var(--system-blue)] transition-colors">
+                <Search size={18} />
+              </div>
+              <input
+                type="text"
+                aria-label={t.search_placeholder}
+                placeholder={t.search_placeholder}
+                className="w-full h-11 pl-10 pr-4 rounded-2xl bg-[var(--surface-grouped)]/60 border border-[var(--separator)] text-sm font-medium text-[var(--text)] placeholder-[var(--text-tertiary)] outline-none transition-all focus:bg-[var(--surface-grouped)] focus:ring-2 focus:ring-[var(--system-blue)]/20 focus:border-[var(--system-blue)]/40"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
           </div>
+        </header>
 
-          <div className="relative group">
-            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-[var(--text-tertiary)] group-focus-within:text-[var(--system-blue)] transition-colors">
-              <Search size={18} />
-            </div>
-            <input
-              type="text"
-              aria-label={t.search_placeholder}
-              placeholder={t.search_placeholder}
-              className="w-full h-11 pl-10 pr-4 rounded-2xl bg-[var(--surface-grouped)]/60 border border-[var(--separator)] text-sm font-medium text-[var(--text)] placeholder-[var(--text-tertiary)] outline-none transition-all focus:bg-[var(--surface-grouped)] focus:ring-2 focus:ring-[var(--system-blue)]/20 focus:border-[var(--system-blue)]/40"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-        </div>
-      </header>
-
-      {/* Categories Horizontal Scroll */}
-      <div className="bg-[var(--bg)]/90 backdrop-blur-md pt-3 pb-3 border-b border-[var(--separator)]/50">
-        <div className="flex overflow-x-auto no-scrollbar px-4 gap-2 items-center">
-          <button
-            type="button"
-            onClick={() => setActiveCategory('all')}
-            className={cn(
-              "whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 active:scale-95 border cursor-pointer",
-              activeCategory === 'all'
-                ? "bg-[var(--text)] text-[var(--bg)] border-transparent shadow-md"
-                : "bg-transparent text-[var(--text-secondary)] border-[var(--separator)] hover:bg-[var(--surface-grouped)]"
-            )}
-          >
-            {state.lang === 'vi' ? 'Tất cả' : 'All'}
-          </button>
-          {(categoriesData ?? []).map((cat) => (
+        {/* Categories Horizontal Scroll */}
+        <div className="bg-[var(--bg)]/90 backdrop-blur-md pt-3 pb-3 border-b border-[var(--separator)]/50">
+          <div className="flex overflow-x-auto no-scrollbar px-4 gap-2 items-center">
             <button
               type="button"
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
+              onClick={() => setActiveCategory('all')}
               className={cn(
-                "whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 active:scale-95 border cursor-pointer",
-                activeCategory === cat.id
+                "whitespace-nowrap px-4 py-2.5 rounded-full text-sm font-bold transition-all duration-300 active:scale-95 border cursor-pointer",
+                activeCategory === 'all'
                   ? "bg-[var(--text)] text-[var(--bg)] border-transparent shadow-md"
                   : "bg-transparent text-[var(--text-secondary)] border-[var(--separator)] hover:bg-[var(--surface-grouped)]"
               )}
             >
-              {cat.name}
+              {state.lang === 'vi' ? 'Tất cả' : 'All'}
             </button>
-          ))}
+            {(categoriesData ?? []).map((cat) => (
+              <button
+                type="button"
+                key={cat.id}
+                onClick={() => setActiveCategory(cat.id)}
+                className={cn(
+                  "whitespace-nowrap px-4 py-2.5 rounded-full text-sm font-bold transition-all duration-300 active:scale-95 border cursor-pointer",
+                  activeCategory === cat.id
+                    ? "bg-[var(--text)] text-[var(--bg)] border-transparent shadow-md"
+                    : "bg-transparent text-[var(--text-secondary)] border-[var(--separator)] hover:bg-[var(--surface-grouped)]"
+                )}
+              >
+                {cat.name}
+              </button>
+            ))}
+            {isCategoriesError && (
+              <span className="whitespace-nowrap text-xs text-[var(--text-tertiary)] px-1">
+                {state.lang === 'vi' ? 'Không tải được danh mục' : 'Categories unavailable'}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
       </div>
 
       {/* Menu Grid */}
@@ -150,7 +184,10 @@ export const MenuScreen: FC = () => {
         {isItemsLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
-              <Card key={i} className="flex flex-row sm:flex-col overflow-hidden">
+              <Card
+                key={i}
+                className="flex flex-row sm:flex-col overflow-hidden bg-[var(--bg-elevated)] border-[var(--separator)]"
+              >
                 <Skeleton className="size-28 sm:size-full sm:aspect-[4/3] rounded-none shrink-0" />
                 <CardContent className="p-4 flex flex-col justify-center flex-1 gap-2">
                   <Skeleton className="h-4 w-3/4" />
@@ -183,14 +220,14 @@ export const MenuScreen: FC = () => {
                 key={item.id}
                 item={item}
                 lang={state.lang}
+                cartQty={cartQtyByItemId.get(item.id) ?? 0}
                 onSelect={() => setSelectedItemId(item.id)}
+                onQuickAdd={() => handleQuickAdd(item)}
               />
             ))}
           </div>
         )}
       </main>
-
-
 
       {selectedItemId && (
         <ItemDetail
@@ -226,11 +263,14 @@ export const MenuScreen: FC = () => {
 interface MenuItemCardProps {
   item: ApiMenuItemSummary
   lang: Lang
+  cartQty: number
   onSelect: () => void
+  onQuickAdd: () => void
 }
 
-const MenuItemCard: FC<MenuItemCardProps> = ({ item, lang, onSelect }) => {
+const MenuItemCard: FC<MenuItemCardProps> = ({ item, lang, cartQty, onSelect, onQuickAdd }) => {
   const price = item.has_variants && item.price_from_vnd != null ? item.price_from_vnd : item.base_price_vnd
+  const canQuickAdd = !item.has_variants
 
   return (
     <Card 
@@ -251,6 +291,11 @@ const MenuItemCard: FC<MenuItemCardProps> = ({ item, lang, onSelect }) => {
         ) : (
           <div className="size-full flex items-center justify-center text-[var(--text-tertiary)] bg-gradient-to-br from-[var(--surface-grouped)] to-[var(--separator)]/30" />
         )}
+        {cartQty > 0 && (
+          <span className="absolute top-2 left-2 flex items-center justify-center rounded-full bg-[var(--system-blue)] px-2 py-0.5 text-[11px] font-bold text-white shadow-sm">
+            x{cartQty}
+          </span>
+        )}
       </div>
       
       <CardContent className="p-3 sm:p-4 flex flex-col flex-1 justify-center sm:justify-start gap-1 sm:gap-2">
@@ -269,12 +314,24 @@ const MenuItemCard: FC<MenuItemCardProps> = ({ item, lang, onSelect }) => {
               : null}
             {formatVND(price)}
           </span>
-          <div className="flex size-7 sm:size-8 items-center justify-center rounded-full bg-[var(--surface-grouped)] text-[var(--text-secondary)] group-hover:bg-[var(--system-blue)] group-hover:text-[white] transition-colors">
-            <Plus size={16} strokeWidth={2.5} />
-          </div>
+          <button
+            type="button"
+            aria-label={
+              canQuickAdd
+                ? lang === 'vi' ? 'Thêm vào giỏ' : 'Add to cart'
+                : lang === 'vi' ? 'Xem chi tiết' : 'View details'
+            }
+            onClick={(e) => {
+              e.stopPropagation()
+              if (canQuickAdd) onQuickAdd()
+              else onSelect()
+            }}
+            className="flex size-7 sm:size-8 items-center justify-center rounded-full bg-[var(--surface-grouped)] text-[var(--text-secondary)] group-hover:bg-[var(--system-blue)] group-hover:text-white transition-colors cursor-pointer"
+          >
+            {canQuickAdd ? <Plus size={16} strokeWidth={2.5} /> : <ChevronRight size={16} strokeWidth={2.5} />}
+          </button>
         </div>
       </CardContent>
     </Card>
   )
 }
-

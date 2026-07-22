@@ -60,9 +60,7 @@ func (h *Handler) RegisterStaffRoutes(r *gin.RouterGroup, secret string, resolve
 	g.PUT("/items/:id", h.updateMenuItem)
 	g.DELETE("/items/:id", h.deleteMenuItem)
 	g.PATCH("/items/:id/availability", h.toggleAvailability)
-	if h.Storage != nil {
-		g.POST("/upload/presign", h.presignUpload)
-	}
+	g.POST("/upload/presign", h.presignUpload)
 }
 
 func (h *Handler) RegisterGuestRoutes(r *gin.RouterGroup) {
@@ -229,6 +227,11 @@ func (h *Handler) presignUpload(c *gin.Context) {
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request", err))
+		return
+	}
+
+	if h.Storage == nil {
+		httpx.RespondError(c, apperr.New(apperr.CodeNotImplemented, "storage service is unconfigured or unavailable"))
 		return
 	}
 
