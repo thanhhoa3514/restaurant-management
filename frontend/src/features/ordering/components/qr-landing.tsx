@@ -10,6 +10,7 @@ import { useGuestTables } from '@/features/ordering/queries/useGuestTables'
 import { buildQROrderURL } from '@/features/dining/api'
 import type { GuestTable } from '@/features/dining/types'
 import { cn } from '@/lib/utils'
+import { setGuestRealtimeToken } from '@/lib/realtime-auth'
 
 interface QRLandingProps {
   qrToken?: string
@@ -70,6 +71,7 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
             }
 
             if (joined.status === 'PENDING_VERIFICATION') {
+              setGuestRealtimeToken(joined.session_token || '')
               setJoinState('pending_verification')
               setMessage(t.qr_pending_verification)
               dispatch({
@@ -92,6 +94,7 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
               return
             }
 
+            setGuestRealtimeToken(joined.session_token)
             dispatch({
               type: 'SET_SESSION',
               payload: {

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"strings"
 	"time"
 
@@ -74,12 +75,12 @@ func Issue(secret string, claims Claims, ttl time.Duration) (string, error) {
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(secret))
 }
 
-func parseClaims(c *gin.Context, secret string) *Claims {
-	token := strings.TrimPrefix(c.GetHeader("Authorization"), "Bearer ")
+// Parse validates a raw staff JWT without depending on an HTTP transport.
+// It is shared by the HTTP and WebSocket authentication paths.
+func Parse(token, secret string) (*Claims, error) {
+	token = strings.TrimSpace(strings.TrimPrefix(token, "Bearer "))
 	if token == "" {
-		httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "missing bearer token"))
-		c.Abort()
-		return nil
+		return nil, errors.New("missing bearer token")
 	}
 	var claims Claims
 	parsed, err := jwt.ParseWithClaims(
@@ -91,6 +92,20 @@ func parseClaims(c *gin.Context, secret string) *Claims {
 		jwt.WithValidMethods([]string{"HS256"}),
 	)
 	if err != nil || !parsed.Valid {
+		return nil, errors.New("invalid token")
+	}
+	return &claims, nil
+}
+
+func parseClaims(c *gin.Context, secret string) *Claims {
+	token := c.GetHeader("Authorization")
+	if strings.TrimSpace(strings.TrimPrefix(token, "Bearer ")) == "" {
+		httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "missing bearer token"))
+		c.Abort()
+		return nil
+	}
+	claims, err := Parse(token, secret)
+	if err != nil {
 		httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "invalid token"))
 		c.Abort()
 		return nil
@@ -100,7 +115,7 @@ func parseClaims(c *gin.Context, secret string) *Claims {
 	if claims.SessionID != "" {
 		c.Set(CtxSessionID, claims.SessionID)
 	}
-	return &claims
+	return claims
 }
 
 func JWT(secret string) gin.HandlerFunc {

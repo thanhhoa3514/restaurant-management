@@ -6,6 +6,11 @@ import {
   playKitchenReadySound,
   playCallWaiterSound,
 } from '@/lib/sound'
+import { getStaffSession, subscribeStaffSession } from '@/lib/auth'
+import {
+  getGuestRealtimeToken,
+  subscribeGuestRealtimeToken,
+} from '@/lib/realtime-auth'
 
 const PING_INTERVAL = 25_000
 const INACTIVITY_TIMEOUT = 60_000
@@ -31,6 +36,19 @@ function realtimeURL(): string {
 
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   return `${protocol}//${window.location.host}/ws`
+}
+
+function realtimeAuthMessage():
+  | { type: '_auth'; access_token: string }
+  | { type: '_auth'; session_token: string }
+  | null {
+  const staffToken = getStaffSession()?.token
+  if (staffToken) return { type: '_auth', access_token: staffToken }
+
+  const guestToken =
+    getGuestRealtimeToken() ?? new URLSearchParams(window.location.search).get('s')
+  if (guestToken) return { type: '_auth', session_token: guestToken }
+  return null
 }
 
 function shouldInvalidateStaff(type: string): boolean {
@@ -138,11 +156,18 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
   const connect = () => {
     if (stoppedRef.current) return
+    if (!realtimeAuthMessage()) return
 
     const socket = new WebSocket(realtimeURL())
     socketRef.current = socket
 
     socket.onopen = () => {
+      const authMessage = realtimeAuthMessage()
+      if (!authMessage) {
+        socket.close(1000, 'authentication unavailable')
+        return
+      }
+      socket.send(JSON.stringify(authMessage))
       attemptRef.current = 0
       lastActivityRef.current = Date.now()
 
@@ -196,6 +221,18 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     }
     window.addEventListener('online', handleOnline)
 
+    const restartForAuthChange = () => {
+      clearTimeout(reconnectTimerRef.current)
+      attemptRef.current = 0
+      if (socketRef.current) {
+        socketRef.current.close(1000, 'authentication changed')
+      } else {
+        connect()
+      }
+    }
+    const unsubscribeStaff = subscribeStaffSession(restartForAuthChange)
+    const unsubscribeGuest = subscribeGuestRealtimeToken(restartForAuthChange)
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
@@ -210,6 +247,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       clearTimers()
       socketRef.current?.close()
       window.removeEventListener('online', handleOnline)
+      unsubscribeStaff()
+      unsubscribeGuest()
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [queryClient])

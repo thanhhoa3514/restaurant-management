@@ -1,0 +1,96 @@
+<mxfile host="65bd71144e">
+    <diagram name="Tach phien (huy gop) - flowchart ngang" id="bp-tach-phien">
+        <mxGraphModel dx="2689" dy="602" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2600" pageHeight="720" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="D0" value="Đã xác định được nhóm&amp;nbsp;&lt;div&gt;gộp cần tách?&lt;/div&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="490" y="290" width="200" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="X0" value="Thiếu mã nhóm gộp; hệ thống báo dữ liệu không hợp lệ và không thực hiện tách" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="490" y="500" width="200" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="S2" value="Phục vụ xác nhận tách nhóm gộp" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="760" y="310" width="200" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="D1" value="Nhóm gộp còn tồn tại và&amp;nbsp;&lt;div&gt;còn hiệu lực?&lt;/div&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1000" y="290" width="200" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="X1" value="Hệ thống báo không tìm thấy nhóm gộp hoặc nhóm đã hết hiệu lực" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1000" y="500" width="200" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="D2" value="Nhóm gộp còn phiên nào&amp;nbsp;&lt;div&gt;bên trong?&lt;/div&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1240" y="290" width="200" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="X2" value="Hệ thống báo nhóm gộp không còn phiên nào" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1240" y="500" width="200" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="E_x" value="Kết thúc" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1260" y="710" width="180" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="S3" value="Hệ thống gỡ nhóm gộp khỏi từng phiên và vô hiệu hóa nhóm trong cùng một giao dịch" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1530" y="307.5" width="200" height="95" as="geometry"/>
+                </mxCell>
+                <mxCell id="S5" value="Mỗi phiên trở lại độc lập; món đã gọi của từng bàn giữ nguyên, hóa đơn lập riêng cho từng phiên" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1780" y="310" width="200" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;exitX=1.01;exitY=0.456;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="2" target="D0" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="480" y="355" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e3" value="Chưa" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="D0" target="X0" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" value="Chọn lại nhóm" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;dashed=1;fontSize=10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="1" source="X0" target="2" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="380" y="410" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e5" value="Có" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;" parent="1" source="D0" target="S2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="S2" target="D1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e7" value="Không" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="D1" target="X1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="X1" target="E_x" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e9" value="Còn hiệu lực" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;" parent="1" source="D1" target="D2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e10" value="Không còn" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="D2" target="X2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e11" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="X2" target="E_x" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e12" value="Còn phiên" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;" parent="1" source="D2" target="S3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e14" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="S3" target="S5" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1920" y="355" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e15" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="S5" target="E_x" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="2050" y="355" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="1880" y="745"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="2" value="&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;Phục vụ mở sơ đồ bàn và chọn nhóm gộp cần tách&lt;/span&gt;" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="320" y="320" width="120" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="3" value="&lt;font face=&quot;Times New Roman&quot; style=&quot;font-size: 24px;&quot;&gt;&lt;b style=&quot;&quot;&gt;Luồng: Tách Phiên&lt;/b&gt;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="875" y="190" width="220" height="40" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

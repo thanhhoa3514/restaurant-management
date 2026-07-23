@@ -1,0 +1,136 @@
+<mxfile host="65bd71144e">
+    <diagram name="Quan ly khu vuc va ma QR ban (flowchart ngang)" id="bp-quan-ly-khu-vuc-qr">
+        <mxGraphModel dx="910" dy="336" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2800" pageHeight="760" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="S0" value="Quản lý đăng nhập hệ thống" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="230" y="230" width="200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="S_screen" value="Mở màn hình quản lý bàn và khu vực: danh sách bàn nhóm theo từng khu" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="520" y="230" width="200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="D_task" value="Chọn tác vụ?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="760" y="230" width="200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="A1" value="Quản lý mở hộp thoại quản lý khu vực" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1020" y="100" width="200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="A_D" value="Thêm mới, chỉnh sửa hay&amp;nbsp;&lt;div&gt;xóa khu vực?&lt;/div&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1260" y="100" width="200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="A2" value="Nhập tên khu vực, mô tả, thứ tự hiển thị và trạng thái hoạt động" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1500" y="100" width="200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="A_V" value="Tên khu vực hợp lệ (bắt buộc, tối đa 100 ký tự)?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1740" y="100" width="200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="A3" value="Hệ thống lưu khu vực; khu vực thêm mới mặc định đang hoạt động" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1980" y="100" width="200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="A_END" value="Danh sách khu vực được cập nhật" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="2220" y="100" width="200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="A_DEL" value="Hệ thống xóa mềm khu vực: đánh dấu đã xóa và tắt hoạt động" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1500" y="255" width="200" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="A_X" value="Hệ thống báo lỗi, quản lý nhập lại" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1760" y="255" width="180" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="Q1" value="Quản lý mở chi tiết bàn để xem mã QR" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1020" y="430" width="200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="Q_D" value="Bàn đã có mã QR đang hoạt động?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1260" y="430" width="200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="Q2" value="Hệ thống sinh mã QR mới (chuỗi ngẫu nhiên) và kích hoạt cho bàn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1500" y="430" width="200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="Q3" value="Hiển thị mã QR hiện có của bàn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1500" y="580" width="200" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="Q_R" value="Quản lý yêu cầu đổi mã QR?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1740" y="575" width="200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="Q4" value="Hệ thống thu hồi mã cũ và sinh mã QR mới thay thế" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1980" y="580" width="200" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="Q_END" value="Sao chép hoặc in mã QR để dán tại bàn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="2220" y="430" width="200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="E0" value="Khu vực và mã QR của bàn sẵn sàng cho quy trình mở phiên phục vụ" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="2500" y="250" width="220" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_S0_perm" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="S0" target="S_screen" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_screen_task" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="S_screen" target="D_task" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_task_A" value="Quản lý khu vực" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="D_task" target="A1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_task_Q" value="Quản lý mã QR" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="D_task" target="Q1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_A1_AD" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="A1" target="A_D" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_AD_A2" value="Thêm mới / chỉnh sửa" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;" parent="1" source="A_D" target="A2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_AD_ADEL" value="Xóa" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="A_D" target="A_DEL" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_A2_AV" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="A2" target="A_V" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_AV_AX" value="Không" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="A_V" target="A_X" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_AX_A2" value="Nhập lại" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;dashed=1;fontSize=10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="1" source="A_X" target="A2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_AV_A3" value="Hợp lệ" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;" parent="1" source="A_V" target="A3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_A3_AEND" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="A3" target="A_END" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_ADEL_AEND" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="1" source="A_DEL" target="A_END" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_AEND_E0" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="A_END" target="E0" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_Q1_QD" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="Q1" target="Q_D" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_QD_Q2" value="Chưa có" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;" parent="1" source="Q_D" target="Q2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_QD_Q3" value="Đã có" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="Q_D" target="Q3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_Q2_QEND" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="Q2" target="Q_END" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_Q3_QR" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="Q3" target="Q_R" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_QR_Q4" value="Có" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;" parent="1" source="Q_R" target="Q4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_Q4_QEND" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="1" source="Q4" target="Q_END" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_QR_QEND" value="Không, giữ nguyên mã cũ" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="Q_R" target="Q_END" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_QEND_E0" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="1" source="Q_END" target="E0" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

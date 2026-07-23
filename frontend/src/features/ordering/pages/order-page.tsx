@@ -6,6 +6,7 @@ import { MenuScreen } from '@/features/ordering/components/menu-screen'
 import { OrderStatusScreen } from '@/features/ordering/components/order-status-screen'
 import { SessionSummary } from '@/features/ordering/components/session-summary'
 import { GuestInvoiceScreen } from '@/features/ordering/components/guest-invoice-screen'
+import { setGuestRealtimeToken } from '@/lib/realtime-auth'
 
 export function OrderPage() {
   return (
@@ -23,6 +24,7 @@ function OrderFlow() {
   // Restore session from URL params on mount (page refresh / deep link)
   useEffect(() => {
     if (sessionTokenParam && !state.session) {
+      setGuestRealtimeToken(sessionTokenParam)
       dispatch({
         type: 'SET_SESSION',
         payload: {

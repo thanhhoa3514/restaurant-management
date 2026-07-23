@@ -68,7 +68,15 @@ func main() {
 	cfg.DefaultRestaurantID = rid
 
 	tx := postgres.NewTxManager(pool)
-	hub := realtime.NewHub(cfg.AllowedOrigins)
+	realtimeSessions := identityrepo.NewSessionRepository(pool, rid)
+	realtimeDining := diningrepo.NewRepository(pool, rid)
+	hub := realtime.NewHub(
+		cfg.AllowedOrigins,
+		cfg.JWTSecret,
+		rid,
+		realtimeSessions,
+		realtimeDining,
+	)
 	dispatcher := outbox.NewDispatcher(pool, hub, log)
 	go hub.Run(ctx)
 	go dispatcher.Start(ctx)

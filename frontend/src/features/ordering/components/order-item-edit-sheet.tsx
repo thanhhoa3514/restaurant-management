@@ -38,8 +38,8 @@ export const OrderItemEditSheet: FC<OrderItemEditSheetProps> = ({
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
 
-  const pendableItems = allItems.filter((i) => i.status === 'PENDING')
-  const isLastPendable = pendableItems.length <= 1
+  const editableItems = allItems.filter((i) => i.status === 'PLACED')
+  const isLastEditable = editableItems.length <= 1
 
   if (!open) return null
 
@@ -63,7 +63,7 @@ export const OrderItemEditSheet: FC<OrderItemEditSheetProps> = ({
       return
     }
     setSaving(true)
-    const lines: EditOrderLineInput[] = pendableItems.map((i) =>
+    const lines: EditOrderLineInput[] = editableItems.map((i) =>
       i.order_item_id === item.order_item_id
         ? {
             order_item_id: i.order_item_id,
@@ -95,7 +95,7 @@ export const OrderItemEditSheet: FC<OrderItemEditSheetProps> = ({
 
   const handleDelete = async () => {
     if (!sessionToken) return
-    if (isLastPendable) {
+    if (isLastEditable) {
       const confirmed = window.confirm(t.delete_last_item_confirm)
       if (!confirmed) return
       setSaving(true)
@@ -113,7 +113,7 @@ export const OrderItemEditSheet: FC<OrderItemEditSheetProps> = ({
       return
     }
     setSaving(true)
-    const lines: EditOrderLineInput[] = pendableItems
+    const lines: EditOrderLineInput[] = editableItems
       .filter((i) => i.order_item_id !== item.order_item_id)
       .map(toEditLine)
     const input: EditOrderInput = { version: orderVersion, items: lines }

@@ -610,7 +610,10 @@ func (r *Repository) ProcessPartialPayment(ctx context.Context, restaurantID uui
 		return nil, apperr.New(apperr.CodeInvalid, "reference_code is required")
 	}
 
-	if err := r.ensureNoPaymentConflict(ctx, restaurantID, input.InvoiceID, uuid.Nil); err != nil {
+	// Completed payments are expected here: each partial payment is stored as a
+	// separate COMPLETED row and contributes to the invoice's running total.
+	// Only an in-flight asynchronous payment conflicts with a new partial payment.
+	if err := r.ensureNoProcessingPaymentConflict(ctx, restaurantID, input.InvoiceID, uuid.Nil); err != nil {
 		return nil, err
 	}
 
@@ -623,9 +626,9 @@ func (r *Repository) ProcessPartialPayment(ctx context.Context, restaurantID uui
 		return nil, err
 	}
 
-	newRunningTotal := existingPaid + input.ReceivedAmountVND
-	if newRunningTotal > totalAmount {
-		return nil, apperr.New(apperr.CodeInvalid, "total payment exceeds invoice amount")
+	newRunningTotal, newStatus, err := calculatePartialPayment(existingPaid, input.ReceivedAmountVND, totalAmount)
+	if err != nil {
+		return nil, err
 	}
 
 	paymentNumber, err := randomCode("PAY", 12)
@@ -633,9 +636,6 @@ func (r *Repository) ProcessPartialPayment(ctx context.Context, restaurantID uui
 		return nil, err
 	}
 	change := int64(0)
-	if newRunningTotal > totalAmount {
-		change = newRunningTotal - totalAmount
-	}
 	var reference any
 	if strings.TrimSpace(input.ReferenceCode) != "" {
 		reference = strings.TrimSpace(input.ReferenceCode)
@@ -664,11 +664,6 @@ func (r *Repository) ProcessPartialPayment(ctx context.Context, restaurantID uui
 		return nil, err
 	}
 
-	newStatus := "PARTIALLY_PAID"
-	if newRunningTotal >= totalAmount {
-		newStatus = "PAID"
-	}
-
 	_, err = r.q(ctx).Exec(ctx, `
 		UPDATE invoices
 		SET status = $3,
@@ -685,7 +680,7 @@ func (r *Repository) ProcessPartialPayment(ctx context.Context, restaurantID uui
 		return nil, err
 	}
 
-	if newRunningTotal >= totalAmount {
+	if newStatus == "PAID" {
 		if err := r.closeSessionAndFreeTable(ctx, restaurantID, diningSessionID, input.ProcessedBy); err != nil {
 			return nil, err
 		}
@@ -693,6 +688,21 @@ func (r *Repository) ProcessPartialPayment(ctx context.Context, restaurantID uui
 
 	_ = paymentID
 	return r.LoadInvoice(ctx, restaurantID, input.InvoiceID)
+}
+
+func calculatePartialPayment(existingPaid, receivedAmount, totalAmount int64) (int64, string, error) {
+	if receivedAmount <= 0 {
+		return 0, "", apperr.New(apperr.CodeInvalid, "received_amount_vnd must be positive")
+	}
+	if existingPaid < 0 || existingPaid > totalAmount || receivedAmount > totalAmount-existingPaid {
+		return 0, "", apperr.New(apperr.CodeInvalid, "total payment exceeds invoice amount")
+	}
+
+	newRunningTotal := existingPaid + receivedAmount
+	if newRunningTotal == totalAmount {
+		return newRunningTotal, "PAID", nil
+	}
+	return newRunningTotal, "PARTIALLY_PAID", nil
 }
 
 func (r *Repository) PrepareAsyncPayment(ctx context.Context, restaurantID uuid.UUID, input domain.AsyncPaymentInput) (*domain.AsyncPaymentPreparation, error) {
@@ -997,7 +1007,7 @@ func (r *Repository) lockPayableInvoice(ctx context.Context, restaurantID, invoi
 }
 
 func (r *Repository) ensureNoPaymentConflict(ctx context.Context, restaurantID, invoiceID, allowedProcessingMethodID uuid.UUID) error {
-	var completed, processing bool
+	var completed bool
 	if err := r.q(ctx).QueryRow(ctx, `
 		SELECT EXISTS (SELECT 1 FROM payments WHERE restaurant_id = $1 AND invoice_id = $2 AND status = 'COMPLETED' AND deleted_at IS NULL)
 	`, restaurantID, invoiceID).Scan(&completed); err != nil {
@@ -1006,6 +1016,11 @@ func (r *Repository) ensureNoPaymentConflict(ctx context.Context, restaurantID, 
 	if completed {
 		return apperr.New(apperr.CodeConflict, "invoice already has a completed payment")
 	}
+	return r.ensureNoProcessingPaymentConflict(ctx, restaurantID, invoiceID, allowedProcessingMethodID)
+}
+
+func (r *Repository) ensureNoProcessingPaymentConflict(ctx context.Context, restaurantID, invoiceID, allowedProcessingMethodID uuid.UUID) error {
+	var processing bool
 	args := []any{restaurantID, invoiceID}
 	query := `SELECT EXISTS (SELECT 1 FROM payments WHERE restaurant_id = $1 AND invoice_id = $2 AND status = 'PROCESSING' AND deleted_at IS NULL`
 	if allowedProcessingMethodID != uuid.Nil {

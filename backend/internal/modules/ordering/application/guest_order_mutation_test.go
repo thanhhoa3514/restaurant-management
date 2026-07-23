@@ -170,8 +170,8 @@ func newEditRepo() (*fakeOrderEditRepo, uuid.UUID, uuid.UUID, uuid.UUID, uuid.UU
 		session: &domain.SessionForOrder{ID: sid, RestaurantID: rid, TableID: uuid.New(), Status: "ACTIVE"},
 		order:   &domain.OrderForEdit{ID: orderID, OrderNumber: "ORD-1", OrderType: "INITIAL", Status: "SUBMITTED", Version: 1},
 		lines: []domain.OrderLineForEdit{
-			{ID: lineA, OrderID: orderID, MenuItemID: itemID, Status: "PENDING", Quantity: 2},
-			{ID: lineB, OrderID: orderID, MenuItemID: itemID, Status: "PENDING", Quantity: 1},
+			{ID: lineA, OrderID: orderID, MenuItemID: itemID, Status: "PLACED", Quantity: 2},
+			{ID: lineB, OrderID: orderID, MenuItemID: itemID, Status: "PLACED", Quantity: 1},
 		},
 		options:       map[uuid.UUID][]domain.OrderLineOptionForEdit{},
 		items:         map[uuid.UUID]*domain.MenuItemForOrder{itemID: {ID: itemID, Code: "M1", Name: "Soup", BasePriceVND: 100, Station: "HOT", Orderable: true}},
@@ -181,14 +181,14 @@ func newEditRepo() (*fakeOrderEditRepo, uuid.UUID, uuid.UUID, uuid.UUID, uuid.UU
 		finishVersion: 2,
 		finishStatus:  "SUBMITTED",
 		view: domain.OrderView{SessionTotalVND: 100, Orders: []domain.OrderRead{{ID: orderID, OrderNumber: "ORD-1", OrderType: "INITIAL", Status: "SUBMITTED", Version: 1, Items: []domain.OrderItemRead{
-			{ID: lineA, OrderID: orderID, MenuItemID: itemID, NameSnapshot: "Soup", Quantity: 2, UnitPriceVND: 100, SubtotalVND: 200, TotalAmountVND: 200, Status: "PENDING", Station: "HOT"},
-			{ID: lineB, OrderID: orderID, MenuItemID: itemID, NameSnapshot: "Soup", Quantity: 1, UnitPriceVND: 100, SubtotalVND: 100, TotalAmountVND: 100, Status: "PENDING", Station: "HOT"},
+			{ID: lineA, OrderID: orderID, MenuItemID: itemID, NameSnapshot: "Soup", Quantity: 2, UnitPriceVND: 100, SubtotalVND: 200, TotalAmountVND: 200, Status: "PLACED", Station: "HOT"},
+			{ID: lineB, OrderID: orderID, MenuItemID: itemID, NameSnapshot: "Soup", Quantity: 1, UnitPriceVND: 100, SubtotalVND: 100, TotalAmountVND: 100, Status: "PLACED", Station: "HOT"},
 		}}}},
 	}
 	return repo, rid, sid, orderID, lineA, lineB
 }
 
-func TestGuestEditOrderUpdatesPendingAndCancelsOmittedLines(t *testing.T) {
+func TestGuestEditOrderUpdatesPlacedAndCancelsOmittedLines(t *testing.T) {
 	repo, rid, sid, orderID, lineA, lineB := newEditRepo()
 	outbox := &fakeOutbox{}
 	out, err := NewGuestEditOrder(fakeTx{}, repo, outbox, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{
@@ -222,17 +222,16 @@ func TestGuestEditOrderStaleVersionRejected(t *testing.T) {
 
 func TestGuestEditOrderRequiresVersionAndItems(t *testing.T) {
 	repo, rid, sid, orderID, _, _ := newEditRepo()
-	_, err := NewGuestEditOrder(fakeTx{}, repo, nil, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{
-	})
+	_, err := NewGuestEditOrder(fakeTx{}, repo, nil, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{})
 	require.True(t, apperr.Is(err, apperr.CodeInvalid))
 
 	_, err = NewGuestEditOrder(fakeTx{}, repo, nil, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{OrderID: orderID, Version: 1})
 	require.True(t, apperr.Is(err, apperr.CodeInvalid))
 }
 
-func TestGuestEditOrderLockedLineReturnsLineConflict(t *testing.T) {
+func TestGuestEditOrderConfirmedLineReturnsLineConflict(t *testing.T) {
 	repo, rid, sid, orderID, lineA, _ := newEditRepo()
-	repo.lines[0].Status = "PREPARING"
+	repo.lines[0].Status = "PENDING"
 	_, err := NewGuestEditOrder(fakeTx{}, repo, nil, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{
 		OrderID: orderID,
 		Version: 1,
@@ -275,13 +274,13 @@ func TestGuestEditOrderDecreaseUnavailableLineWithExistingOptionAllowed(t *testi
 		OrderItemID:             lineA,
 		OptionID:                optID,
 		OptionGroupID:           groupID,
-        OptionNameSnapshot:      "Old sauce",
-        OptionGroupNameSnapshot: "Sauce",
-        PriceDeltaSnapshotVND:   10,
-        Quantity:                1,
-        }}
+		OptionNameSnapshot:      "Old sauce",
+		OptionGroupNameSnapshot: "Sauce",
+		PriceDeltaSnapshotVND:   10,
+		Quantity:                1,
+	}}
 
-        out, err := NewGuestEditOrder(fakeTx{}, repo, nil, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{
+	out, err := NewGuestEditOrder(fakeTx{}, repo, nil, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{
 		OrderID: orderID,
 		Version: 1,
 		Items:   []GuestEditOrderLineRequest{{OrderItemID: lineA, Quantity: 1, Options: []GuestOrderOptionRequest{{OptionID: optID, Quantity: 1}}}},
@@ -294,7 +293,7 @@ func TestGuestEditOrderDecreaseUnavailableLineWithExistingOptionAllowed(t *testi
 	require.Equal(t, 2, out.Version)
 }
 
-func TestGuestCancelOrderCancelsOnlyWhenAllLinesPending(t *testing.T) {
+func TestGuestCancelOrderCancelsOnlyWhenAllLinesPlaced(t *testing.T) {
 	repo, rid, sid, orderID, lineA, lineB := newEditRepo()
 	repo.finishStatus = "CANCELLED"
 	outbox := &fakeOutbox{}
@@ -306,7 +305,7 @@ func TestGuestCancelOrderCancelsOnlyWhenAllLinesPending(t *testing.T) {
 	require.Equal(t, 1, outbox.writes)
 
 	repo, rid, sid, orderID, _, _ = newEditRepo()
-	repo.lines[1].Status = "PREPARING"
+	repo.lines[1].Status = "PENDING"
 	_, err = NewGuestCancelOrder(fakeTx{}, repo, nil, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestCancelOrderRequest{OrderID: orderID})
 	require.True(t, apperr.Is(err, apperr.CodeConflict))
 	require.Empty(t, repo.cancelled)

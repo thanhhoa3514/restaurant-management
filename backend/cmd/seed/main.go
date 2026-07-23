@@ -228,46 +228,42 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 		return err
 	}
 
-	// Demo photos, keyed by category name. Verified Unsplash CDN images
-	// (hotlink-friendly, free license). imageURL builds a sized/cropped URL;
-	// each item gets a main photo + a small gallery rotated from its pool.
-	imagePools := map[string][]string{
-		"Lẩu": {
-			"photo-1614104030967-5ca61a54247b", "photo-1677030137853-03a83b0bd630", "photo-1584509171119-9054d2d7d9a7",
-		},
-		"Món nướng": {
-			"photo-1555939594-58d7cb561ad1", "photo-1508615263227-c5d58c1e5821", "photo-1614119068601-483274e9dcb7",
-			"photo-1627947063935-55577ec3c2e1", "photo-1632158930341-46604b637a0f", "photo-1504564321107-4aa3efddb5bd",
-		},
-		"Hải sản": {
-			"photo-1559742811-822873691df8", "photo-1562158079-e4b9ed06b62d", "photo-1688084468401-4938b073aef2",
-			"photo-1514944288352-fffac99f0bdf", "photo-1723325697529-6e2679650b39", "photo-1709327515207-110f910e8913",
-		},
-		"Rau & Nấm": {
-			"photo-1641919062245-98117fd30791", "photo-1651326752381-c5bcaacb2ba0", "photo-1625940949493-91ac054804e7",
-			"photo-1625940947631-908aa92ef5e7", "photo-1651326710058-fd7acf9f68c5",
-		},
-		"Khai vị": {
-			"photo-1623653387945-2fd25214f8fc", "photo-1594254916028-742dedb72062",
-			"photo-1613764816537-a43baeb559c1", "photo-1485995768424-01c1ccc33f7a",
-		},
-		"Đồ uống": {
-			"photo-1461023058943-07fcbe16d735", "photo-1556679343-c7306c1976bc", "photo-1578314675249-a6910f80cc4e",
-			"photo-1533007716222-4b465613a984", "photo-1558122104-355edad709f6", "photo-1561641377-f7456d23aa9b",
-			"photo-1630184799082-05623dbdc7f7", "photo-1504753793650-d4a2b783c15e", "photo-1527678357412-ef45dfbd9ecc",
-		},
-		"Tráng miệng": {
-			"photo-1501443762994-82bd5dace89a", "photo-1597249536924-b226b1a1259d", "photo-1588685232180-8bb64cb4837a",
-			"photo-1438907046657-4ae137eb8c5e", "photo-1531917658462-73450543c9f0", "photo-1531240062960-4842b265a1ad",
-			"photo-1595275320712-24b6f2b0a984", "photo-1568464774940-a3de36f824a5", "photo-1594765877813-a5d04b0d8aa7",
-		},
+	// Item-specific generated photos live in the frontend public directory and
+	// are served from the same origin as the application.
+	generatedItemImages := map[string]string{
+		"LAU-THAI":     "/images/menu/lau-thai-tomyum.webp?v=20260723",
+		"LAU-BO-MY":    "/images/menu/lau-bo-my-nam.webp?v=20260723",
+		"LAU-GA-LA-E":  "/images/menu/lau-ga-la-e.webp?v=20260723",
+		"LAU-HAI-SAN":  "/images/menu/lau-hai-san.webp?v=20260723",
+		"BA-CHI-BO":    "/images/menu/ba-chi-bo-my-nuong.webp?v=20260723",
+		"SUON-NUONG":   "/images/menu/suon-heo-nuong-mat-ong.webp?v=20260723",
+		"BO-CUON-NAM":  "/images/menu/bo-cuon-nam-kim-cham.webp?v=20260723",
+		"GA-NUONG":     "/images/menu/canh-ga-nuong-sa-te.webp?v=20260723",
+		"TOM-SU":       "/images/menu/tom-su-tuoi.webp?v=20260723b",
+		"MUC-NUONG":    "/images/menu/muc-nuong-sa-te.webp?v=20260723b",
+		"HAU-NUONG":    "/images/menu/hau-nuong-pho-mai.webp?v=20260723b",
+		"RAU-THAP-CAM": "/images/menu/rau-thap-cam.webp?v=20260723b",
+		"NAM-TONG-HOP": "/images/menu/nam-tong-hop.webp?v=20260723b",
+		"DAU-HU":       "/images/menu/dau-hu-trung.webp?v=20260723b",
+		"MI-TRUNG":     "/images/menu/mi-trung-tuoi.webp?v=20260723b",
+		"KHOAI-CHIEN":  "/images/menu/khoai-tay-chien.webp?v=20260723b",
+		"NEM-RAN":      "/images/menu/nem-chua-ran.webp?v=20260723b",
+		"SALAD-BO":     "/images/menu/salad-tron-bo-my.webp?v=20260723b",
+		"TRA-DA":       "/images/menu/tra-da.webp?v=20260723b",
+		"TRA-DAO":      "/images/menu/tra-dao-cam-sa.webp?v=20260723b",
+		"COCA":         "/images/menu/coca-cola.webp?v=20260723b",
+		"BIA-SG":       "/images/menu/bia-sai-gon.webp?v=20260723b",
+		"KEM-VANI":     "/images/menu/kem-vani.webp?v=20260723b",
+		"TRAI-CAY":     "/images/menu/dia-trai-cay.webp?v=20260723b",
 	}
-	s3Base := os.Getenv("S3_PUBLIC_URL")
-	if s3Base == "" {
-		s3Base = "http://localhost:9000/restaurant-images"
-	}
-	imageURL := func(id string) string {
-		return s3Base + "/menu/seed/" + id + ".jpg"
+	generatedCategoryImages := map[string]string{
+		"Lẩu":         generatedItemImages["LAU-THAI"],
+		"Món nướng":   generatedItemImages["BA-CHI-BO"],
+		"Hải sản":     generatedItemImages["TOM-SU"],
+		"Rau & Nấm":   generatedItemImages["RAU-THAP-CAM"],
+		"Khai vị":     generatedItemImages["KHOAI-CHIEN"],
+		"Đồ uống":     generatedItemImages["TRA-DAO"],
+		"Tráng miệng": generatedItemImages["KEM-VANI"],
 	}
 
 	type category struct {
@@ -285,9 +281,9 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 	catIDs := map[string]uuid.UUID{}
 	for i, c := range categories {
 		id := uuid.New()
-		var catImage string
-		if pool := imagePools[c.name]; len(pool) > 0 {
-			catImage = imageURL(pool[0])
+		catImage, ok := generatedCategoryImages[c.name]
+		if !ok {
+			return fmt.Errorf("missing generated image for category %q", c.name)
 		}
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO categories (id, restaurant_id, name, slug, description, icon, image_url, display_order, is_active)
@@ -334,18 +330,13 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 	for _, it := range items {
 		id := uuid.New()
 		displayOrders[it.category]++
-		var mainImage string
+		mainImage, ok := generatedItemImages[it.code]
+		if !ok {
+			return fmt.Errorf("missing generated image for menu item %q", it.code)
+		}
 		var gallery any
-		if pool := imagePools[it.category]; len(pool) > 0 {
-			idx := displayOrders[it.category] - 1
-			mainImage = imageURL(pool[idx%len(pool)])
-			imgs := []string{mainImage}
-			for k := 1; k <= 2 && k < len(pool); k++ {
-				imgs = append(imgs, imageURL(pool[(idx+k)%len(pool)]))
-			}
-			if b, err := json.Marshal(imgs); err == nil {
-				gallery = string(b)
-			}
+		if b, err := json.Marshal([]string{mainImage}); err == nil {
+			gallery = string(b)
 		}
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO menu_items (id, restaurant_id, category_id, code, name, slug, short_description, base_price_vnd, image_url, images, is_available, availability_status, station, status, display_order)

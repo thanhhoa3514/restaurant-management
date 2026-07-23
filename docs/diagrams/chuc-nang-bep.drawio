@@ -60,22 +60,22 @@
         </mxCell>
 
         <!-- Edges root -> level1 -->
-        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#A05A2C;" edge="1" parent="1" source="root" target="f1"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#A05A2C;" edge="1" parent="1" source="root" target="f2"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#A05A2C;" edge="1" parent="1" source="root" target="f3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=none;strokeColor=#A05A2C;" edge="1" parent="1" source="root" target="f1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=none;strokeColor=#A05A2C;" edge="1" parent="1" source="root" target="f2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=none;strokeColor=#A05A2C;" edge="1" parent="1" source="root" target="f3"><mxGeometry relative="1" as="geometry" /></mxCell>
 
         <!-- Edges level1 -> level2 -->
-        <mxCell id="e1a" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#E8A87C;" edge="1" parent="1" source="f1" target="s1a"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="e1b" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#E8A87C;" edge="1" parent="1" source="s1a" target="s1b"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="e1c" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#E8A87C;" edge="1" parent="1" source="s1b" target="s1c"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e1a" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=none;strokeColor=#E8A87C;" edge="1" parent="1" source="f1" target="s1a"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e1b" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=none;strokeColor=#E8A87C;" edge="1" parent="1" source="s1a" target="s1b"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e1c" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=none;strokeColor=#E8A87C;" edge="1" parent="1" source="s1b" target="s1c"><mxGeometry relative="1" as="geometry" /></mxCell>
 
-        <mxCell id="e2a" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#E8A87C;" edge="1" parent="1" source="f2" target="s2a"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="e2b" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#E8A87C;" edge="1" parent="1" source="s2a" target="s2b"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2a" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=none;strokeColor=#E8A87C;" edge="1" parent="1" source="f2" target="s2a"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2b" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=none;strokeColor=#E8A87C;" edge="1" parent="1" source="s2a" target="s2b"><mxGeometry relative="1" as="geometry" /></mxCell>
 
-        <mxCell id="e3a" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#E8A87C;" edge="1" parent="1" source="f3" target="s3a"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="e3b" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#E8A87C;" edge="1" parent="1" source="s3a" target="s3b"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="e3c" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#E8A87C;" edge="1" parent="1" source="s3b" target="s3c"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="e3d" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;strokeColor=#E8A87C;" edge="1" parent="1" source="s3c" target="s3d"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3a" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=none;strokeColor=#E8A87C;" edge="1" parent="1" source="f3" target="s3a"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3b" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=none;strokeColor=#E8A87C;" edge="1" parent="1" source="s3a" target="s3b"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3c" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=none;strokeColor=#E8A87C;" edge="1" parent="1" source="s3b" target="s3c"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3d" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=none;strokeColor=#E8A87C;" edge="1" parent="1" source="s3c" target="s3d"><mxGeometry relative="1" as="geometry" /></mxCell>
 
       </root>
     </mxGraphModel>

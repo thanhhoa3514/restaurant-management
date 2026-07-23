@@ -438,7 +438,7 @@ func (r *Repository) UpdateOrderLine(ctx context.Context, restaurantID uuid.UUID
 		    unit_price_vnd = $6, quantity = $7, options_total_vnd = $8, subtotal_vnd = $9,
 		    discount_amount_vnd = $10, total_amount_vnd = $11, station = $12, note = $13,
 		    version = version + 1, updated_at = NOW()
-		WHERE restaurant_id = $1 AND id = $2 AND status IN ('PLACED', 'PENDING') AND deleted_at IS NULL
+			WHERE restaurant_id = $1 AND id = $2 AND status = 'PLACED' AND deleted_at IS NULL
 	`, restaurantID, line.ID, line.ItemNameSnapshot, nullString(line.ItemCodeSnapshot), line.VariantNameSnapshot, line.UnitPriceVND, line.Quantity, line.OptionsTotalVND, line.SubtotalVND, line.DiscountAmountVND, line.TotalAmountVND, line.Station, nullString(line.Note))
 	if err != nil {
 		return err
@@ -468,7 +468,7 @@ func (r *Repository) CancelOrderLines(ctx context.Context, restaurantID, orderID
 		UPDATE order_items
 		SET status = 'CANCELLED', cancelled_at = NOW(), cancelled_reason = $4,
 		    version = version + 1, updated_at = NOW()
-		WHERE restaurant_id = $1 AND order_id = $2 AND id = ANY($3) AND status IN ('PLACED', 'PENDING') AND deleted_at IS NULL
+			WHERE restaurant_id = $1 AND order_id = $2 AND id = ANY($3) AND status = 'PLACED' AND deleted_at IS NULL
 	`, restaurantID, orderID, lineIDs, reason); err != nil {
 		return err
 	}

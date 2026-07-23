@@ -110,7 +110,10 @@ func (s *GuestEditOrder) Handle(ctx context.Context, req GuestEditOrderRequest) 
 		changedIDs := []uuid.UUID{}
 		for _, current := range lines {
 			edit, present := payload[current.ID]
-			if current.Status != "PENDING" {
+			// PLACED is the only guest-editable state. Once serving staff
+			// confirms the line it moves to PENDING and becomes immutable to
+			// the guest.
+			if current.Status != string(domain.StatusPlaced) {
 				if present {
 					reason := "line_locked"
 					if current.Status == "CANCELLED" {

@@ -99,3 +99,28 @@ func TestInvoiceTotalsWorkedExample(t *testing.T) {
 		t.Fatalf("total = %d, want 510300", total)
 	}
 }
+
+func TestCalculatePartialPaymentAllowsMultipleCompletedPayments(t *testing.T) {
+	paid, status, err := calculatePartialPayment(0, 300000, 1000000)
+	if err != nil {
+		t.Fatalf("first partial payment failed: %v", err)
+	}
+	if paid != 300000 || status != "PARTIALLY_PAID" {
+		t.Fatalf("first payment returned paid=%d status=%s", paid, status)
+	}
+
+	paid, status, err = calculatePartialPayment(paid, 700000, 1000000)
+	if err != nil {
+		t.Fatalf("second partial payment failed: %v", err)
+	}
+	if paid != 1000000 || status != "PAID" {
+		t.Fatalf("second payment returned paid=%d status=%s", paid, status)
+	}
+}
+
+func TestCalculatePartialPaymentRejectsOverpayment(t *testing.T) {
+	_, _, err := calculatePartialPayment(300000, 700001, 1000000)
+	if !apperr.Is(err, apperr.CodeInvalid) {
+		t.Fatalf("expected CodeInvalid for overpayment, got %v", err)
+	}
+}

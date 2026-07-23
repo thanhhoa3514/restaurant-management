@@ -1,0 +1,70 @@
+<mxfile host="app.diagrams.net" version="24.0.0">
+  <diagram name="Danh dau da phuc vu (flowchart ngang)" id="bp-danh-dau-da-phuc-vu">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2700" pageHeight="800" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="M0" value="Bếp cập nhật món sang trạng thái sẵn sàng (READY)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="40" y="300" width="200" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="M1" value="Món sẵn sàng hiện lên ô bàn tương ứng trên màn hình phục vụ kèm thời gian chờ" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="280" y="295" width="200" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="M2" value="Phục vụ mang món ra bàn và mở bảng chi tiết bàn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="520" y="300" width="200" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="D1" value="Đánh dấu từng món hay toàn bộ món sẵn sàng?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="760" y="295" width="200" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="M3a" value="Phục vụ chọn đúng món vừa mang ra bàn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="130" width="200" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="M3b" value="Hệ thống lấy toàn bộ món đang sẵn sàng của bàn rồi gửi lần lượt một lệnh cập nhật cho từng món" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="470" width="200" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="D2" value="Món đang ở trạng thái sẵn sàng?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1240" y="300" width="200" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="X1" value="Hệ thống từ chối: chuyển trạng thái không hợp lệ, chỉ món đã sẵn sàng mới được đánh dấu đã phục vụ" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1240" y="490" width="200" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="E_x" value="Kết thúc" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1250" y="670" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="D3" value="Món đã được người khác cập nhật trước đó?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1480" y="290" width="200" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="X2" value="Hệ thống khóa bản ghi món và giữ nguyên kết quả của lần cập nhật trước; giao diện nạp lại danh sách món của bàn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1480" y="500" width="200" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="M4" value="Hệ thống đặt món sang đã phục vụ (SERVED), ghi thời điểm và người phục vụ, tăng số hiệu bản ghi, thêm một dòng lịch sử trạng thái, đồng bộ phiếu bếp" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1720" y="285" width="200" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="M5" value="Hệ thống phát sự kiện: màn hình khách và bếp cập nhật, số món chờ mang ra giảm tương ứng" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1960" y="290" width="200" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="E0" value="Kết thúc" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="2230" y="320" width="180" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" edge="1" parent="1" source="M0" target="M1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" edge="1" parent="1" source="M1" target="M2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" edge="1" parent="1" source="M2" target="D1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" value="Từng món" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="D1" target="M3a"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" value="Toàn bộ" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="D1" target="M3b"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="M3a" target="D2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="M3b" target="D2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e8" value="Không" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="D2" target="X1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" edge="1" parent="1" source="X1" target="E_x"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e10" value="Có" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;" edge="1" parent="1" source="D2" target="D3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e10a" value="Đã cập nhật" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="D3" target="X2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e10b" value="Nạp lại danh sách món" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;dashed=1;fontSize=10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="X2" target="M2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e10c" value="Chưa" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;" edge="1" parent="1" source="D3" target="M4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e11" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" edge="1" parent="1" source="M4" target="M5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e12" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" edge="1" parent="1" source="M5" target="E0"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,70 @@
+<mxfile host="65bd71144e">
+    <diagram name="Xac nhan goi nhan vien (flowchart ngang)" id="bp-xac-nhan-goi-nhan-vien">
+        <mxGraphModel dx="867" dy="449" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2400" pageHeight="720" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="W0" value="Khách bấm nút gọi nhân viên trên giao diện gọi món" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="300" width="200" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="W1" value="Hệ thống ghi thời điểm gọi nhân&amp;nbsp;&lt;div&gt;viên vào phiên và phát sự kiện&amp;nbsp;&lt;/div&gt;&lt;div&gt;thời gian thực&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="280" y="295" width="200" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="W2" value="Màn hình phục vụ: ô bàn hiện dấu gọi nhân viên và bộ đếm tín hiệu tăng thêm" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="520" y="295" width="200" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="W3" value="Phục vụ tới bàn tiếp nhận và hỗ trợ khách" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="760" y="300" width="200" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="W4" value="Phục vụ bấm xác nhận đã tiếp nhận cuộc gọi trên bảng chi tiết bàn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1000" y="295" width="200" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="D1" value="Dấu gọi nhân viên còn trên phiên?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1240" y="290" width="200" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="X1" value="Một nhân viên khác đã tiếp nhận trước đó; hệ thống vẫn trả kết quả thành công và không báo lỗi" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1240" y="500" width="200" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="W5" value="Hệ thống xóa dấu gọi nhân viên khỏi phiên và phát sự kiện thời gian thực" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1500" y="295" width="200" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="W6" value="Dấu gọi nhân viên biến mất trên mọi màn hình phục vụ đang mở" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1740" y="295" width="200" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="E_x" value="Kết thúc" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="2010" y="320" width="180" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="W0" target="W1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="W1" target="W2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="W2" target="W3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="W3" target="W4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="W4" target="D1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" value="Đã bị xóa" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="D1" target="X1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" value="Giao diện vẫn đồng bộ" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="1" source="X1" target="W6" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" value="Còn" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;" parent="1" source="D1" target="W5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="W5" target="W6" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e10" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="W6" target="E_x" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

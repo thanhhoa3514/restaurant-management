@@ -6,7 +6,7 @@
         <mxCell id="1" parent="0" />
 
         <!-- System boundary -->
-        <mxCell id="boundary" value="Hệ thống quản lý nhà hàng lẩu–nướng (QR Ordering)" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;fontSize=14;fontStyle=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+        <mxCell id="boundary" value="Hệ thống quản lý nhà hàng lẩu–nướng (QR Ordering)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fontSize=14;fontStyle=1;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="330" y="30" width="580" height="1280" as="geometry" />
         </mxCell>
 

@@ -217,7 +217,7 @@ func (d *Dispatcher) processPendingEvents(ctx context.Context) error {
 			}
 
 			if err := d.hub.Broadcast(
-				realtime.Topic{RestaurantID: e.RestaurantID},
+				realtimeTopic(e.RestaurantID, payload),
 				realtime.Event{Type: e.Type, Payload: payload},
 			); err != nil {
 				d.logger.Warn("outbox broadcast failed",
@@ -231,6 +231,30 @@ func (d *Dispatcher) processPendingEvents(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func realtimeTopic(restaurantID uuid.UUID, payload any) realtime.Topic {
+	topic := realtime.Topic{RestaurantID: restaurantID}
+	values, ok := payload.(map[string]any)
+	if !ok {
+		return topic
+	}
+	topic.SessionID = firstPayloadUUID(values, "session_id", "dining_session_id")
+	topic.TableID = firstPayloadUUID(values, "table_id")
+	return topic
+}
+
+func firstPayloadUUID(values map[string]any, keys ...string) uuid.UUID {
+	for _, key := range keys {
+		raw, ok := values[key].(string)
+		if !ok {
+			continue
+		}
+		if id, err := uuid.Parse(raw); err == nil {
+			return id
+		}
+	}
+	return uuid.Nil
 }
 
 func suppressRealtime(raw json.RawMessage) bool {

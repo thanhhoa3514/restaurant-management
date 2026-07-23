@@ -1,0 +1,104 @@
+<mxfile host="65bd71144e">
+    <diagram name="Them ban (flowchart ngang)" id="bp-them-ban">
+        <mxGraphModel dx="1016" dy="251" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2560" pageHeight="700" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="T0" value="Quản lý mở màn hình sơ đồ bàn&amp;nbsp;&lt;div&gt;và khu vực&lt;/div&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="300" width="200" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="T1" value="Chọn chức năng thêm bàn; hệ thống mở biểu mẫu bàn trống" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="280" y="300" width="200" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="T2" value="Nhập mã bàn, tên hiển thị, sức chứa, khu vực và trạng thái ban đầu" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="520" y="300" width="200" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="T3" value="Hệ thống chuẩn hóa dữ liệu" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="760" y="295" width="200" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="D1" value="Dữ liệu hợp lệ?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1000" y="300" width="200" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="X1" value="Hệ thống báo lỗi theo từng trường:&amp;nbsp;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1000" y="500" width="200" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="D2" value="Mã bàn đã tồn tại trong&amp;nbsp;&lt;div&gt;nhà hàng?&lt;/div&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1260" y="280" width="200" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="X2" value="Hệ thống báo mã bàn bị trùng, không tạo bản ghi mới" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1260" y="510" width="200" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="D3" value="Khu vực được gán còn tồn tại?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1510" y="285" width="200" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="X3" value="Hệ thống báo khu vực không hợp lệ, không tạo bản ghi mới" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1510" y="510" width="200" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="T4" value="Hệ thống tạo bàn mới, gắn vào khu vực đã chọn và lưu vào cơ sở dữ liệu" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1800" y="300" width="200" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="T5" value="Sơ đồ bàn được cập nhật" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="2060" y="300" width="200" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="E0" value="Kết thúc" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="2300" y="305" width="180" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_T0_T1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="T0" target="T1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_T1_T2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="T1" target="T2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_T2_T3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="T2" target="T3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_T3_D1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="T3" target="D1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_D1_X1" value="Không" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="D1" target="X1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_X1_T2" value="Nhập lại" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;dashed=1;fontSize=10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="1" source="X1" target="T2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_D1_D2" value="Hợp lệ" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;" parent="1" source="D1" target="D2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_D2_X2" value="Đã tồn tại" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="D2" target="X2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_X2_T2" value="Đổi mã bàn" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;dashed=1;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=1;entryDx=0;entryDy=0;" parent="1" source="X2" target="T2" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1340" y="670"/>
+                            <mxPoint x="570" y="670"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e_D2_D3" value="Chưa tồn tại" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;" parent="1" source="D2" target="D3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_D3_X3" value="Không" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="D3" target="X3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_X3_T2" value="Chọn lại khu vực" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;dashed=1;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=1;entryDx=0;entryDy=0;" parent="1" source="X3" target="T2" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1580" y="650"/>
+                            <mxPoint x="670" y="650"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e_D3_T4" value="Còn tồn tại" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;" parent="1" source="D3" target="T4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_T4_T5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="T4" target="T5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_T5_E0" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="T5" target="E0" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

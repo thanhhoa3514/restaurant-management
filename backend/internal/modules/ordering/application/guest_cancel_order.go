@@ -52,8 +52,8 @@ func (s *GuestCancelOrder) Handle(ctx context.Context, req GuestCancelOrderReque
 		}
 		lineIDs := make([]uuid.UUID, 0, len(lines))
 		for _, line := range lines {
-			if line.Status != "PENDING" {
-				return apperr.New(apperr.CodeConflict, "order has items already in the kitchen")
+			if line.Status != string(domain.StatusPlaced) {
+				return apperr.New(apperr.CodeConflict, "order has items already confirmed by staff")
 			}
 			lineIDs = append(lineIDs, line.ID)
 		}

@@ -1,0 +1,94 @@
+<mxfile host="65bd71144e">
+    <diagram name="Xoa ban (flowchart ngang)" id="bp-xoa-ban">
+        <mxGraphModel dx="1478" dy="365" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2400" pageHeight="800" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="V0" value="Quản lý mở màn hình sơ đồ bàn và khu vực" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="300" width="200" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="V1" value="Chọn bàn cần xóa và bấm chức năng xóa" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="280" y="300" width="200" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="D0" value="Quản lý xác nhận xóa bàn?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="520" y="300" width="200" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="X0" value="Hủy thao tác, giữ nguyên bàn trên sơ đồ" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="520" y="510" width="200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="D_EX" value="Bàn còn tồn tại trong hệ thống?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="760" y="300" width="200" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="X_NF" value="Hệ thống báo không tìm thấy bàn, không thực hiện xóa" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="760" y="510" width="200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="D1" value="Bàn có phiên phục vụ&amp;nbsp;&lt;div&gt;đang hoạt động?&lt;/div&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1000" y="300" width="200" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="X1" value="Hệ thống từ chối xóa: bàn đang có phiên phục vụ, cần đóng phiên trước" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1000" y="510" width="200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="E_x" value="Kết thúc" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="770" y="670" width="180" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="V2" value="Hệ thống thu hồi mã QR đang&amp;nbsp;&lt;div&gt;hoạt động của bàn với lý do&amp;nbsp;&lt;/div&gt;&lt;div&gt;bàn bị xóa&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1290" y="295" width="200" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="V3" value="Hệ thống xóa mềm bàn: đánh dấu thời điểm xóa, giữ nguyên lịch sử phiên phục vụ, đơn hàng và hóa đơn cũ" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="1540" y="295" width="200" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_V0_V1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="V0" target="V1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_V1_D0" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="V1" target="D0" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_D0_X0" value="Không" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="D0" target="X0" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_X0_Ex" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="X0" target="E_x" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_D0_DEX" value="Có" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;" parent="1" source="D0" target="D_EX" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_DEX_XNF" value="Không" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="D_EX" target="X_NF" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_XNF_Ex" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="X_NF" target="E_x" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_DEX_D1" value="Còn tồn tại" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;" parent="1" source="D_EX" target="D1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_D1_X1" value="Có" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="D1" target="X1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_X1_Ex" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="X1" target="E_x" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1110" y="705"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e_D1_V2" value="Không" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;" parent="1" source="D1" target="V2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_V2_V3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="V2" target="V3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_V3_V4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;entryX=1;entryY=1;entryDx=0;entryDy=0;" parent="1" source="V3" target="E_x" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1640" y="480" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="1640" y="730"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="2" value="&lt;b&gt;&lt;font style=&quot;font-size: 14px;&quot;&gt;Luồng: Xoá bàn&amp;nbsp;&lt;/font&gt;&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="590" y="240" width="130" height="30" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

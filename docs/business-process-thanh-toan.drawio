@@ -9,16 +9,16 @@
         <mxCell id="S0" value="[Khách] Yêu cầu thanh toán" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="40" y="255" width="180" height="90" as="geometry" />
         </mxCell>
-        <mxCell id="S1" value="[Thu ngân / Phục vụ] Truy cập hệ thống, chọn bàn tương ứng" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+        <mxCell id="S1" value="[Thu ngân / Phục vụ] Truy cập hệ thống, chọn bàn tương ứng" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="250" y="255" width="190" height="90" as="geometry" />
         </mxCell>
-        <mxCell id="S2" value="[HT] Lập hóa đơn: tổng hợp món phải trả (loại các món đã hủy) → tạm tính + phí dịch vụ + VAT theo cấu hình → tổng tiền" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+        <mxCell id="S2" value="[HT] Lập hóa đơn: tổng hợp món phải trả (loại các món đã hủy) → tạm tính + phí dịch vụ + VAT theo cấu hình → tổng tiền" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="470" y="245" width="210" height="110" as="geometry" />
         </mxCell>
-        <mxCell id="S3" value="[HT] Tạo hóa đơn 'Chờ thanh toán'; phiên: Hoạt động → Chờ thanh toán" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+        <mxCell id="S3" value="[HT] Tạo hóa đơn 'Chờ thanh toán'; phiên: Hoạt động → Chờ thanh toán" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="710" y="250" width="200" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="S4" value="[Thu ngân] Chọn phương thức thanh toán" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+        <mxCell id="S4" value="[Thu ngân] Chọn phương thức thanh toán" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="940" y="260" width="170" height="80" as="geometry" />
         </mxCell>
         <mxCell id="D1" value="[HT] Phương thức?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
@@ -26,15 +26,15 @@
         </mxCell>
 
         <!-- ===== CASH lane (above) ===== -->
-        <mxCell id="CA" value="[Thu ngân] Tiền mặt (đồng bộ): nhập tiền khách đưa → HT tính tiền thối + ghi nhận khoản thanh toán" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+        <mxCell id="CA" value="[Thu ngân] Tiền mặt (đồng bộ): nhập tiền khách đưa → HT tính tiền thối + ghi nhận khoản thanh toán" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="1370" y="90" width="220" height="110" as="geometry" />
         </mxCell>
 
         <!-- ===== E-WALLET lane (below) ===== -->
-        <mxCell id="EW1" value="[HT] Ví điện tử (bất đồng bộ): khởi tạo yêu cầu tới cổng nhà cung cấp → trả mã QR / liên kết" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+        <mxCell id="EW1" value="[HT] Ví điện tử (bất đồng bộ): khởi tạo yêu cầu tới cổng nhà cung cấp → trả mã QR / liên kết" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="1370" y="400" width="220" height="90" as="geometry" />
         </mxCell>
-        <mxCell id="EW2" value="[Khách] Quét mã, trả qua ví — phiên CHƯA đóng" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+        <mxCell id="EW2" value="[Khách] Quét mã, trả qua ví — phiên CHƯA đóng" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="1370" y="520" width="220" height="80" as="geometry" />
         </mxCell>
         <mxCell id="D2" value="[HT] Cổng gửi webhook xác nhận hoàn tất?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
@@ -42,10 +42,10 @@
         </mxCell>
 
         <!-- ===== CONVERGE + atomic close ===== -->
-        <mxCell id="PAY" value="[HT] Ghi nhận thanh toán hoàn tất" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+        <mxCell id="PAY" value="[HT] Ghi nhận thanh toán hoàn tất" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="1680" y="255" width="190" height="90" as="geometry" />
         </mxCell>
-        <mxCell id="ATOM" value="[HT] Trong MỘT giao dịch DB nguyên tử: Hóa đơn → Đã thanh toán; Phiên → Đã đóng; Bàn: Đang phục vụ → Sẵn sàng (giải phóng)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+        <mxCell id="ATOM" value="[HT] Trong MỘT giao dịch DB nguyên tử: Hóa đơn → Đã thanh toán; Phiên → Đã đóng; Bàn: Đang phục vụ → Sẵn sàng (giải phóng)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="1920" y="245" width="240" height="120" as="geometry" />
         </mxCell>
         <mxCell id="E0" value="Phiên đã đóng — mọi thao tác gọi món vào phiên đều bị từ chối" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=3;" vertex="1" parent="1">
@@ -58,28 +58,28 @@
         </mxCell>
 
         <!-- ===== EDGES ===== -->
-        <mxCell id="e_S0_S1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="S0" target="S1"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="e_S1_S2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="S1" target="S2"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="e_S2_S3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="S2" target="S3"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="e_S3_S4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="S3" target="S4"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="e_S4_D1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="S4" target="D1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_S0_S1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" edge="1" parent="1" source="S0" target="S1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_S1_S2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" edge="1" parent="1" source="S1" target="S2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_S2_S3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" edge="1" parent="1" source="S2" target="S3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_S3_S4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" edge="1" parent="1" source="S3" target="S4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_S4_D1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" edge="1" parent="1" source="S4" target="D1"><mxGeometry relative="1" as="geometry" /></mxCell>
 
         <!-- D1 branch -->
-        <mxCell id="e_D1_CA" value="Tiền mặt" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="D1" target="CA"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="e_D1_EW1" value="Ví điện tử" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="D1" target="EW1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_D1_CA" value="Tiền mặt" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="D1" target="CA"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_D1_EW1" value="Ví điện tử" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="D1" target="EW1"><mxGeometry relative="1" as="geometry" /></mxCell>
 
         <!-- cash -> PAY -->
-        <mxCell id="e_CA_PAY" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="CA" target="PAY"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_CA_PAY" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="CA" target="PAY"><mxGeometry relative="1" as="geometry" /></mxCell>
 
         <!-- ewallet chain -->
-        <mxCell id="e_EW1_EW2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="EW1" target="EW2"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="e_EW2_D2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="EW2" target="D2"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="e_D2_EW2" value="Chưa / lỗi / hết hạn → chờ, thử lại" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="D2" target="EW2"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="e_D2_PAY" value="Thành công" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="D2" target="PAY"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_EW1_EW2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" edge="1" parent="1" source="EW1" target="EW2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_EW2_D2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" edge="1" parent="1" source="EW2" target="D2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_D2_EW2" value="Chưa / lỗi / hết hạn → chờ, thử lại" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;dashed=1;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="D2" target="EW2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_D2_PAY" value="Thành công" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="D2" target="PAY"><mxGeometry relative="1" as="geometry" /></mxCell>
 
         <!-- close atomic -->
-        <mxCell id="e_PAY_ATOM" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="PAY" target="ATOM"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="e_ATOM_E0" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="ATOM" target="E0"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_PAY_ATOM" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" edge="1" parent="1" source="PAY" target="ATOM"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_ATOM_E0" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" edge="1" parent="1" source="ATOM" target="E0"><mxGeometry relative="1" as="geometry" /></mxCell>
 
       </root>
     </mxGraphModel>

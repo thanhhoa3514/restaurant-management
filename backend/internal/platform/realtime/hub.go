@@ -3,24 +3,30 @@ package realtime
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+
+	"restaurant-management/internal/platform/auth"
 )
 
 const (
-	pongWait   = 60 * time.Second    // tối đa chờ Pong từ client
-	pingPeriod = (pongWait * 9) / 10 // gửi Ping trước khi deadline để tránh race
+	pongWait    = 60 * time.Second    // tối đa chờ Pong từ client
+	pingPeriod  = (pongWait * 9) / 10 // gửi Ping trước khi deadline để tránh race
+	authTimeout = 10 * time.Second
 )
 
 type Topic struct {
 	RestaurantID uuid.UUID
 	Role         string
 	TableID      uuid.UUID
+	SessionID    uuid.UUID
 }
 type Event struct {
 	Type    string `json:"type"`
@@ -28,18 +34,23 @@ type Event struct {
 }
 
 type subscription struct {
-	topic Topic
-	conn  *websocket.Conn
-	send  chan []byte
+	topic       Topic
+	authPayload []byte
+	conn        *websocket.Conn
+	send        chan []byte
 }
 
 type Hub struct {
-	mu       sync.RWMutex
-	clients  map[*subscription]struct{}
-	upgrader websocket.Upgrader
+	mu                  sync.RWMutex
+	clients             map[*subscription]struct{}
+	upgrader            websocket.Upgrader
+	staffSecret         string
+	defaultRestaurantID uuid.UUID
+	sessionChecker      auth.SessionChecker
+	sessionValidator    auth.SessionValidator
 }
 
-func NewHub(allowedOrigins []string) *Hub {
+func NewHub(allowedOrigins []string, staffSecret string, defaultRestaurantID uuid.UUID, sessionChecker auth.SessionChecker, sessionValidator auth.SessionValidator) *Hub {
 	allowed := make(map[string]struct{}, len(allowedOrigins))
 	for _, o := range allowedOrigins {
 		allowed[o] = struct{}{}
@@ -51,7 +62,14 @@ func NewHub(allowedOrigins []string) *Hub {
 		_, ok := allowed[r.Header.Get("Origin")]
 		return ok
 	}
-	return &Hub{clients: map[*subscription]struct{}{}, upgrader: websocket.Upgrader{CheckOrigin: checkOrigin}}
+	return &Hub{
+		clients:             map[*subscription]struct{}{},
+		upgrader:            websocket.Upgrader{CheckOrigin: checkOrigin},
+		staffSecret:         staffSecret,
+		defaultRestaurantID: defaultRestaurantID,
+		sessionChecker:      sessionChecker,
+		sessionValidator:    sessionValidator,
+	}
 }
 func (h *Hub) Run(ctx context.Context) {
 	<-ctx.Done()
@@ -68,13 +86,10 @@ func (h *Hub) ServeGin(c *gin.Context) {
 		return
 	}
 	sub := &subscription{conn: conn, send: make(chan []byte, 8)}
-	h.mu.Lock()
-	h.clients[sub] = struct{}{}
-	h.mu.Unlock()
 	go h.writePump(sub)
 	go h.readPump(sub)
 }
-func (h *Hub) Broadcast(_ Topic, event Event) error {
+func (h *Hub) Broadcast(topic Topic, event Event) error {
 	b, err := json.Marshal(event)
 	if err != nil {
 		return err
@@ -82,12 +97,31 @@ func (h *Hub) Broadcast(_ Topic, event Event) error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	for c := range h.clients {
+		if !matches(c.topic, topic, event.Type) {
+			continue
+		}
 		select {
 		case c.send <- b:
 		default:
 		}
 	}
 	return nil
+}
+
+func matches(subscriber, event Topic, eventType string) bool {
+	if subscriber.RestaurantID == uuid.Nil || subscriber.RestaurantID != event.RestaurantID {
+		return false
+	}
+	if subscriber.Role != "GUEST" {
+		return subscriber.Role != ""
+	}
+	if strings.HasPrefix(eventType, "catalog.") {
+		return true
+	}
+	if event.SessionID != uuid.Nil && subscriber.SessionID == event.SessionID {
+		return true
+	}
+	return event.TableID != uuid.Nil && subscriber.TableID == event.TableID
 }
 
 func (h *Hub) writePump(s *subscription) {
@@ -106,6 +140,10 @@ func (h *Hub) writePump(s *subscription) {
 				return
 			}
 		case <-ticker.C:
+			topic, err := h.authenticate(s.authPayload)
+			if err != nil || topic != s.topic {
+				return
+			}
 			if err := s.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
@@ -114,6 +152,7 @@ func (h *Hub) writePump(s *subscription) {
 }
 
 func (h *Hub) readPump(s *subscription) {
+	authenticated := false
 	defer func() {
 		h.mu.Lock()
 		delete(h.clients, s)
@@ -123,7 +162,7 @@ func (h *Hub) readPump(s *subscription) {
 	}()
 
 	s.conn.SetReadLimit(4096)
-	s.conn.SetReadDeadline(time.Now().Add(pongWait))
+	s.conn.SetReadDeadline(time.Now().Add(authTimeout))
 	s.conn.SetPongHandler(func(string) error {
 		s.conn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
@@ -138,11 +177,86 @@ func (h *Hub) readPump(s *subscription) {
 		if err != nil {
 			return
 		}
+		if !authenticated {
+			topic, err := h.authenticate(msg)
+			if err != nil {
+				_ = s.conn.WriteControl(
+					websocket.CloseMessage,
+					websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "authentication failed"),
+					time.Now().Add(time.Second),
+				)
+				return
+			}
+			s.topic = topic
+			s.authPayload = append([]byte(nil), msg...)
+			h.mu.Lock()
+			h.clients[s] = struct{}{}
+			h.mu.Unlock()
+			authenticated = true
+			s.conn.SetReadDeadline(time.Now().Add(pongWait))
+			ack, _ := json.Marshal(Event{Type: "_auth_ok", Payload: map[string]any{"role": topic.Role}})
+			select {
+			case s.send <- ack:
+			default:
+				return
+			}
+			continue
+		}
 		s.conn.SetReadDeadline(time.Now().Add(pongWait))
 		if isInternalPing(msg) {
 			continue
 		}
 	}
+}
+
+type authMessage struct {
+	Type         string `json:"type"`
+	AccessToken  string `json:"access_token"`
+	SessionToken string `json:"session_token"`
+}
+
+func (h *Hub) authenticate(raw []byte) (Topic, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	var message authMessage
+	if err := json.Unmarshal(raw, &message); err != nil || message.Type != "_auth" {
+		return Topic{}, errors.New("authentication message required")
+	}
+	if token := strings.TrimSpace(message.AccessToken); token != "" {
+		if h.sessionChecker == nil || h.staffSecret == "" || h.defaultRestaurantID == uuid.Nil {
+			return Topic{}, errors.New("staff authentication unavailable")
+		}
+		claims, err := auth.Parse(token, h.staffSecret)
+		if err != nil || strings.TrimSpace(claims.Role) == "" {
+			return Topic{}, errors.New("invalid staff token")
+		}
+		sessionID, err := uuid.Parse(claims.SessionID)
+		if err != nil || sessionID == uuid.Nil {
+			return Topic{}, errors.New("staff session claim required")
+		}
+		valid, err := h.sessionChecker.IsSessionValid(ctx, sessionID)
+		if err != nil || !valid {
+			return Topic{}, errors.New("staff session revoked")
+		}
+		return Topic{RestaurantID: h.defaultRestaurantID, Role: strings.ToUpper(claims.Role)}, nil
+	}
+	if token := strings.TrimSpace(message.SessionToken); token != "" {
+		if h.sessionValidator == nil {
+			return Topic{}, errors.New("guest authentication unavailable")
+		}
+		session, err := h.sessionValidator.ValidateSessionToken(ctx, token)
+		if err != nil {
+			return Topic{}, errors.New("invalid guest session")
+		}
+		return Topic{
+			RestaurantID: session.RestaurantID,
+			Role:         "GUEST",
+			TableID:      session.TableID,
+			SessionID:    session.SessionID,
+		}, nil
+	}
+	return Topic{}, errors.New("authentication token required")
 }
 
 func isInternalPing(msg []byte) bool {

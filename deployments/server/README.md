@@ -47,6 +47,15 @@ cd ~/containers/apps/nginx    && docker compose up -d
 Postgres/minio only need starting once; for an update only backend/frontend
 need `docker load` + `up -d` again (migrate/seed re-run, both idempotent).
 
+After deploying a release that contains bundled menu images, verify that the
+web container has the files and serves the correct content type:
+
+```bash
+docker exec web test -s /usr/share/nginx/html/images/menu/lau-thai-tomyum.webp
+curl -I http://localhost/images/menu/lau-thai-tomyum.webp
+# Expected: HTTP 200 and Content-Type: image/webp
+```
+
 ## Verify
 
 ```bash
@@ -59,7 +68,7 @@ curl -I http://localhost/health        # 200 via edge nginx → api
 - `TAG` in backend/frontend `.env` must match the build env (`prod` or `uat`).
 - Edge nginx routes `/api`, `/ws`, `/health` → `api:8080`, everything else → `web:80`.
   The web image itself only serves static files (SPA fallback + asset cache).
-- MinIO stays internal; menu images aren't publicly reachable until you add an
-  nginx `location /images/ { proxy_pass http://minio:9000/; }` and point
-  `S3_PUBLIC_URL` at it.
+- Generated seed/demo images under `/images/menu/` are bundled into the
+  frontend image. Admin-uploaded images continue to use MinIO through the edge
+  route `/restaurant-images/`; `S3_PUBLIC_URL` must point to that public route.
 - Old images pile up after repeated loads: `docker image prune -f`.

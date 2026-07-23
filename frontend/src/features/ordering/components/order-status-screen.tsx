@@ -102,7 +102,7 @@ export const OrderStatusScreen: FC = () => {
                       lang={state.lang}
                       imageUrl={imageByItemId[item.menu_item_id]}
                       onEdit={
-                        item.status === 'PENDING'
+                        item.status === 'PLACED'
                           ? () => setEditTarget({ order, item })
                           : undefined
                       }

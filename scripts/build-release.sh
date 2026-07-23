@@ -22,6 +22,41 @@ docker build -t "restaurant-web:$ENV" -t "restaurant-web:$ENV-$SHA" \
   --build-arg VITE_PUBLIC_ORIGIN="$VITE_PUBLIC_ORIGIN" \
   "$ROOT/frontend"
 
+echo "==> verify bundled menu images"
+docker run --rm --entrypoint sh "restaurant-web:$ENV" -c '
+  for image in \
+    lau-thai-tomyum.webp \
+    lau-bo-my-nam.webp \
+    lau-ga-la-e.webp \
+    lau-hai-san.webp \
+    ba-chi-bo-my-nuong.webp \
+    suon-heo-nuong-mat-ong.webp \
+    bo-cuon-nam-kim-cham.webp \
+    canh-ga-nuong-sa-te.webp \
+    tom-su-tuoi.webp \
+    muc-nuong-sa-te.webp \
+    hau-nuong-pho-mai.webp \
+    rau-thap-cam.webp \
+    nam-tong-hop.webp \
+    dau-hu-trung.webp \
+    mi-trung-tuoi.webp \
+    khoai-tay-chien.webp \
+    nem-chua-ran.webp \
+    salad-tron-bo-my.webp \
+    tra-da.webp \
+    tra-dao-cam-sa.webp \
+    coca-cola.webp \
+    bia-sai-gon.webp \
+    kem-vani.webp \
+    dia-trai-cay.webp
+  do
+    test -s "/usr/share/nginx/html/images/menu/$image" || {
+      echo "missing menu image: $image" >&2
+      exit 1
+    }
+  done
+'
+
 mkdir -p "$ROOT/release"
 OUT="$ROOT/release/restaurant-images-$ENV-$SHA.tar.gz"
 docker save "restaurant-api:$ENV" "restaurant-web:$ENV" | gzip > "$OUT"

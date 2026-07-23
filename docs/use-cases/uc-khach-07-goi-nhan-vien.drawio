@@ -7,7 +7,7 @@
                 <mxCell id="title" value="ĐẶC TẢ USE-CASE KHÁCH — GỌI NHÂN VIÊN" style="text;html=1;fontSize=14;fontStyle=1;align=center;verticalAlign=middle;" parent="1" vertex="1">
                     <mxGeometry x="40" y="40" width="960" height="40" as="geometry"/>
                 </mxCell>
-                <mxCell id="boundary" value="" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;fontSize=11;fontStyle=2;fillColor=none;strokeColor=#000000;" parent="1" vertex="1">
+                <mxCell id="boundary" value="" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fontSize=11;fontStyle=2;fillColor=none;strokeColor=#000000;" parent="1" vertex="1">
                     <mxGeometry x="170" y="90" width="560" height="260" as="geometry"/>
                 </mxCell>
                 <mxCell id="a0" value="Khách" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;fontStyle=1;fillColor=#FFFFFF;strokeColor=#000000;" parent="1" vertex="1">
