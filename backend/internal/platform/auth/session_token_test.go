@@ -47,6 +47,7 @@ func TestQRSessionTokenValidInjectsGuestSession(t *testing.T) {
 	w := runSessionMiddleware(v, "session-token", func(c *gin.Context) {
 		gotGuest, ok := guest.SessionFromContext(c.Request.Context())
 		require.True(t, ok)
+		require.Equal(t, rid, gotGuest.RestaurantID)
 		require.Equal(t, sid, gotGuest.SessionID)
 		require.Equal(t, tableID, gotGuest.TableID)
 		c.Status(http.StatusOK)

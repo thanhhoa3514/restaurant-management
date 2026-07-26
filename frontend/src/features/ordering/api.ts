@@ -10,6 +10,7 @@ import type {
   EditOrderInput,
   EditOrderResult,
   RequestBillResponse,
+  GuestCheckoutResponse,
 } from './types'
 
 export function joinDiningSession(qrToken: string, guestName?: string): Promise<JoinSessionResult> {
@@ -74,6 +75,10 @@ export function requestBill(sessionToken: string): Promise<RequestBillResponse> 
     method: 'POST',
     sessionToken,
   })
+}
+
+export function fetchGuestPayment(sessionToken: string): Promise<GuestCheckoutResponse> {
+  return apiRequest<GuestCheckoutResponse>('/api/v1/customer/payment', { sessionToken })
 }
 
 export function callWaiter(

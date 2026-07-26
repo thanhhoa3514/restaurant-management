@@ -168,7 +168,11 @@ func QRSessionToken(v SessionValidator) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		ctx := guest.WithSession(c.Request.Context(), guest.Session{SessionID: session.SessionID, TableID: session.TableID})
+		ctx := guest.WithSession(c.Request.Context(), guest.Session{
+			RestaurantID: session.RestaurantID,
+			SessionID:    session.SessionID,
+			TableID:      session.TableID,
+		})
 		c.Request = c.Request.WithContext(ctx)
 		c.Next()
 	}

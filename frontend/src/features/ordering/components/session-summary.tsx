@@ -157,10 +157,8 @@ export const SessionSummary: FC = () => {
           try {
             await requestBill(sessionToken)
             toast.success(t.toast_bill)
-            dispatch({
-              type: 'SET_SCREEN',
-              payload: wantsDigitalInvoice ? 'invoice' : 'qr',
-            })
+            dispatch({ type: 'SET_DIGITAL_INVOICE', payload: wantsDigitalInvoice })
+            dispatch({ type: 'SET_SCREEN', payload: 'payment' })
           } catch {
             toast.error(t.toast_error || 'Yêu cầu thất bại, vui lòng thử lại')
           } finally {

@@ -1,10 +1,12 @@
+import type { BillingInvoiceDTO } from '@/features/billing/api'
+
 // ── Client-only domain types ──────────────────────────────────────────────
 // Menu/order shapes from the backend live below; this section holds the
 // client-only session + cart model.
 
 export type { Lang } from '@/constants'
 
-export type Screen = 'qr' | 'menu' | 'order' | 'summary' | 'invoice'
+export type Screen = 'qr' | 'menu' | 'order' | 'summary' | 'payment' | 'invoice'
 
 export interface Session {
   token: string
@@ -13,6 +15,11 @@ export interface Session {
   sessionId?: string
   tableId?: string
   status?: string
+}
+
+export interface GuestCheckoutResponse {
+  session_status: string
+  invoices: BillingInvoiceDTO[]
 }
 
 // A chosen option inside a cart line. priceDeltaVnd/nameSnapshot are kept for

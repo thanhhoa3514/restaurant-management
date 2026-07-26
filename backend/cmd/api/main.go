@@ -213,11 +213,14 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 		billingapp.NewVoidInvoice(tx, billingRepo, outboxWriter, defaultRID),
 		billingapp.NewSplitInvoice(tx, billingRepo, outboxWriter, defaultRID),
 		billingapp.NewListSessionInvoices(billingRepo, defaultRID),
+		billingapp.NewGuestCheckout(billingRepo, defaultRID),
 		cfg.AppEnv,
 	)
 
 	orderRateLimiter := ratelimit.NewSlidingWindow(30, 1*time.Minute)
 	defer orderRateLimiter.Stop()
+	paymentRateLimiter := ratelimit.NewSlidingWindow(120, 1*time.Minute)
+	defer paymentRateLimiter.Stop()
 
 	customer := api.Group("/customer")
 	diningHandler.RegisterGuestRoutes(customer)
@@ -225,6 +228,9 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 
 	orders := api.Group("/customer", auth.QRSessionToken(diningRepo), orderRateLimiter.Middleware(ratelimit.GuestSessionKey))
 	orderingHandler.RegisterGuestRoutes(orders)
+
+	guestPayments := api.Group("/customer", auth.QRSessionToken(diningRepo), paymentRateLimiter.Middleware(ratelimit.GuestSessionKey))
+	billingHandler.RegisterGuestRoutes(guestPayments)
 
 	restaurant := api.Group("/restaurant")
 	identityHandler.RegisterRoutes(restaurant, secret, identityRepo, sessionRepo, defaultRID)

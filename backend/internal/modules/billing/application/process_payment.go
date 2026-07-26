@@ -118,20 +118,29 @@ func (s *ProcessPayment) processAsync(ctx context.Context, methodCode string, ga
 			AggregateType: "invoice",
 			AggregateID:   invoice.ID,
 			EventType:     "billing.payment_initiated",
-			Payload: map[string]any{
-				"invoice_id":          invoice.ID,
-				"dining_session_id":   invoice.DiningSessionID,
-				"payment_id":          invoice.Payment.ID,
-				"payment_method_code": invoice.Payment.MethodCode,
-				"amount_vnd":          invoice.Payment.AmountVND,
-			},
-			Metadata: map[string]any{"actor_type": "STAFF", "action": "payment.initiated"},
-			Priority: 4,
+			Payload:       paymentInitiatedPayload(invoice),
+			Metadata:      map[string]any{"actor_type": "STAFF", "action": "payment.initiated"},
+			Priority:      4,
 		}); err != nil {
 			return nil, err
 		}
 	}
 	return invoice, nil
+}
+
+func paymentInitiatedPayload(invoice *domain.Invoice) map[string]any {
+	return map[string]any{
+		"invoice_id":          invoice.ID,
+		"dining_session_id":   invoice.DiningSessionID,
+		"payment_id":          invoice.Payment.ID,
+		"payment_number":      invoice.Payment.PaymentNumber,
+		"payment_method_code": invoice.Payment.MethodCode,
+		"amount_vnd":          invoice.Payment.AmountVND,
+		"status":              invoice.Payment.Status,
+		"pay_url":             invoice.Payment.PayURL,
+		"deeplink":            invoice.Payment.Deeplink,
+		"qr_code_url":         invoice.Payment.QRCodeURL,
+	}
 }
 
 func (s *ProcessPayment) writePaymentCompleted(ctx context.Context, invoice *domain.Invoice, actorID uuid.UUID) error {

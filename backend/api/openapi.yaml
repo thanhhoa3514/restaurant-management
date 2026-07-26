@@ -607,6 +607,33 @@ paths:
       responses:
         '200':
           description: Mock webhook applied
+  /api/v1/customer/payment:
+    get:
+      tags: [billing]
+      summary: Get invoices and current payment for the authenticated guest session
+      security:
+        - sessionToken: []
+      responses:
+        '200':
+          description: Session invoices, including the current QR payment when available
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    required: [session_status, invoices]
+                    properties:
+                      session_status:
+                        type: string
+                        enum: [ACTIVE, AWAITING_PAYMENT, CLOSED]
+                      invoices:
+                        type: array
+                        items: { type: object }
+        '401':
+          description: Missing, invalid, or expired guest session token
 components:
   securitySchemes:
     bearerAuth:

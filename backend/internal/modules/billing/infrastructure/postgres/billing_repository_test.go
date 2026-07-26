@@ -29,6 +29,15 @@ func TestShouldCloseSession(t *testing.T) {
 	}
 }
 
+func TestShouldReopenSessionAfterVoid(t *testing.T) {
+	if !shouldReopenSessionAfterVoid(0) {
+		t.Fatal("expected session to reopen after its final non-VOID invoice is voided")
+	}
+	if shouldReopenSessionAfterVoid(1) {
+		t.Fatal("expected session to remain awaiting payment while a split sibling invoice remains")
+	}
+}
+
 func TestValidateSplitGroupsPartitionsExactly(t *testing.T) {
 	id1, id2, id3, id4 := uuid.New(), uuid.New(), uuid.New(), uuid.New()
 	billable := map[uuid.UUID]billableItem{

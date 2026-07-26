@@ -1,4 +1,4 @@
-import { createContext, use, useMemo, useReducer, type ReactNode } from 'react'
+import { createContext, use, useEffect, useMemo, useReducer, type ReactNode } from 'react'
 import type { CartLine, Screen, Session, Lang } from '../types'
 
 interface OrderingState {
@@ -8,6 +8,7 @@ interface OrderingState {
   lang: Lang
   cartOpen: boolean
   placing: boolean
+  wantsDigitalInvoice: boolean
 }
 
 type Action =
@@ -20,6 +21,7 @@ type Action =
   | { type: 'PLACE_FAILED' }
   | { type: 'SET_SCREEN'; payload: Screen }
   | { type: 'SET_LANG'; payload: Lang }
+  | { type: 'SET_DIGITAL_INVOICE'; payload: boolean }
   | { type: 'TOGGLE_CART' }
   | { type: 'OPEN_CART' }
   | { type: 'CLOSE_CART' }
@@ -60,6 +62,9 @@ function orderingReducer(state: OrderingState, action: Action): OrderingState {
       localStorage.setItem('rest_lang_customer', action.payload)
       return { ...state, lang: action.payload }
 
+    case 'SET_DIGITAL_INVOICE':
+      return { ...state, wantsDigitalInvoice: action.payload }
+
     case 'TOGGLE_CART':
       return { ...state, cartOpen: !state.cartOpen }
 
@@ -92,9 +97,16 @@ export function OrderingProvider({ children }: { children: ReactNode }) {
     lang: (localStorage.getItem('rest_lang_customer') as Lang) || 'vi',
     cartOpen: false,
     placing: false,
+    wantsDigitalInvoice: true,
   })
 
   const value = useMemo(() => ({ state, dispatch }), [state, dispatch])
+
+  useEffect(() => {
+    const showPayment = () => dispatch({ type: 'SET_SCREEN', payload: 'payment' })
+    window.addEventListener('billing.payment_initiated', showPayment)
+    return () => window.removeEventListener('billing.payment_initiated', showPayment)
+  }, [])
 
   return <OrderingContext.Provider value={value}>{children}</OrderingContext.Provider>
 }

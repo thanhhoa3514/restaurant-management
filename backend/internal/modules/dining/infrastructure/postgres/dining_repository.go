@@ -119,11 +119,17 @@ func (r *Repository) FindActiveSessionByTable(ctx context.Context, restaurantID,
 
 func (r *Repository) ValidateSessionToken(ctx context.Context, token string) (auth.SessionAuth, error) {
 	var out auth.SessionAuth
+	// Keep a short read window after checkout so the guest can receive the final
+	// payment event, refresh once, and download the receipt. Domain write paths
+	// still reject CLOSED sessions.
 	err := r.q(ctx).QueryRow(ctx, `
 		SELECT restaurant_id, id, table_id
 		FROM dining_sessions
 		WHERE session_token = $1
-		  AND status IN ('PENDING_VERIFICATION', 'ACTIVE', 'AWAITING_PAYMENT')
+		  AND (
+		      status IN ('PENDING_VERIFICATION', 'ACTIVE', 'AWAITING_PAYMENT')
+		      OR (status = 'CLOSED' AND closed_at >= NOW() - INTERVAL '30 minutes')
+		  )
 		  AND deleted_at IS NULL
 	`, strings.TrimSpace(token)).Scan(&out.RestaurantID, &out.SessionID, &out.TableID)
 	if errors.Is(err, pgx.ErrNoRows) {

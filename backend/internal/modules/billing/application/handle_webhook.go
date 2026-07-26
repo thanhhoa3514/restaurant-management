@@ -24,11 +24,11 @@ type WebhookResult struct {
 }
 
 type HandleWebhook struct {
-	tx                 TxRunner
-	repo               domain.InvoiceRepository
-	outbox             domain.OutboxWriter
-	gateways           *domain.GatewayRegistry
-	mockSecret         string
+	tx                  TxRunner
+	repo                domain.InvoiceRepository
+	outbox              domain.OutboxWriter
+	gateways            *domain.GatewayRegistry
+	mockSecret          string
 	defaultRestaurantID uuid.UUID
 }
 
@@ -169,10 +169,12 @@ func (s *HandleWebhook) writePaymentCompleted(ctx context.Context, restaurantID 
 			"invoice_id":          invoice.ID,
 			"dining_session_id":   invoice.DiningSessionID,
 			"payment_id":          invoice.Payment.ID,
+			"payment_number":      invoice.Payment.PaymentNumber,
 			"payment_method_code": invoice.Payment.MethodCode,
 			"amount_vnd":          invoice.Payment.AmountVND,
 			"received_amount_vnd": invoice.Payment.ReceivedAmountVND,
 			"change_amount_vnd":   invoice.Payment.ChangeAmountVND,
+			"status":              invoice.Payment.Status,
 		},
 		Metadata: map[string]any{"actor_type": "SYSTEM", "action": "payment.completed"},
 		Priority: 3,
@@ -207,8 +209,10 @@ func (s *HandleWebhook) writePaymentFailed(ctx context.Context, restaurantID uui
 			"invoice_id":          invoice.ID,
 			"dining_session_id":   invoice.DiningSessionID,
 			"payment_id":          invoice.Payment.ID,
+			"payment_number":      invoice.Payment.PaymentNumber,
 			"payment_method_code": invoice.Payment.MethodCode,
 			"amount_vnd":          invoice.Payment.AmountVND,
+			"status":              invoice.Payment.Status,
 		},
 		Metadata: map[string]any{"actor_type": "SYSTEM", "action": "payment.failed"},
 		Priority: 4,

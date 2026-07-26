@@ -168,7 +168,7 @@ export const OrderStatusScreen: FC = () => {
                     toast.success(
                       state.lang === 'vi' ? 'Đã gửi yêu cầu thanh toán.' : 'Checkout request sent.',
                     )
-                    dispatch({ type: 'SET_SCREEN', payload: 'invoice' })
+                    dispatch({ type: 'SET_SCREEN', payload: 'payment' })
                   },
                   onError: () => {
                     toast.error(

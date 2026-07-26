@@ -9,8 +9,9 @@ import (
 type contextKey struct{}
 
 type Session struct {
-	SessionID uuid.UUID
-	TableID   uuid.UUID
+	RestaurantID uuid.UUID
+	SessionID    uuid.UUID
+	TableID      uuid.UUID
 }
 
 func WithSession(ctx context.Context, session Session) context.Context {

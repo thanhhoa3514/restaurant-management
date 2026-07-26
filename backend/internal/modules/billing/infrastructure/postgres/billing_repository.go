@@ -203,8 +203,44 @@ func (r *Repository) AdjustInvoice(ctx context.Context, restaurantID, invoiceID 
 }
 
 func (r *Repository) VoidInvoice(ctx context.Context, restaurantID, invoiceID uuid.UUID, reason string) (*domain.Invoice, error) {
-	var status string
+	var diningSessionID pgtype.UUID
 	err := r.q(ctx).QueryRow(ctx, `
+		SELECT dining_session_id
+		FROM invoices
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, restaurantID, invoiceID).Scan(&diningSessionID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperr.New(apperr.CodeNotFound, "invoice not found")
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var primaryID uuid.UUID
+	var memberIDs []uuid.UUID
+	if diningSessionID.Valid {
+		sessionID := uuid.UUID(diningSessionID.Bytes)
+		primaryID, memberIDs, err = r.billingSessions(ctx, restaurantID, sessionID)
+		if err != nil {
+			return nil, err
+		}
+		var lockedSessionID uuid.UUID
+		err = r.q(ctx).QueryRow(ctx, `
+			SELECT id
+			FROM dining_sessions
+			WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+			FOR UPDATE
+		`, restaurantID, primaryID).Scan(&lockedSessionID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apperr.New(apperr.CodeNotFound, "dining session not found")
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var status string
+	err = r.q(ctx).QueryRow(ctx, `
 		SELECT status
 		FROM invoices
 		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
@@ -229,6 +265,24 @@ func (r *Repository) VoidInvoice(ctx context.Context, restaurantID, invoiceID uu
 	`, restaurantID, invoiceID)
 	if err != nil {
 		return nil, err
+	}
+	if diningSessionID.Valid {
+		remainingInvoiceIDs, err := r.nonVoidInvoiceIDs(ctx, restaurantID, primaryID)
+		if err != nil {
+			return nil, err
+		}
+		if shouldReopenSessionAfterVoid(len(remainingInvoiceIDs)) {
+			if _, err := r.q(ctx).Exec(ctx, `
+				UPDATE dining_sessions
+				SET status = 'ACTIVE', version = version + 1, updated_at = NOW()
+				WHERE restaurant_id = $1
+				  AND id = ANY($2)
+				  AND status = 'AWAITING_PAYMENT'
+				  AND deleted_at IS NULL
+			`, restaurantID, memberIDs); err != nil {
+				return nil, err
+			}
+		}
 	}
 	return r.LoadInvoice(ctx, restaurantID, invoiceID)
 }
@@ -400,6 +454,19 @@ func (r *Repository) ListSessionInvoices(ctx context.Context, restaurantID, dini
 	return invoices, nil
 }
 
+func (r *Repository) GuestSessionStatus(ctx context.Context, restaurantID, diningSessionID uuid.UUID) (string, error) {
+	var status string
+	err := r.q(ctx).QueryRow(ctx, `
+		SELECT status
+		FROM dining_sessions
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, restaurantID, diningSessionID).Scan(&status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", apperr.New(apperr.CodeNotFound, "dining session not found")
+	}
+	return status, err
+}
+
 // billingSessions resolves which dining sessions a bill covers. A session in an
 // active merge group bills as one: the oldest session of the group owns the
 // invoice ("primary") and every member's items go on it. An unmerged session
@@ -476,6 +543,10 @@ func (r *Repository) restaurantChargeRates(ctx context.Context, restaurantID uui
 // PAID/VOID) — split invoices must all be settled before the table frees up.
 func shouldCloseSession(openNonTerminalInvoices int) bool {
 	return openNonTerminalInvoices == 0
+}
+
+func shouldReopenSessionAfterVoid(remainingNonVoidInvoices int) bool {
+	return remainingNonVoidInvoices == 0
 }
 
 // validateSplitGroups checks that groups form an exact partition of the

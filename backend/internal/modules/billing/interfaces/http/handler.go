@@ -13,19 +13,37 @@ import (
 )
 
 type Handler struct {
-	BuildInvoice         *application.BuildInvoice
-	AdjustInvoice        *application.AdjustInvoice
-	ProcessPayment       *application.ProcessPayment
+	BuildInvoice          *application.BuildInvoice
+	AdjustInvoice         *application.AdjustInvoice
+	ProcessPayment        *application.ProcessPayment
 	ProcessPartialPayment *application.ProcessPartialPayment
-	HandleWebhook        *application.HandleWebhook
-	VoidInvoice          *application.VoidInvoice
-	SplitInvoice         *application.SplitInvoice
-	ListSessionInvoices  *application.ListSessionInvoices
-	appEnv               string
+	HandleWebhook         *application.HandleWebhook
+	VoidInvoice           *application.VoidInvoice
+	SplitInvoice          *application.SplitInvoice
+	ListSessionInvoices   *application.ListSessionInvoices
+	GuestCheckout         *application.GuestCheckout
+	appEnv                string
 }
 
-func NewHandler(buildInvoice *application.BuildInvoice, adjustInvoice *application.AdjustInvoice, processPayment *application.ProcessPayment, processPartialPayment *application.ProcessPartialPayment, handleWebhook *application.HandleWebhook, voidInvoice *application.VoidInvoice, splitInvoice *application.SplitInvoice, listSessionInvoices *application.ListSessionInvoices, appEnv string) *Handler {
-	return &Handler{BuildInvoice: buildInvoice, AdjustInvoice: adjustInvoice, ProcessPayment: processPayment, ProcessPartialPayment: processPartialPayment, HandleWebhook: handleWebhook, VoidInvoice: voidInvoice, SplitInvoice: splitInvoice, ListSessionInvoices: listSessionInvoices, appEnv: appEnv}
+func NewHandler(buildInvoice *application.BuildInvoice, adjustInvoice *application.AdjustInvoice, processPayment *application.ProcessPayment, processPartialPayment *application.ProcessPartialPayment, handleWebhook *application.HandleWebhook, voidInvoice *application.VoidInvoice, splitInvoice *application.SplitInvoice, listSessionInvoices *application.ListSessionInvoices, guestCheckout *application.GuestCheckout, appEnv string) *Handler {
+	return &Handler{BuildInvoice: buildInvoice, AdjustInvoice: adjustInvoice, ProcessPayment: processPayment, ProcessPartialPayment: processPartialPayment, HandleWebhook: handleWebhook, VoidInvoice: voidInvoice, SplitInvoice: splitInvoice, ListSessionInvoices: listSessionInvoices, GuestCheckout: guestCheckout, appEnv: appEnv}
+}
+
+func (h *Handler) RegisterGuestRoutes(r *gin.RouterGroup) {
+	r.GET("/payment", h.guestCheckout)
+}
+
+func (h *Handler) guestCheckout(c *gin.Context) {
+	if h.GuestCheckout == nil {
+		httpx.RespondError(c, apperr.ErrNotImplemented)
+		return
+	}
+	out, err := h.GuestCheckout.Handle(c.Request.Context())
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
 }
 
 func (h *Handler) RegisterStaffRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver, defaultRestaurantID uuid.UUID) {

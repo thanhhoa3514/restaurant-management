@@ -100,6 +100,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       void queryClient.invalidateQueries({ queryKey: ['guest-orders'] })
       void queryClient.invalidateQueries({ queryKey: ['guest-items'] })
     }
+    if (type.startsWith('billing.') || type === 'dining.session_reopened') {
+      void queryClient.invalidateQueries({ queryKey: ['guest-payment'] })
+    }
 
     // Toast/chuông tách theo người xem: máy nhân viên và máy khách nghe hai thứ khác nhau
     if (getStaffSession()) notifyStaff(type, payload)

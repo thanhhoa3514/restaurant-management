@@ -6,6 +6,8 @@ import { MenuScreen } from '@/features/ordering/components/menu-screen'
 import { OrderStatusScreen } from '@/features/ordering/components/order-status-screen'
 import { SessionSummary } from '@/features/ordering/components/session-summary'
 import { GuestInvoiceScreen } from '@/features/ordering/components/guest-invoice-screen'
+import { GuestPaymentScreen } from '@/features/ordering/components/guest-payment-screen'
+import { useGuestPayment } from '@/features/ordering/queries/useGuestPayment'
 import { setGuestRealtimeToken } from '@/lib/realtime-auth'
 
 export function OrderPage() {
@@ -25,6 +27,7 @@ function OrderFlow() {
     table: tableParam,
     tableId: tableIdParam,
   } = useSearch({ from: '/order' })
+  const { data: checkout } = useGuestPayment(state.session?.token)
 
   // Restore session from URL params on mount (page refresh / deep link)
   useEffect(() => {
@@ -60,6 +63,32 @@ function OrderFlow() {
     }
   }, [state.session, navigate, sessionTokenParam])
 
+  useEffect(() => {
+    const invoices = checkout?.invoices ?? []
+    const allPaid = invoices.length > 0 && invoices.every((invoice) => invoice.status === 'PAID')
+    if (allPaid) {
+      if (state.wantsDigitalInvoice && state.screen !== 'invoice' && state.screen !== 'qr') {
+        dispatch({ type: 'SET_SCREEN', payload: 'invoice' })
+      }
+      return
+    }
+
+    if (checkout?.session_status === 'ACTIVE') {
+      if (state.screen === 'payment') {
+        dispatch({ type: 'SET_SCREEN', payload: 'order' })
+      }
+      return
+    }
+
+    if (
+      checkout?.session_status === 'AWAITING_PAYMENT' &&
+      state.screen !== 'payment' &&
+      state.screen !== 'invoice'
+    ) {
+      dispatch({ type: 'SET_SCREEN', payload: 'payment' })
+    }
+  }, [checkout, dispatch, state.screen, state.wantsDigitalInvoice])
+
   // If we have a session token in the URL but the session hasn't been restored yet,
   // we shouldn't render the QR landing page to avoid flashing the TablePicker.
   if (sessionTokenParam && !state.session) {
@@ -79,6 +108,8 @@ function OrderFlow() {
       return <OrderStatusScreen />
     case 'summary':
       return <SessionSummary />
+    case 'payment':
+      return <GuestPaymentScreen />
     case 'invoice':
       return <GuestInvoiceScreen />
     default:
