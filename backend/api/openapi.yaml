@@ -540,9 +540,10 @@ paths:
         - bearerAuth: []
       description: >
         Permission: billing.process. Cash/card complete synchronously. Configured
-        E_WALLET methods create a PROCESSING payment and return pay_url,
-        deeplink, and qr_code_url for gateway checkout; the invoice is paid only
-        after the provider webhook is reconciled.
+        asynchronous providers (including SePay BANK_TRANSFER and E_WALLET
+        methods) create a PROCESSING payment and return pay_url, deeplink, or
+        qr_code_url; the invoice is paid only after the provider webhook is
+        authenticated and reconciled.
       requestBody:
         required: true
         content:
@@ -563,11 +564,21 @@ paths:
           required: true
           schema:
             type: string
-            enum: [momo, zalopay, mock]
+            enum: [sepay, momo, zalopay, mock]
         - name: X-Mock-Signature
           in: header
           required: false
           description: HMAC signature required by the mock provider.
+          schema: { type: string }
+        - name: X-SePay-Signature
+          in: header
+          required: false
+          description: SePay HMAC-SHA256 signature in sha256={hex} format.
+          schema: { type: string }
+        - name: X-SePay-Timestamp
+          in: header
+          required: false
+          description: Unix timestamp in seconds used to sign the raw request body.
           schema: { type: string }
       description: Public signature-authenticated callback. Amount must match the stored payment.
       requestBody:

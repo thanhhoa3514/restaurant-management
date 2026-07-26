@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,11 +21,13 @@ import (
 )
 
 type Repository struct {
-	pool      *pgxpool.Pool
+	pool       *pgxpool.Pool
 	defaultRID uuid.UUID
 }
 
-func NewRepository(pool *pgxpool.Pool, defaultRID uuid.UUID) *Repository { return &Repository{pool: pool, defaultRID: defaultRID} }
+func NewRepository(pool *pgxpool.Pool, defaultRID uuid.UUID) *Repository {
+	return &Repository{pool: pool, defaultRID: defaultRID}
+}
 
 func (r *Repository) q(ctx context.Context) pg.Querier { return pg.QuerierFromContext(ctx, r.pool) }
 
@@ -747,7 +750,7 @@ func (r *Repository) PrepareAsyncPayment(ctx context.Context, restaurantID uuid.
 		return nil, err
 	}
 
-	paymentNumber, err := randomCode("PAY", 12)
+	paymentNumber, err := randomPaymentCode()
 	if err != nil {
 		return nil, err
 	}
@@ -874,11 +877,12 @@ func (r *Repository) CompleteWebhookPayment(ctx context.Context, restaurantID, p
 		    received_amount_vnd = amount_vnd,
 		    change_amount_vnd = 0,
 		    processed_at = NOW(),
-		    transaction_data = COALESCE(transaction_data, '{}'::jsonb) || $3::jsonb,
+		    gateway_transaction_id = COALESCE(NULLIF($3, ''), gateway_transaction_id),
+		    transaction_data = COALESCE(transaction_data, '{}'::jsonb) || $4::jsonb,
 		    version = version + 1,
 		    updated_at = NOW()
 		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
-	`, restaurantID, paymentID, payload)
+	`, restaurantID, paymentID, event.GatewayTransactionID, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -1372,4 +1376,12 @@ func randomCode(prefix string, n int) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("%s-%s", prefix, token), nil
+}
+
+func randomPaymentCode() (string, error) {
+	b := make([]byte, 8)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return "PAY" + strings.ToUpper(hex.EncodeToString(b)), nil
 }

@@ -7,7 +7,7 @@ export type SessionStatus =
   | 'voided'
 
 export type PaymentMethod = 'cash' | 'card' | 'ewallet'
-export type SubMethod = 'cash' | 'card' | 'momo' | 'zalopay' | 'vnpay' | 'mock'
+export type SubMethod = 'cash' | 'card' | 'sepay' | 'momo' | 'zalopay' | 'vnpay' | 'mock'
 export type PaymentRecordStatus = 'pending' | 'processing' | 'completed' | 'failed'
 
 export interface LineItem {

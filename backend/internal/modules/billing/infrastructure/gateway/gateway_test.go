@@ -1,16 +1,20 @@
 package gateway
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"restaurant-management/internal/modules/billing/domain"
+	"restaurant-management/internal/shared/apperr"
 )
 
 func TestMockGatewayInitiateAndParseWebhook(t *testing.T) {
@@ -108,6 +112,104 @@ func TestMoMoGatewayInitiateAndParseWebhook(t *testing.T) {
 	if event.Status != domain.PaymentCompleted || event.GatewayTransactionID != "MOMO-TXN-2" || event.OrderRef != "PAY-2" {
 		t.Fatalf("unexpected momo event: %+v", event)
 	}
+}
+
+func TestSePayGatewayInitiateAndParseWebhook(t *testing.T) {
+	now := time.Unix(1_752_000_000, 0)
+	gateway := NewSePay(SePayConfig{
+		BankCode:      "Vietcombank",
+		AccountNumber: "0000000001",
+		AccountName:   "HO KINH DOANH TEST 3CBA",
+		WebhookSecret: "test-secret",
+		QRBaseURL:     "https://vietqr.app/img",
+		Now:           func() time.Time { return now },
+	})
+	paymentCode := "PAY0123456789ABCDEF"
+	result, err := gateway.Initiate(context.Background(), domain.InitiateInput{
+		PaymentNumber: paymentCode,
+		AmountVND:     150000,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	qrURL, err := url.Parse(result.QRCodeURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	query := qrURL.Query()
+	if query.Get("acc") != "0000000001" || query.Get("bank") != "Vietcombank" ||
+		query.Get("amount") != "150000" || query.Get("des") != paymentCode {
+		t.Fatalf("unexpected SePay QR query: %s", qrURL.RawQuery)
+	}
+
+	raw := []byte(`{"id":92704,"gateway":"Vietcombank","transactionDate":"2026-07-26 12:00:00","accountNumber":"0000000001","subAccount":"","code":null,"content":"PAY0123456789ABCDEF thanh toan","transferType":"in","description":"sandbox","transferAmount":150000,"accumulated":500000,"referenceCode":"SB1A2B3C4"}`)
+	timestamp := strconv.FormatInt(now.Unix(), 10)
+	headers := http.Header{
+		"X-Sepay-Timestamp": []string{timestamp},
+		"X-Sepay-Signature": []string{"sha256=" + hmacSHA256Hex("test-secret", timestamp+"."+string(raw))},
+	}
+	event, err := gateway.ParseWebhook(context.Background(), raw, headers)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if event.Provider != "sepay" || event.EventID != "92704" ||
+		event.GatewayTransactionID != "SB1A2B3C4" || event.OrderRef != paymentCode ||
+		event.AmountVND != 150000 || event.Status != domain.PaymentCompleted {
+		t.Fatalf("unexpected SePay event: %+v", event)
+	}
+	ack := gateway.WebhookAck(event)
+	if ack.Status != http.StatusOK || !ack.Unwrapped {
+		t.Fatalf("unexpected SePay ack: %+v", ack)
+	}
+}
+
+func TestSePayGatewayRejectsInvalidWebhook(t *testing.T) {
+	now := time.Unix(1_752_000_000, 0)
+	gateway := NewSePay(SePayConfig{
+		BankCode:      "Vietcombank",
+		AccountNumber: "0000000001",
+		WebhookSecret: "test-secret",
+		Now:           func() time.Time { return now },
+	})
+	validRaw := []byte(`{"id":92704,"gateway":"Vietcombank","accountNumber":"0000000001","code":"PAY0123456789ABCDEF","content":"PAY0123456789ABCDEF","transferType":"in","transferAmount":150000,"referenceCode":"SB1A2B3C4"}`)
+
+	t.Run("tampered body", func(t *testing.T) {
+		timestamp := strconv.FormatInt(now.Unix(), 10)
+		headers := http.Header{
+			"X-Sepay-Timestamp": []string{timestamp},
+			"X-Sepay-Signature": []string{"sha256=" + hmacSHA256Hex("test-secret", timestamp+"."+string(validRaw))},
+		}
+		tampered := bytes.Replace(validRaw, []byte("150000"), []byte("150001"), 1)
+		_, err := gateway.ParseWebhook(context.Background(), tampered, headers)
+		if !apperr.Is(err, apperr.CodeUnauthorized) {
+			t.Fatalf("expected unauthorized tampered webhook, got %v", err)
+		}
+	})
+
+	t.Run("expired timestamp", func(t *testing.T) {
+		timestamp := strconv.FormatInt(now.Add(-6*time.Minute).Unix(), 10)
+		headers := http.Header{
+			"X-Sepay-Timestamp": []string{timestamp},
+			"X-Sepay-Signature": []string{"sha256=" + hmacSHA256Hex("test-secret", timestamp+"."+string(validRaw))},
+		}
+		_, err := gateway.ParseWebhook(context.Background(), validRaw, headers)
+		if !apperr.Is(err, apperr.CodeUnauthorized) {
+			t.Fatalf("expected unauthorized expired webhook, got %v", err)
+		}
+	})
+
+	t.Run("wrong account", func(t *testing.T) {
+		raw := bytes.Replace(validRaw, []byte("0000000001"), []byte("0000000002"), 1)
+		timestamp := strconv.FormatInt(now.Unix(), 10)
+		headers := http.Header{
+			"X-Sepay-Timestamp": []string{timestamp},
+			"X-Sepay-Signature": []string{"sha256=" + hmacSHA256Hex("test-secret", timestamp+"."+string(raw))},
+		}
+		_, err := gateway.ParseWebhook(context.Background(), raw, headers)
+		if !apperr.Is(err, apperr.CodeUnauthorized) {
+			t.Fatalf("expected unauthorized account, got %v", err)
+		}
+	})
 }
 
 func TestZaloPayGatewayInitiateAndParseWebhook(t *testing.T) {

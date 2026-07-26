@@ -32,6 +32,12 @@ type Config struct {
 	MoMoAccessKey   string
 	MoMoSecretKey   string
 
+	SePayBankCode      string
+	SePayAccountNumber string
+	SePayAccountName   string
+	SePayWebhookSecret string
+	SePayQRBaseURL     string
+
 	ZaloPayEndpoint string
 	ZaloPayAppID    string
 	ZaloPayKey1     string
@@ -71,6 +77,12 @@ func Load() Config {
 		MoMoPartnerCode: env("MOMO_PARTNER_CODE", ""),
 		MoMoAccessKey:   env("MOMO_ACCESS_KEY", ""),
 		MoMoSecretKey:   env("MOMO_SECRET_KEY", ""),
+
+		SePayBankCode:      strings.TrimSpace(env("SEPAY_BANK_CODE", "")),
+		SePayAccountNumber: strings.TrimSpace(env("SEPAY_ACCOUNT_NUMBER", "")),
+		SePayAccountName:   strings.TrimSpace(env("SEPAY_ACCOUNT_NAME", "")),
+		SePayWebhookSecret: env("SEPAY_WEBHOOK_SECRET", ""),
+		SePayQRBaseURL:     strings.TrimRight(env("SEPAY_QR_BASE_URL", "https://vietqr.app/img"), "/"),
 
 		ZaloPayEndpoint: strings.TrimRight(env("ZALOPAY_ENDPOINT", ""), "/"),
 		ZaloPayAppID:    env("ZALOPAY_APP_ID", ""),

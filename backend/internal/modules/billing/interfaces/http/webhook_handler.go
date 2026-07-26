@@ -73,5 +73,9 @@ func respondWebhookAck(c *gin.Context, ack domain.WebhookAck) {
 	if body == nil {
 		body = gin.H{"ok": true}
 	}
+	if ack.Unwrapped {
+		c.JSON(status, body)
+		return
+	}
 	httpx.Respond(c, status, body, nil)
 }

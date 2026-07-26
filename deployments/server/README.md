@@ -63,6 +63,32 @@ docker ps
 curl -I http://localhost/health        # 200 via edge nginx → api
 ```
 
+## SePay Test Mode
+
+The backend `.env` must contain the same HMAC secret configured in the SePay
+dashboard. Never commit the real secret:
+
+```dotenv
+SEPAY_BANK_CODE=Vietcombank
+SEPAY_ACCOUNT_NUMBER=0000000001
+SEPAY_ACCOUNT_NAME=HO KINH DOANH TEST 3CBA
+SEPAY_WEBHOOK_SECRET=<same-secret-as-SePay-dashboard>
+SEPAY_QR_BASE_URL=https://vietqr.app/img
+```
+
+Configure the Test Mode payment-code recognizer with prefix `PAY`, minimum and
+maximum suffix length `16`, and character type `Số và chữ`. Configure the
+incoming JSON webhook at:
+
+```text
+https://jackiengo.io.vn/api/v1/billing/payments/webhook/sepay
+```
+
+Select HMAC-SHA256 authentication, the test Vietcombank account, and enable
+`Chỉ gửi khi có mã thanh toán` with the `PAY` prefix. To test end to end, start a
+SePay payment in the cashier UI, then simulate an incoming transaction for the
+exact invoice amount with the generated `PAY...` code in its content.
+
 ## Notes
 
 - `TAG` in backend/frontend `.env` must match the build env (`prod` or `uat`).

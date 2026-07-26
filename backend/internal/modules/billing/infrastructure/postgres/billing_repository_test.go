@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/google/uuid"
@@ -8,6 +9,16 @@ import (
 	"restaurant-management/internal/modules/billing/domain"
 	"restaurant-management/internal/shared/apperr"
 )
+
+func TestRandomPaymentCodeMatchesSePayStructure(t *testing.T) {
+	code, err := randomPaymentCode()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !regexp.MustCompile(`^PAY[A-F0-9]{16}$`).MatchString(code) {
+		t.Fatalf("payment code %q does not match SePay structure", code)
+	}
+}
 
 func TestShouldCloseSession(t *testing.T) {
 	if !shouldCloseSession(0) {

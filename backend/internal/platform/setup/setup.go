@@ -192,7 +192,7 @@ func SeedPaymentMethods(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID, 
 	methods := []method{
 		{code: "cash", name: "Cash", methodType: "CASH", displayOrder: 1},
 		{code: "card", name: "Card", methodType: "CARD", displayOrder: 2},
-		{code: "momo", name: "MoMo", methodType: "E_WALLET", displayOrder: 3},
+		{code: "sepay", name: "SePay VietQR", methodType: "BANK_TRANSFER", displayOrder: 3},
 		{code: "zalopay", name: "ZaloPay", methodType: "E_WALLET", displayOrder: 4},
 		{code: "vnpay", name: "VNPay", methodType: "E_WALLET", displayOrder: 5},
 	}
@@ -213,6 +213,13 @@ func SeedPaymentMethods(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID, 
 		`, restaurantID, m.code, m.name, m.methodType, m.displayOrder); err != nil {
 			return fmt.Errorf("seed payment method %s: %w", m.code, err)
 		}
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE payment_methods
+		SET is_active = FALSE, updated_at = NOW()
+		WHERE restaurant_id = $1 AND code = 'momo' AND deleted_at IS NULL
+	`, restaurantID); err != nil {
+		return fmt.Errorf("disable legacy momo payment method: %w", err)
 	}
 	slog.Info("payment methods seeded", slog.Int("count", len(methods)))
 	return nil

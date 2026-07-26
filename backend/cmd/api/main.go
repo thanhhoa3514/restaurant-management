@@ -255,6 +255,15 @@ func buildGatewayRegistry(cfg config.Config) *billingdomain.GatewayRegistry {
 			HTTPClient:  httpClient,
 		}))
 	}
+	if cfg.SePayBankCode != "" && cfg.SePayAccountNumber != "" && cfg.SePayWebhookSecret != "" {
+		registry.Register(billinggateway.NewSePay(billinggateway.SePayConfig{
+			BankCode:      cfg.SePayBankCode,
+			AccountNumber: cfg.SePayAccountNumber,
+			AccountName:   cfg.SePayAccountName,
+			WebhookSecret: cfg.SePayWebhookSecret,
+			QRBaseURL:     cfg.SePayQRBaseURL,
+		}))
+	}
 	if cfg.ZaloPayEndpoint != "" && cfg.ZaloPayAppID != "" && cfg.ZaloPayKey1 != "" && cfg.ZaloPayKey2 != "" {
 		registry.Register(billinggateway.NewZaloPay(billinggateway.ZaloPayConfig{
 			Endpoint:   cfg.ZaloPayEndpoint,

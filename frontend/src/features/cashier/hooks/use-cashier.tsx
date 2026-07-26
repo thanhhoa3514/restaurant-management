@@ -144,7 +144,9 @@ function updateActiveInvoice(
 
 function subMethodFromCode(code: string): SubMethod {
   return (
-    ['cash', 'card', 'momo', 'zalopay', 'vnpay', 'mock'].includes(code) ? code : 'momo'
+    ['cash', 'card', 'sepay', 'momo', 'zalopay', 'vnpay', 'mock'].includes(code)
+      ? code
+      : 'sepay'
   ) as SubMethod
 }
 
@@ -595,7 +597,7 @@ export function CashierProvider({ children }: { children: ReactNode }) {
 
             if (methodCode === 'cash') toast(t('toast_cash_received'))
             else if (methodCode === 'card') toast(t('toast_card_received'))
-            else toast(t('toast_ewallet_paid', currentSession.table_label))
+            else toast(t('toast_ewallet_started', currentSession.table_label))
 
             break
           }

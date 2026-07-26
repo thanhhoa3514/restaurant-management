@@ -12,11 +12,11 @@ import (
 )
 
 type ProcessPayment struct {
-	tx                 TxRunner
-	repo               domain.InvoiceRepository
-	outbox             domain.OutboxWriter
-	gateways           *domain.GatewayRegistry
-	publicBaseURL      string
+	tx                  TxRunner
+	repo                domain.InvoiceRepository
+	outbox              domain.OutboxWriter
+	gateways            *domain.GatewayRegistry
+	publicBaseURL       string
 	defaultRestaurantID uuid.UUID
 }
 
@@ -42,10 +42,10 @@ func (s *ProcessPayment) Handle(ctx context.Context, in ProcessPaymentRequest) (
 			return err
 		}
 		gateway, hasGateway := s.gateways.Get(method.Code)
-		if method.Type == "E_WALLET" && !hasGateway {
+		if isGatewayOnlyPaymentMethod(method) && !hasGateway {
 			return apperr.New(apperr.CodeNotImplemented, "payment provider not configured")
 		}
-		if method.Type == "E_WALLET" && hasGateway {
+		if hasGateway {
 			invoice, err := s.processAsync(ctx, method.Code, gateway, in)
 			if err != nil {
 				return err
@@ -74,6 +74,13 @@ func (s *ProcessPayment) Handle(ctx context.Context, in ProcessPaymentRequest) (
 		return nil
 	})
 	return out, err
+}
+
+func isGatewayOnlyPaymentMethod(method *domain.PaymentMethod) bool {
+	if method == nil {
+		return false
+	}
+	return strings.EqualFold(method.Type, "E_WALLET") || strings.EqualFold(method.Code, "sepay")
 }
 
 func (s *ProcessPayment) processAsync(ctx context.Context, methodCode string, gateway domain.PaymentGateway, in ProcessPaymentRequest) (*domain.Invoice, error) {

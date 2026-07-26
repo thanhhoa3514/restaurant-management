@@ -20,9 +20,9 @@ type ProcessPartialPaymentRequest struct {
 }
 
 type ProcessPartialPayment struct {
-	tx                 TxRunner
-	repo               domain.InvoiceRepository
-	outbox             domain.OutboxWriter
+	tx                  TxRunner
+	repo                domain.InvoiceRepository
+	outbox              domain.OutboxWriter
 	defaultRestaurantID uuid.UUID
 }
 
@@ -51,8 +51,8 @@ func (s *ProcessPartialPayment) Handle(ctx context.Context, in ProcessPartialPay
 		if err != nil {
 			return err
 		}
-		if method.Type == "E_WALLET" {
-			return apperr.New(apperr.CodeInvalid, "partial payment with e-wallet is not supported, use full payment")
+		if isGatewayOnlyPaymentMethod(method) {
+			return apperr.New(apperr.CodeInvalid, "partial payment with an asynchronous provider is not supported, use full payment")
 		}
 
 		invoice, err := s.repo.ProcessPartialPayment(ctx, s.defaultRestaurantID, domain.PartialPaymentInput{

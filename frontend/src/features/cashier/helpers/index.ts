@@ -45,6 +45,7 @@ export function providerName(id: SubMethod): string {
   const names: Record<SubMethod, string> = {
     cash: 'Cash',
     card: 'Card',
+    sepay: 'SePay VietQR',
     momo: 'Momo',
     zalopay: 'ZaloPay',
     vnpay: 'VNPay',

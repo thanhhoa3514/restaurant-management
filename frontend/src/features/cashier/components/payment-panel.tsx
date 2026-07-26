@@ -42,22 +42,10 @@ interface CardForm {
 
 const baseProviders: Provider[] = [
   {
-    id: 'momo',
-    name: 'Momo',
-    accent: 'border-pink-300 bg-pink-500/10 text-pink-700',
-    dot: 'bg-pink-500',
-  },
-  {
-    id: 'zalopay',
-    name: 'ZaloPay',
-    accent: 'border-sky-300 bg-sky-500/10 text-sky-700',
-    dot: 'bg-sky-500',
-  },
-  {
-    id: 'vnpay',
-    name: 'VNPay',
-    accent: 'border-red-300 bg-red-500/10 text-red-700',
-    dot: 'bg-red-500',
+    id: 'sepay',
+    name: 'SePay VietQR',
+    accent: 'border-[var(--separator)] bg-[var(--material-regular)] text-[var(--text)]',
+    dot: 'bg-[var(--system-green)]',
   },
 ]
 const providers: Provider[] = import.meta.env.DEV
@@ -692,16 +680,17 @@ function EWalletPending({
           {providerName(payment.sub_method)}
         </div>
         <div className="mt-1 text-sm font-semibold">{t('ewallet_qr_title')}</div>
-        <div className="mx-auto mt-4 grid size-44 grid-cols-8 gap-0.5 rounded-[var(--radius-lg)] bg-white p-3 shadow-sm">
-          {Array.from({ length: 64 }, (_, index) => (
-            <span
-              key={index}
-              className={
-                (index + payment.transaction_id.length) % 4 === 0 ? 'bg-zinc-950' : 'bg-white'
-              }
-            />
-          ))}
-        </div>
+        {payment.qr_code_url ? (
+          <img
+            src={payment.qr_code_url}
+            alt={t('ewallet_qr_title')}
+            className="mx-auto mt-4 size-52 rounded-[var(--radius-lg)] bg-white object-contain p-2 shadow-sm"
+          />
+        ) : (
+          <div className="mx-auto mt-4 flex size-52 items-center justify-center rounded-[var(--radius-lg)] bg-white p-3 text-xs text-zinc-600 shadow-sm">
+            {t('ewallet_qr_unavailable')}
+          </div>
+        )}
         <div className="mt-4 text-3xl font-bold tabular-nums text-[var(--text)]">
           {fmtVND(invoice.total)}
         </div>

@@ -43,8 +43,9 @@ type WebhookEvent struct {
 }
 
 type WebhookAck struct {
-	Status int
-	Body   any
+	Status    int
+	Body      any
+	Unwrapped bool
 }
 
 type GatewayRegistry struct {
