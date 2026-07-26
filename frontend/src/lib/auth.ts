@@ -28,10 +28,7 @@ const BACKEND_TO_ROLE: Record<BackendStaffRole, StaffRole> = {
 }
 
 // Seeded backend credentials from `backend/cmd/seed`.
-export const DEMO_CREDENTIALS: Record<
-  StaffRole,
-  { code: string; pass: string; name: string }
-> = {
+export const DEMO_CREDENTIALS: Record<StaffRole, { code: string; pass: string; name: string }> = {
   admin: { code: 'manager', pass: 'demo1234', name: 'Demo Manager' },
   cashier: { code: 'cashier', pass: 'demo1234', name: 'Demo Cashier' },
   waiter: { code: 'server', pass: 'demo1234', name: 'Demo Server' },
@@ -58,10 +55,7 @@ function displayNameFor(username: string, backendRole: BackendStaffRole): string
   return credential?.name ?? (username.trim() || BACKEND_TO_ROLE[backendRole])
 }
 
-export async function loginStaff(
-  code: string,
-  pass: string,
-): Promise<StaffSession | null> {
+export async function loginStaff(code: string, pass: string): Promise<StaffSession | null> {
   const res = await fetch(`${API_BASE_URL}/api/v1/restaurant/auth/login`, {
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
@@ -205,7 +199,9 @@ export function updateStaffSession(
   return next
 }
 
-export function subscribeStaffSession(listener: (session: StaffSession | null) => void): () => void {
+export function subscribeStaffSession(
+  listener: (session: StaffSession | null) => void,
+): () => void {
   const handleChange = () => listener(getStaffSession())
   window.addEventListener(STAFF_SESSION_EVENT, handleChange)
   window.addEventListener('storage', handleChange)

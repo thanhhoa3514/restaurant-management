@@ -64,21 +64,24 @@ export const ActionCenterPanel: FC = () => {
           />
         }
       >
-          <BellRing className="size-4 animate-[swing_2s_ease-in-out_infinite]" />
-          <span className="text-sm font-semibold hidden sm:inline">
-            {state.lang === 'vi' ? 'Việc cần làm' : 'Tasks'}
-          </span>
-          <Badge className="ml-1 flex h-6 min-w-6 items-center justify-center rounded-full bg-orange-500 px-1.5 text-white">
-            {totalTasks}
-          </Badge>
+        <BellRing className="size-4 animate-[swing_2s_ease-in-out_infinite]" />
+        <span className="text-sm font-semibold hidden sm:inline">
+          {state.lang === 'vi' ? 'Việc cần làm' : 'Tasks'}
+        </span>
+        <Badge className="ml-1 flex h-6 min-w-6 items-center justify-center rounded-full bg-orange-500 px-1.5 text-white">
+          {totalTasks}
+        </Badge>
       </SheetTrigger>
-      
+
       <SheetContent className="w-full sm:max-w-md bg-[var(--material-thick)] backdrop-blur-2xl flex flex-col p-0">
         <SheetHeader className="p-5 pb-4 border-b border-[var(--separator)]">
           <SheetTitle className="text-lg font-bold flex items-center gap-2">
             <BellRing className="size-5 text-orange-500" />
             {state.lang === 'vi' ? 'Trung tâm xử lý' : 'Action Center'}
-            <Badge variant="secondary" className="ml-auto bg-orange-500/10 text-orange-600 rounded-full">
+            <Badge
+              variant="secondary"
+              className="ml-auto bg-orange-500/10 text-orange-600 rounded-full"
+            >
               {totalTasks} {state.lang === 'vi' ? 'yêu cầu' : 'requests'}
             </Badge>
           </SheetTitle>
@@ -103,7 +106,7 @@ export const ActionCenterPanel: FC = () => {
             </TabsList>
           </Tabs>
         </SheetHeader>
-        
+
         <div className="flex-1 overflow-y-auto bg-[var(--surface-grouped)]/30">
           {/* TAB ORDERS */}
           {tab === 'orders' && (
@@ -112,23 +115,29 @@ export const ActionCenterPanel: FC = () => {
                 <div className="flex flex-col items-center justify-center h-40 text-[var(--text-tertiary)] gap-3 opacity-50">
                   <Check className="size-12" />
                   <p className="text-sm font-medium">
-                    {state.lang === 'vi' ? 'Tất cả các món đã được duyệt' : 'All items are confirmed'}
+                    {state.lang === 'vi'
+                      ? 'Tất cả các món đã được duyệt'
+                      : 'All items are confirmed'}
                   </p>
                 </div>
               ) : (
                 pendingOrders.map((item) => {
                   const name = state.lang === 'vi' ? item.name_vi : item.name_en
-                  const optionsText = state.lang === 'vi' ? item.options_text_vi : item.options_text_en
-                  
+                  const optionsText =
+                    state.lang === 'vi' ? item.options_text_vi : item.options_text_en
+
                   return (
-                    <div 
-                      key={item.id} 
+                    <div
+                      key={item.id}
                       className="flex flex-col gap-3 rounded-2xl bg-[var(--bg-elevated)] p-4 shadow-sm border border-[var(--separator)] transition-all"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <Badge variant="outline" className="font-mono bg-[var(--surface-grouped)] text-[var(--text)] border-[var(--separator)]">
+                            <Badge
+                              variant="outline"
+                              className="font-mono bg-[var(--surface-grouped)] text-[var(--text)] border-[var(--separator)]"
+                            >
                               {item.tableCode}
                             </Badge>
                             <span className="text-xs text-[var(--text-tertiary)] font-mono">
@@ -151,13 +160,15 @@ export const ActionCenterPanel: FC = () => {
                           )}
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-2 pt-2 border-t border-[var(--separator)]/50">
                         <Button
                           variant="outline"
                           className="flex-1 h-9 rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950 font-semibold gap-1.5"
                           onClick={() => {
-                            const reason = window.prompt(state.lang === 'vi' ? 'Lý do từ chối:' : 'Reason for rejection:')
+                            const reason = window.prompt(
+                              state.lang === 'vi' ? 'Lý do từ chối:' : 'Reason for rejection:',
+                            )
                             if (reason !== null) {
                               actions.rejectItem(item.tableId, item.id, reason)
                             }
@@ -197,8 +208,8 @@ export const ActionCenterPanel: FC = () => {
                 </div>
               ) : (
                 pendingSessions?.map((session) => (
-                  <div 
-                    key={session.session_id} 
+                  <div
+                    key={session.session_id}
                     className="flex flex-col gap-3 rounded-2xl bg-[var(--bg-elevated)] p-4 shadow-sm border border-[var(--separator)] transition-all"
                   >
                     <div className="flex items-center gap-3">
@@ -214,13 +225,15 @@ export const ActionCenterPanel: FC = () => {
                         </p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-2 pt-2 border-t border-[var(--separator)]/50">
                       <Button
                         variant="outline"
                         className="flex-1 h-9 rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950 font-semibold gap-1.5"
                         disabled={verifyMutation.isPending}
-                        onClick={() => verifyMutation.mutate({ sessionId: session.session_id, action: 'reject' })}
+                        onClick={() =>
+                          verifyMutation.mutate({ sessionId: session.session_id, action: 'reject' })
+                        }
                       >
                         <X className="size-4" strokeWidth={2.5} />
                         {state.lang === 'vi' ? 'Từ chối' : 'Reject'}
@@ -228,9 +241,16 @@ export const ActionCenterPanel: FC = () => {
                       <Button
                         className="flex-1 h-9 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-semibold gap-1.5"
                         disabled={verifyMutation.isPending}
-                        onClick={() => verifyMutation.mutate({ sessionId: session.session_id, action: 'approve' })}
+                        onClick={() =>
+                          verifyMutation.mutate({
+                            sessionId: session.session_id,
+                            action: 'approve',
+                          })
+                        }
                       >
-                        {verifyMutation.isPending && verifyMutation.variables?.sessionId === session.session_id && verifyMutation.variables?.action === 'approve' ? (
+                        {verifyMutation.isPending &&
+                        verifyMutation.variables?.sessionId === session.session_id &&
+                        verifyMutation.variables?.action === 'approve' ? (
                           <Loader2 size={16} className="animate-spin" />
                         ) : (
                           <Check className="size-4" strokeWidth={2.5} />

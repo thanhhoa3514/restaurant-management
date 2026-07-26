@@ -19,22 +19,26 @@ var validTableStatus = map[string]bool{
 }
 
 type SaveTableRequest struct {
-	TableID  *uuid.UUID `json:"-"`
-	AreaID   *uuid.UUID `json:"area_id"`
-	Code     string     `json:"code"`
-	Name     string     `json:"name"`
-	Capacity int        `json:"capacity"`
-	Status   string     `json:"status"`
+	TableID   *uuid.UUID `json:"-"`
+	AreaID    *uuid.UUID `json:"area_id"`
+	Code      string     `json:"code"`
+	Name      string     `json:"name"`
+	Capacity  int        `json:"capacity"`
+	Status    string     `json:"status"`
+	PositionX *int       `json:"position_x"` // bỏ trống khi sửa = giữ nguyên chỗ trên sơ đồ
+	PositionY *int       `json:"position_y"`
 }
 
 type SaveTableResponse struct {
-	ID       uuid.UUID  `json:"id"`
-	AreaID   *uuid.UUID `json:"area_id"`
-	Code     string     `json:"code"`
-	Name     string     `json:"name"`
-	Capacity int        `json:"capacity"`
-	Status   string     `json:"status"`
-	Created  bool       `json:"created"`
+	ID        uuid.UUID  `json:"id"`
+	AreaID    *uuid.UUID `json:"area_id"`
+	Code      string     `json:"code"`
+	Name      string     `json:"name"`
+	Capacity  int        `json:"capacity"`
+	Status    string     `json:"status"`
+	PositionX *int       `json:"position_x"`
+	PositionY *int       `json:"position_y"`
+	Created   bool       `json:"created"`
 }
 
 type SaveTable struct {
@@ -76,6 +80,8 @@ func (s *SaveTable) Handle(ctx context.Context, in SaveTableRequest) (SaveTableR
 		Name:         name,
 		Capacity:     in.Capacity,
 		Status:       status,
+		PositionX:    clampPercent(in.PositionX),
+		PositionY:    clampPercent(in.PositionY),
 	}
 	if in.AreaID != nil {
 		table.AreaID = *in.AreaID
@@ -96,15 +102,75 @@ func (s *SaveTable) Handle(ctx context.Context, in SaveTableRequest) (SaveTableR
 	}
 
 	out = SaveTableResponse{
-		ID:       table.ID,
-		AreaID:   in.AreaID,
-		Code:     table.Code,
-		Name:     table.Name,
-		Capacity: table.Capacity,
-		Status:   table.Status,
-		Created:  in.TableID == nil,
+		ID:        table.ID,
+		AreaID:    in.AreaID,
+		Code:      table.Code,
+		Name:      table.Name,
+		Capacity:  table.Capacity,
+		Status:    table.Status,
+		PositionX: table.PositionX,
+		PositionY: table.PositionY,
+		Created:   in.TableID == nil,
 	}
 	return out, nil
+}
+
+// clampPercent giữ toạ độ trong khung sơ đồ 0–100%.
+func clampPercent(v *int) *int {
+	if v == nil {
+		return nil
+	}
+	c := *v
+	if c < 0 {
+		c = 0
+	}
+	if c > 100 {
+		c = 100
+	}
+	return &c
+}
+
+// ── Lưu sơ đồ bàn ───────────────────────────────────────────────────────────
+
+type TablePositionInput struct {
+	TableID uuid.UUID `json:"table_id"`
+	X       int       `json:"x"`
+	Y       int       `json:"y"`
+}
+
+type SaveTablePositionsRequest struct {
+	Positions []TablePositionInput `json:"positions"`
+}
+
+type SaveTablePositions struct {
+	tx                  TxRunner
+	repo                domain.DiningRepository
+	defaultRestaurantID uuid.UUID
+}
+
+func NewSaveTablePositions(tx TxRunner, repo domain.DiningRepository, defaultRestaurantID uuid.UUID) *SaveTablePositions {
+	return &SaveTablePositions{tx: tx, repo: repo, defaultRestaurantID: defaultRestaurantID}
+}
+
+func (s *SaveTablePositions) Handle(ctx context.Context, in SaveTablePositionsRequest) error {
+	if len(in.Positions) == 0 {
+		return apperr.New(apperr.CodeInvalid, "positions is required")
+	}
+	if len(in.Positions) > 500 {
+		return apperr.New(apperr.CodeInvalid, "too many positions")
+	}
+
+	rows := make([]domain.TablePosition, 0, len(in.Positions))
+	for _, p := range in.Positions {
+		if p.TableID == uuid.Nil {
+			return apperr.New(apperr.CodeInvalid, "table_id is required")
+		}
+		rows = append(rows, domain.TablePosition{TableID: p.TableID, X: *clampPercent(&p.X), Y: *clampPercent(&p.Y)})
+	}
+
+	return s.tx.Run(ctx, func(ctx context.Context) error {
+		return s.repo.UpdateTablePositions(ctx, s.defaultRestaurantID, rows)
+	})
 }
 
 type DeleteTable struct {

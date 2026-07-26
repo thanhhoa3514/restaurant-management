@@ -32,6 +32,7 @@ type fakeRepo struct {
 	createdTable   *domain.Table
 	updatedTable   *domain.Table
 	deletedTableID uuid.UUID
+	savedPositions []domain.TablePosition
 }
 
 func (r *fakeRepo) FindTable(context.Context, uuid.UUID, uuid.UUID) (*domain.Table, error) {
@@ -93,6 +94,10 @@ func (r *fakeRepo) CreateTable(_ context.Context, t *domain.Table) error {
 }
 func (r *fakeRepo) UpdateTable(_ context.Context, t *domain.Table) error {
 	r.updatedTable = t
+	return nil
+}
+func (r *fakeRepo) UpdateTablePositions(_ context.Context, _ uuid.UUID, positions []domain.TablePosition) error {
+	r.savedPositions = positions
 	return nil
 }
 func (r *fakeRepo) SoftDeleteTable(_ context.Context, _, tableID uuid.UUID) error {

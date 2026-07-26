@@ -1,0 +1,1440 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Zenith — Thu ngân</title>
+    <style>
+      /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
+      /* Hallmark · genre: modern-minimal · macrostructure: workbench-modal · tone: utilitarian Apple Glass · anchor hue: system purple · extraction: production admin shell + POS dialog */
+      :root {
+        color-scheme: light;
+        --font-display:
+          "SF Pro Display", "Helvetica Neue", ui-sans-serif, sans-serif;
+        --font-body: "SF Pro Text", "Helvetica Neue", ui-sans-serif, sans-serif;
+        --font-mono: "SF Mono", ui-monospace, monospace;
+        --bg: #ffffff;
+        --surface: #ffffff;
+        --surface-grouped: #f2f2f7;
+        --surface-soft: #f8f8fa;
+        --material: rgba(255, 255, 255, 0.82);
+        --material-thick: rgba(255, 255, 255, 0.96);
+        --separator: rgba(60, 60, 67, 0.18);
+        --separator-soft: rgba(60, 60, 67, 0.1);
+        --text: #1d1d1f;
+        --text-secondary: rgba(29, 29, 31, 0.78);
+        --text-tertiary: rgba(29, 29, 31, 0.55);
+        --purple: #af52de;
+        --purple-soft: rgba(175, 82, 222, 0.12);
+        --orange: #ff9500;
+        --orange-deep: #b25000;
+        --orange-soft: rgba(255, 149, 0, 0.12);
+        --green: #248a3d;
+        --green-soft: rgba(52, 199, 89, 0.12);
+        --red: #d70015;
+        --red-soft: rgba(255, 59, 48, 0.1);
+        --blue: #007aff;
+        --blue-soft: rgba(0, 122, 255, 0.1);
+        --pink-soft: rgba(255, 45, 85, 0.1);
+        --focus: #005ac8;
+        --overlay: rgba(29, 29, 31, 0.42);
+        --shadow-card: 0 1px 2px rgba(29, 29, 31, 0.06);
+        --shadow-modal: 0 24px 80px rgba(29, 29, 31, 0.24);
+        --radius-sm: 10px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-xl: 20px;
+        --radius-2xl: 24px;
+        --space-2xs: 4px;
+        --space-xs: 8px;
+        --space-sm: 12px;
+        --space-md: 16px;
+        --space-lg: 24px;
+        --space-xl: 32px;
+        --dur-micro: 120ms;
+        --dur-short: 220ms;
+        --dur-long: 300ms;
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+        --z-sticky: 200;
+        --z-modal: 400;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        overflow-x: clip;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-body);
+        font-size: 16px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      button,
+      input {
+        color: inherit;
+        font: inherit;
+      }
+
+      button,
+      .button {
+        white-space: nowrap;
+      }
+
+      button:active {
+        transform: translateY(1px);
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+
+      button:focus-visible,
+      input:focus-visible {
+        outline: 3px solid var(--focus);
+        outline-offset: 2px;
+      }
+
+      h1,
+      h2,
+      h3 {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+
+      svg {
+        display: block;
+        width: 20px;
+        height: 20px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.8;
+      }
+
+      .shell {
+        display: flex;
+        min-height: 100dvh;
+      }
+
+      .sidebar {
+        display: none;
+        width: 264px;
+        flex: 0 0 264px;
+        border-inline-end: 1px solid var(--separator);
+        background: var(--material);
+        backdrop-filter: blur(24px);
+      }
+
+      .sidebar-inner {
+        position: sticky;
+        top: 0;
+        min-height: 100dvh;
+        padding: var(--space-md);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+        margin-block-end: var(--space-lg);
+        padding: var(--space-xs) var(--space-xs) 0;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 44px;
+        height: 44px;
+        flex: 0 0 44px;
+        place-items: center;
+        border-radius: var(--radius-lg);
+        background: var(--text);
+        color: var(--bg);
+        font-family: var(--font-display);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .brand-name {
+        overflow: hidden;
+        font-family: var(--font-display);
+        font-size: 17px;
+        font-weight: 650;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .brand-meta {
+        color: var(--purple);
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .nav-group + .nav-group {
+        margin-block-start: var(--space-lg);
+      }
+
+      .nav-title {
+        padding: 0 var(--space-sm) var(--space-2xs);
+        color: var(--text-tertiary);
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      .nav-item {
+        display: flex;
+        min-height: 48px;
+        width: 100%;
+        align-items: center;
+        gap: var(--space-sm);
+        border: 0;
+        border-radius: var(--radius-lg);
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 0 var(--space-sm);
+        text-align: start;
+        font-size: 15px;
+        font-weight: 650;
+        transition:
+          background-color var(--dur-short) var(--ease-out),
+          color var(--dur-short) var(--ease-out);
+      }
+
+      .nav-item.active {
+        background: var(--purple-soft);
+        color: var(--purple);
+      }
+
+      .workspace {
+        display: flex;
+        min-width: 0;
+        flex: 1;
+        flex-direction: column;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: var(--z-sticky);
+        border-block-end: 1px solid var(--separator);
+        background: var(--material);
+        backdrop-filter: blur(24px);
+      }
+
+      .topbar-inner {
+        display: grid;
+        min-height: 68px;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: var(--space-sm);
+        padding: max(var(--space-xs), env(safe-area-inset-top))
+          max(var(--space-sm), env(safe-area-inset-right)) var(--space-xs)
+          max(var(--space-sm), env(safe-area-inset-left));
+      }
+
+      .round-button,
+      .avatar,
+      .close-button {
+        display: grid;
+        width: 44px;
+        height: 44px;
+        flex: 0 0 44px;
+        place-items: center;
+        border-radius: 999px;
+        cursor: pointer;
+      }
+
+      .round-button,
+      .close-button {
+        border: 1px solid var(--separator);
+        background: var(--surface-grouped);
+      }
+
+      .avatar {
+        border: 0;
+        background: var(--purple);
+        color: var(--bg);
+        font-weight: 750;
+      }
+
+      .page-title {
+        min-width: 0;
+      }
+
+      .page-title h1 {
+        overflow: hidden;
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 17px;
+        font-weight: 750;
+        line-height: 1.2;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .page-title p {
+        display: none;
+        overflow: hidden;
+        margin: 2px 0 0;
+        color: var(--text-tertiary);
+        font-size: 12px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .clock {
+        display: none;
+        align-items: center;
+        gap: var(--space-sm);
+        font-family: var(--font-mono);
+        font-size: 20px;
+        font-variant-numeric: tabular-nums;
+        font-weight: 750;
+      }
+
+      .clock-multiplier {
+        border-inline-start: 1px solid var(--separator);
+        padding-inline-start: var(--space-sm);
+        color: var(--text-tertiary);
+        font-family: var(--font-body);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+      }
+
+      .header-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: var(--space-xs);
+      }
+
+      .stat-pill,
+      .lang {
+        display: none;
+        min-height: 36px;
+        align-items: center;
+        border: 0;
+        border-radius: 999px;
+        padding-inline: 12px;
+        font-size: 12px;
+        font-weight: 650;
+        white-space: nowrap;
+      }
+
+      .stat-pill.orange {
+        background: var(--orange-soft);
+        color: var(--orange-deep);
+      }
+
+      .stat-pill.green {
+        background: var(--green-soft);
+        color: var(--green);
+      }
+
+      .lang {
+        border: 1px solid var(--separator);
+        background: var(--surface);
+        color: var(--text-secondary);
+        cursor: pointer;
+      }
+
+      .session-screen {
+        min-height: calc(100dvh - 68px);
+        background: var(--surface-grouped);
+      }
+
+      .session-tools {
+        position: sticky;
+        top: 68px;
+        z-index: 10;
+        display: grid;
+        gap: var(--space-sm);
+        border-block-end: 1px solid var(--separator);
+        background: var(--surface);
+        padding: var(--space-md);
+        box-shadow: var(--shadow-card);
+      }
+
+      .search {
+        position: relative;
+      }
+
+      .search svg {
+        position: absolute;
+        inset-block-start: 50%;
+        inset-inline-start: 14px;
+        color: var(--text-tertiary);
+        transform: translateY(-50%);
+      }
+
+      .search input {
+        width: 100%;
+        height: 48px;
+        border: 1px solid var(--separator);
+        border-radius: var(--radius-lg);
+        background: var(--surface-grouped);
+        padding: 0 16px 0 44px;
+        font-size: 16px;
+        font-weight: 550;
+      }
+
+      .tabs {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: var(--space-2xs);
+        border-radius: var(--radius-sm);
+        background: var(--surface-grouped);
+        padding: var(--space-2xs);
+      }
+
+      .tab {
+        min-height: 40px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 650;
+      }
+
+      .tab.active {
+        background: var(--surface);
+        color: var(--text);
+        box-shadow: var(--shadow-card);
+      }
+
+      .session-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--space-md);
+        padding: var(--space-md);
+      }
+
+      .session-card {
+        min-width: 0;
+        border: 1px solid var(--separator);
+        border-radius: var(--radius-lg);
+        background: var(--surface);
+        box-shadow: var(--shadow-card);
+        cursor: pointer;
+        padding: var(--space-sm);
+        text-align: start;
+        transition:
+          border-color var(--dur-short) var(--ease-out),
+          transform var(--dur-micro) var(--ease-out);
+      }
+
+      .session-card.selected {
+        border-color: var(--blue);
+        background: var(--blue-soft);
+        outline: 2px solid rgba(0, 122, 255, 0.16);
+      }
+
+      .session-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--space-xs);
+      }
+
+      .session-name {
+        font-family: var(--font-display);
+        font-size: 18px;
+        font-weight: 750;
+      }
+
+      .session-meta {
+        margin-block-start: 2px;
+        color: var(--text-tertiary);
+        font-size: 12px;
+      }
+
+      .session-detail {
+        display: flex;
+        justify-content: space-between;
+        gap: var(--space-xs);
+        margin-block-start: var(--space-sm);
+        color: var(--text-tertiary);
+        font-size: 12px;
+      }
+
+      .session-total {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-weight: 750;
+      }
+
+      .badge {
+        display: inline-flex;
+        min-height: 25px;
+        align-items: center;
+        border-radius: 999px;
+        padding: 3px 9px;
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .badge.red {
+        background: var(--red-soft);
+        color: var(--red);
+      }
+
+      .badge.orange {
+        background: var(--orange-soft);
+        color: var(--orange-deep);
+      }
+
+      .badge.green {
+        background: var(--green-soft);
+        color: var(--green);
+      }
+
+      .badge.neutral {
+        background: var(--surface-grouped);
+        color: var(--text-secondary);
+      }
+
+      .status-total {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-xs);
+        margin-block-start: var(--space-xs);
+      }
+
+      .dialog-layer {
+        position: fixed;
+        inset: 0;
+        z-index: var(--z-modal);
+        display: grid;
+        place-items: center;
+        background: var(--overlay);
+        opacity: 1;
+        transition: opacity var(--dur-long) var(--ease-out);
+      }
+
+      .dialog-layer[hidden] {
+        display: none;
+      }
+
+      .dialog {
+        display: flex;
+        width: 100%;
+        height: 100dvh;
+        min-width: 0;
+        flex-direction: column;
+        overflow: hidden;
+        background: var(--surface);
+      }
+
+      .invoice-panel,
+      .payment-panel {
+        min-width: 0;
+      }
+
+      .invoice-panel {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        overflow: hidden;
+        background: var(--surface-grouped);
+      }
+
+      .mobile-dialog-head {
+        display: flex;
+        justify-content: flex-end;
+        padding: max(var(--space-sm), env(safe-area-inset-top)) var(--space-md)
+          0;
+      }
+
+      .invoice-scroll {
+        overflow-y: auto;
+        padding: var(--space-md);
+      }
+
+      .summary-card,
+      .order-card,
+      .total-card,
+      .amount-card,
+      .method {
+        border: 1px solid var(--separator);
+        background: var(--material-thick);
+        box-shadow: var(--shadow-card);
+      }
+
+      .summary-card,
+      .order-card,
+      .total-card {
+        border-radius: var(--radius-lg);
+      }
+
+      .summary-card {
+        padding: var(--space-md);
+      }
+
+      .summary-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--space-sm);
+      }
+
+      .summary-card h2 {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 24px;
+        font-weight: 750;
+        letter-spacing: -0.02em;
+      }
+
+      .summary-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 8px;
+        margin-block-start: var(--space-xs);
+        color: var(--text-tertiary);
+        font-size: 13px;
+      }
+
+      .invoice-number {
+        margin-block-start: var(--space-xs);
+        color: var(--text-tertiary);
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .section-title {
+        margin: var(--space-md) 0 var(--space-xs);
+        font-family: var(--font-display);
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .order-card {
+        overflow: hidden;
+      }
+
+      .order-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-sm);
+        border-block-end: 1px solid var(--separator);
+        padding: 9px var(--space-md);
+        color: var(--text-secondary);
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .order-id {
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+        font-size: 11px;
+      }
+
+      .line-item {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--space-sm);
+        padding: 12px var(--space-md);
+      }
+
+      .line-item + .line-item {
+        border-block-start: 1px solid var(--separator-soft);
+      }
+
+      .line-name {
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .line-option,
+      .line-qty {
+        color: var(--text-tertiary);
+        font-size: 12px;
+      }
+
+      .line-note {
+        color: var(--orange-deep);
+        font-size: 12px;
+        font-style: italic;
+      }
+
+      .line-price {
+        flex: 0 0 auto;
+        font-family: var(--font-mono);
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+        font-weight: 750;
+      }
+
+      .total-card {
+        display: grid;
+        gap: var(--space-sm);
+        margin-block-start: var(--space-md);
+        padding: var(--space-md);
+      }
+
+      .price-row,
+      .grand-total,
+      .amount-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-sm);
+      }
+
+      .price-row {
+        color: var(--text-secondary);
+        font-size: 13px;
+      }
+
+      .price-row strong {
+        color: var(--text);
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .grand-total {
+        border-block-start: 1px solid var(--separator);
+        padding-block-start: var(--space-sm);
+        font-size: 17px;
+        font-weight: 750;
+      }
+
+      .grand-total strong {
+        color: var(--orange-deep);
+        font-family: var(--font-mono);
+        font-size: clamp(24px, 5vw, 34px);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .invoice-actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: var(--space-xs);
+      }
+
+      .secondary-button,
+      .danger-button,
+      .split-button {
+        min-height: 44px;
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .secondary-button {
+        border: 1px solid var(--separator);
+        background: var(--surface-grouped);
+      }
+
+      .danger-button {
+        border: 0;
+        background: var(--red);
+        color: var(--bg);
+      }
+
+      .split-button {
+        grid-column: 1 / -1;
+        border: 0;
+        background: transparent;
+        color: var(--blue);
+      }
+
+      .payment-panel {
+        display: flex;
+        width: 100%;
+        flex: 0 0 auto;
+        flex-direction: column;
+        border-block-start: 1px solid var(--separator);
+        background: var(--surface);
+      }
+
+      .payment-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--space-sm);
+        border-block-end: 1px solid var(--separator);
+        padding: var(--space-md);
+      }
+
+      .payment-head h2 {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 18px;
+        font-weight: 750;
+      }
+
+      .payment-head p {
+        margin: 3px 0 0;
+        color: var(--text-tertiary);
+        font-size: 13px;
+      }
+
+      .desktop-close {
+        display: none;
+      }
+
+      .payment-content {
+        display: grid;
+        gap: var(--space-md);
+        overflow-y: auto;
+        padding: var(--space-md);
+        padding-block-end: max(var(--space-lg), env(safe-area-inset-bottom));
+      }
+
+      .amount-card {
+        border-radius: var(--radius-lg);
+        background: var(--orange-soft);
+        padding: var(--space-md);
+      }
+
+      .amount-label {
+        color: var(--text-tertiary);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .amount-value {
+        margin-block-start: 3px;
+        color: var(--orange-deep);
+        font-family: var(--font-mono);
+        font-size: clamp(28px, 8vw, 38px);
+        font-variant-numeric: tabular-nums;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+
+      .method {
+        display: flex;
+        width: 100%;
+        min-height: 76px;
+        align-items: center;
+        gap: var(--space-sm);
+        border-radius: var(--radius-xl);
+        cursor: pointer;
+        padding: var(--space-sm);
+        text-align: start;
+        transition:
+          background-color var(--dur-short) var(--ease-out),
+          transform var(--dur-micro) var(--ease-out);
+      }
+
+      .method-icon {
+        display: grid;
+        width: 44px;
+        height: 44px;
+        flex: 0 0 44px;
+        place-items: center;
+        border-radius: var(--radius-md);
+        background: var(--surface-grouped);
+        font-family: var(--font-display);
+        font-size: 18px;
+        font-weight: 750;
+      }
+
+      .method-copy {
+        min-width: 0;
+        flex: 1;
+      }
+
+      .method-name {
+        display: block;
+        font-size: 15px;
+        font-weight: 750;
+      }
+
+      .method-hint {
+        display: block;
+        overflow-wrap: anywhere;
+        color: var(--text-tertiary);
+        font-size: 12px;
+      }
+
+      .chevron {
+        color: var(--text-tertiary);
+        font-size: 20px;
+      }
+
+      @media (hover: hover) and (pointer: fine) {
+        .nav-item:hover,
+        .secondary-button:hover,
+        .close-button:hover {
+          background: var(--surface-grouped);
+          color: var(--text);
+        }
+
+        .session-card:hover,
+        .method:hover {
+          transform: translateY(-1px);
+        }
+
+        .method:hover {
+          background: var(--surface-soft);
+        }
+      }
+
+      @media (min-width: 40rem) {
+        .page-title p,
+        .stat-pill,
+        .lang {
+          display: flex;
+        }
+
+        .topbar-inner,
+        .session-tools {
+          padding-inline: 20px;
+        }
+
+        .session-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          padding: 20px;
+        }
+
+        .dialog {
+          width: min(95%, 1240px);
+          height: 94dvh;
+          border: 1px solid var(--separator);
+          border-radius: var(--radius-2xl);
+          box-shadow: var(--shadow-modal);
+        }
+
+        .invoice-scroll,
+        .payment-content,
+        .payment-head {
+          padding-inline: 20px;
+        }
+      }
+
+      @media (min-width: 52rem) {
+        .clock {
+          display: flex;
+        }
+
+        .topbar-inner {
+          grid-template-columns: minmax(190px, 1fr) auto minmax(190px, 1fr);
+        }
+
+        .session-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      @media (min-width: 64rem) {
+        .sidebar {
+          display: block;
+        }
+
+        .menu-button {
+          display: none;
+        }
+
+        .session-tools {
+          padding: var(--space-lg);
+        }
+
+        .session-grid {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          padding: var(--space-lg);
+        }
+
+        .dialog {
+          height: 90dvh;
+          flex-direction: row;
+        }
+
+        .mobile-dialog-head {
+          display: none;
+        }
+
+        .invoice-scroll {
+          padding: 20px;
+        }
+
+        .payment-panel {
+          width: 410px;
+          flex: 0 0 410px;
+          border-block-start: 0;
+          border-inline-start: 1px solid var(--separator);
+        }
+
+        .payment-head {
+          padding-block-start: 20px;
+        }
+
+        .desktop-close {
+          display: grid;
+        }
+      }
+
+      @media (min-width: 80rem) {
+        .session-grid {
+          grid-template-columns: repeat(5, minmax(0, 1fr));
+        }
+
+        .payment-panel {
+          width: 440px;
+          flex-basis: 440px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar" aria-label="Điều hướng quản trị">
+        <div class="sidebar-inner">
+          <div class="brand">
+            <div class="brand-mark">ZH</div>
+            <div>
+              <div class="brand-name">Zenith Lẩu Nướng</div>
+              <div class="brand-meta">Staff OS</div>
+            </div>
+          </div>
+
+          <div class="nav-group">
+            <div class="nav-title">Quản lý</div>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+              </svg>
+              Tổng quan
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+                <path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1" />
+              </svg>
+              Quản lý bàn
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7v5l3 2" />
+              </svg>
+              Nhật ký phiên ăn
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M8 4h8M9 2h6v4H9z" />
+                <rect x="5" y="4" width="14" height="18" rx="2" />
+                <path d="M8 10h8M8 14h8M8 18h5" />
+              </svg>
+              Danh mục món
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M22 20v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              Nhân sự
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M4 19V9M10 19V5M16 19v-7M22 19H2" />
+              </svg>
+              Báo cáo
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="3" />
+                <path
+                  d="M19 12h3M2 12h3M12 2v3M12 19v3M17 7l2-2M5 19l2-2M17 17l2 2M5 5l2 2"
+                />
+              </svg>
+              Cài đặt
+            </button>
+          </div>
+
+          <div class="nav-group">
+            <div class="nav-title">Vận hành</div>
+            <button class="nav-item active" aria-current="page">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <rect x="2" y="5" width="20" height="14" rx="2" />
+                <path d="M2 10h20M6 15h2" />
+              </svg>
+              Thanh toán
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M4 9h16M6 9v11M18 9v11M8 4h8l2 5H6zM9 14h6" />
+              </svg>
+              Sơ đồ bàn
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path
+                  d="M6 13a6 6 0 0 1 12 0v7H6zM9 13v-2M15 13v-2M4 20h16M12 4V2"
+                />
+              </svg>
+              Bếp KDS
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div class="topbar-inner">
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                min-width: 0;
+              "
+            >
+              <button
+                class="round-button menu-button"
+                aria-label="Mở điều hướng"
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="M4 7h16M4 12h16M4 17h16" />
+                </svg>
+              </button>
+              <div class="page-title">
+                <h1>Thu ngân</h1>
+                <p>Zenith Lẩu Nướng · Ca chiều · Nguyễn Văn A</p>
+              </div>
+            </div>
+
+            <div class="clock">
+              <span>18:42:36</span>
+              <span class="clock-multiplier">×1</span>
+            </div>
+
+            <div class="header-actions">
+              <span class="stat-pill orange">Phiên đang chờ · 6</span>
+              <span class="stat-pill green">Đã hoàn tất hôm nay · 23</span>
+              <button class="lang" aria-label="Đổi ngôn ngữ">VI</button>
+              <button class="avatar" aria-label="Mở hồ sơ">A</button>
+            </div>
+          </div>
+        </header>
+
+        <main class="session-screen">
+          <div class="session-tools">
+            <label class="search">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-4-4" />
+              </svg>
+              <input
+                type="search"
+                aria-label="Tìm bàn"
+                placeholder="Tìm bàn…"
+              />
+            </label>
+            <div class="tabs" role="tablist" aria-label="Sắp xếp phiên">
+              <button class="tab active" role="tab" aria-selected="true">
+                Mới nhất
+              </button>
+              <button class="tab" role="tab" aria-selected="false">
+                Đã yêu cầu
+              </button>
+            </div>
+          </div>
+
+          <div class="session-grid">
+            <button class="session-card selected" data-open-dialog>
+              <div class="session-row">
+                <div>
+                  <div class="session-name">Bàn 12</div>
+                  <div class="session-meta">Sảnh chính · 4 khách</div>
+                </div>
+                <span>›</span>
+              </div>
+              <div class="session-detail">
+                <span>17:56 · 46 phút</span><span>5 món</span>
+              </div>
+              <div class="status-total">
+                <span class="badge red">Đã yêu cầu thanh toán</span>
+                <span class="session-total">783.200₫</span>
+              </div>
+            </button>
+
+            <button class="session-card" data-open-dialog>
+              <div class="session-row">
+                <div>
+                  <div class="session-name">Bàn 07</div>
+                  <div class="session-meta">Tầng 1 · 2 khách</div>
+                </div>
+                <span>›</span>
+              </div>
+              <div class="session-detail">
+                <span>18:09 · 33 phút</span><span>4 món</span>
+              </div>
+              <div class="status-total">
+                <span class="badge orange">Đang thanh toán</span>
+                <span class="session-total">496.100₫</span>
+              </div>
+            </button>
+
+            <button class="session-card" data-open-dialog>
+              <div class="session-row">
+                <div>
+                  <div class="session-name">Bàn 03</div>
+                  <div class="session-meta">Sân vườn · 3 khách</div>
+                </div>
+                <span>›</span>
+              </div>
+              <div class="session-detail">
+                <span>18:15 · 27 phút</span><span>6 món</span>
+              </div>
+              <div class="status-total">
+                <span class="badge neutral">Đang ăn</span>
+                <span class="session-total">721.600₫</span>
+              </div>
+            </button>
+
+            <button class="session-card" data-open-dialog>
+              <div class="session-row">
+                <div>
+                  <div class="session-name">Bàn 18</div>
+                  <div class="session-meta">Phòng riêng · 6 khách</div>
+                </div>
+                <span>›</span>
+              </div>
+              <div class="session-detail">
+                <span>17:42 · 60 phút</span><span>9 món</span>
+              </div>
+              <div class="status-total">
+                <span class="badge red">Đã yêu cầu thanh toán</span>
+                <span class="session-total">1.326.600₫</span>
+              </div>
+            </button>
+
+            <button class="session-card" data-open-dialog>
+              <div class="session-row">
+                <div>
+                  <div class="session-name">Bàn 05</div>
+                  <div class="session-meta">Sảnh chính · 2 khách</div>
+                </div>
+                <span>›</span>
+              </div>
+              <div class="session-detail">
+                <span>18:23 · 19 phút</span><span>3 món</span>
+              </div>
+              <div class="status-total">
+                <span class="badge green">Đã thanh toán</span>
+                <span class="session-total">382.800₫</span>
+              </div>
+            </button>
+          </div>
+        </main>
+      </section>
+    </div>
+
+    <div
+      class="dialog-layer"
+      id="payment-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="dialog-title"
+    >
+      <section class="dialog">
+        <div class="invoice-panel">
+          <div class="mobile-dialog-head">
+            <button
+              class="close-button"
+              data-close-dialog
+              aria-label="Đóng chi tiết"
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M6 6l12 12M18 6 6 18" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="invoice-scroll">
+            <section class="summary-card">
+              <div class="summary-head">
+                <div>
+                  <h2 id="dialog-title">Bàn 12</h2>
+                  <div class="summary-meta">
+                    <span>Sảnh chính</span><span>·</span><span>4 khách</span
+                    ><span>·</span>
+                    <span>Thời lượng: 46 phút</span>
+                  </div>
+                </div>
+                <span class="badge red">Đã yêu cầu thanh toán</span>
+              </div>
+              <div class="invoice-number">
+                Số hóa đơn: INV-20260724-0012 · Mở phiên lúc 17:56
+              </div>
+            </section>
+
+            <h3 class="section-title">Chi tiết đơn hàng</h3>
+            <section class="order-card">
+              <div class="order-head">
+                <span>Gọi lúc 18:02</span>
+                <span class="order-id">ORD-0012</span>
+              </div>
+              <div class="line-item">
+                <div>
+                  <div class="line-name">Lẩu Thái tomyum chua cay</div>
+                  <div class="line-option">Mức cay vừa · thêm nước lẩu</div>
+                  <div class="line-note">“Không rau mùi”</div>
+                  <div class="line-qty">1 × 269.000₫</div>
+                </div>
+                <div class="line-price">269.000₫</div>
+              </div>
+              <div class="line-item">
+                <div>
+                  <div class="line-name">Ba chỉ bò Mỹ nướng</div>
+                  <div class="line-option">Sốt mè rang</div>
+                  <div class="line-qty">2 × 149.000₫</div>
+                </div>
+                <div class="line-price">298.000₫</div>
+              </div>
+              <div class="line-item">
+                <div>
+                  <div class="line-name">Rau thập cẩm</div>
+                  <div class="line-qty">1 × 59.000₫</div>
+                </div>
+                <div class="line-price">59.000₫</div>
+              </div>
+              <div class="line-item">
+                <div>
+                  <div class="line-name">Trà đào cam sả</div>
+                  <div class="line-qty">2 × 45.000₫</div>
+                </div>
+                <div class="line-price">90.000₫</div>
+              </div>
+            </section>
+
+            <section class="total-card">
+              <div class="price-row">
+                <span>Tạm tính</span><strong>716.000₫</strong>
+              </div>
+              <div class="price-row">
+                <span>Thuế VAT 10%</span><strong>71.600₫</strong>
+              </div>
+              <div class="price-row">
+                <span>Giảm giá · Khách quen</span
+                ><strong style="color: var(--orange-deep)">−4.400₫</strong>
+              </div>
+              <div class="grand-total">
+                <span>Tổng cộng</span><strong>783.200₫</strong>
+              </div>
+              <div class="invoice-actions">
+                <button class="secondary-button">Hủy giảm giá</button>
+                <button class="danger-button">Đóng phiên (hủy)</button>
+                <button class="split-button">Chia hóa đơn</button>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <aside class="payment-panel">
+          <header class="payment-head">
+            <div>
+              <h2>Thanh toán</h2>
+              <p>Bàn 12 · Sảnh chính</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px">
+              <span class="badge red">Đã yêu cầu</span>
+              <button
+                class="close-button desktop-close"
+                data-close-dialog
+                aria-label="Đóng chi tiết"
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="M6 6l12 12M18 6 6 18" />
+                </svg>
+              </button>
+            </div>
+          </header>
+
+          <div class="payment-content">
+            <section class="amount-card">
+              <div class="amount-label">Số tiền cần thu</div>
+              <div class="amount-value">783.200₫</div>
+            </section>
+
+            <button class="method">
+              <span class="method-icon">₫</span>
+              <span class="method-copy">
+                <span class="method-name">Tiền mặt</span>
+                <span class="method-hint">Khách thanh toán trực tiếp</span>
+              </span>
+              <span class="chevron">›</span>
+            </button>
+
+            <button class="method">
+              <span class="method-icon">▰</span>
+              <span class="method-copy">
+                <span class="method-name">Thẻ</span>
+                <span class="method-hint">Quẹt thẻ qua máy POS</span>
+              </span>
+              <span class="chevron">›</span>
+            </button>
+
+            <button class="method">
+              <span class="method-icon">▣</span>
+              <span class="method-copy">
+                <span class="method-name">Ví điện tử</span>
+                <span class="method-hint">Momo / ZaloPay / VNPay</span>
+              </span>
+              <span class="chevron">›</span>
+            </button>
+          </div>
+        </aside>
+      </section>
+    </div>
+
+    <script>
+      const dialog = document.querySelector("#payment-dialog");
+      document.querySelectorAll("[data-close-dialog]").forEach((button) => {
+        button.addEventListener("click", () => {
+          dialog.hidden = true;
+        });
+      });
+      document.querySelectorAll("[data-open-dialog]").forEach((button) => {
+        button.addEventListener("click", () => {
+          dialog.hidden = false;
+        });
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") dialog.hidden = true;
+      });
+    </script>
+  </body>
+</html>

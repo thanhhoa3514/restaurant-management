@@ -26,7 +26,9 @@ export const waiterService = {
     return rejectOrderItem(itemId, reason)
   },
 
-  requestBill(sessionId: string): Promise<{ session_id: string; status: string; requested_at: string | null }> {
+  requestBill(
+    sessionId: string,
+  ): Promise<{ session_id: string; status: string; requested_at: string | null }> {
     return requestSessionBill(sessionId)
   },
 
@@ -34,7 +36,15 @@ export const waiterService = {
     return ackWaiterCall(sessionId)
   },
 
-  openSession(tableId: string): Promise<{ session_id: string; session_code: string; table_id: string; status: string; session_token: string }> {
+  openSession(
+    tableId: string,
+  ): Promise<{
+    session_id: string
+    session_code: string
+    table_id: string
+    status: string
+    session_token: string
+  }> {
     return openDiningSession(tableId)
   },
 }

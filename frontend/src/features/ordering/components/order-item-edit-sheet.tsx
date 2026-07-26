@@ -167,7 +167,15 @@ export const OrderItemEditSheet: FC<OrderItemEditSheetProps> = ({
               onClick={onClose}
               className="size-8 rounded-full bg-[var(--surface-grouped)] flex items-center justify-center text-[var(--text-tertiary)] active:scale-90 transition-transform cursor-pointer"
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
                 <path d="M4 4l8 8M12 4l-8 8" />
               </svg>
             </button>
@@ -240,9 +248,7 @@ export const OrderItemEditSheet: FC<OrderItemEditSheetProps> = ({
 
           {qty === 0 && (
             <div className="bg-[var(--system-red)]/10 text-[var(--system-red)] px-4 py-3 rounded-[16px] text-[13px] font-semibold text-center border border-[var(--system-red)]/20">
-              {lang === 'vi'
-                ? 'Món này sẽ bị xoá khi lưu.'
-                : 'This item will be removed on save.'}
+              {lang === 'vi' ? 'Món này sẽ bị xoá khi lưu.' : 'This item will be removed on save.'}
             </div>
           )}
         </div>
@@ -274,11 +280,7 @@ export const OrderItemEditSheet: FC<OrderItemEditSheetProps> = ({
                 className="flex-[2] flex h-[52px] items-center justify-center rounded-[16px] bg-[var(--text)] text-[var(--bg)] font-bold text-[15px] shadow-lg transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50"
                 onClick={handleSave}
               >
-                {saving
-                  ? lang === 'vi'
-                    ? 'Đang lưu...'
-                    : 'Saving...'
-                  : t.save}
+                {saving ? (lang === 'vi' ? 'Đang lưu...' : 'Saving...') : t.save}
               </button>
             </div>
           </div>

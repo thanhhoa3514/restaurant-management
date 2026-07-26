@@ -15,15 +15,42 @@ function optionText(item: {
 }
 
 function statusHistory<T extends string>(
-  history: Array<{ status: string; timestamp: string }>,
+  history: Array<{
+    status: string
+    from_status?: string | null
+    to_status?: string
+    timestamp: string
+    changed_by_name?: string | null
+    changed_by_role?: string | null
+    reason?: string | null
+    note?: string | null
+  }>,
   fallbackStatus: string,
   fallbackAt: string,
-): Array<{ status: T; timestamp: Date }> {
+): Array<{
+  status: T
+  timestamp: Date
+  from_status: T | null
+  to_status: T
+  changed_by_name: string | null
+  changed_by_role: string | null
+  reason: string | null
+  note: string | null
+}> {
   const rows = history.length > 0 ? history : [{ status: fallbackStatus, timestamp: fallbackAt }]
-  return rows.map((row) => ({
-    status: row.status.toLowerCase() as T,
-    timestamp: new Date(row.timestamp),
-  }))
+  return rows.map((row) => {
+    const toStatus = (row.to_status || row.status).toLowerCase() as T
+    return {
+      status: toStatus,
+      timestamp: new Date(row.timestamp),
+      from_status: row.from_status ? (row.from_status.toLowerCase() as T) : null,
+      to_status: toStatus,
+      changed_by_name: row.changed_by_name ?? null,
+      changed_by_role: row.changed_by_role ?? null,
+      reason: row.reason ?? null,
+      note: row.note ?? null,
+    }
+  })
 }
 
 function parseTableNumber(code: string, name: string): number {

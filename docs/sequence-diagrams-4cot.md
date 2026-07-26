@@ -222,7 +222,7 @@ sequenceDiagram
 
 # Nhóm Phục vụ
 
-## UC-09 — Mở phiên walk-in
+## UC-09 — Mở phiên cho khách vãng lai
 
 ```mermaid
 sequenceDiagram

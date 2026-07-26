@@ -1,0 +1,155 @@
+<mxfile host="65bd71144e">
+    <diagram id="bp-xem-thuc-don" name="Xem thực đơn - luồng dọc">
+        <mxGraphModel dx="1444" dy="605" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="1800" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="TITLE" value="LUỒNG: KHÁCH XEM THỰC ĐƠN" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="250" y="20" width="500" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="START" value="[Khách] Mở thực đơn" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=2;" parent="1" vertex="1">
+                    <mxGeometry x="370" y="90" width="260" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="LOAD_MENU" value="Tải danh mục và danh sách món đã công bố" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="200" width="200" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="LOAD_OK" value="Tải dữ liệu thành công?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="405" y="320" width="190" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="LOAD_ERROR" value="Báo không tải được thực đơn và cho phép thử lại" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="700" y="335" width="150" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="SHOW_MENU" value="Hiển thị danh mục và các món còn bán" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="418" y="470" width="164.75" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="CATEGORY_CHOICE" value="Chọn một danh mục?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="418" y="570" width="164.5" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="FILTER_CATEGORY" value="[Giao diện] Chỉ giữ các món thuộc danh mục đã chọn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="690" y="575" width="230" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="SEARCH_CHOICE" value="Nhập từ khóa tìm món?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="710" width="190" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="FILTER_SEARCH" value="&amp;nbsp;theo tên món trong phạm vi đang xem" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="790" y="740" width="160" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="SHOW_RESULT" value="Hiển thị kết quả sau khi lọc" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="397" y="870" width="200" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="HAS_RESULT" value="Có món phù hợp?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="402" y="1000" width="190" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="EMPTY_RESULT" value="&amp;nbsp;Báo không tìm thấy món; khách đổi danh mục hoặc từ khóa" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="650" y="1090" width="150" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="SELECT_ITEM" value="&amp;nbsp;Chọn một món" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="402" y="1160" width="193" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="SHOW_DETAIL" value="Hiển thị chi tiết món: mô tả, hình ảnh, giá, biến thể và tùy chọn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="398.75" y="1260" width="199.5" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="ADD_CART" value="Muốn thêm món vào giỏ?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="416.25" y="1370" width="164.5" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="BACK_MENU" value="Quay lại tiếp tục xem thực đơn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="190" y="1385" width="180" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="END_CART" value="Kết thúc" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=3;" parent="1" vertex="1">
+                    <mxGeometry x="430" y="1620" width="180" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_START_LOAD" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="START" target="LOAD_MENU" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_LOAD_DECISION" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="LOAD_MENU" target="LOAD_OK" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_LOAD_OK_HIDE" value="Có" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=11;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="LOAD_OK" target="SHOW_MENU" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="500" y="470" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e_LOAD_ERROR" value="Không" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="LOAD_OK" target="LOAD_ERROR" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_RETRY" value="Thử lại" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;dashed=1;fontSize=11;exitX=1;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="LOAD_ERROR" target="LOAD_MENU" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="850" y="375"/>
+                            <mxPoint x="870" y="375"/>
+                            <mxPoint x="870" y="240"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e_SHOW_CATEGORY" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="SHOW_MENU" target="CATEGORY_CHOICE" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_CATEGORY_YES" value="Có" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="CATEGORY_CHOICE" target="FILTER_CATEGORY" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_CATEGORY_NO" value="Không, xem tất cả" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=11;" parent="1" source="CATEGORY_CHOICE" target="SEARCH_CHOICE" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_CATEGORY_SEARCH" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;entryX=0.937;entryY=0.403;entryDx=0;entryDy=0;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryPerimeter=0;" parent="1" source="FILTER_CATEGORY" target="SEARCH_CHOICE" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="748" y="754"/>
+                            <mxPoint x="578" y="754"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e_SEARCH_YES" value="Có" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="SEARCH_CHOICE" target="FILTER_SEARCH" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_SEARCH_NO" value="Không" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=11;" parent="1" source="SEARCH_CHOICE" target="SHOW_RESULT" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_FILTER_RESULT" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="FILTER_SEARCH" target="SHOW_RESULT" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="870" y="1055"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e_RESULT_DECISION" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="SHOW_RESULT" target="HAS_RESULT" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_HAS_SELECT" value="Có" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=11;" parent="1" source="HAS_RESULT" target="SELECT_ITEM" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_EMPTY" value="Không" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="HAS_RESULT" target="EMPTY_RESULT" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_EMPTY_BACK" value="Đổi điều kiện lọc" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;dashed=1;fontSize=11;exitX=1;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=1;entryDx=0;entryDy=0;" parent="1" source="EMPTY_RESULT" target="CATEGORY_CHOICE" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="800" y="1070"/>
+                            <mxPoint x="710" y="1070"/>
+                            <mxPoint x="710" y="830"/>
+                            <mxPoint x="640" y="830"/>
+                            <mxPoint x="640" y="638"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e_SELECT_DETAIL" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="SELECT_ITEM" target="SHOW_DETAIL" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_DETAIL_ADD" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;" parent="1" source="SHOW_DETAIL" target="ADD_CART" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_ADD_YES" value="Có" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=11;entryX=0.303;entryY=-0.035;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="ADD_CART" target="2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_ADD_NO" value="Không" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=11;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="ADD_CART" target="BACK_MENU" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="2" value="Thêm vào giỏ hàng" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="440" y="1520" width="180" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="3" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.562;entryY=0.058;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="2" target="END_CART">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

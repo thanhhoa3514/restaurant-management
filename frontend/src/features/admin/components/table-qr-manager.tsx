@@ -1,6 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, Copy, Download, LayoutGrid, Map as MapIcon, Pencil, Plus, QrCode, RefreshCw, SquareStack, Trash2 } from 'lucide-react'
+import {
+  Check,
+  Copy,
+  Download,
+  LayoutGrid,
+  Map as MapIcon,
+  Pencil,
+  Plus,
+  QrCode,
+  RefreshCw,
+  SquareStack,
+  Trash2,
+} from 'lucide-react'
 import QRCode from 'qrcode'
 
 import { Badge } from '@/components/ui/badge'
@@ -24,7 +36,13 @@ export function TableQRManager() {
   const { lang } = useLang()
   const t = makeAdminT(lang)
   const queryClient = useQueryClient()
-  const { data: tablesData, isLoading, isError, error, isSuccess } = useQuery({
+  const {
+    data: tablesData,
+    isLoading,
+    isError,
+    error,
+    isSuccess,
+  } = useQuery({
     queryKey: TABLE_QRS_KEY,
     queryFn: listTableQRs,
   })
@@ -78,7 +96,11 @@ export function TableQRManager() {
                     : 'text-[var(--text-secondary)]',
                 )}
               >
-                {mode === 'grid' ? <LayoutGrid className="size-4" /> : <MapIcon className="size-4" />}
+                {mode === 'grid' ? (
+                  <LayoutGrid className="size-4" />
+                ) : (
+                  <MapIcon className="size-4" />
+                )}
                 {t(mode === 'grid' ? 'tbl_view_grid' : 'tbl_view_plan')}
               </button>
             ))}
@@ -99,14 +121,11 @@ export function TableQRManager() {
           </div>
         </div>
 
-        {isLoading && (
-          <p className="text-sm text-[var(--text-secondary)]">{t('qr_loading')}</p>
-        )}
+        {isLoading && <p className="text-sm text-[var(--text-secondary)]">{t('qr_loading')}</p>}
         {isError && (
           <Card className="border border-[var(--system-red)]/30 bg-[var(--system-red)]/5">
             <CardContent className="p-5 text-sm text-[var(--system-red)]">
-              {t('qr_load_error')}:{' '}
-              {errorMessage(error, t('qr_unknown_error'))}
+              {t('qr_load_error')}: {errorMessage(error, t('qr_unknown_error'))}
             </CardContent>
           </Card>
         )}
@@ -121,26 +140,31 @@ export function TableQRManager() {
 
         {view === 'plan' && <FloorBuilder />}
 
-        {view === 'grid' && areaGroups.map((group) => (
-          <section key={group.name} className="space-y-3">
-            <div className="flex items-baseline gap-2">
-              <h2 className="text-[17px] font-semibold text-[var(--text)]">{group.name}</h2>
-              <span className="text-sm text-[var(--text-tertiary)]">
-                {t('qr_summary', group.tables.filter((table) => table.has_active_qr).length, group.tables.length)}
-              </span>
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {group.tables.map((table) => (
-                <TableCard
-                  key={table.table_id}
-                  table={table}
-                  t={t}
-                  onOpen={() => setSelectedId(table.table_id)}
-                />
-              ))}
-            </div>
-          </section>
-        ))}
+        {view === 'grid' &&
+          areaGroups.map((group) => (
+            <section key={group.name} className="space-y-3">
+              <div className="flex items-baseline gap-2">
+                <h2 className="text-[17px] font-semibold text-[var(--text)]">{group.name}</h2>
+                <span className="text-sm text-[var(--text-tertiary)]">
+                  {t(
+                    'qr_summary',
+                    group.tables.filter((table) => table.has_active_qr).length,
+                    group.tables.length,
+                  )}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {group.tables.map((table) => (
+                  <TableCard
+                    key={table.table_id}
+                    table={table}
+                    t={t}
+                    onOpen={() => setSelectedId(table.table_id)}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
       </div>
       <QRDetailSheet
         table={selected}
@@ -261,7 +285,9 @@ function QRDetailSheet({
       .catch(() => {
         if (active) setDataUrl(null)
       })
-    return () => { active = false }
+    return () => {
+      active = false
+    }
   }, [orderUrl])
 
   const handleCopy = async () => {
@@ -284,7 +310,11 @@ function QRDetailSheet({
               <SheetHeader title={table.table_name} subtitle={table.table_code} />
               <div className="flex-1 space-y-5 overflow-y-auto px-5 pb-5">
                 <div className="grid grid-cols-2 gap-2">
-                  <Button variant="secondary" className="rounded-[var(--radius-lg)]" onClick={onEdit}>
+                  <Button
+                    variant="secondary"
+                    className="rounded-[var(--radius-lg)]"
+                    onClick={onEdit}
+                  >
                     <Pencil className="size-4" />
                     {t('tbl_edit')}
                   </Button>

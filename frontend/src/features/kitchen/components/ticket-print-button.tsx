@@ -9,7 +9,9 @@ import type { KDS_DICT } from '@/i18n'
 type KdsKey = keyof (typeof KDS_DICT)['vi']
 type Translate = (key: KdsKey, ...args: Array<number | string>) => string
 
-const LazyKitchenPDF = lazy(() => import('./kitchen-ticket-pdf').then((m) => ({ default: m.KitchenTicketPDF })))
+const LazyKitchenPDF = lazy(() =>
+  import('./kitchen-ticket-pdf').then((m) => ({ default: m.KitchenTicketPDF })),
+)
 
 interface TicketPrintButtonProps {
   ticket: Ticket
@@ -29,7 +31,10 @@ export function TicketPrintButton({ ticket, now, lang, t }: TicketPrintButtonPro
   )
 
   return (
-    <PDFDownloadLink document={document} fileName={`kitchen-ticket-${ticket.order_id.slice(0, 8)}.pdf`}>
+    <PDFDownloadLink
+      document={document}
+      fileName={`kitchen-ticket-${ticket.order_id.slice(0, 8)}.pdf`}
+    >
       {({ loading }) => (
         <Button variant="outline" className="w-full" size="sm" disabled={loading}>
           <Printer className="mr-1.5 size-4" />

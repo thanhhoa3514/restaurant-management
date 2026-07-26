@@ -40,7 +40,7 @@
 | 5 | Giỏ hàng (sửa/xóa trước khi đặt) | Done | Client-side frontend ordering |
 | 6 | Đặt món | Done | `ordering/guest_place_order.go` |
 | 7 | Gọi thêm món | Done | `order_type = ADDITIONAL`, cùng handler |
-| 8 | Theo dõi trạng thái món realtime | Done | `guest_view_orders.go` + realtime hub |
+| 8 | Theo dõi trạng thái món tức thời | Done | `guest_view_orders.go` + realtime hub |
 | 9 | Gọi nhân viên | Chưa | Chỉ có label UI i18n, không có route backend |
 | 10 | Yêu cầu thanh toán | Partial | Staff `request-bill` có; guest không có route (chỉ tín hiệu) |
 

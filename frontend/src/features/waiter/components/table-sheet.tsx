@@ -56,7 +56,7 @@ export const TableSheet: FC<TableSheetProps> = ({
 }) => {
   const [{ confirmBill, showOpenForm, guestCount, notes }, dispatch] = useReducer(
     (s: any, a: any) => ({ ...s, ...a }),
-    { confirmBill: false, showOpenForm: false, guestCount: 2, notes: '' }
+    { confirmBill: false, showOpenForm: false, guestCount: 2, notes: '' },
   )
 
   const prevTableIdRef = useRef(table?.id)
@@ -67,7 +67,7 @@ export const TableSheet: FC<TableSheetProps> = ({
       confirmBill: false,
       showOpenForm: false,
       guestCount: table?.capacity ? Math.min(2, table.capacity) : 2,
-      notes: ''
+      notes: '',
     })
   }
 
@@ -77,7 +77,7 @@ export const TableSheet: FC<TableSheetProps> = ({
       order.items.reduce<ReadyItem[]>((acc, item) => {
         if (item.status === 'ready') acc.push({ item, orderId: order.id })
         return acc
-      }, [])
+      }, []),
     )
   }, [table])
 
@@ -87,14 +87,15 @@ export const TableSheet: FC<TableSheetProps> = ({
       order.items.reduce<ReadyItem[]>((acc, item) => {
         if (item.status === 'placed') acc.push({ item, orderId: order.id })
         return acc
-      }, [])
+      }, []),
     )
   }, [table])
 
   const subtotal = useMemo(() => {
     if (!table?.session) return 0
     return table.session.orders.reduce(
-      (sum, order) => sum + order.items.reduce((inner, item) => inner + item.unit_price * item.qty, 0),
+      (sum, order) =>
+        sum + order.items.reduce((inner, item) => inner + item.unit_price * item.qty, 0),
       0,
     )
   }, [table])
@@ -102,11 +103,17 @@ export const TableSheet: FC<TableSheetProps> = ({
   if (!table) return null
 
   const isEmpty = table.status === 'empty' || !table.session
-  const elapsedSeconds = table.session ? Math.floor((now.getTime() - table.session.started_at.getTime()) / 1000) : 0
+  const elapsedSeconds = table.session
+    ? Math.floor((now.getTime() - table.session.started_at.getTime()) / 1000)
+    : 0
 
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
-      <SheetContent side="right" hideClose className="w-full max-w-[31rem] gap-0 rounded-l-[28px] border-l border-zinc-200 bg-white shadow-xl max-sm:max-w-full max-sm:rounded-none dark:border-zinc-800 dark:bg-zinc-950">
+      <SheetContent
+        side="right"
+        hideClose
+        className="w-full max-w-[31rem] gap-0 rounded-l-[28px] border-l border-zinc-200 bg-white shadow-xl max-sm:max-w-full max-sm:rounded-none dark:border-zinc-800 dark:bg-zinc-950"
+      >
         <div className="flex items-start justify-between gap-4 border-b border-[var(--separator)] px-6 pb-4 pt-6">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -119,9 +126,13 @@ export const TableSheet: FC<TableSheetProps> = ({
                 </Badge>
               ) : (
                 <>
-                  <span className="text-sm font-semibold text-[var(--text-secondary)]">• {t('guests', table.session?.guest_count ?? 0)}</span>
+                  <span className="text-sm font-semibold text-[var(--text-secondary)]">
+                    • {t('guests', table.session?.guest_count ?? 0)}
+                  </span>
                   {table.session?.guest_name && (
-                    <span className="ml-2 text-sm text-[var(--text-tertiary)]">· {table.session.guest_name}</span>
+                    <span className="ml-2 text-sm text-[var(--text-tertiary)]">
+                      · {table.session.guest_name}
+                    </span>
                   )}
                 </>
               )}
@@ -137,7 +148,13 @@ export const TableSheet: FC<TableSheetProps> = ({
                 : `${t('opened_at')} ${wfFmtClock(table.session?.started_at ?? now)} • ${wfFmtMin(elapsedSeconds)} ${t('minutes')}`}
             </p>
           </div>
-          <Button variant="secondary" size="icon" className="rounded-full" onClick={onClose} aria-label="Close">
+          <Button
+            variant="secondary"
+            size="icon"
+            className="rounded-full"
+            onClick={onClose}
+            aria-label="Close"
+          >
             ×
           </Button>
         </div>
@@ -182,8 +199,12 @@ export const TableSheet: FC<TableSheetProps> = ({
           <div className="border-t border-[var(--separator)] bg-white/45 px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
               <div className="min-w-0">
-                <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--text-tertiary)]">{t('subtotal_label')}</div>
-                <div className="mt-1 text-2xl font-bold tabular-nums text-[var(--text)]">{wfFmtVND(subtotal)}</div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
+                  {t('subtotal_label')}
+                </div>
+                <div className="mt-1 text-2xl font-bold tabular-nums text-[var(--text)]">
+                  {wfFmtVND(subtotal)}
+                </div>
                 <div className="text-xs font-medium text-[var(--text-secondary)]">
                   {table.session?.orders.length ?? 0} {lang === 'vi' ? 'lượt gọi món' : 'orders'}
                 </div>
@@ -263,7 +284,11 @@ const OccupiedBody: FC<OccupiedBodyProps> = ({
     {session.waiter_called_at && (
       <SignalBanner
         tone="red"
-        title={t('signal_call')}
+        title={
+          session.waiter_call_reason
+            ? `${t('signal_call')} — ${session.waiter_call_reason}`
+            : t('signal_call')
+        }
         time={wfFmtHMS(Math.floor((now.getTime() - session.waiter_called_at.getTime()) / 1000))}
         buttonLabel={t('btn_acknowledge')}
         onClick={() => onAcknowledgeCall(table.id)}
@@ -310,27 +335,46 @@ const OccupiedBody: FC<OccupiedBodyProps> = ({
             {t('ready_section', readyItems.length)}
           </h3>
           {readyItems.length > 1 && (
-            <Button variant="ghost" size="sm" className="rounded-full text-emerald-700" onClick={() => onMarkAllServed(table.id)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="rounded-full text-emerald-700"
+              onClick={() => onMarkAllServed(table.id)}
+            >
               {t('btn_mark_all_served')}
             </Button>
           )}
         </div>
         <Card className="overflow-hidden rounded-[24px] border-2 border-emerald-500/20 bg-emerald-500/10">
           {readyItems.map(({ item }) => {
-            const readyAt = item.status_history.find((entry) => entry.status === 'ready')?.timestamp ?? now
+            const readyAt =
+              item.status_history.find((entry) => entry.status === 'ready')?.timestamp ?? now
             const sinceReady = Math.floor((now.getTime() - readyAt.getTime()) / 1000)
             return (
-              <div key={item.id} className="flex items-start gap-3 border-b border-emerald-500/15 p-4 last:border-b-0">
+              <div
+                key={item.id}
+                className="flex items-start gap-3 border-b border-emerald-500/15 p-4 last:border-b-0"
+              >
                 <QuantityPill qty={item.qty} />
                 <div className="min-w-0 flex-1">
-                  <div className="font-semibold leading-tight text-[var(--text)]">{lang === 'vi' ? item.name_vi : item.name_en}</div>
-                  <div className="mt-1 text-sm text-[var(--text-secondary)]">{lang === 'vi' ? item.options_text_vi : item.options_text_en}</div>
-                  {item.notes && <div className="mt-1 text-xs italic text-amber-700">“{item.notes}”</div>}
+                  <div className="font-semibold leading-tight text-[var(--text)]">
+                    {lang === 'vi' ? item.name_vi : item.name_en}
+                  </div>
+                  <div className="mt-1 text-sm text-[var(--text-secondary)]">
+                    {lang === 'vi' ? item.options_text_vi : item.options_text_en}
+                  </div>
+                  {item.notes && (
+                    <div className="mt-1 text-xs italic text-amber-700">“{item.notes}”</div>
+                  )}
                   <div className="mt-2 font-mono text-xs font-semibold tabular-nums text-emerald-700">
                     {t('ready_since')} {wfFmtHMS(sinceReady)}
                   </div>
                 </div>
-                <Button size="sm" className="rounded-full bg-emerald-600 hover:bg-emerald-700" onClick={() => onMarkItemServed(table.id, item.id)}>
+                <Button
+                  size="sm"
+                  className="rounded-full bg-emerald-600 hover:bg-emerald-700"
+                  onClick={() => onMarkItemServed(table.id, item.id)}
+                >
                   {t('btn_mark_served')}
                 </Button>
               </div>
@@ -349,7 +393,10 @@ const OccupiedBody: FC<OccupiedBodyProps> = ({
           </Card>
         ) : (
           session.orders.map((order) => (
-            <Card key={order.id} className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-900/50">
+            <Card
+              key={order.id}
+              className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-900/50"
+            >
               <div className="flex items-center justify-between bg-zinc-50 px-4 py-3 dark:bg-zinc-900">
                 <span className="text-sm font-semibold text-[var(--text-secondary)]">
                   {t('order_placed_at')} {wfFmtClock(order.submitted_at)}
@@ -383,14 +430,23 @@ const SignalBanner: FC<SignalBannerProps> = ({ tone, title, time, buttonLabel, o
     <div
       className={cn(
         'flex flex-col gap-3 rounded-[24px] border-2 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between',
-        red ? 'border-red-500/30 bg-red-500/10 text-red-950 animate-pulse' : 'border-blue-500/30 bg-blue-500/10 text-blue-950',
+        red
+          ? 'border-red-500/30 bg-red-500/10 text-red-950 animate-pulse'
+          : 'border-blue-500/30 bg-blue-500/10 text-blue-950',
       )}
     >
       <div className="flex min-w-0 items-center gap-3">
         <span className={cn('size-3 shrink-0 rounded-full', red ? 'bg-red-500' : 'bg-blue-500')} />
         <div className="min-w-0">
           <div className="font-bold">{title}</div>
-          <div className={cn('mt-0.5 font-mono text-sm font-semibold tabular-nums', red ? 'text-red-700' : 'text-blue-700')}>{time}</div>
+          <div
+            className={cn(
+              'mt-0.5 font-mono text-sm font-semibold tabular-nums',
+              red ? 'text-red-700' : 'text-blue-700',
+            )}
+          >
+            {time}
+          </div>
         </div>
       </div>
       <Button
@@ -417,10 +473,20 @@ const OrderItemRow: FC<OrderItemRowProps> = ({ item, lang, t }) => {
     <div className="flex items-start gap-3 p-4">
       <QuantityPill qty={item.qty} muted={served} />
       <div className="min-w-0 flex-1">
-        <div className={cn('font-semibold leading-tight', served ? 'text-[var(--text-tertiary)] line-through' : 'text-[var(--text)]')}>
+        <div
+          className={cn(
+            'font-semibold leading-tight',
+            served ? 'text-[var(--text-tertiary)] line-through' : 'text-[var(--text)]',
+          )}
+        >
           {lang === 'vi' ? item.name_vi : item.name_en}
         </div>
-        <div className={cn('mt-1 text-sm', served ? 'text-[var(--text-tertiary)]' : 'text-[var(--text-secondary)]')}>
+        <div
+          className={cn(
+            'mt-1 text-sm',
+            served ? 'text-[var(--text-tertiary)]' : 'text-[var(--text-secondary)]',
+          )}
+        >
           {lang === 'vi' ? item.options_text_vi : item.options_text_en}
         </div>
         {item.notes && <div className="mt-1 text-xs italic text-amber-700">“{item.notes}”</div>}
@@ -442,17 +508,18 @@ interface PlacedItemRowProps {
 // an inline optional-reason field so staff can note why (e.g. out of stock).
 const PlacedItemRow: FC<PlacedItemRowProps> = ({ item, lang, t, onConfirm, onReject }) => {
   const [rejecting, setRejecting] = useReducer((s: boolean) => !s, false)
-  const [reason, setReason] = useReducer(
-    (_: string, next: string) => next,
-    '',
-  )
+  const [reason, setReason] = useReducer((_: string, next: string) => next, '')
   return (
     <div className="space-y-3 border-b border-amber-500/15 p-4 last:border-b-0">
       <div className="flex items-start gap-3">
         <QuantityPill qty={item.qty} />
         <div className="min-w-0 flex-1">
-          <div className="font-semibold leading-tight text-[var(--text)]">{lang === 'vi' ? item.name_vi : item.name_en}</div>
-          <div className="mt-1 text-sm text-[var(--text-secondary)]">{lang === 'vi' ? item.options_text_vi : item.options_text_en}</div>
+          <div className="font-semibold leading-tight text-[var(--text)]">
+            {lang === 'vi' ? item.name_vi : item.name_en}
+          </div>
+          <div className="mt-1 text-sm text-[var(--text-secondary)]">
+            {lang === 'vi' ? item.options_text_vi : item.options_text_en}
+          </div>
           {item.notes && <div className="mt-1 text-xs italic text-amber-700">“{item.notes}”</div>}
         </div>
       </div>
@@ -466,20 +533,39 @@ const PlacedItemRow: FC<PlacedItemRowProps> = ({ item, lang, t, onConfirm, onRej
             className="h-10 rounded-xl"
           />
           <div className="flex gap-2">
-            <Button variant="secondary" size="sm" className="flex-1 rounded-full" onClick={() => setRejecting()}>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="flex-1 rounded-full"
+              onClick={() => setRejecting()}
+            >
               {t('cancel')}
             </Button>
-            <Button variant="destructive" size="sm" className="flex-1 rounded-full" onClick={() => onReject(reason.trim())}>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="flex-1 rounded-full"
+              onClick={() => onReject(reason.trim())}
+            >
               {t('btn_reject_send')}
             </Button>
           </div>
         </div>
       ) : (
         <div className="flex gap-2">
-          <Button variant="secondary" size="sm" className="flex-1 rounded-full text-red-600" onClick={() => setRejecting()}>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="flex-1 rounded-full text-red-600"
+            onClick={() => setRejecting()}
+          >
             {t('btn_reject_item')}
           </Button>
-          <Button size="sm" className="flex-1 rounded-full bg-amber-600 hover:bg-amber-700" onClick={onConfirm}>
+          <Button
+            size="sm"
+            className="flex-1 rounded-full bg-amber-600 hover:bg-amber-700"
+            onClick={onConfirm}
+          >
             {t('btn_confirm_item')}
           </Button>
         </div>
@@ -492,14 +578,19 @@ const QuantityPill: FC<{ qty: number; muted?: boolean }> = ({ qty, muted }) => (
   <span
     className={cn(
       'flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold tabular-nums',
-      muted ? 'bg-[var(--surface-grouped)] text-[var(--text-tertiary)]' : 'bg-[var(--text)] text-white',
+      muted
+        ? 'bg-[var(--surface-grouped)] text-[var(--text-tertiary)]'
+        : 'bg-[var(--text)] text-white',
     )}
   >
     ×{qty}
   </span>
 )
 
-const CHIP_VARIANTS: Record<ItemStatus, 'default' | 'secondary' | 'outline' | 'success' | 'warning'> = {
+const CHIP_VARIANTS: Record<
+  ItemStatus,
+  'default' | 'secondary' | 'outline' | 'success' | 'warning'
+> = {
   placed: 'warning',
   cancelled: 'outline',
   pending: 'secondary',
@@ -509,7 +600,10 @@ const CHIP_VARIANTS: Record<ItemStatus, 'default' | 'secondary' | 'outline' | 's
   served: 'outline',
 }
 
-const StatusChip: FC<{ status: ItemStatus; t: (key: string, ...args: Array<string | number>) => string }> = ({ status, t }) => {
+const StatusChip: FC<{
+  status: ItemStatus
+  t: (key: string, ...args: Array<string | number>) => string
+}> = ({ status, t }) => {
   return (
     <Badge variant={CHIP_VARIANTS[status]} className="shrink-0 rounded-full">
       {t(`status_${status}`)}
@@ -567,9 +661,16 @@ const EmptyTableBody: FC<EmptyTableBodyProps> = ({
       </p>
 
       <div className="mt-5 space-y-5">
-        <Input value={`${t('table')} ${table.code}`} readOnly aria-label="Table" className="h-12 rounded-2xl font-semibold" />
+        <Input
+          value={`${t('table')} ${table.code}`}
+          readOnly
+          aria-label="Table"
+          className="h-12 rounded-2xl font-semibold"
+        />
         <div>
-          <label className="mb-2 block text-sm font-semibold text-[var(--text-secondary)]">{t('guest_count_label')}</label>
+          <label className="mb-2 block text-sm font-semibold text-[var(--text-secondary)]">
+            {t('guest_count_label')}
+          </label>
           <div className="flex flex-wrap gap-2">
             {Array.from({ length: table.capacity }, (_, index) => index + 1).map((count) => (
               <Button
@@ -586,12 +687,23 @@ const EmptyTableBody: FC<EmptyTableBodyProps> = ({
           </div>
         </div>
         <div>
-          <label className="mb-2 block text-sm font-semibold text-[var(--text-secondary)]">{t('notes_label')}</label>
-          <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder={t('notes_placeholder')} rows={4} />
+          <label className="mb-2 block text-sm font-semibold text-[var(--text-secondary)]">
+            {t('notes_label')}
+          </label>
+          <Textarea
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder={t('notes_placeholder')}
+            rows={4}
+          />
         </div>
       </div>
       <div className="mt-6 flex gap-2">
-        <Button variant="secondary" className="flex-1 rounded-2xl" onClick={() => setShowOpenForm(false)}>
+        <Button
+          variant="secondary"
+          className="flex-1 rounded-2xl"
+          onClick={() => setShowOpenForm(false)}
+        >
           {t('cancel')}
         </Button>
         <Button className="flex-1 rounded-2xl" onClick={onSubmit}>
@@ -610,7 +722,9 @@ const ConfirmBillDialog: FC<{
   <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/20 p-6 backdrop-blur-3xs">
     <Card className="w-full max-w-sm rounded-[24px] border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
       <h3 className="text-lg font-bold text-[var(--text)]">{t('confirm_bill_title')}</h3>
-      <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{t('confirm_bill_desc')}</p>
+      <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+        {t('confirm_bill_desc')}
+      </p>
       <Separator className="my-5" />
       <div className="flex justify-end gap-2">
         <Button variant="secondary" className="rounded-2xl" onClick={onCancel}>
@@ -623,5 +737,3 @@ const ConfirmBillDialog: FC<{
     </Card>
   </div>
 )
-
-

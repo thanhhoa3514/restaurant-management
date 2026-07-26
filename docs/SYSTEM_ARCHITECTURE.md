@@ -16,7 +16,7 @@ vòng, bếp nhận phiếu realtime, phục vụ theo dõi tín hiệu bàn, th
 | Tác nhân | Xác thực | Vai trò chính |
 |---|---|---|
 | Khách (Guest) | **Không đăng nhập** — QR cấp session token ngắn hạn | Xem món, đặt/gọi thêm, theo dõi trạng thái, gọi nhân viên, yêu cầu thanh toán |
-| Phục vụ (Server) | JWT + RBAC | Mở phiên walk-in, theo dõi bàn, đánh dấu đã phục vụ, yêu cầu bill hộ |
+| Phục vụ (Server) | JWT + RBAC | Mở phiên cho khách vãng lai, theo dõi bàn, đánh dấu đã phục vụ, yêu cầu bill hộ |
 | Bếp (Kitchen) | JWT + RBAC | Xem hàng đợi, cập nhật trạng thái món, duyệt yêu cầu hủy |
 | Thu ngân (Cashier) | JWT + RBAC | Dựng hóa đơn snapshot, điều chỉnh/giảm giá, thu tiền, đóng phiên |
 | Quản lý (Manager) | JWT + RBAC | Quản lý thực đơn, còn/hết, QR, bàn, người dùng, báo cáo |

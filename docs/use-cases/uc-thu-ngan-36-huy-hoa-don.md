@@ -6,7 +6,7 @@
 
 ---
 
-## UC-C36 — Hủy hóa đơn (void)
+## UC-C36 — Hủy hóa đơn
 
 ### 1) Use-case đặc tả tổng quan
 
@@ -19,7 +19,7 @@ Tác nhân **Thu ngân** giao tiếp với use-case «Hủy hóa đơn»; use-ca
 
 | Mục | Nội dung |
 |---|---|
-| **Tên Use-Case** | Hủy hóa đơn (void) |
+| **Tên Use-Case** | Hủy hóa đơn |
 | **Tác nhân** | Thu ngân (Cashier) — phụ: Hệ thống |
 | **Mô tả** | Thu ngân hủy một hóa đơn kèm lý do. Hệ thống đánh dấu hóa đơn `VOID`, ghi lý do (audit) và phát realtime. Sau đó có thể lập lại hóa đơn cho phiên (UC-C21). |
 | **Điều kiện** | Thu ngân đã đăng nhập (JWT, quyền `billing:process`). Hóa đơn tồn tại. |

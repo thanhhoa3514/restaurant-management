@@ -14,5 +14,3 @@ export const availabilityAfterToggle = (item: AdminMenuItemSummaryDTO) =>
     : item.availability_status === 'HIDDEN'
       ? ('HIDDEN' as const)
       : ('OUT_OF_STOCK' as const)
-
-

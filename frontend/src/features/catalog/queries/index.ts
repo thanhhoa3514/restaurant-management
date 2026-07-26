@@ -28,9 +28,7 @@ export function useMenuItemsQuery(categoryId?: string, options?: { enabled?: boo
 
 export function useMenuItemDetailQuery(id: string | undefined) {
   return useQuery<AdminMenuItemDetailDTO>({
-    queryKey: id
-      ? catalogQueryKeys.detail(id)
-      : ['catalog', 'items', 'detail', 'new'],
+    queryKey: id ? catalogQueryKeys.detail(id) : ['catalog', 'items', 'detail', 'new'],
     queryFn: () => getAdminMenuItem(id ?? ''),
     enabled: Boolean(id),
   })

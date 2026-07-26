@@ -33,10 +33,10 @@ func (r *Repository) q(ctx context.Context) pg.Querier { return pg.QuerierFromCo
 func (r *Repository) FindTable(ctx context.Context, restaurantID, tableID uuid.UUID) (*domain.Table, error) {
 	t := &domain.Table{}
 	err := r.q(ctx).QueryRow(ctx, `
-		SELECT id, restaurant_id, COALESCE(area_id, '00000000-0000-0000-0000-000000000000'::uuid), code, name, capacity, status, version, deleted_at
+		SELECT id, restaurant_id, COALESCE(area_id, '00000000-0000-0000-0000-000000000000'::uuid), code, name, capacity, status, position_x, position_y, version, deleted_at
 		FROM tables
 		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
-	`, restaurantID, tableID).Scan(&t.ID, &t.RestaurantID, &t.AreaID, &t.Code, &t.Name, &t.Capacity, &t.Status, &t.Version, &t.DeletedAt)
+	`, restaurantID, tableID).Scan(&t.ID, &t.RestaurantID, &t.AreaID, &t.Code, &t.Name, &t.Capacity, &t.Status, &t.PositionX, &t.PositionY, &t.Version, &t.DeletedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, apperr.New(apperr.CodeNotFound, "table not found")
 	}
@@ -139,6 +139,7 @@ func (r *Repository) ListTablesWithActiveQR(ctx context.Context, restaurantID uu
 	rows, err := r.q(ctx).Query(ctx, `
 		SELECT t.id, t.code, t.name, t.status, t.capacity,
 		       a.id, COALESCE(a.name, ''), COALESCE(a.display_order, 0),
+		       t.position_x, t.position_y,
 		       q.id, q.token,
 		       EXISTS (
 		           SELECT 1 FROM dining_sessions ds
@@ -170,8 +171,13 @@ func (r *Repository) ListTablesWithActiveQR(ctx context.Context, restaurantID uu
 		var qrID pgtype.UUID
 		var areaID pgtype.UUID
 		var token pgtype.Text
-		if err := rows.Scan(&row.TableID, &row.TableCode, &row.TableName, &row.Status, &row.Capacity, &areaID, &row.AreaName, &row.AreaOrder, &qrID, &token, &row.HasActiveSession); err != nil {
+		var posX, posY pgtype.Int4
+		if err := rows.Scan(&row.TableID, &row.TableCode, &row.TableName, &row.Status, &row.Capacity, &areaID, &row.AreaName, &row.AreaOrder, &posX, &posY, &qrID, &token, &row.HasActiveSession); err != nil {
 			return nil, err
+		}
+		if posX.Valid && posY.Valid {
+			x, y := int(posX.Int32), int(posY.Int32)
+			row.PositionX, row.PositionY = &x, &y
 		}
 		if areaID.Valid {
 			id := uuid.UUID(areaID.Bytes)
@@ -527,10 +533,10 @@ func (r *Repository) CreateTable(ctx context.Context, t *domain.Table) error {
 		areaID = t.AreaID
 	}
 	err := r.q(ctx).QueryRow(ctx, `
-		INSERT INTO tables (restaurant_id, area_id, code, name, capacity, status)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO tables (restaurant_id, area_id, code, name, capacity, status, position_x, position_y)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, version
-	`, t.RestaurantID, areaID, t.Code, t.Name, t.Capacity, t.Status).Scan(&t.ID, &t.Version)
+	`, t.RestaurantID, areaID, t.Code, t.Name, t.Capacity, t.Status, t.PositionX, t.PositionY).Scan(&t.ID, &t.Version)
 	if err != nil {
 		return duplicateTableCode(err)
 	}
@@ -545,9 +551,10 @@ func (r *Repository) UpdateTable(ctx context.Context, t *domain.Table) error {
 	tag, err := r.q(ctx).Exec(ctx, `
 		UPDATE tables
 		SET area_id = $3, code = $4, name = $5, capacity = $6, status = $7,
+		    position_x = COALESCE($8, position_x), position_y = COALESCE($9, position_y),
 		    version = version + 1, updated_at = NOW()
 		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
-	`, t.RestaurantID, t.ID, areaID, t.Code, t.Name, t.Capacity, t.Status)
+	`, t.RestaurantID, t.ID, areaID, t.Code, t.Name, t.Capacity, t.Status, t.PositionX, t.PositionY)
 	if err != nil {
 		return duplicateTableCode(err)
 	}
@@ -555,6 +562,26 @@ func (r *Repository) UpdateTable(ctx context.Context, t *domain.Table) error {
 		return apperr.New(apperr.CodeNotFound, "table not found")
 	}
 	return nil
+}
+
+// UpdateTablePositions lưu cả sơ đồ bàn trong một câu lệnh — kéo-thả xong bấm lưu một lần.
+func (r *Repository) UpdateTablePositions(ctx context.Context, restaurantID uuid.UUID, positions []domain.TablePosition) error {
+	if len(positions) == 0 {
+		return nil
+	}
+	ids := make([]uuid.UUID, len(positions))
+	xs := make([]int32, len(positions))
+	ys := make([]int32, len(positions))
+	for i, p := range positions {
+		ids[i], xs[i], ys[i] = p.TableID, int32(p.X), int32(p.Y)
+	}
+	_, err := r.q(ctx).Exec(ctx, `
+		UPDATE tables t
+		SET position_x = v.x, position_y = v.y, updated_at = NOW()
+		FROM (SELECT UNNEST($2::uuid[]) AS id, UNNEST($3::int[]) AS x, UNNEST($4::int[]) AS y) v
+		WHERE t.restaurant_id = $1 AND t.id = v.id AND t.deleted_at IS NULL
+	`, restaurantID, ids, xs, ys)
+	return err
 }
 
 func (r *Repository) SoftDeleteTable(ctx context.Context, restaurantID, tableID uuid.UUID) error {

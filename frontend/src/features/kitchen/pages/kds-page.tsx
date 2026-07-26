@@ -1,5 +1,5 @@
 import { type FC, useState } from 'react'
-import { ChefHat, Clock, Volume2, VolumeX } from 'lucide-react'
+import { AlertTriangle, ChefHat, Clock, RefreshCw, Volume2, VolumeX } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -36,7 +36,11 @@ export const KdsLayout: FC = () => {
 
       <ShellHeaderActions>
         <StatPill label={kds.t('pending_count')} value={kds.stats.pending} variant="warning" />
-        <StatPill label={kds.t('preparing_count')} value={kds.stats.preparing} variant="secondary" />
+        <StatPill
+          label={kds.t('preparing_count')}
+          value={kds.stats.preparing}
+          variant="secondary"
+        />
         <StatPill label={kds.t('ready_count')} value={kds.stats.ready} variant="success" />
         <LanguageSwitcher
           currentLang={kds.lang}
@@ -67,15 +71,21 @@ export const KdsLayout: FC = () => {
         </Button>
       </ShellHeaderActions>
 
-
-
       <main className="mx-auto max-w-[1800px] px-4 py-6 lg:px-6">
         <CancelRequestsPanel
           cancelRequests={kds.cancelRequests}
           t={kds.t}
           onReview={kds.reviewCancel}
         />
-        {kds.sortedTickets.length === 0 ? (
+        {kds.queueIsError && kds.sortedTickets.length === 0 ? (
+          <QueueErrorState
+            hint={kds.t('queue_load_error_hint')}
+            loading={kds.queueIsFetching}
+            retryLabel={kds.t('queue_retry')}
+            title={kds.t('queue_load_error_title')}
+            onRetry={kds.retryQueue}
+          />
+        ) : kds.sortedTickets.length === 0 ? (
           <EmptyState title={kds.t('empty_title')} hint={kds.t('empty_hint')} />
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
@@ -137,6 +147,28 @@ const EmptyState: FC<{ title: string; hint: string }> = ({ title, hint }) => (
         <Skeleton className="h-2.5" />
         <Skeleton className="h-2.5" />
       </div>
+    </CardContent>
+  </Card>
+)
+
+const QueueErrorState: FC<{
+  title: string
+  hint: string
+  retryLabel: string
+  loading: boolean
+  onRetry: () => void
+}> = ({ title, hint, retryLabel, loading, onRetry }) => (
+  <Card className="mx-auto mt-12 max-w-md border-destructive/40">
+    <CardContent className="flex flex-col items-center px-5 py-12 text-center sm:px-8">
+      <div className="mb-4 flex size-16 items-center justify-center rounded-2xl bg-destructive/10">
+        <AlertTriangle className="size-8 text-destructive" />
+      </div>
+      <h2 className="text-lg font-bold sm:text-xl">{title}</h2>
+      <p className="mt-1.5 text-sm text-muted-foreground">{hint}</p>
+      <Button className="mt-6 min-h-11 w-full sm:w-auto" disabled={loading} onClick={onRetry}>
+        <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
+        {retryLabel}
+      </Button>
     </CardContent>
   </Card>
 )

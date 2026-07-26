@@ -1,17 +1,16 @@
-/* eslint-disable react-doctor/prefer-dynamic-import */
-import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
-import type { CashierSession } from '@/features/cashier/types';
-import { activeInvoice, fmtDateTime, fmtVND, providerName } from '@/features/cashier/helpers';
+import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer'
+import type { CashierSession } from '@/features/cashier/types'
+import { activeInvoice, fmtDateTime, fmtVND, providerName } from '@/features/cashier/helpers'
 
 // Register fonts to support Vietnamese characters
 Font.register({
   family: 'Roboto',
   src: 'https://cdnjs.cloudflare.com/ajax/libs/ink/3.1.10/fonts/Roboto/Roboto-Regular.ttf',
-});
+})
 Font.register({
   family: 'Roboto-Bold',
   src: 'https://cdnjs.cloudflare.com/ajax/libs/ink/3.1.10/fonts/Roboto/Roboto-Bold.ttf',
-});
+})
 
 const styles = StyleSheet.create({
   page: {
@@ -105,24 +104,25 @@ const styles = StyleSheet.create({
     borderTopColor: '#f3f4f6',
     paddingTop: 10,
   },
-});
+})
 
 interface InvoicePDFProps {
-  session: CashierSession;
-  t: (key: string, ...args: Array<number | string>) => string;
-  lang: 'vi' | 'en';
+  session: CashierSession
+  t: (key: string, ...args: Array<number | string>) => string
+  lang: 'vi' | 'en'
 }
 
 export const InvoicePDF = ({ session, t, lang }: InvoicePDFProps) => {
-  const invoice = activeInvoice(session);
+  const invoice = activeInvoice(session)
 
   const methodLabel = (() => {
-    const payment = invoice.payment;
-    if (!payment) return '—';
-    if (payment.method === 'cash') return t('method_cash');
-    if (payment.method === 'card') return `${t('method_card')}${payment.last4 ? ` · •••• ${payment.last4}` : ''}`;
-    return `${t('method_ewallet')} · ${providerName(payment.sub_method)}`;
-  })();
+    const payment = invoice.payment
+    if (!payment) return '—'
+    if (payment.method === 'cash') return t('method_cash')
+    if (payment.method === 'card')
+      return `${t('method_card')}${payment.last4 ? ` · •••• ${payment.last4}` : ''}`
+    return `${t('method_ewallet')} · ${providerName(payment.sub_method)}`
+  })()
 
   return (
     <Document>
@@ -167,10 +167,14 @@ export const InvoicePDF = ({ session, t, lang }: InvoicePDFProps) => {
         {/* Invoice Item Table */}
         <View style={styles.table}>
           <View style={styles.tableRowHeader}>
-            <Text style={[styles.colName, { paddingLeft: 4 }]}>{t('invoice_item_name', 'Món ăn')}</Text>
+            <Text style={[styles.colName, { paddingLeft: 4 }]}>
+              {t('invoice_item_name', 'Món ăn')}
+            </Text>
             <Text style={styles.colQty}>{t('invoice_item_qty', 'SL')}</Text>
             <Text style={styles.colPrice}>{t('invoice_item_price', 'Đơn giá')}</Text>
-            <Text style={[styles.colTotal, { paddingRight: 4 }]}>{t('invoice_item_total', 'Thành tiền')}</Text>
+            <Text style={[styles.colTotal, { paddingRight: 4 }]}>
+              {t('invoice_item_total', 'Thành tiền')}
+            </Text>
           </View>
 
           {invoice.items.map((item) => (
@@ -197,14 +201,18 @@ export const InvoicePDF = ({ session, t, lang }: InvoicePDFProps) => {
           {invoice.discount ? (
             <View style={styles.totalRow}>
               <Text style={{ color: '#4b5563' }}>{t('discount')}:</Text>
-              <Text style={{ color: '#dc2626', fontFamily: 'Roboto-Bold' }}>-{fmtVND(invoice.discount.amount)}</Text>
+              <Text style={{ color: '#dc2626', fontFamily: 'Roboto-Bold' }}>
+                -{fmtVND(invoice.discount.amount)}
+              </Text>
             </View>
           ) : null}
 
           {invoice.service_charge_amount > 0 ? (
             <View style={styles.totalRow}>
               <Text style={{ color: '#4b5563' }}>{t('service_charge')}:</Text>
-              <Text style={{ fontFamily: 'Roboto-Bold' }}>{fmtVND(invoice.service_charge_amount)}</Text>
+              <Text style={{ fontFamily: 'Roboto-Bold' }}>
+                {fmtVND(invoice.service_charge_amount)}
+              </Text>
             </View>
           ) : null}
 
@@ -215,8 +223,15 @@ export const InvoicePDF = ({ session, t, lang }: InvoicePDFProps) => {
             </View>
           ) : null}
 
-          <View style={[styles.totalRow, { borderTopWidth: 1, borderTopColor: '#e5e7eb', paddingTop: 6, marginTop: 4 }]}>
-            <Text style={{ fontFamily: 'Roboto-Bold', color: '#111827' }}>{t('total').toUpperCase()}:</Text>
+          <View
+            style={[
+              styles.totalRow,
+              { borderTopWidth: 1, borderTopColor: '#e5e7eb', paddingTop: 6, marginTop: 4 },
+            ]}
+          >
+            <Text style={{ fontFamily: 'Roboto-Bold', color: '#111827' }}>
+              {t('total').toUpperCase()}:
+            </Text>
             <Text style={styles.grandTotal}>{fmtVND(invoice.total)}</Text>
           </View>
         </View>
@@ -224,11 +239,11 @@ export const InvoicePDF = ({ session, t, lang }: InvoicePDFProps) => {
         {/* Footer */}
         <View style={styles.footer}>
           <Text>{t('receipt_thanks')}</Text>
-          <Text style={{ fontSize: 12, color: '#d1d5db', marginTop: 4 }}>Powered by Smart QR System</Text>
+          <Text style={{ fontSize: 12, color: '#d1d5db', marginTop: 4 }}>
+            Powered by Smart QR System
+          </Text>
         </View>
       </Page>
     </Document>
-  );
-};
-
-
+  )
+}

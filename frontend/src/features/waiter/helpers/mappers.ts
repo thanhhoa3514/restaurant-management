@@ -7,22 +7,6 @@ import type {
 } from '@/features/waiter/types'
 import type { StaffOrderDTO, StaffOrderItemDTO, StaffTableDTO } from '@/features/waiter/api'
 
-// Key theo mã bàn, không theo số: T01 và V01 cùng số nhưng là hai bàn khác nhau
-const TABLE_LAYOUT: Record<string, { x_pct: number; y_pct: number }> = {
-  T01: { x_pct: 22, y_pct: 18 },
-  T02: { x_pct: 34, y_pct: 18 },
-  T03: { x_pct: 64, y_pct: 18 },
-  T04: { x_pct: 76, y_pct: 18 },
-  T05: { x_pct: 24, y_pct: 36 },
-  T06: { x_pct: 36, y_pct: 36 },
-  T07: { x_pct: 50, y_pct: 36 },
-  T08: { x_pct: 64, y_pct: 36 },
-  T09: { x_pct: 24, y_pct: 52 },
-  T10: { x_pct: 36, y_pct: 52 },
-  V01: { x_pct: 76, y_pct: 52 },
-  V02: { x_pct: 76, y_pct: 66 },
-}
-
 function parseTableNumber(code: string, name: string): number {
   const source = code || name
   const match = source.match(/\d+/)
@@ -95,6 +79,7 @@ export function toWaiterTables(rows: StaffTableDTO[]): WFTable[] {
           waiter_called_at: table.session.waiter_called_at
             ? new Date(table.session.waiter_called_at)
             : null,
+          waiter_call_reason: table.session.waiter_call_reason ?? '',
           bill_requested_at:
             table.session.bill_requested_at || table.session.status === 'AWAITING_PAYMENT'
               ? new Date(table.session.bill_requested_at ?? table.session.opened_at)
@@ -108,7 +93,10 @@ export function toWaiterTables(rows: StaffTableDTO[]): WFTable[] {
       code: table.code || table.name,
       number,
       capacity: table.capacity || 4,
-      position: TABLE_LAYOUT[table.code] ?? fallbackPosition(index),
+      position:
+        table.position_x != null && table.position_y != null
+          ? { x_pct: table.position_x, y_pct: table.position_y }
+          : fallbackPosition(index),
       status: session ? 'occupied' : 'empty',
       session,
     }

@@ -107,7 +107,9 @@ function AreaManagerBody({ t }: { t: AdminT }) {
           >
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="truncate text-sm font-semibold text-[var(--text)]">{area.name}</span>
+                <span className="truncate text-sm font-semibold text-[var(--text)]">
+                  {area.name}
+                </span>
                 {!area.is_active && (
                   <span className="rounded-full bg-[var(--surface-grouped)] px-2 py-0.5 text-[10px] font-medium text-[var(--text-tertiary)]">
                     {t('area_inactive')}
@@ -257,7 +259,11 @@ function AreaForm({
         <Button
           disabled={!canSubmit || isSaving}
           onClick={() =>
-            onSubmit({ name: name.trim(), description: description.trim(), displayOrder: parsedOrder })
+            onSubmit({
+              name: name.trim(),
+              description: description.trim(),
+              displayOrder: parsedOrder,
+            })
           }
         >
           {isSaving ? t('area_saving') : t('area_save')}

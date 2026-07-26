@@ -54,8 +54,7 @@ export function useToggleItemMutation() {
       )
     },
     onError: async (_error, _item, context) => {
-      for (const [key, data] of context?.snapshots ?? [])
-        queryClient.setQueryData(key, data)
+      for (const [key, data] of context?.snapshots ?? []) queryClient.setQueryData(key, data)
       if (_error instanceof ApiError && _error.status === 409)
         await queryClient.invalidateQueries({ queryKey: CATALOG_KEY })
     },
@@ -92,10 +91,7 @@ export function useCreateItemMutation(onSuccess?: () => Promise<void>) {
   })
 }
 
-export function useUpdateItemMutation(
-  onSuccess?: () => Promise<void>,
-  onError?: () => void,
-) {
+export function useUpdateItemMutation(onSuccess?: () => Promise<void>, onError?: () => void) {
   const queryClient = useQueryClient()
 
   return useMutation({

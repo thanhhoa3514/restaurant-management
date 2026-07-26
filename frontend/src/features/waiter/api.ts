@@ -50,6 +50,7 @@ export interface StaffSessionDTO {
   opened_at: string
   bill_requested_at: string | null
   waiter_called_at: string | null
+  waiter_call_reason: string
   merge_group_id: string | null
   orders: StaffOrderDTO[]
   total_vnd: number
@@ -62,6 +63,8 @@ export interface StaffTableDTO {
   capacity: number
   status: string
   area_name: string
+  position_x: number | null
+  position_y: number | null
   session: StaffSessionDTO | null
 }
 
@@ -79,9 +82,7 @@ export function requestSessionBill(
   return apiRequest(`/api/v1/restaurant/sessions/${sessionId}/request-bill`, { method: 'POST' })
 }
 
-export function ackWaiterCall(
-  sessionId: string,
-): Promise<{ session_id: string; status: string }> {
+export function ackWaiterCall(sessionId: string): Promise<{ session_id: string; status: string }> {
   return apiRequest(`/api/v1/restaurant/sessions/${sessionId}/ack-waiter-call`, { method: 'POST' })
 }
 
@@ -129,5 +130,3 @@ export function rejectOrderItem(
     body: { reason },
   })
 }
-
-

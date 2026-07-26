@@ -75,8 +75,6 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
     })
   }, [item])
 
-
-
   const estUnitPrice = useMemo(() => {
     if (!item) return 0
     const variant = item.variants.find((v) => v.id === form.variantId)
@@ -168,97 +166,97 @@ export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
     <div className="fixed inset-0 z-[var(--z-modal)] bg-[var(--bg)] flex flex-col overflow-hidden animate-in fade-in duration-200 sm:max-w-md sm:mx-auto sm:border-x sm:border-[var(--separator)] sm:shadow-2xl">
       <div className="sr-only">{item?.name ?? 'Item Detail'}</div>
 
-        <div className="absolute inset-x-0 top-0 z-30 flex items-center justify-between px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pointer-events-none">
-          <button
-            type="button"
-            aria-label={t.back}
-            className="pointer-events-auto flex h-11 items-center gap-1 rounded-full bg-black/35 pl-2 pr-4 text-white backdrop-blur-xl border border-white/10 shadow-lg active:scale-95 transition-transform cursor-pointer"
-            onClick={onClose}
-          >
-            <ChevronLeft size={22} strokeWidth={2.5} />
-            <span className="text-[14px] font-bold">{t.back}</span>
-          </button>
-          <button
-            type="button"
-            aria-label={t.close}
-            className="pointer-events-auto hidden sm:flex size-11 rounded-full bg-black/35 backdrop-blur-xl border border-white/10 items-center justify-center text-white active:scale-90 transition-transform cursor-pointer shadow-lg"
-            onClick={onClose}
-          >
-            <X size={20} strokeWidth={2.5} />
-          </button>
-        </div>
+      <div className="absolute inset-x-0 top-0 z-30 flex items-center justify-between px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pointer-events-none">
+        <button
+          type="button"
+          aria-label={t.back}
+          className="pointer-events-auto flex h-11 items-center gap-1 rounded-full bg-black/35 pl-2 pr-4 text-white backdrop-blur-xl border border-white/10 shadow-lg active:scale-95 transition-transform cursor-pointer"
+          onClick={onClose}
+        >
+          <ChevronLeft size={22} strokeWidth={2.5} />
+          <span className="text-[14px] font-bold">{t.back}</span>
+        </button>
+        <button
+          type="button"
+          aria-label={t.close}
+          className="pointer-events-auto hidden sm:flex size-11 rounded-full bg-black/35 backdrop-blur-xl border border-white/10 items-center justify-center text-white active:scale-90 transition-transform cursor-pointer shadow-lg"
+          onClick={onClose}
+        >
+          <X size={20} strokeWidth={2.5} />
+        </button>
+      </div>
 
-        {isItemLoading || !item ? (
-          <div className="flex flex-col gap-5 p-6 h-full">
-            <Skeleton className="aspect-square sm:aspect-[4/3] rounded-2xl" />
-            <Skeleton className="h-8 w-3/4 rounded-lg" />
-            <Skeleton className="h-4 w-full rounded-md" />
-            <Skeleton className="h-4 w-2/3 rounded-md" />
-            <div className="mt-auto pt-4">
-              <Skeleton className="h-14 w-full rounded-2xl" />
+      {isItemLoading || !item ? (
+        <div className="flex flex-col gap-5 p-6 h-full">
+          <Skeleton className="aspect-square sm:aspect-[4/3] rounded-2xl" />
+          <Skeleton className="h-8 w-3/4 rounded-lg" />
+          <Skeleton className="h-4 w-full rounded-md" />
+          <Skeleton className="h-4 w-2/3 rounded-md" />
+          <div className="mt-auto pt-4">
+            <Skeleton className="h-14 w-full rounded-2xl" />
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col relative pb-4">
+            <ItemImageHeader
+              item={item}
+              activeImage={form.activeImage}
+              onImageSelect={(url: string) => setForm((prev) => ({ ...prev, activeImage: url }))}
+            />
+
+            <div className="px-5 relative z-10 flex flex-col gap-6">
+              <div className="bg-[var(--material-thin)]/50 backdrop-blur-xl border border-[var(--separator)] rounded-[24px] p-5 shadow-sm mt-2">
+                <h2 className="text-2xl font-extrabold text-[var(--text)] tracking-tight leading-tight">
+                  {item.name}
+                </h2>
+                {item.description && (
+                  <p className="text-[14px] text-[var(--text-secondary)] mt-2 font-medium leading-relaxed">
+                    {item.description}
+                  </p>
+                )}
+                <div className="mt-4 flex items-center justify-between">
+                  <span className="text-[13px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider">
+                    {lang === 'vi' ? 'Đơn giá' : 'Unit Price'}
+                  </span>
+                  <p className="text-xl font-black text-[var(--system-blue)]">
+                    {formatVND(estUnitPrice)}
+                  </p>
+                </div>
+              </div>
+
+              <ItemVariantSelector item={item} form={form} setForm={setForm} lang={lang} t={t} />
+              <ItemOptionsSelector
+                item={item}
+                form={form}
+                handleSelectOption={handleSelectOption}
+                t={t}
+              />
+              <ItemQtyNotesPanel form={form} setForm={setForm} t={t} />
+
+              <div className="h-4" />
             </div>
           </div>
-        ) : (
-          <>
-            <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col relative pb-4">
-              <ItemImageHeader
-                item={item}
-                activeImage={form.activeImage}
-                onImageSelect={(url: string) => setForm((prev) => ({ ...prev, activeImage: url }))}
-              />
 
-              <div className="px-5 relative z-10 flex flex-col gap-6">
-                <div className="bg-[var(--material-thin)]/50 backdrop-blur-xl border border-[var(--separator)] rounded-[24px] p-5 shadow-sm mt-2">
-                  <h2 className="text-2xl font-extrabold text-[var(--text)] tracking-tight leading-tight">
-                    {item.name}
-                  </h2>
-                  {item.description && (
-                    <p className="text-[14px] text-[var(--text-secondary)] mt-2 font-medium leading-relaxed">
-                      {item.description}
-                    </p>
-                  )}
-                  <div className="mt-4 flex items-center justify-between">
-                    <span className="text-[13px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider">
-                      {lang === 'vi' ? 'Đơn giá' : 'Unit Price'}
-                    </span>
-                    <p className="text-xl font-black text-[var(--system-blue)]">
-                      {formatVND(estUnitPrice)}
-                    </p>
-                  </div>
-                </div>
-
-                <ItemVariantSelector item={item} form={form} setForm={setForm} lang={lang} t={t} />
-                <ItemOptionsSelector
-                  item={item}
-                  form={form}
-                  handleSelectOption={handleSelectOption}
-                  t={t}
-                />
-                <ItemQtyNotesPanel form={form} setForm={setForm} t={t} />
-
-                <div className="h-4" />
-              </div>
-            </div>
-
-            {/* Bottom Action Bar */}
-            <div className="p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:p-5 bg-[var(--material-thin)]/80 backdrop-blur-2xl border-t border-[var(--separator)] shrink-0 z-20 shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
-              <button
-                type="button"
-                className="group relative w-full flex h-14 sm:h-16 items-center justify-center gap-2 overflow-hidden rounded-[20px] sm:rounded-2xl bg-[var(--text)] px-8 shadow-xl transition-all active:scale-[0.98] cursor-pointer"
-                onClick={handleAdd}
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                <span className="font-bold text-[var(--bg)] text-[16px] sm:text-[18px] z-10">
-                  {t.add_to_cart}
-                </span>
-                <span className="font-medium text-[var(--bg)]/60 mx-1 z-10">&middot;</span>
-                <span className="font-black text-[var(--bg)] text-[16px] sm:text-[18px] z-10">
-                  {formatVND(estUnitPrice * form.qty)}
-                </span>
-              </button>
-            </div>
-          </>
-        )}
+          {/* Bottom Action Bar */}
+          <div className="p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:p-5 bg-[var(--material-thin)]/80 backdrop-blur-2xl border-t border-[var(--separator)] shrink-0 z-20 shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
+            <button
+              type="button"
+              className="group relative w-full flex h-14 sm:h-16 items-center justify-center gap-2 overflow-hidden rounded-[20px] sm:rounded-2xl bg-[var(--text)] px-8 shadow-xl transition-all active:scale-[0.98] cursor-pointer"
+              onClick={handleAdd}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+              <span className="font-bold text-[var(--bg)] text-[16px] sm:text-[18px] z-10">
+                {t.add_to_cart}
+              </span>
+              <span className="font-medium text-[var(--bg)]/60 mx-1 z-10">&middot;</span>
+              <span className="font-black text-[var(--bg)] text-[16px] sm:text-[18px] z-10">
+                {formatVND(estUnitPrice * form.qty)}
+              </span>
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }

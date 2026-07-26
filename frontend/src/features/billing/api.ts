@@ -70,22 +70,31 @@ export function adjustInvoice(
   discountAmountVND: number,
   discountReason: string,
 ): Promise<BillingInvoiceResponse> {
-  return apiRequest<BillingInvoiceResponse>(`/api/v1/restaurant/invoices/${encodeURIComponent(invoiceId)}/adjust`, {
-    method: 'POST',
-    body: {
-      discount_amount_vnd: Math.max(0, Math.round(discountAmountVND)),
-      discount_reason: discountReason,
+  return apiRequest<BillingInvoiceResponse>(
+    `/api/v1/restaurant/invoices/${encodeURIComponent(invoiceId)}/adjust`,
+    {
+      method: 'POST',
+      body: {
+        discount_amount_vnd: Math.max(0, Math.round(discountAmountVND)),
+        discount_reason: discountReason,
+      },
     },
-  })
+  )
 }
 
-export function voidInvoice(invoiceId: string, voidReason: string): Promise<BillingInvoiceResponse> {
-  return apiRequest<BillingInvoiceResponse>(`/api/v1/restaurant/invoices/${encodeURIComponent(invoiceId)}/void`, {
-    method: 'POST',
-    body: {
-      void_reason: voidReason,
+export function voidInvoice(
+  invoiceId: string,
+  voidReason: string,
+): Promise<BillingInvoiceResponse> {
+  return apiRequest<BillingInvoiceResponse>(
+    `/api/v1/restaurant/invoices/${encodeURIComponent(invoiceId)}/void`,
+    {
+      method: 'POST',
+      body: {
+        void_reason: voidReason,
+      },
     },
-  })
+  )
 }
 
 export function processPayment(args: {
@@ -94,14 +103,17 @@ export function processPayment(args: {
   receivedAmountVND: number
   referenceCode?: string
 }): Promise<BillingInvoiceResponse> {
-  return apiRequest<BillingInvoiceResponse>(`/api/v1/restaurant/invoices/${encodeURIComponent(args.invoiceId)}/pay`, {
-    method: 'POST',
-    body: {
-      payment_method_code: args.paymentMethodCode,
-      received_amount_vnd: Math.max(0, Math.round(args.receivedAmountVND)),
-      reference_code: args.referenceCode ?? '',
+  return apiRequest<BillingInvoiceResponse>(
+    `/api/v1/restaurant/invoices/${encodeURIComponent(args.invoiceId)}/pay`,
+    {
+      method: 'POST',
+      body: {
+        payment_method_code: args.paymentMethodCode,
+        received_amount_vnd: Math.max(0, Math.round(args.receivedAmountVND)),
+        reference_code: args.referenceCode ?? '',
+      },
     },
-  })
+  )
 }
 
 export function processPartialPayment(args: {
@@ -110,14 +122,17 @@ export function processPartialPayment(args: {
   receivedAmountVND: number
   referenceCode?: string
 }): Promise<BillingInvoiceResponse> {
-  return apiRequest<BillingInvoiceResponse>(`/api/v1/restaurant/invoices/${encodeURIComponent(args.invoiceId)}/pay-partial`, {
-    method: 'POST',
-    body: {
-      payment_method_code: args.paymentMethodCode,
-      received_amount_vnd: Math.max(0, Math.round(args.receivedAmountVND)),
-      reference_code: args.referenceCode ?? '',
+  return apiRequest<BillingInvoiceResponse>(
+    `/api/v1/restaurant/invoices/${encodeURIComponent(args.invoiceId)}/pay-partial`,
+    {
+      method: 'POST',
+      body: {
+        payment_method_code: args.paymentMethodCode,
+        received_amount_vnd: Math.max(0, Math.round(args.receivedAmountVND)),
+        reference_code: args.referenceCode ?? '',
+      },
     },
-  })
+  )
 }
 
 export function mockCompletePayment(args: {

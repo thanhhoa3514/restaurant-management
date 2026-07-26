@@ -101,26 +101,46 @@ func TestInvoiceTotalsWorkedExample(t *testing.T) {
 }
 
 func TestCalculatePartialPaymentAllowsMultipleCompletedPayments(t *testing.T) {
-	paid, status, err := calculatePartialPayment(0, 300000, 1000000)
+	first, err := calculatePartialPayment(0, 300000, 1000000, true)
 	if err != nil {
 		t.Fatalf("first partial payment failed: %v", err)
 	}
-	if paid != 300000 || status != "PARTIALLY_PAID" {
-		t.Fatalf("first payment returned paid=%d status=%s", paid, status)
+	if first.RunningPaid != 300000 || first.Status != "PARTIALLY_PAID" || first.Change != 0 {
+		t.Fatalf("first payment returned %+v", first)
 	}
 
-	paid, status, err = calculatePartialPayment(paid, 700000, 1000000)
+	second, err := calculatePartialPayment(first.RunningPaid, 700000, 1000000, true)
 	if err != nil {
 		t.Fatalf("second partial payment failed: %v", err)
 	}
-	if paid != 1000000 || status != "PAID" {
-		t.Fatalf("second payment returned paid=%d status=%s", paid, status)
+	if second.RunningPaid != 1000000 || second.Status != "PAID" || second.Change != 0 {
+		t.Fatalf("second payment returned %+v", second)
 	}
 }
 
-func TestCalculatePartialPaymentRejectsOverpayment(t *testing.T) {
-	_, _, err := calculatePartialPayment(300000, 700001, 1000000)
+func TestCalculatePartialPaymentCashOverpaymentBecomesChange(t *testing.T) {
+	got, err := calculatePartialPayment(300000, 1000000, 1000000, true)
+	if err != nil {
+		t.Fatalf("cash overpayment failed: %v", err)
+	}
+	if got.Applied != 700000 || got.Change != 300000 {
+		t.Fatalf("applied=%d change=%d, want 700000/300000", got.Applied, got.Change)
+	}
+	if got.RunningPaid != 1000000 || got.Status != "PAID" {
+		t.Fatalf("running=%d status=%s, want 1000000/PAID", got.RunningPaid, got.Status)
+	}
+}
+
+func TestCalculatePartialPaymentRejectsNonCashOverpayment(t *testing.T) {
+	_, err := calculatePartialPayment(300000, 700001, 1000000, false)
 	if !apperr.Is(err, apperr.CodeInvalid) {
 		t.Fatalf("expected CodeInvalid for overpayment, got %v", err)
+	}
+}
+
+func TestCalculatePartialPaymentRejectsWhenNothingLeft(t *testing.T) {
+	_, err := calculatePartialPayment(1000000, 1000, 1000000, true)
+	if !apperr.Is(err, apperr.CodeInvalid) {
+		t.Fatalf("expected CodeInvalid when invoice already settled, got %v", err)
 	}
 }

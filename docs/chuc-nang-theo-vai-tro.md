@@ -1,6 +1,7 @@
 # Sơ đồ phân rã chức năng theo vai trò (BFD)
 
 > Dùng cho mục **2.4.2 Sơ đồ chức năng theo vai trò**. Hai dạng:
+>
 > 1. Sơ đồ cây Mermaid — render ở mermaid.live → export PNG/SVG → chèn ảnh vào Word.
 > 2. Outline đánh số nhiều cấp — paste thẳng vào Word (Home → Multilevel List).
 
@@ -27,7 +28,7 @@ graph TD
     KH --> KH4["1.4 Giỏ hàng (sửa/xóa trước khi đặt)"]
     KH --> KH5["1.5 Đặt món"]
     KH --> KH6["1.6 Gọi thêm món"]
-    KH --> KH7["1.7 Theo dõi trạng thái món realtime"]
+    KH --> KH7["1.7 Theo dõi trạng thái món tức thời"]
     KH --> KH8["1.8 Gọi nhân viên"]
     KH --> KH9["1.9 Yêu cầu thanh toán"]
 
@@ -39,9 +40,10 @@ graph TD
     PV --> PV2["3.2 Theo dõi tín hiệu (ready/gọi NV/bill)"]
     PV --> PV3["3.3 Đánh dấu đã phục vụ"]
     PV --> PV4["3.4 Xác nhận gọi nhân viên"]
-    PV --> PV5["3.5 Mở phiên walk-in"]
+    PV --> PV5["3.5 Mở phiên cho khách vãng lai"]
     PV --> PV6["3.6 Yêu cầu thanh toán hộ khách"]
-    PV --> PV7["3.7 Xem chi tiết phiên/đơn theo bàn"]
+    PV --> PV7["3.7 Gộp bàn"]
+    PV --> PV8["3.8 Tách phiên"]
 
     TN --> TN1["4.1 Xem danh sách phiên chờ thanh toán"]
     TN --> TN2["4.2 Xem hóa đơn (snapshot giá/tên)"]
@@ -71,7 +73,7 @@ graph TD
    1.4. Giỏ hàng (sửa/xóa trước khi đặt)
    1.5. Đặt món
    1.6. Gọi thêm món
-   1.7. Theo dõi trạng thái món realtime
+   1.7. Theo dõi trạng thái món tức thời
    1.8. Gọi nhân viên
    1.9. Yêu cầu thanh toán
 
@@ -81,13 +83,14 @@ graph TD
    2.3. Xem lịch sử trạng thái món
 
 3. **Phục vụ (Waiter)**
-   3.1. Xem sơ đồ bàn / lưới bàn
+   3.1. Xem sơ đồ bàn / lưới bàn (+ xem chi tiết phiên/đơn)
    3.2. Theo dõi tín hiệu (ready / gọi NV / yêu cầu bill)
    3.3. Đánh dấu đã phục vụ
    3.4. Xác nhận gọi nhân viên
    3.5. Mở phiên cho khách walk-in
    3.6. Yêu cầu thanh toán hộ khách
-   3.7. Xem chi tiết phiên/đơn theo bàn
+   3.7. Gộp bàn
+   3.8. Tách phiên
 
 4. **Thu ngân (Cashier)**
    4.1. Xem danh sách phiên chờ thanh toán
@@ -134,13 +137,18 @@ graph TD
 ```mermaid
 graph TD
     PV["Phục vụ"]
-    PV --> c1["Xem sơ đồ/lưới bàn"]
+    PV --> c1["Xem sơ đồ/lưới bàn (+ chi tiết phiên/đơn)"]
     PV --> c2["Theo dõi tín hiệu"]
     PV --> c3["Đánh dấu đã phục vụ"]
     PV --> c4["Xác nhận gọi nhân viên"]
-    PV --> c5["Mở phiên walk-in"]
+    PV --> c5["Mở phiên cho khách vãng lai"]
     PV --> c6["Yêu cầu thanh toán hộ"]
-    PV --> c7["Xem chi tiết phiên/đơn"]
+    PV --> c7["Gộp bàn"]
+    PV --> c8["Tách phiên"]
+    c7 --> c7a["Chọn 2+ bàn"]
+    c7 --> c7b["Gộp thành 1 phiên"]
+    c8 --> c8a["Chọn món từ phiên"]
+    c8 --> c8b["Tạo phiên mới"]
 ```
 
 ```mermaid
@@ -152,6 +160,8 @@ graph TD
     TN --> d4["Thanh toán"]
     TN --> d5["In hóa đơn"]
     TN --> d6["Đóng phiên"]
+    d3 --> d3a["Nhập code giảm"]
+    d3 --> d3b["Hủy giảm giá"]
 ```
 
 ```mermaid
@@ -169,12 +179,12 @@ graph TD
 
 ## Cách đưa vào Word
 
-| Cách | Thao tác | Khi nào dùng |
-|---|---|---|
-| **Ảnh từ Mermaid** | Dán block vào mermaid.live → Actions → PNG/SVG → chèn ảnh vào Word | Muốn sơ đồ cây đẹp, giống BFD chuẩn |
-| **Multilevel List** | Copy outline mục 2 → Word → Home → Multilevel List | Nhanh, native, sửa text dễ |
-| **SmartArt Hierarchy** | Insert → SmartArt → Hierarchy → gõ tay theo outline | Muốn vẽ hộp trong Word, không cần ảnh ngoài |
+| Cách                   | Thao tác                                                           | Khi nào dùng                                |
+| ---------------------- | ------------------------------------------------------------------ | ------------------------------------------- |
+| **Ảnh từ Mermaid**     | Dán block vào mermaid.live → Actions → PNG/SVG → chèn ảnh vào Word | Muốn sơ đồ cây đẹp, giống BFD chuẩn         |
+| **Multilevel List**    | Copy outline mục 2 → Word → Home → Multilevel List                 | Nhanh, native, sửa text dễ                  |
+| **SmartArt Hierarchy** | Insert → SmartArt → Hierarchy → gõ tay theo outline                | Muốn vẽ hộp trong Word, không cần ảnh ngoài |
 
 > Mẹo: sơ đồ tổng (mục 1) thường **quá rộng** khi xuất ảnh khổ A4 dọc. Báo cáo nên dùng **5 cây con
 > (mục 3)** — mỗi vai trò một hình, vừa trang, dễ đọc.
-</content>
+> </content>

@@ -40,7 +40,11 @@ export const DiscountDialog: FC<DiscountDialogProps> = ({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-md bg-[var(--material-thick)]" hideClose>
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-md bg-[var(--material-thick)]"
+        hideClose
+      >
         <SheetHeader title={t('discount_dialog_title')} subtitle={invoice?.number} />
         <div className="flex-1 space-y-5 overflow-y-auto px-5 pb-5">
           <Card className="border border-[var(--separator)] bg-[var(--material-regular)] p-4 shadow-sm backdrop-blur-2xl">
@@ -78,16 +82,28 @@ export const DiscountDialog: FC<DiscountDialogProps> = ({
           <Separator />
 
           <div className="flex gap-2">
-            <Button variant="secondary" className="flex-1 rounded-[var(--radius-lg)]" onClick={() => onOpenChange(false)}>
+            <Button
+              variant="secondary"
+              className="flex-1 rounded-[var(--radius-lg)]"
+              onClick={() => onOpenChange(false)}
+            >
               {t('cancel')}
             </Button>
-            <Button className="flex-1 rounded-[var(--radius-lg)]" disabled={!valid} onClick={() => onApply(parsedAmount, reason)}>
+            <Button
+              className="flex-1 rounded-[var(--radius-lg)]"
+              disabled={!valid}
+              onClick={() => onApply(parsedAmount, reason)}
+            >
               {t('discount_apply')}
             </Button>
           </div>
 
           {invoice?.discount ? (
-            <Button variant="destructive" className="w-full rounded-[var(--radius-lg)]" onClick={onRemove}>
+            <Button
+              variant="destructive"
+              className="w-full rounded-[var(--radius-lg)]"
+              onClick={onRemove}
+            >
               {t('remove_discount')}
             </Button>
           ) : null}
@@ -96,5 +112,3 @@ export const DiscountDialog: FC<DiscountDialogProps> = ({
     </Sheet>
   )
 }
-
-

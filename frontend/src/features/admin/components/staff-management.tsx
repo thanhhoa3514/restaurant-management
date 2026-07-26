@@ -74,12 +74,7 @@ export function StaffManagement() {
   const [statusTarget, setStatusTarget] = useState<StaffUserDTO | null>(null)
   const [resetTarget, setResetTarget] = useState<StaffUserDTO | null>(null)
 
-  const {
-    data: users = [],
-    isLoading,
-    isError,
-    error,
-  } = useStaffUsersQuery()
+  const { data: users = [], isLoading, isError, error } = useStaffUsersQuery()
   const { data: roles = [] } = useStaffRolesQuery()
 
   useShellConfig({
@@ -100,7 +95,10 @@ export function StaffManagement() {
         </div>
       </ShellHeaderCenter>
       <ShellHeaderActions>
-        <Button className="rounded-[var(--radius-lg)]" onClick={() => setSheetState({ mode: 'create' })}>
+        <Button
+          className="rounded-[var(--radius-lg)]"
+          onClick={() => setSheetState({ mode: 'create' })}
+        >
           <Plus className="size-4" />
           {t('staff_add')}
         </Button>
@@ -122,11 +120,21 @@ export function StaffManagement() {
               <Table>
                 <TableHeader>
                   <TableRow className="border-b border-[var(--separator)] hover:bg-transparent">
-                    <TableHead className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)] h-auto">{t('staff_col_name')}</TableHead>
-                    <TableHead className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)] h-auto">{t('staff_col_role')}</TableHead>
-                    <TableHead className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)] h-auto">{t('staff_col_status')}</TableHead>
-                    <TableHead className="hidden px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)] h-auto md:table-cell">{t('staff_col_last_login')}</TableHead>
-                    <TableHead className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)] h-auto">{t('staff_col_actions')}</TableHead>
+                    <TableHead className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)] h-auto">
+                      {t('staff_col_name')}
+                    </TableHead>
+                    <TableHead className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)] h-auto">
+                      {t('staff_col_role')}
+                    </TableHead>
+                    <TableHead className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)] h-auto">
+                      {t('staff_col_status')}
+                    </TableHead>
+                    <TableHead className="hidden px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)] h-auto md:table-cell">
+                      {t('staff_col_last_login')}
+                    </TableHead>
+                    <TableHead className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)] h-auto">
+                      {t('staff_col_actions')}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -170,7 +178,11 @@ export function StaffManagement() {
           variant="destructive"
           onOpenChange={(open) => !open && setStatusTarget(null)}
           onConfirm={() =>
-            statusMutation.mutate({ action: 'set_status', user_id: statusTarget.id, status: 'INACTIVE' })
+            statusMutation.mutate({
+              action: 'set_status',
+              user_id: statusTarget.id,
+              status: 'INACTIVE',
+            })
           }
         />
       )}
@@ -226,7 +238,9 @@ function StaffRow({
         </div>
         <div className="font-mono text-xs text-[var(--text-tertiary)]">{user.username}</div>
       </TableCell>
-      <TableCell className="px-5 py-3 capitalize text-[var(--text-secondary)]">{user.role}</TableCell>
+      <TableCell className="px-5 py-3 capitalize text-[var(--text-secondary)]">
+        {user.role}
+      </TableCell>
       <TableCell className="px-5 py-3">
         <Badge
           className={cn(
@@ -248,7 +262,13 @@ function StaffRow({
       </TableCell>
       <TableCell className="px-5 py-3">
         <div className="flex justify-end gap-1">
-          <Button variant="ghost" size="sm" className="rounded-[10px]" onClick={onEdit} title={t('staff_edit')}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="rounded-[10px]"
+            onClick={onEdit}
+            title={t('staff_edit')}
+          >
             <Pencil className="size-4" />
           </Button>
           <Button
@@ -279,7 +299,11 @@ function StaffRow({
                 className="rounded-[10px] text-[var(--system-green)]"
                 disabled={activateMutation.isPending}
                 onClick={() =>
-                  activateMutation.mutate({ action: 'set_status', user_id: user.id, status: 'ACTIVE' })
+                  activateMutation.mutate({
+                    action: 'set_status',
+                    user_id: user.id,
+                    status: 'ACTIVE',
+                  })
                 }
                 title={t('staff_activate')}
               >
@@ -310,7 +334,14 @@ function StaffSheet({
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
       <SheetContent side="right" className="w-full bg-[var(--material-thick)] sm:max-w-md">
         {state && (
-          <StaffSheetBody key={state.mode === 'edit' ? state.user.id : 'create'} state={state} roles={roles} t={t} onClose={onClose} onSaved={onSaved} />
+          <StaffSheetBody
+            key={state.mode === 'edit' ? state.user.id : 'create'}
+            state={state}
+            roles={roles}
+            t={t}
+            onClose={onClose}
+            onSaved={onSaved}
+          />
         )}
       </SheetContent>
     </Sheet>
@@ -442,7 +473,11 @@ function StaffSheetBody({
           )}
         </div>
         <div className="border-t border-[var(--separator)] p-5">
-          <Button type="submit" className="w-full rounded-[var(--radius-lg)]" disabled={mutation.isPending}>
+          <Button
+            type="submit"
+            className="w-full rounded-[var(--radius-lg)]"
+            disabled={mutation.isPending}
+          >
             {mutation.isPending && <Loader2 className="size-4 animate-spin" />}
             {isEdit
               ? mutation.isPending
@@ -511,7 +546,11 @@ function ResetPasswordSheet({
                 )}
               </div>
               <div className="border-t border-[var(--separator)] p-5">
-                <Button type="submit" className="w-full rounded-[var(--radius-lg)]" disabled={mutation.isPending}>
+                <Button
+                  type="submit"
+                  className="w-full rounded-[var(--radius-lg)]"
+                  disabled={mutation.isPending}
+                >
                   {mutation.isPending && <Loader2 className="size-4 animate-spin" />}
                   {t('staff_reset_pw')}
                 </Button>

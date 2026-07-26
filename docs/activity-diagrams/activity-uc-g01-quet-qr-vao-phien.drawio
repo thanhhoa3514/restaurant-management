@@ -1,0 +1,106 @@
+<mxfile host="65bd71144e">
+    <diagram id="uc-g01" name="UC-G01 — Quét QR vào phiên">
+        <mxGraphModel dx="1253" dy="489" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1096" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="UC-G01 — SƠ ĐỒ HOẠT ĐỘNG: QUÉT QR VÀO PHIÊN" style="text;html=1;align=center;verticalAlign=middle;fontSize=20;fontStyle=1;strokeColor=none;fillColor=none;fontColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="14" width="1100" height="42" as="geometry"/>
+                </mxCell>
+                <mxCell id="actor-lane" value="Tác nhân: Khách" style="swimlane;html=1;horizontal=1;startSize=34;fillColor=#ffffff;swimlaneFillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="90" y="68" width="270" height="752" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-1" value="Quét mã QR tại bàn và nhập tên khách" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=13;" parent="actor-lane" vertex="1">
+                    <mxGeometry x="50" y="132" width="196" height="64" as="geometry"/>
+                </mxCell>
+                <mxCell id="start" value="" style="ellipse;html=1;aspect=fixed;fillColor=#000000;strokeColor=#000000;" parent="actor-lane" vertex="1">
+                    <mxGeometry x="135" y="72" width="26" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="actor-lane" source="start" target="step-1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-7" value="Vào màn hình gọi món của đúng bàn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=13;" parent="actor-lane" vertex="1">
+                    <mxGeometry x="30" y="652" width="216" height="64" as="geometry"/>
+                </mxCell>
+                <mxCell id="system-lane" value="Hệ thống" style="swimlane;html=1;horizontal=1;startSize=34;fillColor=#ffffff;swimlaneFillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="360" y="68" width="660" height="752" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-2" value="Gửi yêu cầu tham gia phiên của bàn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=13;" parent="system-lane" vertex="1">
+                    <mxGeometry x="50" y="132" width="255" height="64" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-3" value="Mã QR còn hiệu lực và đúng bàn?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=13;fontStyle=1;" parent="system-lane" vertex="1">
+                    <mxGeometry x="27.5" y="232" width="300" height="84" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="system-lane" source="step-2" target="step-3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="alternate-3" value="Từ chối mã giả, hết hạn hoặc đã bị đổi" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=13;" parent="system-lane" vertex="1">
+                    <mxGeometry x="420" y="240" width="225" height="68" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-4" value="Không" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="system-lane" source="step-3" target="alternate-3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-4" value="Tìm phiên đang phục vụ của bàn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=13;" parent="system-lane" vertex="1">
+                    <mxGeometry x="55" y="362" width="245" height="64" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-6" value="Có / hợp lệ" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="system-lane" source="step-3" target="step-4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-5" value="Bàn đã có phiên?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=13;fontStyle=1;" parent="system-lane" vertex="1">
+                    <mxGeometry x="52.5" y="463" width="250" height="84" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="system-lane" source="step-4" target="step-5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="alternate-5" value="Mở phiên mới và báo nhân viên tới xác minh" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=13;" parent="system-lane" vertex="1">
+                    <mxGeometry x="390" y="471" width="225" height="68" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-8" value="Chưa có" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="system-lane" source="step-5" target="alternate-5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-6" value="Cấp quyền truy cập phiên và trả thông tin bàn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=13;" parent="system-lane" vertex="1">
+                    <mxGeometry x="80" y="604" width="195" height="64" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="system-lane" source="alternate-5" target="step-6" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="510" y="636"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-10" value="Có" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="system-lane" source="step-5" target="step-6" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="end" value="" style="ellipse;shape=doubleEllipse;html=1;aspect=fixed;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;" parent="1" vertex="1">
+                    <mxGeometry x="540" y="756" width="32" height="32" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="1" source="step-1" target="step-2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="alternate-3" target="end" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1125" y="386" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="990" y="772"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="1" source="step-6" target="step-7" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="240" y="704"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="1" source="step-7" target="end" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="390" y="772"/>
+                            <mxPoint x="390" y="772"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

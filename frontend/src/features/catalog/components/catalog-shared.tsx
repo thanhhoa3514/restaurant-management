@@ -46,7 +46,8 @@ export function FeatureToggleCard({
   onChange: (checked: boolean) => void
 }) {
   const colorStyles = {
-    green: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold',
+    green:
+      'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold',
     amber: 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold',
     red: 'border-rose-500/40 bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold',
     blue: 'border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold',
@@ -60,7 +61,7 @@ export function FeatureToggleCard({
         'relative flex items-center justify-between rounded-xl border p-3 transition-all duration-200 cursor-pointer text-left',
         checked
           ? colorStyles[activeColor]
-          : 'border-[var(--separator)] bg-[var(--surface-grouped)]/60 text-[var(--text-secondary)] hover:bg-[var(--surface-grouped)]'
+          : 'border-[var(--separator)] bg-[var(--surface-grouped)]/60 text-[var(--text-secondary)] hover:bg-[var(--surface-grouped)]',
       )}
     >
       <div className="flex items-center gap-2 min-w-0">
@@ -70,7 +71,9 @@ export function FeatureToggleCard({
       <div
         className={cn(
           'size-4 rounded-full border-2 transition-colors flex items-center justify-center shrink-0 ml-1.5',
-          checked ? 'border-current bg-current' : 'border-zinc-400 dark:border-zinc-600 bg-transparent'
+          checked
+            ? 'border-current bg-current'
+            : 'border-zinc-400 dark:border-zinc-600 bg-transparent',
         )}
       >
         {checked && <div className="size-1.5 rounded-full bg-white dark:bg-zinc-950" />}

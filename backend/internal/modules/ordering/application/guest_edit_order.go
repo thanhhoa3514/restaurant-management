@@ -86,10 +86,12 @@ func (s *GuestEditOrder) Handle(ctx context.Context, req GuestEditOrderRequest) 
 		}
 		lineIDs := make([]uuid.UUID, 0, len(lines))
 		byID := map[uuid.UUID]domain.OrderLineForEdit{}
+
 		for _, line := range lines {
 			lineIDs = append(lineIDs, line.ID)
 			byID[line.ID] = line
 		}
+
 		currentOptions, err := s.repo.LoadOrderLineOptionsForEdit(ctx, restaurantID, lineIDs)
 		if err != nil {
 			return err

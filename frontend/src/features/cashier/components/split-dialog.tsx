@@ -1,7 +1,13 @@
 import { useMemo, useState, type FC } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
 import { fmtVND } from '@/features/cashier/helpers'
 import { cn } from '@/lib/utils'
@@ -39,34 +45,60 @@ const GROUP_TONES = [
   'bg-[var(--system-pink)] text-white',
 ]
 
-export const SplitDialog: FC<SplitDialogProps> = ({ open, session, lang, t, onOpenChange, onConfirm }) => {
+export const SplitDialog: FC<SplitDialogProps> = ({
+  open,
+  session,
+  lang,
+  t,
+  onOpenChange,
+  onConfirm,
+}) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] w-full max-w-lg gap-0 overflow-hidden p-0 sm:max-w-lg">
         <DialogHeader className="gap-1 border-b border-[var(--separator)] p-5 pb-4">
           <DialogTitle className="text-lg font-bold text-[var(--text)]">
             {t('split_dialog_title')}
-            {session ? <span className="ml-2 font-normal text-[var(--text-tertiary)]">· {t('table')} {session.table_label}</span> : null}
+            {session ? (
+              <span className="ml-2 font-normal text-[var(--text-tertiary)]">
+                · {t('table')} {session.table_label}
+              </span>
+            ) : null}
           </DialogTitle>
           <DialogDescription>{t('split_hint')}</DialogDescription>
         </DialogHeader>
 
         {open ? (
-          <SplitDialogBody key={session?.id} session={session} lang={lang} t={t} onOpenChange={onOpenChange} onConfirm={onConfirm} />
+          <SplitDialogBody
+            key={session?.id}
+            session={session}
+            lang={lang}
+            t={t}
+            onOpenChange={onOpenChange}
+            onConfirm={onConfirm}
+          />
         ) : null}
       </DialogContent>
     </Dialog>
   )
 }
 
-const SplitDialogBody: FC<Omit<SplitDialogProps, 'open'>> = ({ session, lang, t, onOpenChange, onConfirm }) => {
+const SplitDialogBody: FC<Omit<SplitDialogProps, 'open'>> = ({
+  session,
+  lang,
+  t,
+  onOpenChange,
+  onConfirm,
+}) => {
   const items = useMemo(() => billableItems(session), [session])
   const [groupCount, setGroupCount] = useState(2)
   const [assignment, setAssignment] = useState<Record<string, number>>({})
 
   const groupLabels = Array.from({ length: groupCount }, (_, i) => t('split_group_label', i + 1))
   const groupOf = (itemId: string) => assignment[itemId] ?? 0
-  const counts = groupLabels.map((_, idx) => items.filter((item) => groupOf(item.id) === idx).length)
+  const counts = groupLabels.map(
+    (_, idx) => items.filter((item) => groupOf(item.id) === idx).length,
+  )
   const valid = groupCount >= 2 && counts.every((c) => c > 0)
 
   return (
@@ -94,7 +126,9 @@ const SplitDialogBody: FC<Omit<SplitDialogProps, 'open'>> = ({ session, lang, t,
             >
               −
             </Button>
-            <span className="w-4 text-center text-sm font-bold tabular-nums text-[var(--text)]">{groupCount}</span>
+            <span className="w-4 text-center text-sm font-bold tabular-nums text-[var(--text)]">
+              {groupCount}
+            </span>
             <Button
               variant="secondary"
               size="icon-sm"
@@ -144,7 +178,9 @@ const SplitDialogBody: FC<Omit<SplitDialogProps, 'open'>> = ({ session, lang, t,
             )
           })}
           {items.length === 0 ? (
-            <p className="p-3 text-center text-sm text-[var(--text-tertiary)]">{t('split_no_items')}</p>
+            <p className="p-3 text-center text-sm text-[var(--text-tertiary)]">
+              {t('split_no_items')}
+            </p>
           ) : null}
         </div>
 
@@ -156,7 +192,11 @@ const SplitDialogBody: FC<Omit<SplitDialogProps, 'open'>> = ({ session, lang, t,
       <Separator />
 
       <div className="flex gap-2 p-5 pt-4">
-        <Button variant="secondary" className="flex-1 rounded-[var(--radius-lg)]" onClick={() => onOpenChange(false)}>
+        <Button
+          variant="secondary"
+          className="flex-1 rounded-[var(--radius-lg)]"
+          onClick={() => onOpenChange(false)}
+        >
           {t('cancel')}
         </Button>
         <Button
@@ -166,7 +206,9 @@ const SplitDialogBody: FC<Omit<SplitDialogProps, 'open'>> = ({ session, lang, t,
             onConfirm(
               groupLabels.map((label, idx) => ({
                 label,
-                order_item_ids: items.filter((item) => groupOf(item.id) === idx).map((item) => item.id),
+                order_item_ids: items
+                  .filter((item) => groupOf(item.id) === idx)
+                  .map((item) => item.id),
               })),
             )
           }

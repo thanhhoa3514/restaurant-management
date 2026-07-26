@@ -2,12 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import { WF_DICT } from '@/features/waiter/data/i18n'
-import type {
-  Lang,
-  WFCounts,
-  WaiterView,
-  UseWaiterValue,
-} from '@/features/waiter/types'
+import type { Lang, WFCounts, WaiterView, UseWaiterValue } from '@/features/waiter/types'
 import { useStaffTables } from '@/features/waiter/queries/useStaffTables'
 import { useUpdateItemStatus } from '@/features/waiter/mutations/useUpdateItemStatus'
 import { useReviewOrderItem } from '@/features/waiter/mutations/useReviewOrderItem'
@@ -202,9 +197,7 @@ export function useWaiter(): UseWaiterValue {
         return
       }
       setMergeSelectedIds((current) =>
-        current.includes(tableId)
-          ? current.filter((id) => id !== tableId)
-          : [...current, tableId],
+        current.includes(tableId) ? current.filter((id) => id !== tableId) : [...current, tableId],
       )
     },
     [t, tables],

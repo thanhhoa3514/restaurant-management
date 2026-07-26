@@ -18,12 +18,14 @@ export function minStatus(items: KDSItem[]): ItemStatus {
   return STATUS_FLOW[minIdx]
 }
 
-export { fmtTimeSec as fmtClock, fmtTimeSec as fmtTimestamp, fmtDuration as fmtHMS } from '@/shared/date'
+export {
+  fmtTimeSec as fmtClock,
+  fmtTimeSec as fmtTimestamp,
+  fmtDuration as fmtHMS,
+} from '@/shared/date'
 
 export function urgencyFor(waitSec: number): Urgency {
   if (waitSec < 5 * 60) return 'green'
   if (waitSec < 10 * 60) return 'amber'
   return 'red'
 }
-
-

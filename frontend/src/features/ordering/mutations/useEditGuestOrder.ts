@@ -6,13 +6,8 @@ export function useEditGuestOrder(sessionToken?: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({
-      orderId,
-      input,
-    }: {
-      orderId: string
-      input: EditOrderInput
-    }) => editGuestOrder(sessionToken!, orderId, input),
+    mutationFn: ({ orderId, input }: { orderId: string; input: EditOrderInput }) =>
+      editGuestOrder(sessionToken!, orderId, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['guest-orders', sessionToken] })
     },

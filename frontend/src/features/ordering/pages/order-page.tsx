@@ -19,7 +19,12 @@ export function OrderPage() {
 function OrderFlow() {
   const { state, dispatch } = useOrdering()
   const navigate = useNavigate()
-  const { t: qrToken, s: sessionTokenParam, table: tableParam, tableId: tableIdParam } = useSearch({ from: '/order' })
+  const {
+    t: qrToken,
+    s: sessionTokenParam,
+    table: tableParam,
+    tableId: tableIdParam,
+  } = useSearch({ from: '/order' })
 
   // Restore session from URL params on mount (page refresh / deep link)
   useEffect(() => {

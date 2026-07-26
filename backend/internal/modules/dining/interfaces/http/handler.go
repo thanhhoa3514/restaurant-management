@@ -26,6 +26,7 @@ type Handler struct {
 	ListPendingSessions *application.ListPendingSessions
 	StaffVerifySession  *application.StaffVerifySession
 	SaveTable           *application.SaveTable
+	SaveTablePositions  *application.SaveTablePositions
 	DeleteTable         *application.DeleteTable
 	ListAreas           *application.ListAreas
 	SaveArea            *application.SaveArea
@@ -54,6 +55,7 @@ func (h *Handler) RegisterStaffRoutes(r *gin.RouterGroup, secret string, resolve
 	manager.PATCH("/areas/:areaId", h.updateArea)
 	manager.DELETE("/areas/:areaId", h.deleteArea)
 	manager.POST("/tables", h.createTable)
+	manager.PATCH("/tables/positions", h.saveTablePositions)
 	manager.PATCH("/tables/:tableId", h.updateTable)
 	manager.DELETE("/tables/:tableId", h.deleteTable)
 	manager.GET("/sessions/daily", h.listDailySessions)
@@ -310,6 +312,19 @@ func (h *Handler) updateTable(c *gin.Context) {
 		return
 	}
 	h.saveTable(c, &tableID)
+}
+
+func (h *Handler) saveTablePositions(c *gin.Context) {
+	var req application.SaveTablePositionsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
+		return
+	}
+	if err := h.SaveTablePositions.Handle(c.Request.Context(), req); err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, gin.H{"saved": len(req.Positions)}, nil)
 }
 
 func (h *Handler) saveTable(c *gin.Context, tableID *uuid.UUID) {

@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"maps"
 	"strings"
 	"time"
 
@@ -17,27 +18,30 @@ type StaffTablesResponse struct {
 }
 
 type StaffTableDTO struct {
-	ID       uuid.UUID        `json:"id"`
-	Code     string           `json:"code"`
-	Name     string           `json:"name"`
-	Capacity int              `json:"capacity"`
-	Status   string           `json:"status"`
-	AreaName string           `json:"area_name"`
-	Session  *StaffSessionDTO `json:"session"`
+	ID        uuid.UUID        `json:"id"`
+	Code      string           `json:"code"`
+	Name      string           `json:"name"`
+	Capacity  int              `json:"capacity"`
+	Status    string           `json:"status"`
+	AreaName  string           `json:"area_name"`
+	PositionX *int             `json:"position_x"`
+	PositionY *int             `json:"position_y"`
+	Session   *StaffSessionDTO `json:"session"`
 }
 
 type StaffSessionDTO struct {
-	ID              uuid.UUID       `json:"id"`
-	SessionCode     string          `json:"session_code"`
-	Status          string          `json:"status"`
-	CustomerCount   int             `json:"customer_count"`
-	GuestName       string          `json:"guest_name"`
-	OpenedAt        time.Time       `json:"opened_at"`
-	BillRequestedAt *time.Time      `json:"bill_requested_at"`
-	WaiterCalledAt  *time.Time      `json:"waiter_called_at"`
-	MergeGroupID    *uuid.UUID      `json:"merge_group_id"`
-	Orders          []StaffOrderDTO `json:"orders"`
-	TotalVND        int64           `json:"total_vnd"`
+	ID               uuid.UUID       `json:"id"`
+	SessionCode      string          `json:"session_code"`
+	Status           string          `json:"status"`
+	CustomerCount    int             `json:"customer_count"`
+	GuestName        string          `json:"guest_name"`
+	OpenedAt         time.Time       `json:"opened_at"`
+	BillRequestedAt  *time.Time      `json:"bill_requested_at"`
+	WaiterCalledAt   *time.Time      `json:"waiter_called_at"`
+	WaiterCallReason string          `json:"waiter_call_reason"`
+	MergeGroupID     *uuid.UUID      `json:"merge_group_id"`
+	Orders           []StaffOrderDTO `json:"orders"`
+	TotalVND         int64           `json:"total_vnd"`
 }
 
 type StaffOrderDTO struct {
@@ -77,8 +81,14 @@ type StaffOptionDTO struct {
 }
 
 type StaffStatusDTO struct {
-	Status    string    `json:"status"`
-	Timestamp time.Time `json:"timestamp"`
+	Status        string    `json:"status"`
+	FromStatus    *string   `json:"from_status"`
+	ToStatus      string    `json:"to_status"`
+	Timestamp     time.Time `json:"timestamp"`
+	ChangedByName *string   `json:"changed_by_name"`
+	ChangedByRole *string   `json:"changed_by_role"`
+	Reason        *string   `json:"reason"`
+	Note          *string   `json:"note"`
 }
 
 type KitchenQueueResponse struct {
@@ -120,12 +130,35 @@ type UpdateItemStatusRequest struct {
 type UpdateItemStatusResponse struct {
 	ID     uuid.UUID `json:"id"`
 	Status string    `json:"status"`
+	// SessionID để outbox định tuyến realtime tới đúng máy khách của phiên đó.
+	// nil với đơn mang về (takeaway) — không gắn phiên nào.
+	SessionID *uuid.UUID `json:"session_id,omitempty"`
+	// ItemName để thông báo realtime gọi đúng tên món thay vì "món ăn".
+	ItemName string `json:"item_name"`
+	// TableCode để toast của nhân viên nói rõ bàn nào thay vì chung chung.
+	TableCode string `json:"table_code,omitempty"`
+}
+
+// itemEventPayload gom payload chung cho 4 event trạng thái món.
+// Đơn mang về không có phiên/bàn → bỏ hẳn key, tránh outbox route tới topic rỗng.
+func itemEventPayload(itemID uuid.UUID, out UpdateItemStatusResponse, extra map[string]any) map[string]any {
+	payload := map[string]any{"item_id": itemID, "status": out.Status, "item_name": out.ItemName}
+	if out.SessionID != nil {
+		payload["session_id"] = *out.SessionID
+	}
+	if out.TableCode != "" {
+		payload["table_code"] = out.TableCode
+	}
+	maps.Copy(payload, extra)
+	return payload
 }
 
 type RequestBillResponse struct {
 	SessionID uuid.UUID  `json:"session_id"`
 	Status    string     `json:"status"`
 	Requested *time.Time `json:"requested_at"`
+	TableCode string     `json:"table_code,omitempty"`
+	Reason    string     `json:"reason,omitempty"`
 }
 
 type StaffReadRepository interface {
@@ -133,7 +166,7 @@ type StaffReadRepository interface {
 	ListKitchenQueue(ctx context.Context, restaurantID uuid.UUID) ([]KitchenTicketDTO, error)
 	RequestBill(ctx context.Context, restaurantID, sessionID uuid.UUID) (RequestBillResponse, error)
 	ReopenSession(ctx context.Context, restaurantID, sessionID uuid.UUID) (RequestBillResponse, error)
-	CallWaiter(ctx context.Context, restaurantID, sessionID uuid.UUID) (RequestBillResponse, error)
+	CallWaiter(ctx context.Context, restaurantID, sessionID uuid.UUID, reason string) (RequestBillResponse, error)
 	AckWaiterCall(ctx context.Context, restaurantID, sessionID uuid.UUID) (RequestBillResponse, error)
 	UpdateOrderItemStatus(ctx context.Context, restaurantID, itemID uuid.UUID, status string, actorID *uuid.UUID, actorRole string) (UpdateItemStatusResponse, error)
 	ConfirmOrderItem(ctx context.Context, restaurantID, itemID uuid.UUID, actorID *uuid.UUID, actorRole string) (UpdateItemStatusResponse, error)
@@ -246,17 +279,25 @@ func NewGuestCallWaiter(tx TxRunner, repo StaffReadRepository, outboxWriter doma
 	return &GuestCallWaiter{tx: tx, repo: repo, outbox: outboxWriter, defaultRestaurantID: defaultRestaurantID}
 }
 
-func (s *GuestCallWaiter) Handle(ctx context.Context, sessionID uuid.UUID) (RequestBillResponse, error) {
+func (s *GuestCallWaiter) Handle(ctx context.Context, sessionID uuid.UUID, reason string) (RequestBillResponse, error) {
 	var out RequestBillResponse
 	restaurantID := s.defaultRestaurantID
+	reason = strings.TrimSpace(reason)
+	if len([]rune(reason)) > 120 {
+		reason = string([]rune(reason)[:120])
+	}
 	err := s.tx.Run(ctx, func(ctx context.Context) error {
 		var err error
-		out, err = s.repo.CallWaiter(ctx, restaurantID, sessionID)
+		out, err = s.repo.CallWaiter(ctx, restaurantID, sessionID, reason)
 		if err != nil {
 			return err
 		}
 		if s.outbox != nil {
-			return s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "dining_session", AggregateID: sessionID, EventType: "dining.waiter_called", Payload: map[string]any{"session_id": sessionID}})
+			return s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "dining_session", AggregateID: sessionID, EventType: "dining.waiter_called", Payload: map[string]any{
+				"session_id": sessionID,
+				"table_code": out.TableCode,
+				"reason":     out.Reason,
+			}})
 		}
 		return nil
 	})
@@ -317,7 +358,7 @@ func (s *StaffUpdateItemStatus) Handle(ctx context.Context, itemID uuid.UUID, st
 			return err
 		}
 		if s.outbox != nil {
-			return s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "order_item", AggregateID: itemID, EventType: "ordering.item_status_updated", Payload: map[string]any{"item_id": itemID, "status": out.Status}})
+			return s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "order_item", AggregateID: itemID, EventType: "ordering.item_status_updated", Payload: itemEventPayload(itemID, out, nil)})
 		}
 		return nil
 	})
@@ -345,7 +386,7 @@ func (s *ServerReviewOrderItem) Confirm(ctx context.Context, itemID uuid.UUID, a
 			return err
 		}
 		if s.outbox != nil {
-			return s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "order_item", AggregateID: itemID, EventType: "ordering.item_confirmed", Payload: map[string]any{"item_id": itemID, "status": out.Status}})
+			return s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "order_item", AggregateID: itemID, EventType: "ordering.item_confirmed", Payload: itemEventPayload(itemID, out, nil)})
 		}
 		return nil
 	})
@@ -362,7 +403,7 @@ func (s *ServerReviewOrderItem) Reject(ctx context.Context, itemID uuid.UUID, re
 			return err
 		}
 		if s.outbox != nil {
-			return s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "order_item", AggregateID: itemID, EventType: "ordering.item_rejected", Payload: map[string]any{"item_id": itemID, "status": out.Status, "reason": reason}})
+			return s.outbox.Write(ctx, outbox.WriteEvent{RestaurantID: restaurantID, AggregateType: "order_item", AggregateID: itemID, EventType: "ordering.item_rejected", Payload: itemEventPayload(itemID, out, map[string]any{"reason": reason})})
 		}
 		return nil
 	})

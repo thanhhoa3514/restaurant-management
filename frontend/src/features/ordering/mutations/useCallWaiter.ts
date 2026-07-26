@@ -3,6 +3,7 @@ import { callWaiter } from '../api'
 
 export function useCallWaiter() {
   return useMutation({
-    mutationFn: (sessionToken: string) => callWaiter(sessionToken),
+    mutationFn: (v: { sessionToken: string; reason?: string }) =>
+      callWaiter(v.sessionToken, v.reason),
   })
 }

@@ -10,6 +10,7 @@ import {
 import { CS_DICT } from '@/i18n'
 import { activeInvoice, fmtVND, makeTxnId } from '@/features/cashier/helpers'
 import { fetchStaffTables } from '@/features/waiter/api'
+import { errorMessage } from '@/lib/api'
 import { useCreateInvoice } from '@/features/cashier/mutations/useCreateInvoice'
 import { useAdjustInvoice } from '@/features/cashier/mutations/useAdjustInvoice'
 import { useProcessPayment } from '@/features/cashier/mutations/useProcessPayment'
@@ -76,7 +77,11 @@ export type CashierAction =
     }
   | { type: 'failPayment'; sessionId: string; at?: Date }
   | { type: 'closeSession'; sessionId: string }
-  | { type: 'splitSession'; sessionId: string; groups: { label: string; order_item_ids: string[] }[] }
+  | {
+      type: 'splitSession'
+      sessionId: string
+      groups: { label: string; order_item_ids: string[] }[]
+    }
   | {
       type: 'addPartialPayment'
       sessionId: string
@@ -138,10 +143,15 @@ function updateActiveInvoice(
 }
 
 function subMethodFromCode(code: string): SubMethod {
-  return (['cash', 'card', 'momo', 'zalopay', 'vnpay', 'mock'].includes(code) ? code : 'momo') as SubMethod
+  return (
+    ['cash', 'card', 'momo', 'zalopay', 'vnpay', 'mock'].includes(code) ? code : 'momo'
+  ) as SubMethod
 }
 
-function paymentRecordFromDTO(payment: BillingPaymentDTO, previous?: PaymentRecord | null): PaymentRecord {
+function paymentRecordFromDTO(
+  payment: BillingPaymentDTO,
+  previous?: PaymentRecord | null,
+): PaymentRecord {
   const method: PaymentMethod =
     payment.method_code === 'cash' ? 'cash' : payment.method_code === 'card' ? 'card' : 'ewallet'
   return {
@@ -223,11 +233,15 @@ function mergeInvoiceDTO(
   }
 }
 
-function statusFromInvoice(invoice: Invoice, priorStatus: CashierSession['status']): CashierSession['status'] {
+function statusFromInvoice(
+  invoice: Invoice,
+  priorStatus: CashierSession['status'],
+): CashierSession['status'] {
   if (invoice.status === 'PAID') return 'paid'
   if (invoice.status === 'PARTIALLY_PAID') return 'in_payment'
   if (priorStatus === 'closed') return 'closed'
-  if (invoice.payment?.status === 'processing' || invoice.payment?.status === 'pending') return 'in_payment'
+  if (invoice.payment?.status === 'processing' || invoice.payment?.status === 'pending')
+    return 'in_payment'
   return 'bill_requested'
 }
 
@@ -275,7 +289,14 @@ function replaceInvoicesInSession(
   const isSplit = dtos.length > 1
   const invoices = dtos.map((dto) => {
     const existing = session.invoices.find((inv) => inv.id === dto.id)
-    return mergeInvoiceDTO(existing, dto, discountFromDTO(dto, at), existing?.discount_history ?? [], isSplit, at)
+    return mergeInvoiceDTO(
+      existing,
+      dto,
+      discountFromDTO(dto, at),
+      existing?.discount_history ?? [],
+      isSplit,
+      at,
+    )
   })
   const activeInvoiceId = invoices.some((inv) => inv.id === session.activeInvoiceId)
     ? session.activeInvoiceId
@@ -320,7 +341,11 @@ function cashierReducer(state: CashierState, action: CashierAction): CashierStat
         sessions: updateSession(state.sessions, action.sessionId, (session) => {
           const invoice = session.invoices.find((inv) => inv.id === action.invoiceId)
           if (!invoice) return session
-          return { ...session, activeInvoiceId: action.invoiceId, status: statusFromInvoice(invoice, session.status) }
+          return {
+            ...session,
+            activeInvoiceId: action.invoiceId,
+            status: statusFromInvoice(invoice, session.status),
+          }
         }),
       }
 
@@ -401,7 +426,9 @@ function cashierReducer(state: CashierState, action: CashierAction): CashierStat
           return {
             ...updateActiveInvoice(session, (inv) => ({
               ...inv,
-              payment: inv.payment ? { ...inv.payment, status: 'failed', completed_at: action.at ?? state.now } : null,
+              payment: inv.payment
+                ? { ...inv.payment, status: 'failed', completed_at: action.at ?? state.now }
+                : null,
             })),
             status: 'bill_requested',
           }
@@ -442,6 +469,15 @@ const CashierContext = createContext<CashierContextValue | null>(null)
 export function CashierProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const [state, baseDispatch] = useReducer(cashierReducer, undefined, () => createInitialState())
+  const t = useMemo<TFunction>(() => {
+    return (key, ...args) => {
+      const value: DictValue | undefined = CS_DICT[state.lang][key]
+      if (typeof value === 'function') {
+        return (value as (...values: Array<number | string>) => string)(...args)
+      }
+      return value ?? key
+    }
+  }, [state.lang])
   const createInvoiceMutation = useCreateInvoice()
   const adjustInvoiceMutation = useAdjustInvoice()
   const processPaymentMutation = useProcessPayment()
@@ -449,7 +485,7 @@ export function CashierProvider({ children }: { children: ReactNode }) {
   const splitInvoiceMutation = useSplitInvoice()
   const voidInvoiceMutation = useVoidInvoice()
   const closeDiningSessionMutation = useCloseDiningSession()
-  const { data: staffTablesData } = useQuery({
+  const { data: staffTablesData, error: staffTablesError } = useQuery({
     queryKey: STAFF_TABLES_QUERY_KEY,
     queryFn: fetchStaffTables,
     refetchInterval: 8_000,
@@ -457,12 +493,20 @@ export function CashierProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (staffTablesData) {
+      toast.dismiss('cashier-sessions-load-error')
       baseDispatch({
         type: 'replaceSessions',
         sessions: toCashierSessions(staffTablesData.tables),
       })
     }
   }, [staffTablesData])
+
+  useEffect(() => {
+    if (!staffTablesError) return
+    toast.error(errorMessage(staffTablesError, t('toast_load_sessions_failed')), {
+      id: 'cashier-sessions-load-error',
+    })
+  }, [staffTablesError, t])
 
   useEffect(() => {
     queryClient.setQueryData(CASHIER_QUERY_KEY, state.sessions)
@@ -480,16 +524,6 @@ export function CashierProvider({ children }: { children: ReactNode }) {
     [state.sessions, state.selectedSessionId],
   )
 
-  const t = useMemo<TFunction>(() => {
-    return (key, ...args) => {
-      const value: DictValue | undefined = CS_DICT[state.lang][key]
-      if (typeof value === 'function') {
-        return (value as (...values: Array<number | string>) => string)(...args)
-      }
-      return value ?? key
-    }
-  }, [state.lang])
-
   const dispatch = useMemo<React.Dispatch<CashierAction>>(
     () => (action) => {
       const run = async () => {
@@ -501,7 +535,8 @@ export function CashierProvider({ children }: { children: ReactNode }) {
           case 'applyDiscount': {
             if (!currentSession) return
             const active = activeInvoice(currentSession)
-            const invoiceId: string = active?.id ?? (await createInvoiceMutation.mutateAsync(currentSession.id)).invoice.id
+            const invoiceId: string =
+              active?.id ?? (await createInvoiceMutation.mutateAsync(currentSession.id)).invoice.id
             const response = await adjustInvoiceMutation.mutateAsync({
               invoiceId,
               discountAmountVND: action.amount,
@@ -520,7 +555,8 @@ export function CashierProvider({ children }: { children: ReactNode }) {
           case 'removeDiscount': {
             if (!currentSession) return
             const active = activeInvoice(currentSession)
-            const invoiceId: string = active?.id ?? (await createInvoiceMutation.mutateAsync(currentSession.id)).invoice.id
+            const invoiceId: string =
+              active?.id ?? (await createInvoiceMutation.mutateAsync(currentSession.id)).invoice.id
             const response = await adjustInvoiceMutation.mutateAsync({
               invoiceId,
               discountAmountVND: 0,
@@ -539,13 +575,11 @@ export function CashierProvider({ children }: { children: ReactNode }) {
           case 'completePayment': {
             if (!currentSession) return
             const active = activeInvoice(currentSession)
-            const invoiceId: string = active?.id ?? (await createInvoiceMutation.mutateAsync(currentSession.id)).invoice.id
+            const invoiceId: string =
+              active?.id ?? (await createInvoiceMutation.mutateAsync(currentSession.id)).invoice.id
             const methodCode = action.subMethod ?? active?.payment?.sub_method ?? 'cash'
             const received =
-              action.amountTendered ??
-              active?.payment?.amount_tendered ??
-              active?.total ??
-              0
+              action.amountTendered ?? active?.payment?.amount_tendered ?? active?.total ?? 0
             const response = await processPaymentMutation.mutateAsync({
               invoiceId,
               paymentMethodCode: methodCode,
@@ -586,7 +620,15 @@ export function CashierProvider({ children }: { children: ReactNode }) {
               invoice: response.invoice,
             })
             void queryClient.invalidateQueries({ queryKey: STAFF_TABLES_QUERY_KEY })
-            toast(t('toast_payment_partial', fmtVND(action.amount)))
+            const appliedAmount = response.invoice.payment?.amount_vnd ?? action.amount
+            const changeAmount = response.invoice.payment?.change_amount_vnd ?? 0
+            if (changeAmount > 0) {
+              toast(
+                t('toast_payment_partial_with_change', fmtVND(appliedAmount), fmtVND(changeAmount)),
+              )
+            } else {
+              toast(t('toast_payment_partial', fmtVND(appliedAmount)))
+            }
             break
           }
           case 'splitSession': {
@@ -608,7 +650,10 @@ export function CashierProvider({ children }: { children: ReactNode }) {
             let voided = false
             for (const invoice of currentSession.invoices) {
               if (invoice.id && invoice.status !== 'PAID' && invoice.status !== 'VOID') {
-                await voidInvoiceMutation.mutateAsync({ invoiceId: invoice.id, voidReason: 'void_session' })
+                await voidInvoiceMutation.mutateAsync({
+                  invoiceId: invoice.id,
+                  voidReason: 'void_session',
+                })
                 voided = true
               }
             }
@@ -625,16 +670,47 @@ export function CashierProvider({ children }: { children: ReactNode }) {
             baseDispatch(action)
         }
       }
-      void run().catch(() => {
-        if (action.type === 'completePayment') {
-          toast(t('toast_ewallet_failed'))
-          baseDispatch({ type: 'failPayment', sessionId: action.sessionId })
-        } else if (action.type === 'splitSession') {
-          toast.error(t('toast_split_failed'))
+      void run().catch((error: unknown) => {
+        const toastId = `cashier-action-${action.type}`
+        switch (action.type) {
+          case 'applyDiscount':
+            toast.error(errorMessage(error, t('toast_discount_apply_failed')), { id: toastId })
+            break
+          case 'removeDiscount':
+            toast.error(errorMessage(error, t('toast_discount_remove_failed')), { id: toastId })
+            break
+          case 'completePayment':
+            toast.error(errorMessage(error, t('toast_payment_failed')), { id: toastId })
+            if (action.method === 'ewallet') {
+              baseDispatch({ type: 'failPayment', sessionId: action.sessionId })
+            }
+            break
+          case 'addPartialPayment':
+            toast.error(errorMessage(error, t('toast_payment_partial_failed')), { id: toastId })
+            break
+          case 'splitSession':
+            toast.error(errorMessage(error, t('toast_split_failed')), { id: toastId })
+            break
+          case 'closeSession':
+            toast.error(errorMessage(error, t('toast_close_session_failed')), { id: toastId })
+            break
+          default:
+            toast.error(errorMessage(error, t('toast_action_failed')), { id: toastId })
         }
       })
     },
-    [queryClient, state.sessions, t, createInvoiceMutation, adjustInvoiceMutation, processPaymentMutation, processPartialPaymentMutation, splitInvoiceMutation, voidInvoiceMutation, closeDiningSessionMutation],
+    [
+      queryClient,
+      state.sessions,
+      t,
+      createInvoiceMutation,
+      adjustInvoiceMutation,
+      processPaymentMutation,
+      processPartialPaymentMutation,
+      splitInvoiceMutation,
+      voidInvoiceMutation,
+      closeDiningSessionMutation,
+    ],
   )
 
   useEffect(() => {
@@ -649,8 +725,12 @@ export function CashierProvider({ children }: { children: ReactNode }) {
           baseDispatch({ type: 'replaceInvoices', sessionId: id, invoices: response.invoices })
         }
       })
-      .catch(() => toast.error('Không thể tải hóa đơn'))
-  }, [selectedSession])
+      .catch((error: unknown) => {
+        toast.error(errorMessage(error, t('toast_load_invoice_failed')), {
+          id: `cashier-invoice-load-${id}`,
+        })
+      })
+  }, [selectedSession, t])
 
   const value = useMemo(
     () => ({ state, dispatch, selectedSession, t }),

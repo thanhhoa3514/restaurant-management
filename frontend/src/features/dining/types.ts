@@ -10,7 +10,6 @@ export interface GuestTable {
   qr_token?: string
 }
 
-
 export interface TableQR {
   table_id: string
   table_code: string

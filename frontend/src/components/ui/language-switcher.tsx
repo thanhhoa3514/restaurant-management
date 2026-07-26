@@ -22,23 +22,19 @@ export const LanguageSwitcher: FC<LanguageSwitcherProps> = ({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={
-          <Button variant="ghost" size="icon" className={cn("rounded-full", className)} />
-        }
+        render={<Button variant="ghost" size="icon" className={cn('rounded-full', className)} />}
       >
         <Languages className="h-[1.2rem] w-[1.2rem]" />
         <span className="sr-only">Toggle language</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => onLangChange('vi')}>
-          Tiếng Việt {currentLang === 'vi' && "✓"}
+          Tiếng Việt {currentLang === 'vi' && '✓'}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => onLangChange('en')}>
-          English {currentLang === 'en' && "✓"}
+          English {currentLang === 'en' && '✓'}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
 }
-
-

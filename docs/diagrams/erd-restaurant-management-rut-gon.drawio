@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="65bd71144e" modified="2026-07-25T00:00:00.000Z" agent="Codex" version="24.7.17">
+  <diagram id="erd-restaurant-management" name="ERD rút gọn - 32 bảng">
+    <mxGraphModel dx="3100" dy="2150" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3100" pageHeight="2150" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="title" value="ERD RÚT GỌN — RESTAURANT MANAGEMENT SYSTEM (32 BẢNG)" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=22;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="900" y="25" width="1300" height="45" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="group_identity" value="1. NHÀ HÀNG, NGƯỜI DÙNG VÀ PHÂN QUYỀN" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingTop=10;spacingLeft=12;fontSize=15;fontStyle=1;fillColor=#D9EAF7;strokeColor=#999999;opacity=35;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="100" width="1430" height="490" as="geometry"/>
+        </mxCell>
+        <mxCell id="group_venue" value="2. KHU VỰC, BÀN VÀ PHIÊN PHỤC VỤ" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingTop=10;spacingLeft=12;fontSize=15;fontStyle=1;fillColor=#E2F0D9;strokeColor=#999999;opacity=35;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="1500" y="100" width="1460" height="490" as="geometry"/>
+        </mxCell>
+        <mxCell id="group_menu" value="3. THỰC ĐƠN" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingTop=10;spacingLeft=12;fontSize=15;fontStyle=1;fillColor=#FFF2CC;strokeColor=#999999;opacity=35;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="630" width="1880" height="650" as="geometry"/>
+        </mxCell>
+        <mxCell id="group_ordering" value="4. GỌI MÓN VÀ LỊCH SỬ TRẠNG THÁI" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingTop=10;spacingLeft=12;fontSize=15;fontStyle=1;fillColor=#FCE4D6;strokeColor=#999999;opacity=35;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="1950" y="630" width="1010" height="650" as="geometry"/>
+        </mxCell>
+        <mxCell id="group_kitchen" value="5. BẾP" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingTop=10;spacingLeft=12;fontSize=15;fontStyle=1;fillColor=#E4DFEC;strokeColor=#999999;opacity=35;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1320" width="980" height="570" as="geometry"/>
+        </mxCell>
+        <mxCell id="group_billing" value="6. HÓA ĐƠN VÀ THANH TOÁN" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingTop=10;spacingLeft=12;fontSize=15;fontStyle=1;fillColor=#DDEBF7;strokeColor=#999999;opacity=35;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="1320" width="1370" height="570" as="geometry"/>
+        </mxCell>
+        <mxCell id="group_support" value="7. NHẬT KÝ VÀ CẤU HÌNH" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingTop=10;spacingLeft=12;fontSize=15;fontStyle=1;fillColor=#EDEDED;strokeColor=#999999;opacity=35;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="2450" y="1320" width="510" height="570" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="roles" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;roles&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ CHÍNH&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;name (UQ)&lt;/div&gt;&lt;div&gt;display_name&lt;/div&gt;&lt;div&gt;is_system&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#EAF2F8;strokeColor=#1F4E78;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="80" y="180" width="250" height="143" as="geometry"/>
+        </mxCell>
+        <mxCell id="permissions" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;permissions&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ CHÍNH&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;code (UQ)&lt;/div&gt;&lt;div&gt;module&lt;/div&gt;&lt;div&gt;display_name&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#EAF2F8;strokeColor=#1F4E78;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="360" y="180" width="250" height="143" as="geometry"/>
+        </mxCell>
+        <mxCell id="role_permissions" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;role_permissions&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;BẢNG LIÊN KẾT&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK, FK role_id&lt;/div&gt;&lt;div&gt;PK, FK permission_id&lt;/div&gt;&lt;div&gt;created_at&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#FFF2CC;strokeColor=#B8860B;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="220" y="390" width="250" height="126" as="geometry"/>
+        </mxCell>
+        <mxCell id="restaurants" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;restaurants&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ CHÍNH&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;code (UQ)&lt;/div&gt;&lt;div&gt;name&lt;/div&gt;&lt;div&gt;status&lt;/div&gt;&lt;div&gt;timezone&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#EAF2F8;strokeColor=#1F4E78;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="650" y="180" width="250" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="users" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;users&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ CHÍNH&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;FK role_id&lt;/div&gt;&lt;div&gt;username&lt;/div&gt;&lt;div&gt;status&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#EAF2F8;strokeColor=#1F4E78;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="930" y="180" width="250" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="user_sessions" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;user_sessions&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ PHỤ THUỘC&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;FK user_id&lt;/div&gt;&lt;div&gt;expires_at&lt;/div&gt;&lt;div&gt;revoked_at&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#F2F2F2;strokeColor=#666666;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="1210" y="390" width="250" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="areas" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;areas&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ CHÍNH&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;name&lt;/div&gt;&lt;div&gt;display_order&lt;/div&gt;&lt;div&gt;is_active&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#EAF2F8;strokeColor=#1F4E78;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="1540" y="180" width="250" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="tables" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;tables&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ CHÍNH&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;FK area_id&lt;/div&gt;&lt;div&gt;code&lt;/div&gt;&lt;div&gt;status&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#EAF2F8;strokeColor=#1F4E78;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="1820" y="180" width="250" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="qr_codes" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;qr_codes&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ PHỤ THUỘC&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;FK table_id&lt;/div&gt;&lt;div&gt;token (UQ)&lt;/div&gt;&lt;div&gt;is_active&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#F2F2F2;strokeColor=#666666;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="2100" y="390" width="250" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="table_merge_groups" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;table_merge_groups&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ CHÍNH&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;FK merged_by&lt;/div&gt;&lt;div&gt;is_active&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#EAF2F8;strokeColor=#1F4E78;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="2380" y="180" width="250" height="143" as="geometry"/>
+        </mxCell>
+        <mxCell id="dining_sessions" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;dining_sessions&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ CHÍNH&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;FK table_id&lt;/div&gt;&lt;div&gt;FK merge_group_id&lt;/div&gt;&lt;div&gt;session_code&lt;/div&gt;&lt;div&gt;status&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#EAF2F8;strokeColor=#1F4E78;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="2660" y="390" width="250" height="177" as="geometry"/>
+        </mxCell>
+        <mxCell id="categories" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;categories&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ CHÍNH&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;FK parent_id&lt;/div&gt;&lt;div&gt;name&lt;/div&gt;&lt;div&gt;slug&lt;/div&gt;&lt;div&gt;is_active&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#EAF2F8;strokeColor=#1F4E78;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="80" y="720" width="250" height="177" as="geometry"/>
+        </mxCell>
+        <mxCell id="menu_items" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;menu_items&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ CHÍNH&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;FK category_id&lt;/div&gt;&lt;div&gt;code&lt;/div&gt;&lt;div&gt;name&lt;/div&gt;&lt;div&gt;base_price_vnd&lt;/div&gt;&lt;div&gt;status&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#EAF2F8;strokeColor=#1F4E78;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="380" y="720" width="250" height="194" as="geometry"/>
+        </mxCell>
+        <mxCell id="menu_item_variants" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;menu_item_variants&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ PHỤ THUỘC&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;FK menu_item_id&lt;/div&gt;&lt;div&gt;name&lt;/div&gt;&lt;div&gt;price_vnd&lt;/div&gt;&lt;div&gt;is_default&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#F2F2F2;strokeColor=#666666;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="680" y="720" width="250" height="177" as="geometry"/>
+        </mxCell>
+        <mxCell id="option_groups" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;option_groups&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ CHÍNH&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;name&lt;/div&gt;&lt;div&gt;selection_type&lt;/div&gt;&lt;div&gt;min/max_selections&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#EAF2F8;strokeColor=#1F4E78;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="980" y="720" width="250" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="options" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;options&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ PHỤ THUỘC&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;FK option_group_id&lt;/div&gt;&lt;div&gt;name&lt;/div&gt;&lt;div&gt;price_delta_vnd&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#F2F2F2;strokeColor=#666666;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="720" width="250" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="menu_item_option_groups" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;menu_item_option_groups&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;BẢNG LIÊN KẾT&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK, FK restaurant_id&lt;/div&gt;&lt;div&gt;PK, FK menu_item_id&lt;/div&gt;&lt;div&gt;PK, FK option_group_id&lt;/div&gt;&lt;div&gt;display_order&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#FFF2CC;strokeColor=#B8860B;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="1580" y="720" width="250" height="143" as="geometry"/>
+        </mxCell>
+        <mxCell id="orders" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;orders&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ CHÍNH&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;FK dining_session_id&lt;/div&gt;&lt;div&gt;order_number&lt;/div&gt;&lt;div&gt;order_type&lt;/div&gt;&lt;div&gt;status&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#EAF2F8;strokeColor=#1F4E78;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="1990" y="720" width="250" height="177" as="geometry"/>
+        </mxCell>
+        <mxCell id="order_items" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;order_items&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ PHỤ THUỘC&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;FK order_id&lt;/div&gt;&lt;div&gt;FK menu_item_id&lt;/div&gt;&lt;div&gt;quantity&lt;/div&gt;&lt;div&gt;status&lt;/div&gt;&lt;div&gt;total_amount_vnd&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#F2F2F2;strokeColor=#666666;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="2310" y="720" width="250" height="194" as="geometry"/>
+        </mxCell>
+        <mxCell id="order_item_options" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;order_item_options&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ PHỤ THUỘC&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;FK order_item_id&lt;/div&gt;&lt;div&gt;FK option_id&lt;/div&gt;&lt;div&gt;price_delta_snapshot_vnd&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#F2F2F2;strokeColor=#666666;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="2630" y="720" width="250" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="order_item_status_history" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;order_item_status_history&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ PHỤ THUỘC&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;FK order_item_id&lt;/div&gt;&lt;div&gt;from_status → to_status&lt;/div&gt;&lt;div&gt;changed_at&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#F2F2F2;strokeColor=#666666;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="2070" y="1030" width="250" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="cancel_requests" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;cancel_requests&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ PHỤ THUỘC&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;FK order_item_id&lt;/div&gt;&lt;div&gt;status&lt;/div&gt;&lt;div&gt;reviewed_by&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#F2F2F2;strokeColor=#666666;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="2490" y="1030" width="250" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="kitchen_tickets" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;kitchen_tickets&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ CHÍNH&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;FK order_id&lt;/div&gt;&lt;div&gt;FK dining_session_id&lt;/div&gt;&lt;div&gt;station&lt;/div&gt;&lt;div&gt;status&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#EAF2F8;strokeColor=#1F4E78;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="90" y="1410" width="250" height="177" as="geometry"/>
+        </mxCell>
+        <mxCell id="kitchen_ticket_items" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;kitchen_ticket_items&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ PHỤ THUỘC&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;FK kitchen_ticket_id&lt;/div&gt;&lt;div&gt;FK order_item_id&lt;/div&gt;&lt;div&gt;status&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#F2F2F2;strokeColor=#666666;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="430" y="1410" width="250" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="invoices" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;invoices&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ CHÍNH&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;FK dining_session_id&lt;/div&gt;&lt;div&gt;FK order_id&lt;/div&gt;&lt;div&gt;invoice_number&lt;/div&gt;&lt;div&gt;status&lt;/div&gt;&lt;div&gt;total/paid/change_vnd&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#EAF2F8;strokeColor=#1F4E78;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="1090" y="1410" width="250" height="194" as="geometry"/>
+        </mxCell>
+        <mxCell id="invoice_items" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;invoice_items&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ PHỤ THUỘC&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;FK invoice_id&lt;/div&gt;&lt;div&gt;FK order_item_id&lt;/div&gt;&lt;div&gt;quantity&lt;/div&gt;&lt;div&gt;total_amount_vnd&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#F2F2F2;strokeColor=#666666;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="1380" y="1410" width="250" height="177" as="geometry"/>
+        </mxCell>
+        <mxCell id="payment_methods" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;payment_methods&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ CHÍNH&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;code&lt;/div&gt;&lt;div&gt;type&lt;/div&gt;&lt;div&gt;is_active&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#EAF2F8;strokeColor=#1F4E78;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="1670" y="1410" width="250" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="payments" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;payments&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ CHÍNH&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;FK invoice_id&lt;/div&gt;&lt;div&gt;FK payment_method_id&lt;/div&gt;&lt;div&gt;amount_vnd&lt;/div&gt;&lt;div&gt;change_amount_vnd&lt;/div&gt;&lt;div&gt;status&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#EAF2F8;strokeColor=#1F4E78;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="1960" y="1410" width="250" height="194" as="geometry"/>
+        </mxCell>
+        <mxCell id="payment_webhook_events" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;payment_webhook_events&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ PHỤ THUỘC&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;FK payment_id&lt;/div&gt;&lt;div&gt;provider + event_id (UQ)&lt;/div&gt;&lt;div&gt;processed_at&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#F2F2F2;strokeColor=#666666;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="1670" y="1690" width="250" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="discounts" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;discounts&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ CHÍNH&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;code&lt;/div&gt;&lt;div&gt;type&lt;/div&gt;&lt;div&gt;value/percent&lt;/div&gt;&lt;div&gt;is_active&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#EAF2F8;strokeColor=#1F4E78;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="2050" y="1690" width="250" height="177" as="geometry"/>
+        </mxCell>
+        <mxCell id="audit_logs" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;audit_logs&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ PHỤ THUỘC&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;FK user_id&lt;/div&gt;&lt;div&gt;action&lt;/div&gt;&lt;div&gt;entity_type/id&lt;/div&gt;&lt;div&gt;created_at&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#F2F2F2;strokeColor=#666666;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="2490" y="1410" width="250" height="177" as="geometry"/>
+        </mxCell>
+        <mxCell id="system_settings" value="&lt;div style=&quot;text-align:center&quot;&gt;&lt;b&gt;system_settings&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align:center;font-size:9px&quot;&gt;THỰC THỂ PHỤ THUỘC&lt;/div&gt;&lt;hr&gt;&lt;div&gt;PK id&lt;/div&gt;&lt;div&gt;FK restaurant_id&lt;/div&gt;&lt;div&gt;key (UQ)&lt;/div&gt;&lt;div&gt;value&lt;/div&gt;&lt;div&gt;value_type&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#F2F2F2;strokeColor=#666666;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="2720" y="1690" width="250" height="160" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="rel_1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="roles" target="role_permissions">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="permissions" target="role_permissions">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="restaurants" target="users">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="roles" target="users">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="users" target="user_sessions">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="restaurants" target="areas">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="areas" target="tables">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="tables" target="qr_codes">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="table_merge_groups" target="dining_sessions">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="tables" target="dining_sessions">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_11" value="parent" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="categories" target="categories">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="60" y="820"/><mxPoint x="60" y="690"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="rel_12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="categories" target="menu_items">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="menu_items" target="menu_item_variants">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="option_groups" target="options">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="menu_items" target="menu_item_option_groups">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="option_groups" target="menu_item_option_groups">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_17" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="dining_sessions" target="orders">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="orders" target="order_items">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_19" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="menu_items" target="order_items">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_20" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="menu_item_variants" target="order_items">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_21" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="order_items" target="order_item_options">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_22" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="options" target="order_item_options">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_23" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="order_items" target="order_item_status_history">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_24" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="order_items" target="cancel_requests">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_25" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="orders" target="kitchen_tickets">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_26" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="dining_sessions" target="kitchen_tickets">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_27" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="tables" target="kitchen_tickets">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_28" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="kitchen_tickets" target="kitchen_ticket_items">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_29" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="order_items" target="kitchen_ticket_items">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_30" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="dining_sessions" target="invoices">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_31" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="orders" target="invoices">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_32" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="invoices" target="invoice_items">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_33" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="order_items" target="invoice_items">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_34" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="payment_methods" target="payments">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_35" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="invoices" target="payments">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_36" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="payments" target="payment_webhook_events">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_37" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="users" target="audit_logs">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel_38" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;strokeColor=#555555;fontSize=9;" edge="1" parent="1" source="restaurants" target="system_settings">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="legend" value="&lt;b&gt;CHÚ GIẢI&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#1F4E78&quot;&gt;■&lt;/font&gt; Thực thể chính&lt;br&gt;&lt;font color=&quot;#666666&quot;&gt;■&lt;/font&gt; Thực thể phụ thuộc&lt;br&gt;&lt;font color=&quot;#B8860B&quot;&gt;■&lt;/font&gt; Bảng liên kết&lt;br&gt;PK: khóa chính · FK: khóa ngoại · UQ: duy nhất" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=middle;spacing=10;fontSize=11;fillColor=#FFFFFF;strokeColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="80" y="1940" width="520" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="note_tenant" value="&lt;b&gt;Lược giản để dễ đọc:&lt;/b&gt; restaurant_id có trong hầu hết bảng nghiệp vụ. Sơ đồ chỉ vẽ một số đường nối với restaurants; các FK người thao tác như created_by, reviewed_by, served_by cũng được giữ trong dữ liệu nhưng không nối hết bằng đường." style="shape=note;whiteSpace=wrap;html=1;size=15;align=left;verticalAlign=middle;spacing=10;fontSize=11;fillColor=#FFFBEA;strokeColor=#A67C00;" vertex="1" parent="1">
+          <mxGeometry x="650" y="1940" width="900" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="note_weak" value="&lt;b&gt;Lưu ý về “thực thể yếu”:&lt;/b&gt; role_permissions và menu_item_option_groups là bảng liên kết có khóa ghép từ bảng cha. Các bảng màu xám có UUID riêng nên không phải thực thể yếu theo định nghĩa chặt, nhưng phụ thuộc vòng đời vào bảng cha." style="shape=note;whiteSpace=wrap;html=1;size=15;align=left;verticalAlign=middle;spacing=10;fontSize=11;fillColor=#F5F5F5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1600" y="1940" width="1280" height="120" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

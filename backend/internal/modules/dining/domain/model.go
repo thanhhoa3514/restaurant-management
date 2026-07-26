@@ -40,8 +40,17 @@ type Table struct {
 	Name         string
 	Capacity     int
 	Status       string
+	PositionX    *int // % chiều ngang trên sơ đồ bàn; nil = chưa xếp chỗ
+	PositionY    *int
 	Version      int
 	DeletedAt    *time.Time
+}
+
+// TablePosition là một ô trên sơ đồ bàn, toạ độ theo % khung (0–100).
+type TablePosition struct {
+	TableID uuid.UUID
+	X       int
+	Y       int
 }
 
 type QRCode struct {
@@ -62,6 +71,8 @@ type TableWithQR struct {
 	AreaID           *uuid.UUID
 	AreaName         string
 	AreaOrder        int
+	PositionX        *int
+	PositionY        *int
 	QRCodeID         *uuid.UUID
 	QRToken          *string
 	HasActiveSession bool
@@ -109,6 +120,7 @@ type DiningRepository interface {
 	ListAreas(ctx context.Context, restaurantID uuid.UUID) ([]Area, error)
 	CreateTable(ctx context.Context, t *Table) error
 	UpdateTable(ctx context.Context, t *Table) error
+	UpdateTablePositions(ctx context.Context, restaurantID uuid.UUID, positions []TablePosition) error
 	SoftDeleteTable(ctx context.Context, restaurantID, tableID uuid.UUID) error
 	CloseSession(ctx context.Context, restaurantID, sessionID uuid.UUID, closedBy *uuid.UUID) (*DiningSession, bool, error)
 	DeactivateActiveQR(ctx context.Context, restaurantID, tableID uuid.UUID, deactivatedBy *uuid.UUID, reason string) error

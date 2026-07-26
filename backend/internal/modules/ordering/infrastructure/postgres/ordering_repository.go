@@ -693,8 +693,8 @@ func (r *Repository) ReviewCancelRequest(ctx context.Context, restaurantID, canc
 
 func (r *Repository) ListStaffTables(ctx context.Context, restaurantID uuid.UUID) ([]orderingapp.StaffTableDTO, error) {
 	rows, err := r.q(ctx).Query(ctx, `
-		SELECT t.id, t.code, t.name, t.capacity, t.status, COALESCE(a.name, ''),
-		       ds.id, ds.session_code, ds.status, COALESCE(ds.customer_count, 0), COALESCE(ds.customer_name, ''), ds.opened_at, ds.updated_at, ds.waiter_called_at, ds.merge_group_id
+		SELECT t.id, t.code, t.name, t.capacity, t.status, COALESCE(a.name, ''), t.position_x, t.position_y,
+		       ds.id, ds.session_code, ds.status, COALESCE(ds.customer_count, 0), COALESCE(ds.customer_name, ''), ds.opened_at, ds.updated_at, ds.waiter_called_at, COALESCE(ds.waiter_call_reason, ''), ds.merge_group_id
 		FROM tables t
 		LEFT JOIN areas a ON a.id = t.area_id AND a.restaurant_id = t.restaurant_id AND a.deleted_at IS NULL
 		LEFT JOIN dining_sessions ds
@@ -706,8 +706,8 @@ func (r *Repository) ListStaffTables(ctx context.Context, restaurantID uuid.UUID
 
 		UNION ALL
 
-		SELECT '00000000-0000-0000-0000-000000000001'::uuid, 'Mang về', 'Mang về', 0, 'AVAILABLE', '',
-		       o.id, o.order_number, o.status, 1, COALESCE(o.customer_name, ''), o.submitted_at, o.updated_at, NULL::timestamptz, NULL::uuid
+		SELECT '00000000-0000-0000-0000-000000000001'::uuid, 'Mang về', 'Mang về', 0, 'AVAILABLE', '', NULL::int, NULL::int,
+		       o.id, o.order_number, o.status, 1, COALESCE(o.customer_name, ''), o.submitted_at, o.updated_at, NULL::timestamptz, '', NULL::uuid
 		FROM orders o
 		WHERE o.restaurant_id = $1 AND o.order_type = 'TAKEAWAY' AND o.status NOT IN ('PAID', 'CANCELLED') AND o.deleted_at IS NULL
 		
@@ -724,10 +724,15 @@ func (r *Repository) ListStaffTables(ctx context.Context, restaurantID uuid.UUID
 		var sessionID, mergeGroupID pgtype.UUID
 		var sessionCode, sessionStatus pgtype.Text
 		var customerCount pgtype.Int4
-		var customerName pgtype.Text
+		var customerName, waiterCallReason pgtype.Text
+		var posX, posY pgtype.Int4
 		var openedAt, updatedAt, waiterCalledAt pgtype.Timestamptz
-		if err := rows.Scan(&table.ID, &table.Code, &table.Name, &table.Capacity, &table.Status, &table.AreaName, &sessionID, &sessionCode, &sessionStatus, &customerCount, &customerName, &openedAt, &updatedAt, &waiterCalledAt, &mergeGroupID); err != nil {
+		if err := rows.Scan(&table.ID, &table.Code, &table.Name, &table.Capacity, &table.Status, &table.AreaName, &posX, &posY, &sessionID, &sessionCode, &sessionStatus, &customerCount, &customerName, &openedAt, &updatedAt, &waiterCalledAt, &waiterCallReason, &mergeGroupID); err != nil {
 			return nil, err
+		}
+		if posX.Valid && posY.Valid {
+			x, y := int(posX.Int32), int(posY.Int32)
+			table.PositionX, table.PositionY = &x, &y
 		}
 		if sessionID.Valid {
 			sid := uuid.UUID(sessionID.Bytes)
@@ -748,6 +753,7 @@ func (r *Repository) ListStaffTables(ctx context.Context, restaurantID uuid.UUID
 			if waiterCalledAt.Valid {
 				t := waiterCalledAt.Time
 				session.WaiterCalledAt = &t
+				session.WaiterCallReason = waiterCallReason.String
 			}
 			if mergeGroupID.Valid {
 				gid := uuid.UUID(mergeGroupID.Bytes)
@@ -837,7 +843,11 @@ func (r *Repository) ListKitchenQueue(ctx context.Context, restaurantID uuid.UUI
 		item.Options = options[item.OrderItemID]
 		item.StatusHistory = history[item.OrderItemID]
 		if len(item.StatusHistory) == 0 {
-			item.StatusHistory = []orderingapp.StaffStatusDTO{{Status: item.Status, Timestamp: tickets[idx[row.ticketID]].SubmittedAt}}
+			item.StatusHistory = []orderingapp.StaffStatusDTO{{
+				Status:    item.Status,
+				ToStatus:  item.Status,
+				Timestamp: tickets[idx[row.ticketID]].SubmittedAt,
+			}}
 		}
 		tickets[idx[row.ticketID]].Items = append(tickets[idx[row.ticketID]].Items, item)
 	}
@@ -919,15 +929,22 @@ func (r *Repository) ReopenSession(ctx context.Context, restaurantID, sessionID 
 	return out, err
 }
 
-func (r *Repository) CallWaiter(ctx context.Context, restaurantID, sessionID uuid.UUID) (orderingapp.RequestBillResponse, error) {
+func (r *Repository) CallWaiter(ctx context.Context, restaurantID, sessionID uuid.UUID, reason string) (orderingapp.RequestBillResponse, error) {
 	var out orderingapp.RequestBillResponse
 	var called pgtype.Timestamptz
+	var storedReason, tableCode pgtype.Text
+	// Trả kèm mã bàn để realtime báo đúng "Bàn T05 gọi nhân viên" thay vì thông báo chung chung.
 	err := r.q(ctx).QueryRow(ctx, `
-		UPDATE dining_sessions
-		SET waiter_called_at = NOW()
-		WHERE restaurant_id = $1 AND id = $2 AND status IN ('ACTIVE', 'AWAITING_PAYMENT') AND deleted_at IS NULL
-		RETURNING id, status, waiter_called_at
-	`, restaurantID, sessionID).Scan(&out.SessionID, &out.Status, &called)
+		WITH updated AS (
+			UPDATE dining_sessions
+			SET waiter_called_at = NOW(), waiter_call_reason = NULLIF($3, '')
+			WHERE restaurant_id = $1 AND id = $2 AND status IN ('ACTIVE', 'AWAITING_PAYMENT') AND deleted_at IS NULL
+			RETURNING id, status, waiter_called_at, waiter_call_reason, table_id
+		)
+		SELECT u.id, u.status, u.waiter_called_at, u.waiter_call_reason, t.code
+		FROM updated u
+		LEFT JOIN tables t ON t.id = u.table_id
+	`, restaurantID, sessionID, reason).Scan(&out.SessionID, &out.Status, &called, &storedReason, &tableCode)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return out, apperr.New(apperr.CodeConflict, "session is not open")
 	}
@@ -935,6 +952,8 @@ func (r *Repository) CallWaiter(ctx context.Context, restaurantID, sessionID uui
 		t := called.Time
 		out.Requested = &t
 	}
+	out.Reason = storedReason.String
+	out.TableCode = tableCode.String
 	return out, err
 }
 
@@ -942,7 +961,7 @@ func (r *Repository) AckWaiterCall(ctx context.Context, restaurantID, sessionID 
 	var out orderingapp.RequestBillResponse
 	err := r.q(ctx).QueryRow(ctx, `
 		UPDATE dining_sessions
-		SET waiter_called_at = NULL
+		SET waiter_called_at = NULL, waiter_call_reason = NULL
 		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
 		RETURNING id, status
 	`, restaurantID, sessionID).Scan(&out.SessionID, &out.Status)
@@ -953,22 +972,12 @@ func (r *Repository) AckWaiterCall(ctx context.Context, restaurantID, sessionID 
 }
 
 func (r *Repository) UpdateOrderItemStatus(ctx context.Context, restaurantID, itemID uuid.UUID, status string, actorID *uuid.UUID, actorRole string) (orderingapp.UpdateItemStatusResponse, error) {
-	var current string
-	var orderID uuid.UUID
-	err := r.q(ctx).QueryRow(ctx, `
-		SELECT order_id, status
-		FROM order_items
-		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
-		FOR UPDATE
-	`, restaurantID, itemID).Scan(&orderID, &current)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return orderingapp.UpdateItemStatusResponse{}, apperr.New(apperr.CodeNotFound, "order item not found")
-	}
+	orderID, current, c, err := r.lockItem(ctx, restaurantID, itemID)
 	if err != nil {
 		return orderingapp.UpdateItemStatusResponse{}, err
 	}
 	if current == status {
-		return orderingapp.UpdateItemStatusResponse{ID: itemID, Status: status}, nil
+		return c.resp(itemID, status), nil
 	}
 	if !canMoveStatus(current, status) {
 		return orderingapp.UpdateItemStatusResponse{}, apperr.New(apperr.CodeConflict, "invalid item status transition")
@@ -996,7 +1005,7 @@ func (r *Repository) UpdateOrderItemStatus(ctx context.Context, restaurantID, it
 	if err := r.syncKitchenStatus(ctx, restaurantID, orderID, itemID, status, actorID); err != nil {
 		return orderingapp.UpdateItemStatusResponse{}, err
 	}
-	return orderingapp.UpdateItemStatusResponse{ID: itemID, Status: status}, nil
+	return c.resp(itemID, status), nil
 }
 
 func canMoveStatus(current, next string) bool {
@@ -1053,17 +1062,7 @@ func (r *Repository) syncKitchenStatus(ctx context.Context, restaurantID, orderI
 }
 
 func (r *Repository) MarkItemUnavailable(ctx context.Context, restaurantID, itemID uuid.UUID, reason string, actorID *uuid.UUID) (orderingapp.UpdateItemStatusResponse, error) {
-	var current string
-	var orderID uuid.UUID
-	err := r.q(ctx).QueryRow(ctx, `
-		SELECT order_id, status
-		FROM order_items
-		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
-		FOR UPDATE
-	`, restaurantID, itemID).Scan(&orderID, &current)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return orderingapp.UpdateItemStatusResponse{}, apperr.New(apperr.CodeNotFound, "order item not found")
-	}
+	_, current, c, err := r.lockItem(ctx, restaurantID, itemID)
 	if err != nil {
 		return orderingapp.UpdateItemStatusResponse{}, err
 	}
@@ -1098,14 +1097,14 @@ func (r *Repository) MarkItemUnavailable(ctx context.Context, restaurantID, item
 	`, restaurantID, itemID); err != nil {
 		return orderingapp.UpdateItemStatusResponse{}, err
 	}
-	return orderingapp.UpdateItemStatusResponse{ID: itemID, Status: "UNAVAILABLE"}, nil
+	return c.resp(itemID, "UNAVAILABLE"), nil
 }
 
 // ConfirmOrderItem promotes a PLACED item to PENDING, releasing it to the
 // kitchen queue. The kitchen_ticket_item was created PENDING already and only
 // becomes visible once the order_item leaves PLACED (see ListKitchenQueue).
 func (r *Repository) ConfirmOrderItem(ctx context.Context, restaurantID, itemID uuid.UUID, actorID *uuid.UUID, actorRole string) (orderingapp.UpdateItemStatusResponse, error) {
-	current, err := r.lockPlacedItem(ctx, restaurantID, itemID)
+	current, c, err := r.lockPlacedItem(ctx, restaurantID, itemID)
 	if err != nil {
 		return orderingapp.UpdateItemStatusResponse{}, err
 	}
@@ -1122,14 +1121,14 @@ func (r *Repository) ConfirmOrderItem(ctx context.Context, restaurantID, itemID 
 	`, restaurantID, itemID, current, actorID, nullString(actorRole)); err != nil {
 		return orderingapp.UpdateItemStatusResponse{}, err
 	}
-	return orderingapp.UpdateItemStatusResponse{ID: itemID, Status: "PENDING"}, nil
+	return c.resp(itemID, "PENDING"), nil
 }
 
 // RejectOrderItem cancels a PLACED item before it ever reaches the kitchen.
 // The item and its kitchen_ticket_item go CANCELLED; any ticket left with no
 // live items is cancelled too.
 func (r *Repository) RejectOrderItem(ctx context.Context, restaurantID, itemID uuid.UUID, reason string, actorID *uuid.UUID, actorRole string) (orderingapp.UpdateItemStatusResponse, error) {
-	current, err := r.lockPlacedItem(ctx, restaurantID, itemID)
+	current, c, err := r.lockPlacedItem(ctx, restaurantID, itemID)
 	if err != nil {
 		return orderingapp.UpdateItemStatusResponse{}, err
 	}
@@ -1168,28 +1167,64 @@ func (r *Repository) RejectOrderItem(ctx context.Context, restaurantID, itemID u
 	`, restaurantID, itemID); err != nil {
 		return orderingapp.UpdateItemStatusResponse{}, err
 	}
-	return orderingapp.UpdateItemStatusResponse{ID: itemID, Status: "CANCELLED"}, nil
+	return c.resp(itemID, "CANCELLED"), nil
 }
 
-// lockPlacedItem locks an order item and asserts it is still awaiting server
-// confirmation (PLACED). Returns the current status so callers can record it.
-func (r *Repository) lockPlacedItem(ctx context.Context, restaurantID, itemID uuid.UUID) (string, error) {
+// itemCtx gom dữ liệu định tuyến + hiển thị realtime lấy kèm lúc khoá dòng món.
+type itemCtx struct {
+	sessionID *uuid.UUID
+	itemName  string
+	tableCode string
+}
+
+func (c itemCtx) resp(itemID uuid.UUID, status string) orderingapp.UpdateItemStatusResponse {
+	return orderingapp.UpdateItemStatusResponse{
+		ID:        itemID,
+		Status:    status,
+		SessionID: c.sessionID,
+		ItemName:  c.itemName,
+		TableCode: c.tableCode,
+	}
+}
+
+// lockItem khoá dòng order_item và lấy kèm dữ liệu realtime.
+// Đơn mang về (takeaway) không gắn phiên/bàn → sessionID = nil, tableCode = "".
+func (r *Repository) lockItem(ctx context.Context, restaurantID, itemID uuid.UUID) (uuid.UUID, string, itemCtx, error) {
+	var orderID uuid.UUID
 	var current string
+	var c itemCtx
+	var sess pgtype.UUID
 	err := r.q(ctx).QueryRow(ctx, `
-		SELECT status FROM order_items
-		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
-		FOR UPDATE
-	`, restaurantID, itemID).Scan(&current)
+		SELECT oi.order_id, oi.status, oi.item_name_snapshot, oi.dining_session_id, COALESCE(t.code, '')
+		FROM order_items oi
+		LEFT JOIN dining_sessions ds ON ds.id = oi.dining_session_id AND ds.restaurant_id = oi.restaurant_id
+		LEFT JOIN tables t ON t.id = ds.table_id AND t.restaurant_id = oi.restaurant_id
+		WHERE oi.restaurant_id = $1 AND oi.id = $2 AND oi.deleted_at IS NULL
+		FOR UPDATE OF oi
+	`, restaurantID, itemID).Scan(&orderID, &current, &c.itemName, &sess, &c.tableCode)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return "", apperr.New(apperr.CodeNotFound, "order item not found")
+		return uuid.Nil, "", itemCtx{}, apperr.New(apperr.CodeNotFound, "order item not found")
 	}
 	if err != nil {
-		return "", err
+		return uuid.Nil, "", itemCtx{}, err
+	}
+	if sess.Valid {
+		id := uuid.UUID(sess.Bytes)
+		c.sessionID = &id
+	}
+	return orderID, current, c, nil
+}
+
+// lockPlacedItem khoá dòng món và khẳng định nó vẫn đang chờ nhân viên duyệt (PLACED).
+func (r *Repository) lockPlacedItem(ctx context.Context, restaurantID, itemID uuid.UUID) (string, itemCtx, error) {
+	_, current, c, err := r.lockItem(ctx, restaurantID, itemID)
+	if err != nil {
+		return "", itemCtx{}, err
 	}
 	if current != "PLACED" {
-		return "", apperr.New(apperr.CodeConflict, "order item is not awaiting confirmation")
+		return "", itemCtx{}, apperr.New(apperr.CodeConflict, "order item is not awaiting confirmation")
 	}
-	return current, nil
+	return current, c, nil
 }
 
 func toStaffOrders(orders []domain.OrderRead) []orderingapp.StaffOrderDTO {
@@ -1201,7 +1236,7 @@ func toStaffOrders(orders []domain.OrderRead) []orderingapp.StaffOrderDTO {
 			for _, opt := range item.Options {
 				options = append(options, orderingapp.StaffOptionDTO{NameSnapshot: opt.NameSnapshot, OptionGroupNameSnapshot: opt.OptionGroupNameSnapshot, PriceDeltaSnapshotVND: opt.PriceDeltaSnapshotVND, Quantity: opt.Quantity})
 			}
-			items = append(items, orderingapp.StaffOrderItemDTO{ID: item.ID, OrderID: item.OrderID, MenuItemID: item.MenuItemID, NameSnapshot: item.NameSnapshot, VariantNameSnapshot: item.VariantNameSnapshot, Quantity: item.Quantity, UnitPriceVND: item.UnitPriceVND, OptionsTotalVND: item.OptionsTotalVND, SubtotalVND: item.SubtotalVND, TotalAmountVND: item.TotalAmountVND, Status: item.Status, Station: item.Station, Note: item.Note, IsTakeaway: item.IsTakeaway, Options: options, StatusHistory: []orderingapp.StaffStatusDTO{{Status: item.Status, Timestamp: order.SubmittedAt}}})
+			items = append(items, orderingapp.StaffOrderItemDTO{ID: item.ID, OrderID: item.OrderID, MenuItemID: item.MenuItemID, NameSnapshot: item.NameSnapshot, VariantNameSnapshot: item.VariantNameSnapshot, Quantity: item.Quantity, UnitPriceVND: item.UnitPriceVND, OptionsTotalVND: item.OptionsTotalVND, SubtotalVND: item.SubtotalVND, TotalAmountVND: item.TotalAmountVND, Status: item.Status, Station: item.Station, Note: item.Note, IsTakeaway: item.IsTakeaway, Options: options, StatusHistory: []orderingapp.StaffStatusDTO{{Status: item.Status, ToStatus: item.Status, Timestamp: order.SubmittedAt}}})
 		}
 		out = append(out, orderingapp.StaffOrderDTO{ID: order.ID, OrderNumber: order.OrderNumber, OrderType: order.OrderType, Status: order.Status, SubmittedAt: order.SubmittedAt, Note: order.Note, Items: items})
 	}
@@ -1234,7 +1269,17 @@ func (r *Repository) fetchStaffHistory(ctx context.Context, restaurantID uuid.UU
 	if len(itemIDs) == 0 {
 		return out, nil
 	}
-	rows, err := r.q(ctx).Query(ctx, `SELECT order_item_id, to_status, changed_at FROM order_item_status_history WHERE restaurant_id = $1 AND order_item_id = ANY($2) ORDER BY changed_at`, restaurantID, itemIDs)
+	rows, err := r.q(ctx).Query(ctx, `
+		SELECT h.order_item_id, h.from_status, h.to_status, h.changed_at,
+		       u.full_name, h.changed_by_role, h.reason, h.note
+		FROM order_item_status_history h
+		LEFT JOIN users u
+		  ON u.id = h.changed_by
+		 AND u.restaurant_id = h.restaurant_id
+		WHERE h.restaurant_id = $1
+		  AND h.order_item_id = ANY($2)
+		ORDER BY h.changed_at, h.id
+	`, restaurantID, itemIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -1242,9 +1287,19 @@ func (r *Repository) fetchStaffHistory(ctx context.Context, restaurantID uuid.UU
 	for rows.Next() {
 		var itemID uuid.UUID
 		var row orderingapp.StaffStatusDTO
-		if err := rows.Scan(&itemID, &row.Status, &row.Timestamp); err != nil {
+		if err := rows.Scan(
+			&itemID,
+			&row.FromStatus,
+			&row.ToStatus,
+			&row.Timestamp,
+			&row.ChangedByName,
+			&row.ChangedByRole,
+			&row.Reason,
+			&row.Note,
+		); err != nil {
 			return nil, err
 		}
+		row.Status = row.ToStatus
 		out[itemID] = append(out[itemID], row)
 	}
 	return out, rows.Err()

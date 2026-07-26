@@ -2,7 +2,9 @@ import type { CashierSession, Invoice, SubMethod } from '../types'
 
 export function fmtVND(amount: number): string {
   const sign = amount < 0 ? '-' : ''
-  const v = Math.abs(Math.round(amount)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  const v = Math.abs(Math.round(amount))
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, '.')
   return sign + v + 'đ'
 }
 
@@ -57,7 +59,8 @@ export function activeInvoice(session: CashierSession): Invoice {
 
 export function itemsCount(session: CashierSession): number {
   return session.invoices.reduce(
-    (sum, inv) => sum + inv.orders.reduce((s, o) => s + o.items.reduce((s2, it) => s2 + it.qty, 0), 0),
+    (sum, inv) =>
+      sum + inv.orders.reduce((s, o) => s + o.items.reduce((s2, it) => s2 + it.qty, 0), 0),
     0,
   )
 }
@@ -72,5 +75,3 @@ export function paidCount(session: CashierSession): { paid: number; total: numbe
     total: session.invoices.length,
   }
 }
-
-

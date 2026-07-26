@@ -7,9 +7,7 @@ export function NotFoundPage() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-800/10 via-zinc-950 to-zinc-950" />
 
       <div className="relative text-center">
-        <p className="text-[120px] font-black leading-none text-zinc-800 sm:text-[160px]">
-          404
-        </p>
+        <p className="text-[120px] font-black leading-none text-zinc-800 sm:text-[160px]">404</p>
         <h1 className="-mt-2 text-lg font-semibold text-zinc-300 sm:text-xl">
           Không tìm thấy trang
         </h1>

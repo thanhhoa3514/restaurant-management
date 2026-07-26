@@ -57,11 +57,14 @@ export interface UseKdsValue {
   stats: KDSStats
   manageTicket: Ticket | undefined
   cancelRequests: CancelRequestDTO[]
+  queueIsError: boolean
+  queueIsFetching: boolean
   t: (key: KdsDictKey, ...args: Array<number | string>) => string
   advanceAll: (orderId: string) => void
   advanceItem: (orderId: string, itemId: string) => void
   reviewCancel: (cancelRequestId: string, action: 'approve' | 'reject') => void
   injectNewTicket: () => void
+  retryQueue: () => void
   setPaused: Dispatch<SetStateAction<boolean>>
   setTimeMultiplier: Dispatch<SetStateAction<number>>
   setSoundOn: Dispatch<SetStateAction<boolean>>
@@ -82,7 +85,13 @@ export function useKds(): UseKdsValue {
   const [manageOrderId, setManageOrderId] = useState<string | null>(null)
   const [demoOpen, setDemoOpen] = useState(false)
 
-  const { tickets, refetch: refetchQueue } = useKdsQueue(paused)
+  const {
+    tickets,
+    error: queueError,
+    isError: queueIsError,
+    isFetching: queueIsFetching,
+    refetch: refetchQueue,
+  } = useKdsQueue(paused)
   const { cancelRequests, refetch: refetchCancelRequests } = useCancelRequests(paused)
 
   const langRef = useRef(lang)
@@ -122,6 +131,21 @@ export function useKds(): UseKdsValue {
       toast.success(message)
     }
   }, [])
+
+  useEffect(() => {
+    const toastId = 'kitchen-queue-load-error'
+    if (!queueIsError) {
+      toast.dismiss(toastId)
+      return
+    }
+    toast.error(errorMessage(queueError, t('queue_load_error_title')), {
+      id: toastId,
+      action: {
+        label: t('queue_retry'),
+        onClick: refetchQueue,
+      },
+    })
+  }, [queueError, queueIsError, refetchQueue, t])
 
   // ── Timer: urgency tracking ────────────────────────────────────────────────
   useEffect(() => {
@@ -279,11 +303,14 @@ export function useKds(): UseKdsValue {
     stats,
     manageTicket,
     cancelRequests,
+    queueIsError,
+    queueIsFetching,
     t,
     advanceAll,
     advanceItem,
     reviewCancel,
     injectNewTicket: refetchQueue,
+    retryQueue: refetchQueue,
     setPaused,
     setTimeMultiplier,
     setSoundOn,

@@ -72,7 +72,11 @@ func (s *ProcessPartialPayment) Handle(ctx context.Context, in ProcessPartialPay
 		}
 
 		if s.outbox != nil {
+			// Khách đưa dư thì phần ghi nhận vào hóa đơn nhỏ hơn tiền đưa.
 			paidAmount := in.ReceivedAmountVND
+			if invoice.Payment != nil {
+				paidAmount = invoice.Payment.AmountVND
+			}
 			if err := s.outbox.Write(ctx, outbox.WriteEvent{
 				RestaurantID:  s.defaultRestaurantID,
 				AggregateType: "invoice",

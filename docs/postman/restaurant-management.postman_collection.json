@@ -1,0 +1,3563 @@
+{
+  "info": {
+    "_postman_id": "7ba27186-c66c-4b28-a4a4-d73a5d645b2c",
+    "name": "Restaurant Management API",
+    "description": "Collection được sinh trực tiếp từ các Gin route hiện tại của dự án.\n\nLuồng khuyến nghị:\n1. Chạy Public > Staff login để tự lưu access_token/refresh_token.\n2. Chạy Staff > Dining > List table QR để tự lưu table_id/qr_token.\n3. Chạy Public > Join dining session để tự lưu session_token/session_id.\n4. Chạy Guest > Menu và Guest > Ordering theo thứ tự để tự lưu các UUID.\n\nTài khoản seed mặc định: manager/demo1234. Thay staff_username để kiểm tra phân quyền cashier, server hoặc kitchen.\nCác request tạo/sửa/xóa làm thay đổi dữ liệu thật; không dùng Run collection toàn bộ trên production.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const contentType = pm.response.headers.get(\"Content-Type\") || \"\";",
+          "if (contentType.includes(\"application/json\")) {",
+          "  let payload;",
+          "  try { payload = pm.response.json(); } catch (_) {}",
+          "  if (payload && Object.prototype.hasOwnProperty.call(payload, \"code\")) {",
+          "    pm.test(\"Envelope code khớp HTTP status\", () => pm.expect(payload.code).to.eql(pm.response.code));",
+          "  }",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "ws_url",
+      "value": "ws://localhost:8080"
+    },
+    {
+      "key": "staff_username",
+      "value": "manager"
+    },
+    {
+      "key": "staff_password",
+      "value": "demo1234"
+    },
+    {
+      "key": "access_token",
+      "value": ""
+    },
+    {
+      "key": "refresh_token",
+      "value": ""
+    },
+    {
+      "key": "qr_token",
+      "value": ""
+    },
+    {
+      "key": "session_token",
+      "value": ""
+    },
+    {
+      "key": "provider",
+      "value": "mock"
+    },
+    {
+      "key": "payment_method_code",
+      "value": "cash"
+    },
+    {
+      "key": "table_id",
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "key": "second_table_id",
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "key": "area_id",
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "key": "session_id",
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "key": "second_session_id",
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "key": "merge_group_id",
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "key": "category_id",
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "key": "menu_item_id",
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "key": "menu_item_version",
+      "value": "1"
+    },
+    {
+      "key": "variant_id",
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "key": "option_id",
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "key": "order_id",
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "key": "order_version",
+      "value": "1"
+    },
+    {
+      "key": "order_item_id",
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "key": "second_order_item_id",
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "key": "cancel_request_id",
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "key": "invoice_id",
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "key": "invoice_version",
+      "value": "1"
+    },
+    {
+      "key": "payment_number",
+      "value": ""
+    },
+    {
+      "key": "user_id",
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "key": "managed_user_id",
+      "value": "00000000-0000-0000-0000-000000000000"
+    }
+  ],
+  "item": [
+    {
+      "name": "00. Operations",
+      "description": "Health, tài liệu API và WebSocket.",
+      "item": [
+        {
+          "name": "Liveness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{base_url}}/health",
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Readiness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{base_url}}/health/ready",
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "OpenAPI YAML",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{base_url}}/openapi.yaml",
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Swagger UI redirect",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{base_url}}/swagger",
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "WebSocket handshake [mở bằng New > WebSocket]",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{ws_url}}/ws",
+            "description": "Postman HTTP collection không lưu native WebSocket request theo schema v2.1.\nTạo WebSocket request tới {{ws_url}}/ws, sau khi Connected gửi một trong hai message:\nStaff: {\"type\":\"_auth\",\"access_token\":\"{{access_token}}\"}\nGuest: {\"type\":\"_auth\",\"session_token\":\"{{session_token}}\"}\nServer phản hồi event _auth_ok nếu xác thực thành công."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "01. Public",
+      "description": "Không yêu cầu JWT hoặc QR session token.",
+      "item": [
+        {
+          "name": "Staff login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{base_url}}/api/v1/restaurant/auth/login",
+            "description": "Tự lưu access_token, refresh_token và user_id vào collection variables.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{staff_username}}\",\n  \"password\": \"{{staff_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "if (data.token) pm.collectionVariables.set(\"access_token\", data.token);",
+                  "if (data.refresh_token) pm.collectionVariables.set(\"refresh_token\", data.refresh_token);",
+                  "if (data.user_id) pm.collectionVariables.set(\"user_id\", data.user_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh staff token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{base_url}}/api/v1/restaurant/auth/refresh",
+            "description": "Refresh token được rotate; script tự ghi đè cả hai token.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "if (data.token) pm.collectionVariables.set(\"access_token\", data.token);",
+                  "if (data.refresh_token) pm.collectionVariables.set(\"refresh_token\", data.refresh_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List guest tables and QR tokens",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{base_url}}/api/v1/customer/tables",
+            "description": "Public demo endpoint. Tự lưu table_id và qr_token của phần tử đầu tiên."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "const first = Array.isArray(data) ? data[0] : null;",
+                  "if (first && first.table_id) pm.collectionVariables.set(\"table_id\", first.table_id);",
+                  "if (first && (first.qr_token || first.token)) pm.collectionVariables.set(\"qr_token\", first.qr_token || first.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Join dining session by QR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{base_url}}/api/v1/customer/sessions/join",
+            "description": "Tự lưu session_token, session_id và table_id. Phiên QR mới có thể cần nhân viên verify trước khi gọi món.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{qr_token}}\",\n  \"guest_name\": \"Khách Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "if (data.session_token) pm.collectionVariables.set(\"session_token\", data.session_token);",
+                  "if (data.session_id) pm.collectionVariables.set(\"session_id\", data.session_id);",
+                  "if (data.table_id) pm.collectionVariables.set(\"table_id\", data.table_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Payment webhook [provider manual]",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{base_url}}/api/v1/billing/payments/webhook/{{provider}}",
+            "description": "Request dành cho tích hợp thủ công. Mỗi provider có payload và chữ ký riêng; cần bổ sung header đúng cấu hình gateway.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event_id\": \"postman-event-{{$timestamp}}\",\n  \"payment_number\": \"{{payment_number}}\",\n  \"status\": \"COMPLETED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mock payment completion [non-production]",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{base_url}}/api/v1/billing/payments/mock/complete",
+            "description": "Chỉ được đăng ký khi APP_ENV khác production.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_number\": \"{{payment_number}}\",\n  \"result\": \"success\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "const invoice = data.invoice || (Array.isArray(data.invoices) ? data.invoices[0] : null);",
+                  "if (invoice) {",
+                  "  if (invoice.id) pm.collectionVariables.set(\"invoice_id\", invoice.id);",
+                  "  if (invoice.version) pm.collectionVariables.set(\"invoice_version\", invoice.version);",
+                  "  if (invoice.payment && invoice.payment.payment_number) pm.collectionVariables.set(\"payment_number\", invoice.payment.payment_number);",
+                  "  if (invoice.items && invoice.items[0] && invoice.items[0].order_item_id) pm.collectionVariables.set(\"order_item_id\", invoice.items[0].order_item_id);",
+                  "  if (invoice.items && invoice.items[1] && invoice.items[1].order_item_id) pm.collectionVariables.set(\"second_order_item_id\", invoice.items[1].order_item_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02. Guest - Menu & Ordering",
+      "description": "Menu là public; các API ordering dùng X-Session-Token: {{session_token}}.",
+      "item": [
+        {
+          "name": "List menu categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{base_url}}/api/v1/customer/menu/categories",
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "const first = Array.isArray(data) ? data[0] : null;",
+                  "if (first && first.id) pm.collectionVariables.set(\"category_id\", first.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List menu items",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{base_url}}/api/v1/customer/menu/items?category_id={{category_id}}",
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "const first = Array.isArray(data) ? data[0] : null;",
+                  "if (first && first.id) pm.collectionVariables.set(\"menu_item_id\", first.id);",
+                  "if (first && first.version) pm.collectionVariables.set(\"menu_item_version\", first.version);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get menu item detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": "{{base_url}}/api/v1/customer/menu/items/{{menu_item_id}}",
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "if (data.id) pm.collectionVariables.set(\"menu_item_id\", data.id);",
+                  "if (data.version) pm.collectionVariables.set(\"menu_item_version\", data.version);",
+                  "if (Array.isArray(data.variants) && data.variants[0]) pm.collectionVariables.set(\"variant_id\", data.variants[0].id);",
+                  "if (Array.isArray(data.option_groups) && data.option_groups[0] && data.option_groups[0].options && data.option_groups[0].options[0]) pm.collectionVariables.set(\"option_id\", data.option_groups[0].options[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Place order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "key",
+                  "value": "X-Session-Token",
+                  "type": "string"
+                },
+                {
+                  "key": "value",
+                  "value": "{{session_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/customer/orders",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Đơn kiểm thử từ Postman\",\n  \"items\": [\n    {\n      \"menu_item_id\": \"{{menu_item_id}}\",\n      \"variant_id\": null,\n      \"quantity\": 1,\n      \"note\": \"Ít cay\",\n      \"options\": []\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "if (data.order_id) pm.collectionVariables.set(\"order_id\", data.order_id);",
+                  "if (data.version) pm.collectionVariables.set(\"order_version\", data.version);",
+                  "if (Array.isArray(data.items) && data.items[0]) pm.collectionVariables.set(\"order_item_id\", data.items[0].order_item_id || data.items[0].id);",
+                  "if (Array.isArray(data.items) && data.items[1]) pm.collectionVariables.set(\"second_order_item_id\", data.items[1].order_item_id || data.items[1].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "View current session orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "key",
+                  "value": "X-Session-Token",
+                  "type": "string"
+                },
+                {
+                  "key": "value",
+                  "value": "{{session_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/customer/orders",
+            "description": "Tự lưu order_id, order_version và order_item_id để dùng cho sửa/hủy."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "const first = Array.isArray(data.orders) ? data.orders[0] : null;",
+                  "if (first && first.id) pm.collectionVariables.set(\"order_id\", first.id);",
+                  "if (first && first.version) pm.collectionVariables.set(\"order_version\", first.version);",
+                  "if (first && first.items && first.items[0]) pm.collectionVariables.set(\"order_item_id\", first.items[0].order_item_id || first.items[0].id);",
+                  "if (first && first.items && first.items[1]) pm.collectionVariables.set(\"second_order_item_id\", first.items[1].order_item_id || first.items[1].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Edit placed order items",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "key",
+                  "value": "X-Session-Token",
+                  "type": "string"
+                },
+                {
+                  "key": "value",
+                  "value": "{{session_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/customer/orders/{{order_id}}/items",
+            "description": "Chỉ món PLACED, chưa được phục vụ xác nhận, mới được sửa. Món bị bỏ khỏi mảng items sẽ được hủy.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"version\": {{order_version}},\n  \"items\": [\n    {\n      \"order_item_id\": \"{{order_item_id}}\",\n      \"quantity\": 2,\n      \"note\": \"Cập nhật từ Postman\",\n      \"options\": []\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "if (data.order_id) pm.collectionVariables.set(\"order_id\", data.order_id);",
+                  "if (data.version) pm.collectionVariables.set(\"order_version\", data.version);",
+                  "if (Array.isArray(data.items) && data.items[0]) pm.collectionVariables.set(\"order_item_id\", data.items[0].order_item_id || data.items[0].id);",
+                  "if (Array.isArray(data.items) && data.items[1]) pm.collectionVariables.set(\"second_order_item_id\", data.items[1].order_item_id || data.items[1].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancel whole placed order",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "key",
+                  "value": "X-Session-Token",
+                  "type": "string"
+                },
+                {
+                  "key": "value",
+                  "value": "{{session_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/customer/orders/{{order_id}}",
+            "description": "Chỉ dùng khi toàn bộ món còn ở PLACED. Request này thay đổi dữ liệu thật."
+          },
+          "response": []
+        },
+        {
+          "name": "Request cancellation after confirmation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "key",
+                  "value": "X-Session-Token",
+                  "type": "string"
+                },
+                {
+                  "key": "value",
+                  "value": "{{session_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/customer/orders/{{order_id}}/cancel-requests",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_item_id\": \"{{order_item_id}}\",\n  \"reason\": \"Khách đổi ý\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "if (data.cancel_request_id) pm.collectionVariables.set(\"cancel_request_id\", data.cancel_request_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Request bill",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "key",
+                  "value": "X-Session-Token",
+                  "type": "string"
+                },
+                {
+                  "key": "value",
+                  "value": "{{session_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/customer/request-bill",
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Call waiter",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "key",
+                  "value": "X-Session-Token",
+                  "type": "string"
+                },
+                {
+                  "key": "value",
+                  "value": "{{session_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/customer/call-waiter",
+            "description": ""
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03. Staff - Identity",
+      "description": "JWT staff; các API quản trị cần permission identity.manage.",
+      "item": [
+        {
+          "name": "Current staff session",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/auth/me",
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Admin dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/dashboard",
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "List staff users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/users",
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "const first = Array.isArray(data) ? data[0] : null;",
+                  "if (first && first.id) pm.collectionVariables.set(\"managed_user_id\", first.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List roles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/users/roles",
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Create staff user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/users",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"create\",\n  \"username\": \"postman_{{$timestamp}}\",\n  \"full_name\": \"Nhân viên Postman\",\n  \"email\": \"postman@example.com\",\n  \"phone\": \"0900000000\",\n  \"role\": \"server\",\n  \"password\": \"Postman123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "if (data.id) pm.collectionVariables.set(\"managed_user_id\", data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update staff user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/users",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"update\",\n  \"user_id\": \"{{managed_user_id}}\",\n  \"full_name\": \"Nhân viên Postman đã sửa\",\n  \"phone\": \"0911111111\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Set staff user status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/users",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"set_status\",\n  \"user_id\": \"{{managed_user_id}}\",\n  \"status\": \"ACTIVE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reset staff password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/users",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"reset_password\",\n  \"user_id\": \"{{managed_user_id}}\",\n  \"password\": \"Postman456!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout current staff session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/auth/logout",
+            "description": "Đặt cuối luồng kiểm thử vì request này revoke JWT session hiện tại."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  pm.collectionVariables.unset(\"access_token\");",
+                  "  pm.collectionVariables.unset(\"refresh_token\");",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04. Staff - Catalog",
+      "description": "JWT staff; yêu cầu permission catalog.manage.",
+      "item": [
+        {
+          "name": "List categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/menu/categories",
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "const first = Array.isArray(data) ? data[0] : null;",
+                  "if (first && first.id) pm.collectionVariables.set(\"category_id\", first.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List menu items",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/menu/items?category_id={{category_id}}",
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "const first = Array.isArray(data) ? data[0] : null;",
+                  "if (first && first.id) pm.collectionVariables.set(\"menu_item_id\", first.id);",
+                  "if (first && first.version) pm.collectionVariables.set(\"menu_item_version\", first.version);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get menu item detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/menu/items/{{menu_item_id}}",
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "if (data.id) pm.collectionVariables.set(\"menu_item_id\", data.id);",
+                  "if (data.version) pm.collectionVariables.set(\"menu_item_version\", data.version);",
+                  "if (Array.isArray(data.variants) && data.variants[0]) pm.collectionVariables.set(\"variant_id\", data.variants[0].id);",
+                  "if (Array.isArray(data.option_groups) && data.option_groups[0] && data.option_groups[0].options && data.option_groups[0].options[0]) pm.collectionVariables.set(\"option_id\", data.option_groups[0].options[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create menu item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/menu/items",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_id\": \"{{category_id}}\",\n  \"name\": \"Món thử từ Postman\",\n  \"description\": \"Món được tạo để kiểm thử API\",\n  \"short_description\": \"Món kiểm thử\",\n  \"base_price_vnd\": 99000,\n  \"image_url\": \"/images/menu/lau-thai-tomyum.webp\",\n  \"is_available\": true,\n  \"availability_status\": \"AVAILABLE\",\n  \"status\": \"DRAFT\",\n  \"is_featured\": false,\n  \"is_spicy\": false,\n  \"station\": \"KITCHEN\",\n  \"display_order\": 99,\n  \"variants\": [],\n  \"option_groups\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "if (data.id) pm.collectionVariables.set(\"menu_item_id\", data.id);",
+                  "if (data.version) pm.collectionVariables.set(\"menu_item_version\", data.version);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update menu item",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/menu/items/{{menu_item_id}}",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_id\": \"{{category_id}}\",\n  \"name\": \"Món thử từ Postman\",\n  \"description\": \"Món được tạo để kiểm thử API\",\n  \"short_description\": \"Món kiểm thử\",\n  \"base_price_vnd\": 99000,\n  \"image_url\": \"/images/menu/lau-thai-tomyum.webp\",\n  \"is_available\": true,\n  \"availability_status\": \"AVAILABLE\",\n  \"status\": \"DRAFT\",\n  \"is_featured\": false,\n  \"is_spicy\": false,\n  \"station\": \"KITCHEN\",\n  \"display_order\": 99,\n  \"variants\": [],\n  \"option_groups\": [],\n  \"version\": {{menu_item_version}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "if (data.version) pm.collectionVariables.set(\"menu_item_version\", data.version);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Toggle menu item availability",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/menu/items/{{menu_item_id}}/availability",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_available\": false,\n  \"availability_status\": \"TEMPORARILY_UNAVAILABLE\",\n  \"version\": {{menu_item_version}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "if (data.version) pm.collectionVariables.set(\"menu_item_version\", data.version);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Presign menu image upload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/menu/upload/presign",
+            "description": "Trả về URL upload nếu S3-compatible storage đã được cấu hình.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"extension\": \".webp\",\n  \"content_type\": \"image/webp\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete menu item",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/menu/items/{{menu_item_id}}",
+            "description": "Đặt cuối luồng Catalog; đây là soft delete.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"version\": {{menu_item_version}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "05. Staff - Dining",
+      "description": "Quản lý bàn, khu vực và phiên ăn. Permission thay đổi theo endpoint.",
+      "item": [
+        {
+          "name": "List table QR codes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/tables/qrs",
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "const first = Array.isArray(data) ? data[0] : null;",
+                  "if (first && first.table_id) pm.collectionVariables.set(\"table_id\", first.table_id);",
+                  "if (first && (first.qr_token || first.token)) pm.collectionVariables.set(\"qr_token\", first.qr_token || first.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ensure or rotate table QR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/tables/qrs",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"table_id\": \"{{table_id}}\",\n  \"rotate\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "if (data.table_id) pm.collectionVariables.set(\"table_id\", data.table_id);",
+                  "if (data.token) pm.collectionVariables.set(\"qr_token\", data.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Open dining session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/sessions",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"table_id\": \"{{table_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "if (data.session_token) pm.collectionVariables.set(\"session_token\", data.session_token);",
+                  "if (data.session_id) pm.collectionVariables.set(\"session_id\", data.session_id);",
+                  "if (data.table_id) pm.collectionVariables.set(\"table_id\", data.table_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List pending verification sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/sessions/pending-verification",
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "const first = Array.isArray(data) ? data[0] : null;",
+                  "if (first && first.id) pm.collectionVariables.set(\"session_id\", first.id);",
+                  "if (first && first.session_id) pm.collectionVariables.set(\"session_id\", first.session_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify pending session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/sessions/{{session_id}}/verify",
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Merge sessions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/sessions/merge",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_ids\": [\n    \"{{session_id}}\",\n    \"{{second_session_id}}\"\n  ],\n  \"note\": \"Ghép bàn từ Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "if (data.merge_group_id) pm.collectionVariables.set(\"merge_group_id\", data.merge_group_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Split merged sessions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/sessions/split",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merge_group_id\": \"{{merge_group_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Close dining session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/sessions/{{session_id}}/close",
+            "description": "Cashier permission; phiên chỉ đóng được theo điều kiện nghiệp vụ thanh toán."
+          },
+          "response": []
+        },
+        {
+          "name": "List areas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/areas",
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "const areas = Array.isArray(data.areas) ? data.areas : [];",
+                  "if (areas[0] && areas[0].id) pm.collectionVariables.set(\"area_id\", areas[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create area",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/areas",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Khu Postman {{$timestamp}}\",\n  \"description\": \"Khu vực kiểm thử\",\n  \"display_order\": 99\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "if (data.id) pm.collectionVariables.set(\"area_id\", data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update area",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/areas/{{area_id}}",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Khu Postman đã sửa\",\n  \"description\": \"Cập nhật từ Postman\",\n  \"display_order\": 98,\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create table",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/tables",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"area_id\": \"{{area_id}}\",\n  \"code\": \"P{{$timestamp}}\",\n  \"name\": \"Bàn Postman\",\n  \"capacity\": 4,\n  \"status\": \"AVAILABLE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "if (data.id) pm.collectionVariables.set(\"table_id\", data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update table",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/tables/{{table_id}}",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"area_id\": \"{{area_id}}\",\n  \"code\": \"POSTMAN\",\n  \"name\": \"Bàn Postman đã sửa\",\n  \"capacity\": 6,\n  \"status\": \"AVAILABLE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete table",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/tables/{{table_id}}",
+            "description": "Có thể bị từ chối nếu bàn đang có phiên hoạt động."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete area",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/areas/{{area_id}}",
+            "description": "Đặt sau Delete table; vẫn có thể bị từ chối nếu khu vực đang còn bàn khác."
+          },
+          "response": []
+        },
+        {
+          "name": "List daily sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/sessions/daily?date=&status=ALL&search=",
+            "description": "date có định dạng YYYY-MM-DD; có thể để trống để dùng ngày hiện tại."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "const first = Array.isArray(data.sessions) ? data.sessions[0] : null;",
+                  "if (first && first.id) pm.collectionVariables.set(\"session_id\", first.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get daily session detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/sessions/daily/{{session_id}}",
+            "description": ""
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "06. Staff - Ordering",
+      "description": "Nhân viên phục vụ xác nhận, cập nhật món và xử lý tín hiệu bàn.",
+      "item": [
+        {
+          "name": "List staff tables and orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/tables",
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "const tables = Array.isArray(data.tables) ? data.tables : [];",
+                  "const withSession = tables.find((table) => table.session);",
+                  "if (tables[0] && tables[0].id) pm.collectionVariables.set(\"table_id\", tables[0].id);",
+                  "if (withSession && withSession.session) {",
+                  "  pm.collectionVariables.set(\"session_id\", withSession.session.id);",
+                  "  const orders = withSession.session.orders || [];",
+                  "  if (orders[0]) pm.collectionVariables.set(\"order_id\", orders[0].id);",
+                  "  if (orders[0] && orders[0].items && orders[0].items[0]) pm.collectionVariables.set(\"order_item_id\", orders[0].items[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Request bill for session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/sessions/{{session_id}}/request-bill",
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Reopen session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/sessions/{{session_id}}/reopen",
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Acknowledge waiter call",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/sessions/{{session_id}}/ack-waiter-call",
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Update order item status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/order-items/{{order_item_id}}/status",
+            "description": "Status phải tuân theo state transition hiện tại.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"SERVED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm placed item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/order-items/{{order_item_id}}/confirm",
+            "description": "Chuyển món PLACED sang PENDING để đưa vào luồng bếp."
+          },
+          "response": []
+        },
+        {
+          "name": "Reject placed item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/order-items/{{order_item_id}}/reject",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Không thể phục vụ món\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark order item unavailable",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/order-items/{{order_item_id}}/unavailable",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Hết nguyên liệu\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create takeaway order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/orders/takeaway",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_name\": \"Khách mang về\",\n  \"customer_phone\": \"0900000000\",\n  \"pickup_time\": null,\n  \"note\": \"Đơn mang về từ Postman\",\n  \"items\": [\n    {\n      \"menu_item_id\": \"{{menu_item_id}}\",\n      \"variant_id\": null,\n      \"quantity\": 1,\n      \"note\": \"\",\n      \"options\": []\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "if (data.order_id) pm.collectionVariables.set(\"order_id\", data.order_id);",
+                  "if (data.version) pm.collectionVariables.set(\"order_version\", data.version);",
+                  "if (Array.isArray(data.items) && data.items[0]) pm.collectionVariables.set(\"order_item_id\", data.items[0].order_item_id || data.items[0].id);",
+                  "if (Array.isArray(data.items) && data.items[1]) pm.collectionVariables.set(\"second_order_item_id\", data.items[1].order_item_id || data.items[1].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add takeaway items to dining session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/sessions/{{session_id}}/takeaway-items",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Đơn kiểm thử từ Postman\",\n  \"items\": [\n    {\n      \"menu_item_id\": \"{{menu_item_id}}\",\n      \"variant_id\": null,\n      \"quantity\": 1,\n      \"note\": \"Ít cay\",\n      \"options\": []\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "if (data.order_id) pm.collectionVariables.set(\"order_id\", data.order_id);",
+                  "if (data.version) pm.collectionVariables.set(\"order_version\", data.version);",
+                  "if (Array.isArray(data.items) && data.items[0]) pm.collectionVariables.set(\"order_item_id\", data.items[0].order_item_id || data.items[0].id);",
+                  "if (Array.isArray(data.items) && data.items[1]) pm.collectionVariables.set(\"second_order_item_id\", data.items[1].order_item_id || data.items[1].id);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07. Staff - Kitchen",
+      "description": "JWT staff; yêu cầu permission kitchen.operate.",
+      "item": [
+        {
+          "name": "Kitchen queue",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/kitchen/queue",
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "const ticket = Array.isArray(data.tickets) ? data.tickets[0] : null;",
+                  "if (ticket && ticket.items && ticket.items[0]) pm.collectionVariables.set(\"order_item_id\", ticket.items[0].order_item_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update kitchen item status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/kitchen/items/{{order_item_id}}/status",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PREPARING\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark kitchen item unavailable",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/kitchen/items/{{order_item_id}}/unavailable",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Bếp hết nguyên liệu\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List pending cancel requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/kitchen/cancel-requests",
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "const first = Array.isArray(data.cancel_requests) ? data.cancel_requests[0] : null;",
+                  "if (first && first.id) pm.collectionVariables.set(\"cancel_request_id\", first.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Review cancel request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/kitchen/cancel-requests/{{cancel_request_id}}/review",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"approve\",\n  \"note\": \"Bếp đồng ý hủy\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "08. Staff - Billing",
+      "description": "JWT staff; yêu cầu permission billing.process.",
+      "item": [
+        {
+          "name": "Build invoice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/invoices",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dining_session_id\": \"{{session_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "const invoice = data.invoice || (Array.isArray(data.invoices) ? data.invoices[0] : null);",
+                  "if (invoice) {",
+                  "  if (invoice.id) pm.collectionVariables.set(\"invoice_id\", invoice.id);",
+                  "  if (invoice.version) pm.collectionVariables.set(\"invoice_version\", invoice.version);",
+                  "  if (invoice.payment && invoice.payment.payment_number) pm.collectionVariables.set(\"payment_number\", invoice.payment.payment_number);",
+                  "  if (invoice.items && invoice.items[0] && invoice.items[0].order_item_id) pm.collectionVariables.set(\"order_item_id\", invoice.items[0].order_item_id);",
+                  "  if (invoice.items && invoice.items[1] && invoice.items[1].order_item_id) pm.collectionVariables.set(\"second_order_item_id\", invoice.items[1].order_item_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List session invoices",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/invoices?dining_session_id={{session_id}}",
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "const invoice = data.invoice || (Array.isArray(data.invoices) ? data.invoices[0] : null);",
+                  "if (invoice) {",
+                  "  if (invoice.id) pm.collectionVariables.set(\"invoice_id\", invoice.id);",
+                  "  if (invoice.version) pm.collectionVariables.set(\"invoice_version\", invoice.version);",
+                  "  if (invoice.payment && invoice.payment.payment_number) pm.collectionVariables.set(\"payment_number\", invoice.payment.payment_number);",
+                  "  if (invoice.items && invoice.items[0] && invoice.items[0].order_item_id) pm.collectionVariables.set(\"order_item_id\", invoice.items[0].order_item_id);",
+                  "  if (invoice.items && invoice.items[1] && invoice.items[1].order_item_id) pm.collectionVariables.set(\"second_order_item_id\", invoice.items[1].order_item_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Split invoice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/invoices/split",
+            "description": "Cần ít nhất hai order_item_id khác nhau thuộc cùng phiên.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dining_session_id\": \"{{session_id}}\",\n  \"groups\": [\n    {\n      \"label\": \"Nhóm 1\",\n      \"order_item_ids\": [\"{{order_item_id}}\"]\n    },\n    {\n      \"label\": \"Nhóm 2\",\n      \"order_item_ids\": [\"{{second_order_item_id}}\"]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "const invoice = data.invoice || (Array.isArray(data.invoices) ? data.invoices[0] : null);",
+                  "if (invoice) {",
+                  "  if (invoice.id) pm.collectionVariables.set(\"invoice_id\", invoice.id);",
+                  "  if (invoice.version) pm.collectionVariables.set(\"invoice_version\", invoice.version);",
+                  "  if (invoice.payment && invoice.payment.payment_number) pm.collectionVariables.set(\"payment_number\", invoice.payment.payment_number);",
+                  "  if (invoice.items && invoice.items[0] && invoice.items[0].order_item_id) pm.collectionVariables.set(\"order_item_id\", invoice.items[0].order_item_id);",
+                  "  if (invoice.items && invoice.items[1] && invoice.items[1].order_item_id) pm.collectionVariables.set(\"second_order_item_id\", invoice.items[1].order_item_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Adjust invoice discount",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/invoices/{{invoice_id}}/adjust",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"discount_amount_vnd\": 10000,\n  \"discount_reason\": \"Khuyến mãi Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "const invoice = data.invoice || (Array.isArray(data.invoices) ? data.invoices[0] : null);",
+                  "if (invoice) {",
+                  "  if (invoice.id) pm.collectionVariables.set(\"invoice_id\", invoice.id);",
+                  "  if (invoice.version) pm.collectionVariables.set(\"invoice_version\", invoice.version);",
+                  "  if (invoice.payment && invoice.payment.payment_number) pm.collectionVariables.set(\"payment_number\", invoice.payment.payment_number);",
+                  "  if (invoice.items && invoice.items[0] && invoice.items[0].order_item_id) pm.collectionVariables.set(\"order_item_id\", invoice.items[0].order_item_id);",
+                  "  if (invoice.items && invoice.items[1] && invoice.items[1].order_item_id) pm.collectionVariables.set(\"second_order_item_id\", invoice.items[1].order_item_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Process partial payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/invoices/{{invoice_id}}/pay-partial",
+            "description": "Có thể gọi nhiều lần cho đến khi tổng paid_amount_vnd đạt total_amount_vnd.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_method_code\": \"cash\",\n  \"received_amount_vnd\": 100000,\n  \"reference_code\": \"PARTIAL-{{$timestamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "const invoice = data.invoice || (Array.isArray(data.invoices) ? data.invoices[0] : null);",
+                  "if (invoice) {",
+                  "  if (invoice.id) pm.collectionVariables.set(\"invoice_id\", invoice.id);",
+                  "  if (invoice.version) pm.collectionVariables.set(\"invoice_version\", invoice.version);",
+                  "  if (invoice.payment && invoice.payment.payment_number) pm.collectionVariables.set(\"payment_number\", invoice.payment.payment_number);",
+                  "  if (invoice.items && invoice.items[0] && invoice.items[0].order_item_id) pm.collectionVariables.set(\"order_item_id\", invoice.items[0].order_item_id);",
+                  "  if (invoice.items && invoice.items[1] && invoice.items[1].order_item_id) pm.collectionVariables.set(\"second_order_item_id\", invoice.items[1].order_item_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Process full payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/invoices/{{invoice_id}}/pay",
+            "description": "Thanh toán toàn bộ phần còn lại. Với cash, tiền dư được tính vào change_amount_vnd.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_method_code\": \"{{payment_method_code}}\",\n  \"received_amount_vnd\": 1000000,\n  \"reference_code\": \"POSTMAN-{{$timestamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "const invoice = data.invoice || (Array.isArray(data.invoices) ? data.invoices[0] : null);",
+                  "if (invoice) {",
+                  "  if (invoice.id) pm.collectionVariables.set(\"invoice_id\", invoice.id);",
+                  "  if (invoice.version) pm.collectionVariables.set(\"invoice_version\", invoice.version);",
+                  "  if (invoice.payment && invoice.payment.payment_number) pm.collectionVariables.set(\"payment_number\", invoice.payment.payment_number);",
+                  "  if (invoice.items && invoice.items[0] && invoice.items[0].order_item_id) pm.collectionVariables.set(\"order_item_id\", invoice.items[0].order_item_id);",
+                  "  if (invoice.items && invoice.items[1] && invoice.items[1].order_item_id) pm.collectionVariables.set(\"second_order_item_id\", invoice.items[1].order_item_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Void invoice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/restaurant/invoices/{{invoice_id}}/void",
+            "description": "Đặt cuối luồng hóa đơn; request này thay đổi trạng thái hóa đơn.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"void_reason\": \"Hủy hóa đơn kiểm thử\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let body = {};",
+                  "try { body = pm.response.json(); } catch (_) {}",
+                  "const data = body && body.data ? body.data : {};",
+                  "const invoice = data.invoice || (Array.isArray(data.invoices) ? data.invoices[0] : null);",
+                  "if (invoice) {",
+                  "  if (invoice.id) pm.collectionVariables.set(\"invoice_id\", invoice.id);",
+                  "  if (invoice.version) pm.collectionVariables.set(\"invoice_version\", invoice.version);",
+                  "  if (invoice.payment && invoice.payment.payment_number) pm.collectionVariables.set(\"payment_number\", invoice.payment.payment_number);",
+                  "  if (invoice.items && invoice.items[0] && invoice.items[0].order_item_id) pm.collectionVariables.set(\"order_item_id\", invoice.items[0].order_item_id);",
+                  "  if (invoice.items && invoice.items[1] && invoice.items[1].order_item_id) pm.collectionVariables.set(\"second_order_item_id\", invoice.items[1].order_item_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

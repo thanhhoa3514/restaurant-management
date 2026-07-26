@@ -1,5 +1,10 @@
 import { apiRequest } from '@/lib/api'
-import type { GuestTable, ManageTableQRResult, PendingSession, TableQR } from '@/features/dining/types'
+import type {
+  GuestTable,
+  ManageTableQRResult,
+  PendingSession,
+  TableQR,
+} from '@/features/dining/types'
 
 export function listTableQRs(): Promise<TableQR[]> {
   return apiRequest<TableQR[]>('/api/v1/restaurant/tables/qrs')
@@ -59,7 +64,9 @@ export interface CloseSessionResult {
   status: string
 }
 
-export function staffVerifySession(sessionId: string): Promise<{ session_id: string; status: string }> {
+export function staffVerifySession(
+  sessionId: string,
+): Promise<{ session_id: string; status: string }> {
   return apiRequest<{ session_id: string; status: string }>(
     `/api/v1/restaurant/sessions/${encodeURIComponent(sessionId)}/verify`,
     { method: 'POST' },
@@ -138,24 +145,33 @@ export interface SessionDetail extends DailySessionItem {
   invoices: SessionInvoiceDetail[]
 }
 
-export function fetchDailySessions(filter: DailySessionsFilter): Promise<ListDailySessionsResponse> {
+export function fetchDailySessions(
+  filter: DailySessionsFilter,
+): Promise<ListDailySessionsResponse> {
   const params = new URLSearchParams()
   if (filter.date) params.set('date', filter.date)
   if (filter.status) params.set('status', filter.status)
   if (filter.search) params.set('search', filter.search)
 
   const query = params.toString()
-  return apiRequest<ListDailySessionsResponse>(`/api/v1/restaurant/sessions/daily${query ? `?${query}` : ''}`)
+  return apiRequest<ListDailySessionsResponse>(
+    `/api/v1/restaurant/sessions/daily${query ? `?${query}` : ''}`,
+  )
 }
 
 export function fetchSessionDetail(sessionId: string): Promise<SessionDetail> {
-  return apiRequest<SessionDetail>(`/api/v1/restaurant/sessions/daily/${encodeURIComponent(sessionId)}`)
+  return apiRequest<SessionDetail>(
+    `/api/v1/restaurant/sessions/daily/${encodeURIComponent(sessionId)}`,
+  )
 }
 
 export function closeDiningSession(sessionId: string): Promise<CloseSessionResult> {
-  return apiRequest<CloseSessionResult>(`/api/v1/restaurant/sessions/${encodeURIComponent(sessionId)}/close`, {
-    method: 'POST',
-  })
+  return apiRequest<CloseSessionResult>(
+    `/api/v1/restaurant/sessions/${encodeURIComponent(sessionId)}/close`,
+    {
+      method: 'POST',
+    },
+  )
 }
 
 export function fetchPendingSessions(): Promise<PendingSession[]> {
@@ -198,7 +214,10 @@ export function saveArea({ areaId, name, description, displayOrder, isActive }: 
     ...(isActive === undefined ? {} : { is_active: isActive }),
   }
   return areaId
-    ? apiRequest(`/api/v1/restaurant/areas/${encodeURIComponent(areaId)}`, { method: 'PATCH', body })
+    ? apiRequest(`/api/v1/restaurant/areas/${encodeURIComponent(areaId)}`, {
+        method: 'PATCH',
+        body,
+      })
     : apiRequest('/api/v1/restaurant/areas', { method: 'POST', body })
 }
 
@@ -219,10 +238,22 @@ export interface SaveTableArgs {
 export function saveTable({ tableId, areaId, code, name, capacity, status }: SaveTableArgs) {
   const body = { area_id: areaId ?? null, code, name, capacity, status }
   return tableId
-    ? apiRequest(`/api/v1/restaurant/tables/${encodeURIComponent(tableId)}`, { method: 'PATCH', body })
+    ? apiRequest(`/api/v1/restaurant/tables/${encodeURIComponent(tableId)}`, {
+        method: 'PATCH',
+        body,
+      })
     : apiRequest('/api/v1/restaurant/tables', { method: 'POST', body })
 }
 
+export function saveTablePositions(positions: Array<{ table_id: string; x: number; y: number }>) {
+  return apiRequest<{ saved: number }>('/api/v1/restaurant/tables/positions', {
+    method: 'PATCH',
+    body: { positions },
+  })
+}
+
 export function deleteTable(tableId: string) {
-  return apiRequest(`/api/v1/restaurant/tables/${encodeURIComponent(tableId)}`, { method: 'DELETE' })
+  return apiRequest(`/api/v1/restaurant/tables/${encodeURIComponent(tableId)}`, {
+    method: 'DELETE',
+  })
 }

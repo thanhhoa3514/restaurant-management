@@ -289,7 +289,12 @@ func (h *Handler) guestCallWaiter(c *gin.Context) {
 		httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "missing guest session"))
 		return
 	}
-	out, err := h.GuestCallWaiter.Handle(c.Request.Context(), gs.SessionID)
+	// Lý do là tuỳ chọn — nút gọi nhanh vẫn gửi body rỗng.
+	var req struct {
+		Reason string `json:"reason"`
+	}
+	_ = c.ShouldBindJSON(&req)
+	out, err := h.GuestCallWaiter.Handle(c.Request.Context(), gs.SessionID, req.Reason)
 	if err != nil {
 		httpx.RespondError(c, err)
 		return

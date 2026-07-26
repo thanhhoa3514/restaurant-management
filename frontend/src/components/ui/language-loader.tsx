@@ -17,7 +17,9 @@ function loaderReducer(state: LoaderState, action: Action): LoaderState {
     case 'MAKE_VISIBLE':
       return state.status === 'entering' ? { status: 'visible' } : state
     case 'CLOSE':
-      return state.status === 'visible' || state.status === 'entering' ? { status: 'exiting' } : state
+      return state.status === 'visible' || state.status === 'entering'
+        ? { status: 'exiting' }
+        : state
     case 'HIDE':
       return state.status === 'exiting' ? { status: 'hidden' } : state
     default:
@@ -27,7 +29,7 @@ function loaderReducer(state: LoaderState, action: Action): LoaderState {
 
 export const LanguageLoader: FC<LanguageLoaderProps> = ({ open, targetLang }) => {
   const [state, dispatch] = useReducer(loaderReducer, { status: open ? 'visible' : 'hidden' })
-  
+
   // Track previous prop inline to avoid useEffect state adjustments
   const [prevOpen, setPrevOpen] = useState(() => open)
   if (open !== prevOpen) {
@@ -47,9 +49,8 @@ export const LanguageLoader: FC<LanguageLoaderProps> = ({ open, targetLang }) =>
 
   if (state.status === 'hidden') return null
 
-  const animationClass = state.status === 'visible'
-    ? 'opacity-100 scale-100'
-    : 'opacity-0 scale-95 pointer-events-none'
+  const animationClass =
+    state.status === 'visible' ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
 
   return (
     <div

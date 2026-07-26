@@ -65,8 +65,10 @@ export interface AdminMenuItemSummaryDTO {
   version: number
 }
 
-export interface AdminMenuItemDetailDTO
-  extends Omit<AdminMenuItemSummaryDTO, 'has_variants' | 'price_from_vnd'> {
+export interface AdminMenuItemDetailDTO extends Omit<
+  AdminMenuItemSummaryDTO,
+  'has_variants' | 'price_from_vnd'
+> {
   description?: string | null
   images?: string[]
   is_spicy: boolean

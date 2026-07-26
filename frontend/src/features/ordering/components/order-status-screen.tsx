@@ -1,5 +1,14 @@
 import { type FC, useMemo, useState } from 'react'
-import { ChevronLeft, Plus, Pencil, ShoppingBag, UtensilsCrossed, RefreshCw, Receipt, Loader2 } from 'lucide-react'
+import {
+  ChevronLeft,
+  Plus,
+  Pencil,
+  ShoppingBag,
+  UtensilsCrossed,
+  RefreshCw,
+  Receipt,
+  Loader2,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { useOrdering } from '../hooks/use-ordering'
 import { useRequestBill } from '../mutations/useRequestBill'
@@ -102,9 +111,7 @@ export const OrderStatusScreen: FC = () => {
                       lang={state.lang}
                       imageUrl={imageByItemId[item.menu_item_id]}
                       onEdit={
-                        item.status === 'PLACED'
-                          ? () => setEditTarget({ order, item })
-                          : undefined
+                        item.status === 'PLACED' ? () => setEditTarget({ order, item }) : undefined
                       }
                       onChooseOther={
                         item.status === 'UNAVAILABLE'
@@ -148,21 +155,37 @@ export const OrderStatusScreen: FC = () => {
             disabled={requestBill.isPending}
             className="flex-1 rounded-2xl h-14 text-[14px] sm:text-base font-bold bg-[var(--text)] text-[var(--bg)] hover:opacity-90 transition-all shadow-md active:scale-[0.98] border-0"
             onClick={() => {
-              if (window.confirm(state.lang === 'vi' ? 'Bạn có chắc chắn muốn yêu cầu thanh toán không? Bàn sẽ được khóa để tính tiền.' : 'Are you sure you want to request the bill? The table will be locked.')) {
+              if (
+                window.confirm(
+                  state.lang === 'vi'
+                    ? 'Bạn có chắc chắn muốn yêu cầu thanh toán không? Bàn sẽ được khóa để tính tiền.'
+                    : 'Are you sure you want to request the bill? The table will be locked.',
+                )
+              ) {
                 if (!sessionToken) return
                 requestBill.mutate(sessionToken, {
                   onSuccess: () => {
-                    toast.success(state.lang === 'vi' ? 'Đã gửi yêu cầu thanh toán.' : 'Checkout request sent.')
+                    toast.success(
+                      state.lang === 'vi' ? 'Đã gửi yêu cầu thanh toán.' : 'Checkout request sent.',
+                    )
                     dispatch({ type: 'SET_SCREEN', payload: 'invoice' })
                   },
                   onError: () => {
-                    toast.error(state.lang === 'vi' ? 'Có lỗi xảy ra, vui lòng thử lại!' : 'Error occurred, please try again!')
-                  }
+                    toast.error(
+                      state.lang === 'vi'
+                        ? 'Có lỗi xảy ra, vui lòng thử lại!'
+                        : 'Error occurred, please try again!',
+                    )
+                  },
                 })
               }
             }}
           >
-            {requestBill.isPending ? <Loader2 size={18} className="mr-1.5 animate-spin" /> : <Receipt size={18} className="mr-1.5" strokeWidth={2.5} />}
+            {requestBill.isPending ? (
+              <Loader2 size={18} className="mr-1.5 animate-spin" />
+            ) : (
+              <Receipt size={18} className="mr-1.5" strokeWidth={2.5} />
+            )}
             {state.lang === 'vi' ? 'Thanh toán' : 'Checkout'}
           </Button>
         </div>
@@ -190,7 +213,9 @@ const OrderItemRow: FC<{
 
   const content = (
     <>
-      <div className={`relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-[var(--surface-grouped)] ${isUnavailable ? 'opacity-50' : ''}`}>
+      <div
+        className={`relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-[var(--surface-grouped)] ${isUnavailable ? 'opacity-50' : ''}`}
+      >
         {imageUrl ? (
           <img src={imageUrl} alt={name} loading="lazy" className="h-full w-full object-cover" />
         ) : (
@@ -203,7 +228,11 @@ const OrderItemRow: FC<{
         </span>
       </div>
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-medium text-primary truncate ${isUnavailable ? 'line-through opacity-50' : ''}`}>{name}</p>
+        <p
+          className={`text-sm font-medium text-primary truncate ${isUnavailable ? 'line-through opacity-50' : ''}`}
+        >
+          {name}
+        </p>
         {isUnavailable && item.unavailable_reason && (
           <p className="text-xs text-system-red mt-0.5">{item.unavailable_reason}</p>
         )}
@@ -213,7 +242,10 @@ const OrderItemRow: FC<{
           <button
             type="button"
             className="flex items-center gap-1 rounded-full bg-[var(--system-red)]/10 text-system-red text-xs font-semibold px-2.5 py-1 transition-colors hover:bg-[var(--system-red)]/20 active:scale-95"
-            onClick={(e) => { e.stopPropagation(); onChooseOther() }}
+            onClick={(e) => {
+              e.stopPropagation()
+              onChooseOther()
+            }}
           >
             <RefreshCw size={12} strokeWidth={2.5} />
             <span>{t.choose_other_dish}</span>
@@ -253,9 +285,5 @@ const OrderItemRow: FC<{
     )
   }
 
-  return (
-    <div className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
-      {content}
-    </div>
-  )
+  return <div className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">{content}</div>
 }

@@ -2,7 +2,6 @@ import type { CashierSession, LineItem, Order } from '@/features/cashier/types'
 import type { StaffOrderDTO, StaffOrderItemDTO, StaffTableDTO } from '@/features/waiter/api'
 import type { BillingInvoiceItemDTO } from '@/features/billing/api'
 
-
 function optionText(item: {
   variant_name_snapshot: string | null
   options: Array<{ name_snapshot: string; quantity: number }> | null
@@ -71,7 +70,9 @@ function mergeGroupedTables(rows: StaffTableDTO[]): StaffTableDTO[] {
   const folded = new Map<string, StaffTableDTO>()
   for (const [groupId, members] of groups) {
     // Phiên mở sớm nhất làm phiên chủ — khớp với billingSessions ở backend
-    const sorted = [...members].sort((a, b) => a.session!.opened_at.localeCompare(b.session!.opened_at))
+    const sorted = [...members].sort((a, b) =>
+      a.session!.opened_at.localeCompare(b.session!.opened_at),
+    )
     const primary = sorted[0]
     folded.set(groupId, {
       ...primary,

@@ -14,7 +14,10 @@ import {
   ShoppingBag,
 } from 'lucide-react'
 import { useShellConfig } from '@/components/admin-shell'
-import { useDailySessionsQuery, useSessionDetailQuery } from '@/features/dining/queries/useDailySessionsQuery'
+import {
+  useDailySessionsQuery,
+  useSessionDetailQuery,
+} from '@/features/dining/queries/useDailySessionsQuery'
 
 function formatVND(amount: number): string {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)
@@ -55,7 +58,12 @@ export function SessionHistoryManagement() {
   })
 
   const sessions = data?.sessions ?? []
-  const stats = data?.stats ?? { total_sessions: 0, active_sessions: 0, closed_sessions: 0, total_revenue_vnd: 0 }
+  const stats = data?.stats ?? {
+    total_sessions: 0,
+    active_sessions: 0,
+    closed_sessions: 0,
+    total_revenue_vnd: 0,
+  }
 
   const statusBadge = (status: string) => {
     switch (status) {
@@ -105,8 +113,12 @@ export function SessionHistoryManagement() {
             <Clock className="size-5" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-[var(--text)] tracking-tight">Tra cứu phiên ăn theo ngày</h2>
-            <p className="text-xs text-[var(--text-tertiary)]">Quản lý lịch sử bàn ăn, món gọi & doanh thu thời gian thực</p>
+            <h2 className="text-lg font-bold text-[var(--text)] tracking-tight">
+              Tra cứu phiên ăn theo ngày
+            </h2>
+            <p className="text-xs text-[var(--text-tertiary)]">
+              Quản lý lịch sử bàn ăn, món gọi & doanh thu thời gian thực
+            </p>
           </div>
         </div>
 
@@ -153,7 +165,9 @@ export function SessionHistoryManagement() {
             Tổng phiên trong ngày
           </span>
           <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-2xl font-black text-[var(--text)] tracking-tight">{stats.total_sessions}</span>
+            <span className="text-2xl font-black text-[var(--text)] tracking-tight">
+              {stats.total_sessions}
+            </span>
             <span className="text-xs font-semibold text-[var(--text-tertiary)]">bàn ăn</span>
           </div>
         </div>
@@ -164,7 +178,9 @@ export function SessionHistoryManagement() {
             Đang phục vụ / Chờ
           </span>
           <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-2xl font-black text-emerald-500 tracking-tight">{stats.active_sessions}</span>
+            <span className="text-2xl font-black text-emerald-500 tracking-tight">
+              {stats.active_sessions}
+            </span>
             <span className="text-xs font-semibold text-emerald-500/80">phiên active</span>
           </div>
         </div>
@@ -175,7 +191,9 @@ export function SessionHistoryManagement() {
             Đã thanh toán (Đóng)
           </span>
           <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-2xl font-black text-blue-500 tracking-tight">{stats.closed_sessions}</span>
+            <span className="text-2xl font-black text-blue-500 tracking-tight">
+              {stats.closed_sessions}
+            </span>
             <span className="text-xs font-semibold text-blue-500/80">đã hoàn thành</span>
           </div>
         </div>
@@ -313,7 +331,8 @@ export function SessionHistoryManagement() {
                     <td className="py-3.5 px-4">
                       <div className="flex flex-col text-[11px]">
                         <span className="font-semibold text-[var(--text-secondary)]">
-                          {formatTime(item.opened_at)} {item.closed_at ? `→ ${formatTime(item.closed_at)}` : ''}
+                          {formatTime(item.opened_at)}{' '}
+                          {item.closed_at ? `→ ${formatTime(item.closed_at)}` : ''}
                         </span>
                         <span className="text-[10px] text-[var(--text-tertiary)]">
                           {item.duration_minutes} phút
@@ -323,9 +342,13 @@ export function SessionHistoryManagement() {
 
                     <td className="py-3.5 px-4">
                       <div className="flex flex-col text-[11px]">
-                        <span className="font-medium text-[var(--text-secondary)]">{item.opened_by_name}</span>
+                        <span className="font-medium text-[var(--text-secondary)]">
+                          {item.opened_by_name}
+                        </span>
                         {item.closed_by_name && (
-                          <span className="text-[10px] text-[var(--text-tertiary)]">Thu: {item.closed_by_name}</span>
+                          <span className="text-[10px] text-[var(--text-tertiary)]">
+                            Thu: {item.closed_by_name}
+                          </span>
                         )}
                       </div>
                     </td>
@@ -365,10 +388,7 @@ export function SessionHistoryManagement() {
 
       {/* Session Detail Modal */}
       {detailSessionId && (
-        <SessionDetailModal
-          sessionId={detailSessionId}
-          onClose={() => setDetailSessionId(null)}
-        />
+        <SessionDetailModal sessionId={detailSessionId} onClose={() => setDetailSessionId(null)} />
       )}
     </div>
   )
@@ -398,7 +418,8 @@ function SessionDetailModal({ sessionId, onClose }: { sessionId: string; onClose
                 )}
               </div>
               <p className="text-xs text-[var(--text-tertiary)]">
-                Khu vực: {detail?.area_name ?? '--'} | Mở lúc: {formatTime(detail?.opened_at ?? null)}
+                Khu vực: {detail?.area_name ?? '--'} | Mở lúc:{' '}
+                {formatTime(detail?.opened_at ?? null)}
               </p>
             </div>
           </div>
@@ -424,18 +445,27 @@ function SessionDetailModal({ sessionId, onClose }: { sessionId: string; onClose
               {/* Session Overview Stats */}
               <div className="grid grid-cols-3 gap-3 p-3.5 rounded-2xl bg-[var(--surface-grouped)]/40 border border-[var(--separator)]/30 text-xs">
                 <div>
-                  <span className="text-[11px] text-[var(--text-tertiary)] block">Thời gian phục vụ</span>
+                  <span className="text-[11px] text-[var(--text-tertiary)] block">
+                    Thời gian phục vụ
+                  </span>
                   <span className="font-bold text-[var(--text)]">
-                    {detail.duration_minutes} phút ({formatTime(detail.opened_at)} → {formatTime(detail.closed_at)})
+                    {detail.duration_minutes} phút ({formatTime(detail.opened_at)} →{' '}
+                    {formatTime(detail.closed_at)})
                   </span>
                 </div>
                 <div>
-                  <span className="text-[11px] text-[var(--text-tertiary)] block">Người mở bàn</span>
+                  <span className="text-[11px] text-[var(--text-tertiary)] block">
+                    Người mở bàn
+                  </span>
                   <span className="font-bold text-[var(--text)]">{detail.opened_by_name}</span>
                 </div>
                 <div>
-                  <span className="text-[11px] text-[var(--text-tertiary)] block">Thu ngân chốt đơn</span>
-                  <span className="font-bold text-[var(--text)]">{detail.closed_by_name || 'Chưa đóng'}</span>
+                  <span className="text-[11px] text-[var(--text-tertiary)] block">
+                    Thu ngân chốt đơn
+                  </span>
+                  <span className="font-bold text-[var(--text)]">
+                    {detail.closed_by_name || 'Chưa đóng'}
+                  </span>
                 </div>
               </div>
 
@@ -468,25 +498,34 @@ function SessionDetailModal({ sessionId, onClose }: { sessionId: string; onClose
 
                         <div className="space-y-1.5">
                           {ord.items.map((item) => (
-                            <div key={item.order_item_id} className="flex items-center justify-between text-xs py-1">
+                            <div
+                              key={item.order_item_id}
+                              className="flex items-center justify-between text-xs py-1"
+                            >
                               <div className="flex items-center gap-2">
                                 <span className="size-5 rounded-md bg-[var(--system-blue)]/10 text-[var(--system-blue)] font-extrabold text-[11px] flex items-center justify-center">
                                   x{item.quantity}
                                 </span>
                                 <div>
-                                  <span className="font-semibold text-[var(--text)]">{item.menu_item_name}</span>
+                                  <span className="font-semibold text-[var(--text)]">
+                                    {item.menu_item_name}
+                                  </span>
                                   {item.variant_name && (
                                     <span className="text-[11px] text-[var(--text-tertiary)] ml-1.5">
                                       ({item.variant_name})
                                     </span>
                                   )}
                                   {item.note && (
-                                    <p className="text-[10px] text-amber-500 italic">Ghi chú: {item.note}</p>
+                                    <p className="text-[10px] text-amber-500 italic">
+                                      Ghi chú: {item.note}
+                                    </p>
                                   )}
                                 </div>
                               </div>
 
-                              <span className="font-bold text-[var(--text)]">{formatVND(item.subtotal_vnd)}</span>
+                              <span className="font-bold text-[var(--text)]">
+                                {formatVND(item.subtotal_vnd)}
+                              </span>
                             </div>
                           ))}
                         </div>
@@ -513,9 +552,12 @@ function SessionDetailModal({ sessionId, onClose }: { sessionId: string; onClose
                         <div className="flex items-center gap-2.5">
                           <CreditCard size={16} className="text-emerald-500" />
                           <div>
-                            <span className="font-bold text-[var(--text)]">{inv.invoice_number}</span>
+                            <span className="font-bold text-[var(--text)]">
+                              {inv.invoice_number}
+                            </span>
                             <span className="text-[11px] text-[var(--text-tertiary)] block">
-                              Phương thức: {inv.payment_method || 'Tiền mặt'} | {formatTime(inv.paid_at)}
+                              Phương thức: {inv.payment_method || 'Tiền mặt'} |{' '}
+                              {formatTime(inv.paid_at)}
                             </span>
                           </div>
                         </div>
@@ -535,8 +577,12 @@ function SessionDetailModal({ sessionId, onClose }: { sessionId: string; onClose
         {/* Footer Total */}
         {detail && (
           <div className="p-4 bg-[var(--surface-grouped)] border-t border-[var(--separator)]/40 flex items-center justify-between">
-            <span className="text-xs font-bold text-[var(--text-secondary)]">Tổng doanh thu phiên này:</span>
-            <span className="text-xl font-black text-[var(--text)]">{formatVND(detail.total_amount_vnd)}</span>
+            <span className="text-xs font-bold text-[var(--text-secondary)]">
+              Tổng doanh thu phiên này:
+            </span>
+            <span className="text-xl font-black text-[var(--text)]">
+              {formatVND(detail.total_amount_vnd)}
+            </span>
           </div>
         )}
       </div>

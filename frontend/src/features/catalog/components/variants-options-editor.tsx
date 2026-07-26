@@ -2,8 +2,18 @@ import { Plus, Trash2, Layers, CheckSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import type { AdminMenuVariantDTO, AdminMenuOptionGroupDTO, AdminMenuOptionDTO } from '@/features/catalog/types'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import type {
+  AdminMenuVariantDTO,
+  AdminMenuOptionGroupDTO,
+  AdminMenuOptionDTO,
+} from '@/features/catalog/types'
 
 interface VariantsOptionsEditorProps {
   variants: AdminMenuVariantDTO[]
@@ -88,11 +98,15 @@ export function VariantsOptionsEditor({
     })
   }
 
-  const handleUpdateOption = (groupIndex: number, optionIndex: number, patch: Partial<AdminMenuOptionDTO>) => {
+  const handleUpdateOption = (
+    groupIndex: number,
+    optionIndex: number,
+    patch: Partial<AdminMenuOptionDTO>,
+  ) => {
     const group = optionGroups[groupIndex]
     if (!group) return
     const updatedOptions = (group.options ?? []).map((opt, i) =>
-      i === optionIndex ? { ...opt, ...patch } : opt
+      i === optionIndex ? { ...opt, ...patch } : opt,
     )
     handleUpdateOptionGroup(groupIndex, { options: updatedOptions })
   }
@@ -111,7 +125,9 @@ export function VariantsOptionsEditor({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Layers className="size-4 text-[var(--system-blue)]" />
-            <h4 className="text-sm font-bold text-[var(--text)]">Biến thể món ăn (Size / Kích cỡ / Suất)</h4>
+            <h4 className="text-sm font-bold text-[var(--text)]">
+              Biến thể món ăn (Size / Kích cỡ / Suất)
+            </h4>
             <span className="text-xs text-[var(--text-tertiary)]">({variants.length})</span>
           </div>
           <Button
@@ -128,12 +144,16 @@ export function VariantsOptionsEditor({
 
         {variants.length === 0 ? (
           <div className="rounded-xl border border-dashed border-[var(--separator)] p-4 text-center text-xs text-[var(--text-tertiary)] bg-[var(--surface-grouped)]/40">
-            Chưa có biến thể. Bấm "Thêm biến thể" nếu món có các Size hoặc Suất khác nhau (ví dụ: Nhỏ / Vừa / Lớn).
+            Chưa có biến thể. Bấm "Thêm biến thể" nếu món có các Size hoặc Suất khác nhau (ví dụ:
+            Nhỏ / Vừa / Lớn).
           </div>
         ) : (
           <div className="space-y-2">
             {variants.map((v, idx) => (
-              <Card key={idx} className="p-3 bg-[var(--surface-grouped)] border-0 shadow-none rounded-xl">
+              <Card
+                key={idx}
+                className="p-3 bg-[var(--surface-grouped)] border-0 shadow-none rounded-xl"
+              >
                 <div className="grid grid-cols-12 gap-2 items-center">
                   <div className="col-span-5 sm:col-span-4">
                     <Input
@@ -150,7 +170,9 @@ export function VariantsOptionsEditor({
                       step={1000}
                       placeholder="Giá VND"
                       value={v.price_vnd}
-                      onChange={(e) => handleUpdateVariant(idx, { price_vnd: Number(e.target.value) })}
+                      onChange={(e) =>
+                        handleUpdateVariant(idx, { price_vnd: Number(e.target.value) })
+                      }
                       className="h-9 text-xs font-mono"
                     />
                   </div>
@@ -185,7 +207,9 @@ export function VariantsOptionsEditor({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CheckSquare className="size-4 text-[var(--system-purple)]" />
-            <h4 className="text-sm font-bold text-[var(--text)]">Nhóm Tùy chọn (Topping / Yêu cầu thêm)</h4>
+            <h4 className="text-sm font-bold text-[var(--text)]">
+              Nhóm Tùy chọn (Topping / Yêu cầu thêm)
+            </h4>
             <span className="text-xs text-[var(--text-tertiary)]">({optionGroups.length})</span>
           </div>
           <Button
@@ -202,12 +226,16 @@ export function VariantsOptionsEditor({
 
         {optionGroups.length === 0 ? (
           <div className="rounded-xl border border-dashed border-[var(--separator)] p-4 text-center text-xs text-[var(--text-tertiary)] bg-[var(--surface-grouped)]/40">
-            Chưa có nhóm tùy chọn. Bấm "Thêm nhóm tùy chọn" để tạo yêu cầu kèm món (ví dụ: Mức đường, đá, topping thêm).
+            Chưa có nhóm tùy chọn. Bấm "Thêm nhóm tùy chọn" để tạo yêu cầu kèm món (ví dụ: Mức
+            đường, đá, topping thêm).
           </div>
         ) : (
           <div className="space-y-4">
             {optionGroups.map((group, gIdx) => (
-              <Card key={gIdx} className="p-4 bg-[var(--surface-grouped)]/80 border border-[var(--separator)] rounded-2xl space-y-3">
+              <Card
+                key={gIdx}
+                className="p-4 bg-[var(--surface-grouped)]/80 border border-[var(--separator)] rounded-2xl space-y-3"
+              >
                 {/* Group Header Info */}
                 <div className="grid grid-cols-12 gap-2 items-center">
                   <div className="col-span-6 sm:col-span-5">
@@ -221,7 +249,9 @@ export function VariantsOptionsEditor({
                   <div className="col-span-4 sm:col-span-4">
                     <Select
                       value={group.selection_type}
-                      onValueChange={(val) => handleUpdateOptionGroup(gIdx, { selection_type: val || 'SINGLE' })}
+                      onValueChange={(val) =>
+                        handleUpdateOptionGroup(gIdx, { selection_type: val || 'SINGLE' })
+                      }
                     >
                       <SelectTrigger className="h-9 text-xs">
                         <SelectValue />
@@ -275,7 +305,11 @@ export function VariantsOptionsEditor({
                           step={1000}
                           placeholder="+ Phụ thu VND"
                           value={opt.price_delta_vnd}
-                          onChange={(e) => handleUpdateOption(gIdx, oIdx, { price_delta_vnd: Number(e.target.value) })}
+                          onChange={(e) =>
+                            handleUpdateOption(gIdx, oIdx, {
+                              price_delta_vnd: Number(e.target.value),
+                            })
+                          }
                           className="h-8 text-xs font-mono bg-white/80 dark:bg-zinc-900/80"
                         />
                       </div>

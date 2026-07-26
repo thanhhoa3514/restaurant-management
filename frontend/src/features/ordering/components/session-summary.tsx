@@ -43,8 +43,8 @@ export const SessionSummary: FC = () => {
               </h1>
               {state.session && (
                 <p className="text-xs font-medium text-[var(--text-tertiary)] mt-0.5">
-                  {t.table} {state.session.table} &middot;{' '}
-                  {t.session_started} {formatTime(state.session.startedAt)}
+                  {t.table} {state.session.table} &middot; {t.session_started}{' '}
+                  {formatTime(state.session.startedAt)}
                 </p>
               )}
             </div>
@@ -69,7 +69,10 @@ export const SessionSummary: FC = () => {
         ) : (
           <>
             {orders.map((order) => (
-              <div key={order.id} className="rounded-2xl bg-[var(--material-regular)] border border-[var(--separator)] p-4 flex flex-col gap-3 shadow-sm">
+              <div
+                key={order.id}
+                className="rounded-2xl bg-[var(--material-regular)] border border-[var(--separator)] p-4 flex flex-col gap-3 shadow-sm"
+              >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-[var(--text-tertiary)]">
                     {t.submitted_at} {formatTime(new Date(order.submitted_at))}
@@ -81,9 +84,13 @@ export const SessionSummary: FC = () => {
                     : item.name_snapshot
                   return (
                     <div key={item.order_item_id} className="flex items-center justify-between">
-                      <p className="text-sm text-[var(--text)] font-medium truncate min-w-0 flex-1">{name}</p>
+                      <p className="text-sm text-[var(--text)] font-medium truncate min-w-0 flex-1">
+                        {name}
+                      </p>
                       <div className="flex items-center gap-2 shrink-0 ml-3">
-                        <span className="text-xs text-[var(--text-tertiary)] tabular-nums">x{item.quantity}</span>
+                        <span className="text-xs text-[var(--text-tertiary)] tabular-nums">
+                          x{item.quantity}
+                        </span>
                         <span className="text-sm font-semibold text-[var(--text)] tabular-nums">
                           {formatVND(item.total_amount_vnd)}
                         </span>
@@ -166,7 +173,9 @@ export const SessionSummary: FC = () => {
         <div className="fixed inset-0 z-[600] flex flex-col items-center justify-center bg-black/60 backdrop-blur-xl text-center text-white animate-in fade-in duration-300">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="animate-spin h-10 w-10 text-system-blue" />
-            <div className="font-bold text-lg">{state.lang === 'vi' ? 'Đang xử lý thanh toán...' : 'Processing payment...'}</div>
+            <div className="font-bold text-lg">
+              {state.lang === 'vi' ? 'Đang xử lý thanh toán...' : 'Processing payment...'}
+            </div>
             <p className="text-sm text-zinc-300 max-w-xs px-6 leading-relaxed">
               {state.lang === 'vi'
                 ? 'Hóa đơn điện tử đang được tạo và gửi trực tiếp đến thiết bị của bạn'

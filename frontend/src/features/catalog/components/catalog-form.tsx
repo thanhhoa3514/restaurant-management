@@ -83,12 +83,16 @@ export function CatalogItemSheet({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent
-        className="flex w-[95vw] max-w-2xl h-[85vh] max-h-[85vh] flex-col gap-0 overflow-hidden bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl p-0 sm:max-w-3xl rounded-2xl"
-      >
+      <DialogContent className="flex w-[95vw] max-w-2xl h-[85vh] max-h-[85vh] flex-col gap-0 overflow-hidden bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl p-0 sm:max-w-3xl rounded-2xl">
         <DialogHeader className="shrink-0 border-b border-zinc-200 dark:border-zinc-800 px-6 py-4 text-left bg-zinc-50 dark:bg-zinc-900/90">
-          <DialogTitle className="text-lg font-bold text-zinc-900 dark:text-zinc-100">{title}</DialogTitle>
-          {subtitle && <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mt-0.5">{subtitle}</p>}
+          <DialogTitle className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+            {title}
+          </DialogTitle>
+          {subtitle && (
+            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mt-0.5">
+              {subtitle}
+            </p>
+          )}
         </DialogHeader>
 
         {state?.mode === 'edit' && isDetailLoading ? (
@@ -182,10 +186,16 @@ function CatalogItemForm({
           <div className="shrink-0 border-b border-zinc-200 dark:border-zinc-800 px-6 pt-3 pb-2 bg-zinc-100 dark:bg-zinc-800/80">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="w-full grid grid-cols-3 bg-zinc-200/70 dark:bg-zinc-800 p-1 rounded-xl h-10">
-                <TabsTrigger value="info" className="rounded-lg text-xs font-bold gap-1.5 cursor-pointer">
+                <TabsTrigger
+                  value="info"
+                  className="rounded-lg text-xs font-bold gap-1.5 cursor-pointer"
+                >
                   Thông tin món
                 </TabsTrigger>
-                <TabsTrigger value="options" className="rounded-lg text-xs font-bold gap-1.5 cursor-pointer">
+                <TabsTrigger
+                  value="options"
+                  className="rounded-lg text-xs font-bold gap-1.5 cursor-pointer"
+                >
                   Biến thể & Topping
                   {(variants.length > 0 || optionGroups.length > 0) && (
                     <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-blue-600 text-white font-black">
@@ -193,7 +203,10 @@ function CatalogItemForm({
                     </span>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="status" className="rounded-lg text-xs font-bold gap-1.5 cursor-pointer">
+                <TabsTrigger
+                  value="status"
+                  className="rounded-lg text-xs font-bold gap-1.5 cursor-pointer"
+                >
                   Trạm bếp & Trạng thái
                 </TabsTrigger>
               </TabsList>
@@ -242,7 +255,11 @@ function CatalogItemForm({
                       <FormItem>
                         <FormLabel>{t('catalog_field_name')}</FormLabel>
                         <FormControl>
-                          <Input placeholder={t('catalog_name_placeholder')} className="bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700" {...field} />
+                          <Input
+                            placeholder={t('catalog_name_placeholder')}
+                            className="bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -258,7 +275,13 @@ function CatalogItemForm({
                       <FormItem>
                         <FormLabel>{t('catalog_field_price')}</FormLabel>
                         <FormControl>
-                          <Input type="number" min={0} step={1000} className="font-mono bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700" {...field} />
+                          <Input
+                            type="number"
+                            min={0}
+                            step={1000}
+                            className="font-mono bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -271,7 +294,11 @@ function CatalogItemForm({
                       <FormItem>
                         <FormLabel>{t('catalog_field_short_description')}</FormLabel>
                         <FormControl>
-                          <Input placeholder={t('catalog_short_placeholder')} className="bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700" {...field} />
+                          <Input
+                            placeholder={t('catalog_short_placeholder')}
+                            className="bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -322,10 +349,16 @@ function CatalogItemForm({
                   variants={variants}
                   optionGroups={optionGroups}
                   onVariantsChange={(nextVariants) =>
-                    hookForm.setValue('variants', nextVariants, { shouldDirty: true, shouldValidate: true })
+                    hookForm.setValue('variants', nextVariants, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
                   }
                   onOptionGroupsChange={(nextGroups) =>
-                    hookForm.setValue('option_groups', nextGroups, { shouldDirty: true, shouldValidate: true })
+                    hookForm.setValue('option_groups', nextGroups, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
                   }
                 />
               </TabsContent>
@@ -418,7 +451,11 @@ function CatalogItemForm({
                     <FormItem className="max-w-xs">
                       <FormLabel>{t('catalog_field_display_order')}</FormLabel>
                       <FormControl>
-                        <Input type="number" className="bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700" {...field} />
+                        <Input
+                          type="number"
+                          className="bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -497,7 +534,11 @@ function CatalogItemForm({
             >
               {t('catalog_cancel')}
             </Button>
-            <Button type="submit" className="flex-1 rounded-xl cursor-pointer font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md" disabled={busy}>
+            <Button
+              type="submit"
+              className="flex-1 rounded-xl cursor-pointer font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md"
+              disabled={busy}
+            >
               {busy && <Loader2 className="size-4 animate-spin mr-1.5" />}
               {state?.mode === 'edit' ? t('catalog_save_changes') : t('catalog_create_confirm')}
             </Button>

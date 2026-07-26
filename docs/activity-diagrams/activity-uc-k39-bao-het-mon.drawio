@@ -1,0 +1,76 @@
+<mxfile host="65bd71144e">
+    <diagram id="uc-k39" name="UC-K39 — Báo món không thể chế biến">
+        <mxGraphModel dx="4385" dy="1905" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="740" background="#ffffff" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="UC-39 — SƠ ĐỒ HOẠT ĐỘNG: BÁO MÓN KHÔNG THỂ CHẾ BIẾN" style="text;html=1;align=center;verticalAlign=middle;fontSize=20;fontStyle=1;strokeColor=none;fillColor=none;fontColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="14" width="1100" height="42" as="geometry"/>
+                </mxCell>
+                <mxCell id="actor-lane" value="Tác nhân: Bếp" style="swimlane;html=1;horizontal=1;startSize=34;fillColor=#ffffff;swimlaneFillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="68" width="300" height="600" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-1" value="Chọn món và nhập lý do hết nguyên liệu" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=13;" parent="actor-lane" vertex="1">
+                    <mxGeometry x="20" y="92" width="220" height="64" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-6" value="Món rời khỏi hàng đợi chế biến" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=13;" parent="actor-lane" vertex="1">
+                    <mxGeometry x="20" y="494" width="220" height="64" as="geometry"/>
+                </mxCell>
+                <mxCell id="system-lane" value="Hệ thống" style="swimlane;html=1;horizontal=1;startSize=34;fillColor=#ffffff;swimlaneFillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="360" y="68" width="640" height="600" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-2" value="Kiểm tra quyền và trạng thái hiện tại của món" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=13;" parent="system-lane" vertex="1">
+                    <mxGeometry x="72.5" y="92" width="240" height="64" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-3" value="Món còn có thể báo không chế biến được?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=13;fontStyle=1;" parent="system-lane" vertex="1">
+                    <mxGeometry x="42.5" y="186" width="300" height="84" as="geometry"/>
+                </mxCell>
+                <mxCell id="alternate-3" value="Từ chối món đã phục vụ hoặc đã hủy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=13;" parent="system-lane" vertex="1">
+                    <mxGeometry x="440" y="194" width="180" height="68" as="geometry"/>
+                </mxCell>
+                <mxCell id="alternate-end-3" value="" style="ellipse;shape=doubleEllipse;html=1;aspect=fixed;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;" parent="system-lane" vertex="1">
+                    <mxGeometry x="600" y="213" width="30" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-4" value="Đánh dấu món không phục vụ được kèm lý do và lịch sử" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=13;" parent="system-lane" vertex="1">
+                    <mxGeometry x="72.5" y="306" width="240" height="64" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-5" value="Báo phục vụ và khách của đúng phiên" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=13;" parent="system-lane" vertex="1">
+                    <mxGeometry x="72.5" y="400" width="240" height="64" as="geometry"/>
+                </mxCell>
+                <mxCell id="end" value="" style="ellipse;shape=doubleEllipse;html=1;aspect=fixed;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;" parent="system-lane" vertex="1">
+                    <mxGeometry x="312.5" y="510" width="32" height="32" as="geometry"/>
+                </mxCell>
+                <mxCell id="start" value="" style="ellipse;html=1;aspect=fixed;fillColor=#000000;strokeColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="168" y="110" width="26" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="1" source="start" target="step-1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="1" source="step-1" target="step-2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="1" source="step-2" target="step-3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-4" value="Không" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="1" source="step-3" target="alternate-3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="1" source="alternate-3" target="alternate-end-3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-6" value="Có / hợp lệ" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="1" source="step-3" target="step-4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="1" source="step-4" target="step-5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="1" source="step-5" target="step-6" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="1" source="step-6" target="end" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

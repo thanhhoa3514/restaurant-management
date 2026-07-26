@@ -5,7 +5,14 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { fmtClock, fmtHMS, fmtVND, itemsCount, providerName, sessionTotal } from '@/features/cashier/helpers'
+import {
+  fmtClock,
+  fmtHMS,
+  fmtVND,
+  itemsCount,
+  providerName,
+  sessionTotal,
+} from '@/features/cashier/helpers'
 import type { CashierSession, Lang, SessionStatus } from '@/features/cashier/types'
 
 type SortMode = 'newest' | 'bill'
@@ -28,7 +35,14 @@ const statusTone: Record<SessionStatus, string> = {
   voided: 'bg-[var(--system-red)]/10 text-[var(--system-red)]',
 }
 
-export const SessionList: FC<SessionListProps> = ({ sessions, selectedId, now, lang, t, onSelect }) => {
+export const SessionList: FC<SessionListProps> = ({
+  sessions,
+  selectedId,
+  now,
+  lang,
+  t,
+  onSelect,
+}) => {
   const [search, setSearch] = useState('')
   const [sortMode, setSortMode] = useState<SortMode>('newest')
 
@@ -72,10 +86,18 @@ export const SessionList: FC<SessionListProps> = ({ sessions, selectedId, now, l
             className="h-12 w-full rounded-2xl border-[var(--separator)] bg-[var(--surface-grouped)] pl-11 text-base font-medium shadow-sm transition-all hover:border-[var(--system-orange)]/40 focus-visible:border-[var(--system-orange)] focus-visible:ring-2 focus-visible:ring-[var(--system-orange)]/20"
           />
         </div>
-        <Tabs value={sortMode} onValueChange={(value) => setSortMode(value as SortMode)} className="w-full">
+        <Tabs
+          value={sortMode}
+          onValueChange={(value) => setSortMode(value as SortMode)}
+          className="w-full"
+        >
           <TabsList className="w-full bg-[var(--surface-grouped)]">
-            <TabsTrigger value="newest" className="flex-1">{t('sort_newest')}</TabsTrigger>
-            <TabsTrigger value="bill" className="flex-1">{t('sort_bill')}</TabsTrigger>
+            <TabsTrigger value="newest" className="flex-1">
+              {t('sort_newest')}
+            </TabsTrigger>
+            <TabsTrigger value="bill" className="flex-1">
+              {t('sort_bill')}
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -120,7 +142,10 @@ function SessionCard({
   t: (key: string, ...args: Array<number | string>) => string
   onSelect: () => void
 }) {
-  const elapsedMinutes = Math.max(0, Math.round((now.getTime() - session.started_at.getTime()) / 60000))
+  const elapsedMinutes = Math.max(
+    0,
+    Math.round((now.getTime() - session.started_at.getTime()) / 60000),
+  )
   const billAgoSeconds = session.bill_requested_at
     ? Math.max(0, Math.floor((now.getTime() - session.bill_requested_at.getTime()) / 1000))
     : null
@@ -139,21 +164,30 @@ function SessionCard({
       <div className="w-full p-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-lg font-bold text-[var(--text)]">{t('table')} {session.table_label}</div>
+            <div className="text-lg font-bold text-[var(--text)]">
+              {t('table')} {session.table_label}
+            </div>
             <div className="mt-0.5 text-xs font-normal text-[var(--text-tertiary)]">
-              {lang === 'vi' ? session.area_name_vi : session.area_name_en} · {t('guests', session.guest_count)}
+              {lang === 'vi' ? session.area_name_vi : session.area_name_en} ·{' '}
+              {t('guests', session.guest_count)}
               {session.guest_name && <span> · {session.guest_name}</span>}
             </div>
           </div>
           <span className="text-[var(--text-tertiary)]">›</span>
         </div>
         <div className="mt-3 flex items-center justify-between text-xs font-normal text-[var(--text-tertiary)]">
-          <span>{fmtClock(session.started_at)} · {t('elapsed_min', elapsedMinutes)}</span>
+          <span>
+            {fmtClock(session.started_at)} · {t('elapsed_min', elapsedMinutes)}
+          </span>
           <span>{t('items_count', itemsCount(session))}</span>
         </div>
         <div className="mt-2 flex items-center justify-between gap-2">
-          <Badge className={`rounded-full border-0 ${statusTone[session.status]}`}>{t(`status_${session.status}`)}</Badge>
-          <span className="font-bold tabular-nums text-[var(--text)]">{fmtVND(sessionTotal(session))}</span>
+          <Badge className={`rounded-full border-0 ${statusTone[session.status]}`}>
+            {t(`status_${session.status}`)}
+          </Badge>
+          <span className="font-bold tabular-nums text-[var(--text)]">
+            {fmtVND(sessionTotal(session))}
+          </span>
         </div>
         {billAgoSeconds !== null && session.status === 'bill_requested' ? (
           <div className="mt-2 text-xs font-normal text-[var(--system-red)]">
@@ -169,5 +203,3 @@ function SessionCard({
     </Button>
   )
 }
-
-

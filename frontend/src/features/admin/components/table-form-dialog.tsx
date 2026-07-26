@@ -91,110 +91,109 @@ function TableForm({
   })
 
   const parsedCapacity = Number(capacity)
-  const canSubmit =
-    code.trim().length > 0 && Number.isInteger(parsedCapacity) && parsedCapacity > 0
+  const canSubmit = code.trim().length > 0 && Number.isInteger(parsedCapacity) && parsedCapacity > 0
 
   return (
     <>
-        <DialogHeader>
-          <DialogTitle>{table ? t('tbl_edit') : t('tbl_create_title')}</DialogTitle>
-          <DialogDescription>{t('qr_subtitle')}</DialogDescription>
-        </DialogHeader>
+      <DialogHeader>
+        <DialogTitle>{table ? t('tbl_edit') : t('tbl_create_title')}</DialogTitle>
+        <DialogDescription>{t('qr_subtitle')}</DialogDescription>
+      </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="table-code">{t('tbl_code')}</Label>
-              <Input
-                id="table-code"
-                value={code}
-                placeholder="T11"
-                onChange={(e) => setCode(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="table-capacity">{t('tbl_capacity')}</Label>
-              <Input
-                id="table-capacity"
-                type="number"
-                min={1}
-                max={50}
-                value={capacity}
-                onChange={(e) => setCapacity(e.target.value)}
-              />
-            </div>
-          </div>
-
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label htmlFor="table-name">{t('tbl_name')}</Label>
+            <Label htmlFor="table-code">{t('tbl_code')}</Label>
             <Input
-              id="table-name"
-              value={name}
-              placeholder={code || 'T11'}
-              onChange={(e) => setName(e.target.value)}
+              id="table-code"
+              value={code}
+              placeholder="T11"
+              onChange={(e) => setCode(e.target.value)}
             />
           </div>
-
           <div className="space-y-1.5">
-            <Label>{t('tbl_area')}</Label>
-            <Select value={areaId} onValueChange={(value) => setAreaId(value ?? NO_AREA)}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NO_AREA}>{t('tbl_area_none')}</SelectItem>
-                {areas.map((area) => (
-                  <SelectItem key={area.id} value={area.id}>
-                    {area.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="table-capacity">{t('tbl_capacity')}</Label>
+            <Input
+              id="table-capacity"
+              type="number"
+              min={1}
+              max={50}
+              value={capacity}
+              onChange={(e) => setCapacity(e.target.value)}
+            />
           </div>
-
-          <div className="space-y-1.5">
-            <Label>{t('tbl_status')}</Label>
-            <Select value={status} onValueChange={(value) => setStatus(value ?? "AVAILABLE")}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TABLE_STATUSES.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {t(STATUS_LABEL[value])}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {mutation.isError && (
-            <p className="text-sm text-[var(--system-red)]">
-              {errorMessage(mutation.error, t('qr_action_failed'))}
-            </p>
-          )}
         </div>
 
-        <DialogFooter>
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>
-            {t('qr_cancel')}
-          </Button>
-          <Button
-            disabled={!canSubmit || mutation.isPending}
-            onClick={() =>
-              mutation.mutate({
-                tableId: table?.table_id,
-                areaId: areaId === NO_AREA ? null : areaId,
-                code: code.trim(),
-                name: name.trim() || code.trim(),
-                capacity: parsedCapacity,
-                status,
-              })
-            }
-          >
-            {mutation.isPending ? t('tbl_saving') : t('tbl_save')}
-          </Button>
-        </DialogFooter>
+        <div className="space-y-1.5">
+          <Label htmlFor="table-name">{t('tbl_name')}</Label>
+          <Input
+            id="table-name"
+            value={name}
+            placeholder={code || 'T11'}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>{t('tbl_area')}</Label>
+          <Select value={areaId} onValueChange={(value) => setAreaId(value ?? NO_AREA)}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_AREA}>{t('tbl_area_none')}</SelectItem>
+              {areas.map((area) => (
+                <SelectItem key={area.id} value={area.id}>
+                  {area.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>{t('tbl_status')}</Label>
+          <Select value={status} onValueChange={(value) => setStatus(value ?? 'AVAILABLE')}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {TABLE_STATUSES.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {t(STATUS_LABEL[value])}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {mutation.isError && (
+          <p className="text-sm text-[var(--system-red)]">
+            {errorMessage(mutation.error, t('qr_action_failed'))}
+          </p>
+        )}
+      </div>
+
+      <DialogFooter>
+        <Button variant="secondary" onClick={() => onOpenChange(false)}>
+          {t('qr_cancel')}
+        </Button>
+        <Button
+          disabled={!canSubmit || mutation.isPending}
+          onClick={() =>
+            mutation.mutate({
+              tableId: table?.table_id,
+              areaId: areaId === NO_AREA ? null : areaId,
+              code: code.trim(),
+              name: name.trim() || code.trim(),
+              capacity: parsedCapacity,
+              status,
+            })
+          }
+        >
+          {mutation.isPending ? t('tbl_saving') : t('tbl_save')}
+        </Button>
+      </DialogFooter>
     </>
   )
 }

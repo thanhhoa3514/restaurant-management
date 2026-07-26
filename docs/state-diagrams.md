@@ -365,8 +365,8 @@ end note
 | `PENDING` → `VOID` | Thu ngân | `POST /restaurant/invoices/:id/void` — `VoidInvoice` | Chặn nếu đã `PAID`/`VOID`/`REFUNDED`/`PARTIALLY_PAID`; ghi `voided_reason`, `voided_at` | `billing.invoice_voided` |
 | `PENDING` → `VOID` | Thu ngân | `POST /restaurant/invoices/split` — `SplitInvoice` | Hóa đơn gốc bị `VOID` với `voided_reason='SPLIT'`, sinh các hóa đơn con `PENDING`; chặn nếu có thanh toán đang `PROCESSING` | `billing.invoice_split` |
 | `PENDING` → `PAID` | Thu ngân | `POST /restaurant/invoices/:id/pay` — `ProcessPayment` | Số tiền nhận ≥ tổng; phương thức cần mã tham chiếu thì bắt buộc `reference_code`; không có thanh toán `PROCESSING` treo | `billing.payment_completed` |
-| `PENDING` / `PARTIALLY_PAID` → `PARTIALLY_PAID` | Thu ngân | `POST /restaurant/invoices/:id/pay-partial` — `ProcessPartialPayment` | Tổng đã thu + lần này **không vượt** tổng hóa đơn (`400 "total payment exceeds invoice amount"`) | `billing.payment_completed` |
-| `PARTIALLY_PAID` → `PAID` | Thu ngân | như trên | Lần thu làm tổng cộng dồn ≥ tổng hóa đơn → đặt `paid_at = NOW()` | như trên |
+| `PENDING` / `PARTIALLY_PAID` → `PARTIALLY_PAID` | Thu ngân | `POST /restaurant/invoices/:id/pay-partial` — `ProcessPartialPayment` | Khoản áp dụng chưa đủ tổng; ví điện tử không được hỗ trợ | `billing.payment_partial` |
+| `PENDING` / `PARTIALLY_PAID` → `PAID` | Thu ngân | như trên | Lần thu trả đủ phần còn lại; tiền mặt đưa dư được tách thành `amount_vnd = phần còn lại` và `change_amount_vnd = phần dư`; thẻ/chuyển khoản đưa dư bị từ chối | `billing.payment_completed` |
 | `PENDING` → `PAID` | Hệ thống | `POST /billing/payments/webhook/:provider` — `HandleWebhook` → `CompleteWebhookPayment` | Ví điện tử báo thành công; **idempotent** qua bảng `payment_webhook_events` | `billing.payment_completed` |
 
 **Kéo theo khi `PAID`:** `closeSessionAndFreeTable` — phiên `CLOSED`, bàn `AVAILABLE`.

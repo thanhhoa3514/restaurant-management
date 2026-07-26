@@ -47,7 +47,10 @@ export const GuestInvoiceScreen: FC = () => {
           name,
           qty: item.quantity,
           // Effective unit price (line total / qty); server prices authoritatively.
-          price: item.quantity > 0 ? Math.round(item.total_amount_vnd / item.quantity) : item.total_amount_vnd,
+          price:
+            item.quantity > 0
+              ? Math.round(item.total_amount_vnd / item.quantity)
+              : item.total_amount_vnd,
         })
       }
     }
@@ -91,7 +94,9 @@ export const GuestInvoiceScreen: FC = () => {
             {state.lang === 'vi' ? 'Hóa Đơn Số Bàn' : 'Table Bill'} {state.session?.table}
           </h2>
           <p className="text-xs text-tertiary mt-1">
-            {state.lang === 'vi' ? 'Cảm ơn quý khách đã tin dùng và lựa chọn nhà hàng chúng tôi.' : 'Thank you for choosing our restaurant.'}
+            {state.lang === 'vi'
+              ? 'Cảm ơn quý khách đã tin dùng và lựa chọn nhà hàng chúng tôi.'
+              : 'Thank you for choosing our restaurant.'}
           </p>
         </Card>
 
@@ -118,37 +123,44 @@ export const GuestInvoiceScreen: FC = () => {
         </Card>
 
         {/* PDF Download Section */}
-        <Suspense fallback={
-          <Button className="w-full h-14 rounded-xl font-bold flex items-center justify-center cursor-pointer shadow-lg" disabled>
-            <span className="flex items-center justify-center">
-              <Loader2 className="animate-spin mr-2 h-5 w-5 text-current" />
-              {state.lang === 'vi' ? 'Đang chuẩn bị PDF...' : 'Preparing PDF...'}
-            </span>
-          </Button>
-        }>
-          <LazyGuestPDFLink pdfProps={{
-            restaurantName: brandNameUpper(state.lang),
-            tableName: `${state.session?.table}`,
-            date: currentDateString,
-            items: invoiceItems,
-            total,
-            vat,
-            grandTotal,
-            lang: state.lang,
-            invoiceNumber
-          }} />
+        <Suspense
+          fallback={
+            <Button
+              className="w-full h-14 rounded-xl font-bold flex items-center justify-center cursor-pointer shadow-lg"
+              disabled
+            >
+              <span className="flex items-center justify-center">
+                <Loader2 className="animate-spin mr-2 h-5 w-5 text-current" />
+                {state.lang === 'vi' ? 'Đang chuẩn bị PDF...' : 'Preparing PDF...'}
+              </span>
+            </Button>
+          }
+        >
+          <LazyGuestPDFLink
+            pdfProps={{
+              restaurantName: brandNameUpper(state.lang),
+              tableName: `${state.session?.table}`,
+              date: currentDateString,
+              items: invoiceItems,
+              total,
+              vat,
+              grandTotal,
+              lang: state.lang,
+              invoiceNumber,
+            }}
+          />
         </Suspense>
       </div>
 
       <div className="sticky bottom-0 px-4 py-4 bg-background/80 backdrop-blur-xl border-t border-separator">
-        <Button variant="secondary" className="w-full h-12 rounded-xl font-bold cursor-pointer" onClick={handleFinish}>
+        <Button
+          variant="secondary"
+          className="w-full h-12 rounded-xl font-bold cursor-pointer"
+          onClick={handleFinish}
+        >
           {state.lang === 'vi' ? 'Hoàn Tất dùng bữa' : 'Finish Session'}
         </Button>
       </div>
     </div>
   )
 }
-
-
-
-

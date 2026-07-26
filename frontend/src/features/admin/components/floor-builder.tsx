@@ -10,8 +10,12 @@ import {
 } from '@dnd-kit/core'
 import { restrictToParentElement } from '@dnd-kit/modifiers'
 
+import { useMutation } from '@tanstack/react-query'
+import { toast } from 'sonner'
+
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { saveTablePositions } from '@/features/dining/api'
 import { WF_LANDMARKS } from '@/features/waiter/data/seed'
 import { useStaffTables } from '@/features/waiter/queries/useStaffTables'
 import { Save, GripVertical } from 'lucide-react'
@@ -26,7 +30,7 @@ interface TableData {
 }
 
 export function FloorBuilder() {
-  const { tables: dbTables, isLoading, isError } = useStaffTables()
+  const { tables: dbTables, isLoading, isError, refetch } = useStaffTables()
   // ponytail: chỉ giữ toạ độ đã kéo trong state, phần còn lại đọc thẳng từ query
   // -> refetch 8s không ghi đè thao tác kéo, không phải đồng bộ hai nguồn.
   const [moved, setMoved] = useState<Record<string, { x: number; y: number }>>({})
@@ -39,13 +43,31 @@ export function FloorBuilder() {
     y: moved[t.id]?.y ?? t.position.y_pct,
   }))
 
+  // ponytail: chỉ gửi bàn đã kéo, không gửi cả sơ đồ — bàn chưa đụng tới giữ nguyên toạ độ cũ
+  const save = useMutation({
+    mutationFn: () =>
+      saveTablePositions(
+        Object.entries(moved).map(([table_id, p]) => ({
+          table_id,
+          x: Math.round(p.x),
+          y: Math.round(p.y),
+        })),
+      ),
+    onSuccess: () => {
+      setMoved({})
+      refetch()
+      toast.success('Đã lưu sơ đồ bàn')
+    },
+    onError: (err: Error) => toast.error(err.message || 'Lưu sơ đồ thất bại'),
+  })
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 5,
       },
     }),
-    useSensor(KeyboardSensor)
+    useSensor(KeyboardSensor),
   )
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -84,18 +106,16 @@ export function FloorBuilder() {
                 : `${tables.length} bàn`}
           </p>
         </div>
-        {/* ponytail: lưu cần PATCH position_x/position_y — chưa có endpoint, disable thay vì giả vờ lưu */}
-        <Button disabled title="Cần API lưu toạ độ bàn">
+        <Button
+          disabled={Object.keys(moved).length === 0 || save.isPending}
+          onClick={() => save.mutate()}
+        >
           <Save className="size-4" />
-          Lưu sơ đồ
+          {save.isPending ? 'Đang lưu…' : 'Lưu sơ đồ'}
         </Button>
       </div>
 
-      <DndContext
-        sensors={sensors}
-        modifiers={[restrictToParentElement]}
-        onDragEnd={handleDragEnd}
-      >
+      <DndContext sensors={sensors} modifiers={[restrictToParentElement]} onDragEnd={handleDragEnd}>
         <Card className="relative h-[620px] w-full overflow-hidden bg-zinc-50/70 p-0 shadow-inner dark:bg-zinc-950/40">
           <div
             className="pointer-events-none absolute inset-0 opacity-70"
@@ -165,9 +185,7 @@ function DraggableTable({ table }: { table: TableData }) {
       <span className="mt-2 text-lg font-bold leading-none tracking-tight text-zinc-800 dark:text-zinc-200">
         {table.code}
       </span>
-      <span className="mt-1 text-[10px] font-bold text-zinc-500">
-        CAP: {table.capacity}
-      </span>
+      <span className="mt-1 text-[10px] font-bold text-zinc-500">CAP: {table.capacity}</span>
     </div>
   )
 }

@@ -255,7 +255,7 @@ flowchart TD
 
 ---
 
-## UC-06 — Theo dõi trạng thái món realtime  *(chỉ xem)*
+## UC-06 — Theo dõi trạng thái món tức thời  *(chỉ xem)*
 
 | | |
 |---|---|
@@ -363,7 +363,7 @@ flowchart TD
 
 # Nhóm Phục vụ
 
-## UC-09 — Mở phiên walk-in
+## UC-09 — Mở phiên cho khách vãng lai
 
 | | |
 |---|---|

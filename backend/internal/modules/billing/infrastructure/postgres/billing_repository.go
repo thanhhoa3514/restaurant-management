@@ -626,16 +626,16 @@ func (r *Repository) ProcessPartialPayment(ctx context.Context, restaurantID uui
 		return nil, err
 	}
 
-	newRunningTotal, newStatus, err := calculatePartialPayment(existingPaid, input.ReceivedAmountVND, totalAmount)
+	split, err := calculatePartialPayment(existingPaid, input.ReceivedAmountVND, totalAmount, method.Type == "CASH")
 	if err != nil {
 		return nil, err
 	}
+	newRunningTotal, newStatus, change := split.RunningPaid, split.Status, split.Change
 
 	paymentNumber, err := randomCode("PAY", 12)
 	if err != nil {
 		return nil, err
 	}
-	change := int64(0)
 	var reference any
 	if strings.TrimSpace(input.ReferenceCode) != "" {
 		reference = strings.TrimSpace(input.ReferenceCode)
@@ -656,7 +656,7 @@ func (r *Repository) ProcessPartialPayment(ctx context.Context, restaurantID uui
 		)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, 'COMPLETED', $8, $9, $10, NOW(), $11)
 		RETURNING id
-	`, restaurantID, input.InvoiceID, sessionIDVal, orderIDVal, paymentNumber, method.ID, input.ReceivedAmountVND, reference, input.ReceivedAmountVND, change, input.ProcessedBy).Scan(&paymentID)
+	`, restaurantID, input.InvoiceID, sessionIDVal, orderIDVal, paymentNumber, method.ID, split.Applied, reference, input.ReceivedAmountVND, change, input.ProcessedBy).Scan(&paymentID)
 	if pg.IsUniqueViolation(err) {
 		return nil, apperr.New(apperr.CodeConflict, "payment number already exists")
 	}
@@ -690,19 +690,42 @@ func (r *Repository) ProcessPartialPayment(ctx context.Context, restaurantID uui
 	return r.LoadInvoice(ctx, restaurantID, input.InvoiceID)
 }
 
-func calculatePartialPayment(existingPaid, receivedAmount, totalAmount int64) (int64, string, error) {
+// partialPaymentSplit tách số tiền khách đưa thành phần ghi vào hóa đơn và tiền thừa.
+type partialPaymentSplit struct {
+	Applied     int64  // ghi vào payments.amount_vnd
+	Change      int64  // tiền thối lại
+	RunningPaid int64  // tổng đã trả sau lần này
+	Status      string // trạng thái mới của hóa đơn
+}
+
+// allowChange: chỉ tiền mặt mới thối lại được. Thẻ/chuyển khoản đưa dư phải
+// hoàn qua ngân hàng nên vẫn từ chối tại đây.
+func calculatePartialPayment(existingPaid, receivedAmount, totalAmount int64, allowChange bool) (partialPaymentSplit, error) {
+	var out partialPaymentSplit
 	if receivedAmount <= 0 {
-		return 0, "", apperr.New(apperr.CodeInvalid, "received_amount_vnd must be positive")
+		return out, apperr.New(apperr.CodeInvalid, "received_amount_vnd must be positive")
 	}
-	if existingPaid < 0 || existingPaid > totalAmount || receivedAmount > totalAmount-existingPaid {
-		return 0, "", apperr.New(apperr.CodeInvalid, "total payment exceeds invoice amount")
+	if existingPaid < 0 || existingPaid >= totalAmount {
+		return out, apperr.New(apperr.CodeInvalid, "total payment exceeds invoice amount")
 	}
 
-	newRunningTotal := existingPaid + receivedAmount
-	if newRunningTotal == totalAmount {
-		return newRunningTotal, "PAID", nil
+	remaining := totalAmount - existingPaid
+	applied := receivedAmount
+	if applied > remaining {
+		if !allowChange {
+			return out, apperr.New(apperr.CodeInvalid, "total payment exceeds invoice amount")
+		}
+		applied = remaining
 	}
-	return newRunningTotal, "PARTIALLY_PAID", nil
+
+	out.Applied = applied
+	out.Change = receivedAmount - applied
+	out.RunningPaid = existingPaid + applied
+	out.Status = "PARTIALLY_PAID"
+	if out.RunningPaid == totalAmount {
+		out.Status = "PAID"
+	}
+	return out, nil
 }
 
 func (r *Repository) PrepareAsyncPayment(ctx context.Context, restaurantID uuid.UUID, input domain.AsyncPaymentInput) (*domain.AsyncPaymentPreparation, error) {

@@ -40,11 +40,7 @@ func (s *StaffMarkUnavailable) Handle(ctx context.Context, itemID uuid.UUID, rea
 				AggregateType: "order_item",
 				AggregateID:   itemID,
 				EventType:     "ordering.item_unavailable",
-				Payload: map[string]any{
-					"item_id": itemID,
-					"status":  "UNAVAILABLE",
-					"reason":  reason,
-				},
+				Payload:       itemEventPayload(itemID, out, map[string]any{"reason": reason}),
 			})
 		}
 		return nil

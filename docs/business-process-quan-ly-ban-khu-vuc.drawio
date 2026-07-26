@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram name="Quan ly khu vuc va ma QR ban (flowchart ngang)" id="bp-quan-ly-khu-vuc-qr">
-        <mxGraphModel dx="910" dy="336" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2800" pageHeight="760" math="0" shadow="0">
+        <mxGraphModel dx="877" dy="188" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2800" pageHeight="760" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -22,7 +22,7 @@
                 <mxCell id="A2" value="Nhập tên khu vực, mô tả, thứ tự hiển thị và trạng thái hoạt động" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
                     <mxGeometry x="1500" y="100" width="200" height="100" as="geometry"/>
                 </mxCell>
-                <mxCell id="A_V" value="Tên khu vực hợp lệ (bắt buộc, tối đa 100 ký tự)?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
+                <mxCell id="A_V" value="Tên khu vực hợp lệ&amp;nbsp;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
                     <mxGeometry x="1740" y="100" width="200" height="100" as="geometry"/>
                 </mxCell>
                 <mxCell id="A3" value="Hệ thống lưu khu vực; khu vực thêm mới mặc định đang hoạt động" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
@@ -32,7 +32,7 @@
                     <mxGeometry x="2220" y="100" width="200" height="100" as="geometry"/>
                 </mxCell>
                 <mxCell id="A_DEL" value="Hệ thống xóa mềm khu vực: đánh dấu đã xóa và tắt hoạt động" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
-                    <mxGeometry x="1500" y="255" width="200" height="90" as="geometry"/>
+                    <mxGeometry x="1370" y="320" width="180" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="A_X" value="Hệ thống báo lỗi, quản lý nhập lại" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" parent="1" vertex="1">
                     <mxGeometry x="1760" y="255" width="180" height="90" as="geometry"/>
@@ -98,7 +98,12 @@
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="e_ADEL_AEND" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="1" source="A_DEL" target="A_END" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1600" y="370"/>
+                            <mxPoint x="2320" y="370"/>
+                        </Array>
+                    </mxGeometry>
                 </mxCell>
                 <mxCell id="e_AEND_E0" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="A_END" target="E0" edge="1">
                     <mxGeometry relative="1" as="geometry"/>

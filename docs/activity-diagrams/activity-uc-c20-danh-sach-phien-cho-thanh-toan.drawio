@@ -1,0 +1,72 @@
+<mxfile host="65bd71144e">
+    <diagram id="uc-c20" name="UC-C20 — Xem danh sách phiên chờ thanh toán">
+        <mxGraphModel dx="1032" dy="455" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="988" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="UC-C20 — SƠ ĐỒ HOẠT ĐỘNG: XEM DANH SÁCH PHIÊN CHỜ THANH TOÁN" style="text;html=1;align=center;verticalAlign=middle;fontSize=20;fontStyle=1;strokeColor=none;fillColor=none;fontColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="14" width="1100" height="42" as="geometry"/>
+                </mxCell>
+                <mxCell id="actor-lane" value="Tác nhân: Thu ngân" style="swimlane;html=1;horizontal=1;startSize=34;fillColor=#ffffff;swimlaneFillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="70" y="68" width="290" height="622" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-1" value="Mở màn hình thu ngân" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=13;" parent="actor-lane" vertex="1">
+                    <mxGeometry x="32" y="122" width="226" height="64" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-6" value="Chọn một phiên để lập/xem hóa đơn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=13;" parent="actor-lane" vertex="1">
+                    <mxGeometry x="27.5" y="512" width="235" height="64" as="geometry"/>
+                </mxCell>
+                <mxCell id="start" value="" style="ellipse;html=1;aspect=fixed;fillColor=#000000;strokeColor=#000000;" parent="actor-lane" vertex="1">
+                    <mxGeometry x="132" y="52" width="26" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="actor-lane" source="start" target="step-1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="system-lane" value="Hệ thống" style="swimlane;html=1;horizontal=1;startSize=34;fillColor=#ffffff;swimlaneFillColor=#ffffff;strokeColor=#000000;fontColor=#000000;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="360" y="68" width="730" height="622" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-3" value="Tổng hợp các bàn đang muốn thanh toán" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=13;" parent="system-lane" vertex="1">
+                    <mxGeometry x="100" y="122" width="290" height="64" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-4" value="Có phiên chờ thanh toán?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=13;fontStyle=1;" parent="system-lane" vertex="1">
+                    <mxGeometry x="95" y="262" width="300" height="84" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="system-lane" source="step-3" target="step-4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="alternate-4" value="Hiển thị danh sách trống&amp;nbsp;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=12;" parent="system-lane" vertex="1">
+                    <mxGeometry x="500" y="373" width="210" height="68" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-5" value="Không" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="system-lane" source="step-4" target="alternate-4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-5" value="Hiển thị bàn, thời gian yêu cầu&amp;nbsp;&lt;div&gt;và tổng tiền dự kiến&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;fontColor=#000000;fontSize=13;" parent="system-lane" vertex="1">
+                    <mxGeometry x="122.5" y="412" width="245" height="64" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-7" value="Có" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="system-lane" source="step-4" target="step-5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="end" value="" style="ellipse;shape=doubleEllipse;html=1;aspect=fixed;fillColor=#ffffff;strokeColor=#000000;strokeWidth=1.5;" parent="system-lane" vertex="1">
+                    <mxGeometry x="250" y="528" width="32" height="32" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="system-lane" source="alternate-4" target="end" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="765" y="426" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="605" y="544"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="1" source="step-1" target="step-3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="1" source="step-5" target="step-6" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2" parent="1" source="step-6" target="end" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

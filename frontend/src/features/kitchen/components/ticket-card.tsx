@@ -29,10 +29,7 @@ const surface = {
   chipMuted: 'bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500',
 }
 
-const urgencyStyles: Record<
-  Urgency,
-  { timerText: string; labelText: string; pulse: boolean }
-> = {
+const urgencyStyles: Record<Urgency, { timerText: string; labelText: string; pulse: boolean }> = {
   green: {
     timerText: 'text-emerald-600 dark:text-emerald-500',
     labelText: 'text-emerald-600 dark:text-emerald-500',
@@ -213,7 +210,9 @@ const ItemRow: FC<{ item: KDSItem; lang: Lang; t: TicketCardProps['t'] }> = ({ i
             {name}
           </div>
           {options && (
-            <div className={`mt-1 text-[13px] font-medium leading-snug ${surface.textMuted}`}>{options}</div>
+            <div className={`mt-1 text-[13px] font-medium leading-snug ${surface.textMuted}`}>
+              {options}
+            </div>
           )}
           {item.notes && (
             <div className="mt-1.5 flex items-center gap-1.5 text-[12px] font-semibold italic text-amber-600 dark:text-amber-500">

@@ -1,5 +1,6 @@
 import { useState, type FC } from 'react'
 import { Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -13,6 +14,7 @@ import { VoidDialog } from '@/features/cashier/components/void-dialog'
 import { activeInvoice, fmtClock, fmtVND } from '@/features/cashier/helpers'
 import type { CashierSession, Lang } from '@/features/cashier/types'
 import { useReopenSession } from '@/features/cashier/mutations/useReopenSession'
+import { errorMessage } from '@/lib/api'
 
 interface InvoicePanelProps {
   session: CashierSession | null
@@ -56,8 +58,12 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
   }
 
   const invoice = activeInvoice(session)
-  const terminal = session.status === 'paid' || session.status === 'closed' || session.status === 'voided'
-  const elapsedMinutes = Math.max(0, Math.round((now.getTime() - session.started_at.getTime()) / 60000))
+  const terminal =
+    session.status === 'paid' || session.status === 'closed' || session.status === 'voided'
+  const elapsedMinutes = Math.max(
+    0,
+    Math.round((now.getTime() - session.started_at.getTime()) / 60000),
+  )
   const split = session.invoices.length > 1
   const anyInvoicePaidOrPaying = session.invoices.some(
     (inv) => inv.status === 'PAID' || inv.payment?.status === 'processing',
@@ -70,13 +76,17 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <CardTitle className="text-2xl">{t('table')} {session.table_label}</CardTitle>
+                <CardTitle className="text-2xl">
+                  {t('table')} {session.table_label}
+                </CardTitle>
                 <div className="mt-2 flex flex-wrap gap-2 text-sm text-[var(--text-tertiary)]">
                   <span>{lang === 'vi' ? session.area_name_vi : session.area_name_en}</span>
                   <span>·</span>
                   <span>{t('guests', session.guest_count)}</span>
                   <span>·</span>
-                  <span>{t('invoice_duration')}: {t('elapsed_min', elapsedMinutes)}</span>
+                  <span>
+                    {t('invoice_duration')}: {t('elapsed_min', elapsedMinutes)}
+                  </span>
                 </div>
               </div>
               <Badge className="rounded-full border-0 bg-[var(--system-blue)]/10 text-[var(--system-blue)]">
@@ -84,7 +94,8 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
               </Badge>
             </div>
             <div className="mt-2 text-xs font-semibold text-[var(--text-tertiary)]">
-              {t('invoice_number')}: {invoice.number} · {t('invoice_opened_at')} {fmtClock(session.started_at)}
+              {t('invoice_number')}: {invoice.number} · {t('invoice_opened_at')}{' '}
+              {fmtClock(session.started_at)}
             </div>
             {split ? (
               <Tabs
@@ -97,7 +108,9 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
                     <TabsTrigger key={inv.id} value={inv.id ?? ''} className="flex-1 gap-1.5">
                       {inv.number}
                       {inv.status === 'PAID' ? (
-                        <Badge className="rounded-full border-0 bg-[var(--system-green)]/10 px-1.5 text-[10px] text-[var(--system-green)]">✓</Badge>
+                        <Badge className="rounded-full border-0 bg-[var(--system-green)]/10 px-1.5 text-[10px] text-[var(--system-green)]">
+                          ✓
+                        </Badge>
                       ) : null}
                     </TabsTrigger>
                   ))}
@@ -113,21 +126,41 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
           <h2 className="mb-2 text-base font-semibold text-[var(--text)]">{t('order_details')}</h2>
           <div className="space-y-3">
             {invoice.orders.map((order) => (
-              <Card key={order.id} className="overflow-hidden border border-[var(--separator)] bg-[var(--material-regular)] shadow-sm backdrop-blur-2xl">
+              <Card
+                key={order.id}
+                className="overflow-hidden border border-[var(--separator)] bg-[var(--material-regular)] shadow-sm backdrop-blur-2xl"
+              >
                 <div className="flex items-center justify-between border-b border-[var(--separator)] px-4 py-2 text-sm">
-                  <span className="font-semibold text-[var(--text-secondary)]">{t('order_placed_at')} {fmtClock(order.submitted_at)}</span>
+                  <span className="font-semibold text-[var(--text-secondary)]">
+                    {t('order_placed_at')} {fmtClock(order.submitted_at)}
+                  </span>
                   <span className="font-mono text-xs text-[var(--text-tertiary)]">{order.id}</span>
                 </div>
                 {order.items.map((item) => (
-                  <div key={item.id} className="border-b border-[var(--separator)]/60 px-4 py-3 last:border-b-0">
+                  <div
+                    key={item.id}
+                    className="border-b border-[var(--separator)]/60 px-4 py-3 last:border-b-0"
+                  >
                     <div className="flex justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="font-semibold text-[var(--text)]">{lang === 'vi' ? item.name_snapshot_vi : item.name_snapshot_en}</div>
-                        <div className="text-sm text-[var(--text-tertiary)]">{lang === 'vi' ? item.options_text_vi : item.options_text_en}</div>
-                        {item.notes ? <div className="text-xs italic text-[var(--system-orange)]">“{item.notes}”</div> : null}
-                        <div className="mt-1 text-xs text-[var(--text-tertiary)]">{item.qty} × {fmtVND(item.unit_price_snapshot)}</div>
+                        <div className="font-semibold text-[var(--text)]">
+                          {lang === 'vi' ? item.name_snapshot_vi : item.name_snapshot_en}
+                        </div>
+                        <div className="text-sm text-[var(--text-tertiary)]">
+                          {lang === 'vi' ? item.options_text_vi : item.options_text_en}
+                        </div>
+                        {item.notes ? (
+                          <div className="text-xs italic text-[var(--system-orange)]">
+                            “{item.notes}”
+                          </div>
+                        ) : null}
+                        <div className="mt-1 text-xs text-[var(--text-tertiary)]">
+                          {item.qty} × {fmtVND(item.unit_price_snapshot)}
+                        </div>
                       </div>
-                      <div className="font-bold tabular-nums text-[var(--text)]">{fmtVND(item.line_total)}</div>
+                      <div className="font-bold tabular-nums text-[var(--text)]">
+                        {fmtVND(item.line_total)}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -144,9 +177,18 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
             ) : null}
             <PriceRow label={t('vat')} value={fmtVND(invoice.vat_amount)} />
             {invoice.discount ? (
-              <PriceRow label={`${t('discount')} · ${invoice.discount.reason}`} value={`-${fmtVND(invoice.discount.amount)}`} tone="amber" />
+              <PriceRow
+                label={`${t('discount')} · ${invoice.discount.reason}`}
+                value={`-${fmtVND(invoice.discount.amount)}`}
+                tone="amber"
+              />
             ) : (
-              <Button variant="ghost" className="px-0 text-[var(--system-orange)]" disabled={terminal} onClick={() => setDiscountOpen(true)}>
+              <Button
+                variant="ghost"
+                className="px-0 text-[var(--system-orange)]"
+                disabled={terminal}
+                onClick={() => setDiscountOpen(true)}
+              >
                 {t('apply_discount')}
               </Button>
             )}
@@ -155,20 +197,35 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
                 readOnly
                 className="min-h-20 resize-none rounded-[var(--radius-lg)] bg-[var(--surface-grouped)] text-xs"
                 value={invoice.discount_history
-                  .map((item) => `${fmtClock(item.applied_at)} · ${item.action} · ${fmtVND(item.amount)} · ${item.reason}`)
+                  .map(
+                    (item) =>
+                      `${fmtClock(item.applied_at)} · ${item.action} · ${fmtVND(item.amount)} · ${item.reason}`,
+                  )
                   .join('\n')}
               />
             ) : null}
             <Separator />
             <div className="flex items-baseline justify-between">
               <span className="text-lg font-bold text-[var(--text)]">{t('total')}</span>
-              <span className="text-4xl font-bold tabular-nums text-[var(--system-orange)]">{fmtVND(invoice.total)}</span>
+              <span className="text-4xl font-bold tabular-nums text-[var(--system-orange)]">
+                {fmtVND(invoice.total)}
+              </span>
             </div>
             <div className="flex gap-2 pt-2">
-              <Button variant="secondary" className="flex-1 rounded-[var(--radius-lg)]" disabled={!invoice.discount || terminal} onClick={() => onRemoveDiscount(session.id)}>
+              <Button
+                variant="secondary"
+                className="flex-1 rounded-[var(--radius-lg)]"
+                disabled={!invoice.discount || terminal}
+                onClick={() => onRemoveDiscount(session.id)}
+              >
                 {t('remove_discount')}
               </Button>
-              <Button variant="destructive" className="flex-1 rounded-[var(--radius-lg)]" disabled={invoice.payment?.status === 'pending' || terminal} onClick={() => setVoidOpen(true)}>
+              <Button
+                variant="destructive"
+                className="flex-1 rounded-[var(--radius-lg)]"
+                disabled={invoice.payment?.status === 'pending' || terminal}
+                onClick={() => setVoidOpen(true)}
+              >
                 {t('void_session')}
               </Button>
             </div>
@@ -187,7 +244,17 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
                 disabled={reopenMutation.isPending}
                 onClick={() => {
                   if (window.confirm(t('reopen_session_confirm'))) {
-                    reopenMutation.mutate(session.id, { onSuccess: onSessionReopened })
+                    reopenMutation.mutate(session.id, {
+                      onSuccess: () => {
+                        toast.success(t('toast_reopen_done'))
+                        onSessionReopened?.()
+                      },
+                      onError: (error) => {
+                        toast.error(errorMessage(error, t('toast_reopen_failed')), {
+                          id: 'cashier-reopen-session-error',
+                        })
+                      },
+                    })
                   }
                 }}
               >
@@ -239,9 +306,11 @@ function PriceRow({ label, value, tone }: { label: string; value: string; tone?:
   return (
     <div className="flex items-center justify-between text-sm">
       <span className="text-[var(--text-secondary)]">{label}</span>
-      <span className={`font-semibold tabular-nums ${tone === 'amber' ? 'text-[var(--system-orange)]' : 'text-[var(--text)]'}`}>{value}</span>
+      <span
+        className={`font-semibold tabular-nums ${tone === 'amber' ? 'text-[var(--system-orange)]' : 'text-[var(--text)]'}`}
+      >
+        {value}
+      </span>
     </div>
   )
 }
-
-

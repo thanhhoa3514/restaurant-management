@@ -81,7 +81,7 @@ SPECS = {
 
 "uc-phuc-vu-09-mo-phien-walk-in": (
   "ĐẶC TẢ USE-CASE PHỤC VỤ — MỞ PHIÊN WALK-IN", "Phục vụ", [],
-  "Mở phiên walk-in",
+  "Mở phiên cho khách vãng lai",
   ["Kiểm bàn có phiên ACTIVE chưa", "Cấp session_token"],
   ["Đóng phiên cũ còn treo\n(rồi mở lại)"],
   [("dẫn sang", "Gọi món hộ / Khách quét QR\n(UC-01)")]),
@@ -288,13 +288,19 @@ SPECS = {
   [],
   [("ảnh hưởng", "Quét QR vào phiên\n(UC-01)")]),
 
-"uc-quan-ly-29-quan-ly-ban-khu-vuc": (
-  "ĐẶC TẢ USE-CASE QUẢN LÝ — QUẢN LÝ BÀN / KHU VỰC", "Quản lý", [],
-  "Quản lý bàn / khu vực",
-  ["Thêm / Sửa / Xóa bàn", "Gán khu vực", "Sắp xếp sơ đồ",
-   "Kiểm phiên active\n(chặn xóa bàn đang có khách)"],
+"uc-quan-ly-29-quan-ly-ban": (
+  "ĐẶC TẢ USE-CASE QUẢN LÝ — QUẢN LÝ BÀN", "Quản lý", [],
+  "Quản lý bàn",
+  ["Thêm bàn", "Sửa bàn", "Xóa bàn"],
   [],
   [("ảnh hưởng", "Lưới bàn\n(UC-10)")]),
+
+"uc-quan-ly-29a-quan-ly-khu-vuc": (
+  "ĐẶC TẢ USE-CASE QUẢN LÝ — QUẢN LÝ KHU VỰC", "Quản lý", [],
+  "Quản lý khu vực",
+  ["Thêm khu vực", "Sửa khu vực", "Xóa khu vực"],
+  [],
+  []),
 
 "uc-quan-ly-30-quan-ly-nguoi-dung-phan-quyen": (
   "ĐẶC TẢ USE-CASE QUẢN LÝ — QUẢN LÝ NGƯỜI DÙNG & PHÂN QUYỀN", "Quản lý", [],

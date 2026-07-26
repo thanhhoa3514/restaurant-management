@@ -15,7 +15,16 @@ export interface KitchenTicketItemDTO {
     price_delta_snapshot_vnd: number
     quantity: number
   }>
-  status_history: Array<{ status: string; timestamp: string }>
+  status_history: Array<{
+    status: string
+    from_status: string | null
+    to_status: string
+    timestamp: string
+    changed_by_name: string | null
+    changed_by_role: string | null
+    reason: string | null
+    note: string | null
+  }>
 }
 
 export interface KitchenTicketDTO {
@@ -81,8 +90,8 @@ export function reviewCancelRequest(
   status: string
   item_status: string
 }> {
-  return apiRequest(
-    `/api/v1/restaurant/kitchen/cancel-requests/${cancelRequestId}/review`,
-    { method: 'POST', body: { action, note } },
-  )
+  return apiRequest(`/api/v1/restaurant/kitchen/cancel-requests/${cancelRequestId}/review`, {
+    method: 'POST',
+    body: { action, note },
+  })
 }

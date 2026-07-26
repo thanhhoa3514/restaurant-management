@@ -10,13 +10,7 @@ interface VoidDialogProps {
   onConfirm: () => void
 }
 
-export const VoidDialog: FC<VoidDialogProps> = ({
-  open,
-  session,
-  t,
-  onOpenChange,
-  onConfirm,
-}) => {
+export const VoidDialog: FC<VoidDialogProps> = ({ open, session, t, onOpenChange, onConfirm }) => {
   if (!session) return null
 
   return (
@@ -34,5 +28,3 @@ export const VoidDialog: FC<VoidDialogProps> = ({
     />
   )
 }
-
-

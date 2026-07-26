@@ -172,29 +172,103 @@ const ManagedItem: FC<{
         </span>
         <ChevronDown className={`size-4 transition-transform ${expanded ? 'rotate-180' : ''}`} />
       </button>
-      {expanded && <Timeline history={item.status_history} t={t} />}
+      {expanded && <Timeline history={item.status_history} lang={lang} t={t} />}
     </div>
   )
 }
 
-const Timeline: FC<{ history: StatusHistoryEntry[]; t: Translate }> = ({ history, t }) => (
+function historyStatusLabel(status: ItemStatus, t: Translate): string {
+  return t(`hist_${status}` as KdsKey)
+}
+
+function historyRoleLabel(role: string, lang: Lang): string {
+  const labels: Record<string, { vi: string; en: string }> = {
+    ADMIN: { vi: 'Quản trị', en: 'Admin' },
+    CASHIER: { vi: 'Thu ngân', en: 'Cashier' },
+    GUEST: { vi: 'Khách', en: 'Guest' },
+    KITCHEN: { vi: 'Bếp', en: 'Kitchen' },
+    MANAGER: { vi: 'Quản lý', en: 'Manager' },
+    STAFF: { vi: 'Nhân viên', en: 'Staff' },
+    SYSTEM: { vi: 'Hệ thống', en: 'System' },
+    WAITER: { vi: 'Phục vụ', en: 'Waiter' },
+  }
+  return labels[role.toUpperCase()]?.[lang] ?? role
+}
+
+function historyTimestamp(timestamp: Date, lang: Lang): string {
+  if (Number.isNaN(timestamp.getTime())) return '—'
+  return new Intl.DateTimeFormat(lang === 'vi' ? 'vi-VN' : 'en-US', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(timestamp)
+}
+
+const Timeline: FC<{
+  history: StatusHistoryEntry[]
+  lang: Lang
+  t: Translate
+}> = ({ history, lang, t }) => (
   <ol className="space-y-3 border-t bg-muted/30 px-4 py-4">
-    {history.map((entry, index) => (
-      <li
-        key={`${entry.status}-${entry.timestamp.toISOString()}-${index}`}
-        className="flex items-start gap-3"
-      >
-        <Badge
-          className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full p-0 ${timelineBadgeStyle[entry.status]}`}
+    {history.map((entry, index) => {
+      const fromStatus = entry.from_status
+      const toStatus = entry.to_status ?? entry.status
+      const timestampISO = Number.isNaN(entry.timestamp.getTime())
+        ? undefined
+        : entry.timestamp.toISOString()
+      const actor = [
+        entry.changed_by_name,
+        entry.changed_by_role && historyRoleLabel(entry.changed_by_role, lang),
+      ]
+        .filter(Boolean)
+        .join(' · ')
+
+      return (
+        <li
+          key={`${toStatus}-${timestampISO ?? 'invalid'}-${index}`}
+          className="flex items-start gap-3"
         >
-          {index + 1}
-        </Badge>
-        <div>
-          <div className="text-sm font-semibold text-foreground">
-            {t(`hist_${entry.status}` as KdsKey)}
+          <Badge
+            className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full p-0 ${timelineBadgeStyle[toStatus]}`}
+          >
+            {index + 1}
+          </Badge>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+              <div className="text-sm font-semibold text-foreground">
+                {fromStatus && fromStatus !== toStatus ? (
+                  <>
+                    {historyStatusLabel(fromStatus, t)}
+                    <span className="mx-1.5 text-muted-foreground" aria-hidden="true">
+                      →
+                    </span>
+                    {historyStatusLabel(toStatus, t)}
+                  </>
+                ) : (
+                  historyStatusLabel(toStatus, t)
+                )}
+              </div>
+              <time
+                className="shrink-0 text-xs tabular-nums text-muted-foreground"
+                dateTime={timestampISO}
+              >
+                {historyTimestamp(entry.timestamp, lang)}
+              </time>
+            </div>
+            {actor && <div className="mt-1 break-words text-xs text-muted-foreground">{actor}</div>}
+            {entry.reason && (
+              <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                <span className="font-semibold">{t('timeline_reason')}:</span> {entry.reason}
+              </div>
+            )}
+            {entry.note && entry.note !== entry.reason && (
+              <div className="mt-1.5 break-words text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">{t('timeline_note')}:</span>{' '}
+                {entry.note}
+              </div>
+            )}
           </div>
-        </div>
-      </li>
-    ))}
+        </li>
+      )
+    })}
   </ol>
 )

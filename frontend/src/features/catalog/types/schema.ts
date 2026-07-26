@@ -1,9 +1,9 @@
 import { z } from 'zod'
-import type { 
-  MenuItemStatus, 
-  MenuItemAvailabilityStatus, 
-  MenuItemFormBody, 
-  AdminMenuItemDetailDTO 
+import type {
+  MenuItemStatus,
+  MenuItemAvailabilityStatus,
+  MenuItemFormBody,
+  AdminMenuItemDetailDTO,
 } from '@/features/catalog/types'
 
 export const STATUS_OPTIONS: MenuItemStatus[] = ['DRAFT', 'PUBLISHED', 'ARCHIVED']

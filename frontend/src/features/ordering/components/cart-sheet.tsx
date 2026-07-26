@@ -152,14 +152,12 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
                 <ShoppingBag size={40} strokeWidth={1.5} />
               </div>
               <div className="space-y-1">
-                <p className="text-[17px] font-bold text-[var(--text)]">
-                  {t.empty_cart}
-                </p>
+                <p className="text-[17px] font-bold text-[var(--text)]">{t.empty_cart}</p>
                 <p className="text-[14px] text-[var(--text-tertiary)] max-w-[260px] mx-auto">
                   {placedItemCount > 0
-                    ? (lang === 'vi'
-                        ? 'Bạn không có món nháp nào trong giỏ. Món đã gửi đang được xử lý ở Đơn món.'
-                        : 'No draft items in cart. Placed items are being processed in Order Status.')
+                    ? lang === 'vi'
+                      ? 'Bạn không có món nháp nào trong giỏ. Món đã gửi đang được xử lý ở Đơn món.'
+                      : 'No draft items in cart. Placed items are being processed in Order Status.'
                     : t.empty_cart_hint}
                 </p>
               </div>

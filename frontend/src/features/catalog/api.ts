@@ -26,7 +26,9 @@ export function listAdminMenuItems(categoryId?: string): Promise<AdminMenuItemSu
 }
 
 export function getAdminMenuItem(id: string): Promise<AdminMenuItemDetailDTO> {
-  return apiRequest<AdminMenuItemDetailDTO>(`/api/v1/restaurant/menu/items/${encodeURIComponent(id)}`)
+  return apiRequest<AdminMenuItemDetailDTO>(
+    `/api/v1/restaurant/menu/items/${encodeURIComponent(id)}`,
+  )
 }
 
 export function createMenuItem(body: CreateMenuItemRequest): Promise<MenuItemMutationResult> {
@@ -37,17 +39,23 @@ export function createMenuItem(body: CreateMenuItemRequest): Promise<MenuItemMut
 }
 
 export function updateMenuItem(body: UpdateMenuItemRequest): Promise<MenuItemMutationResult> {
-  return apiRequest<MenuItemMutationResult>(`/api/v1/restaurant/menu/items/${encodeURIComponent(body.id)}`, {
-    method: 'PUT',
-    body: { ...body, id: undefined },
-  })
+  return apiRequest<MenuItemMutationResult>(
+    `/api/v1/restaurant/menu/items/${encodeURIComponent(body.id)}`,
+    {
+      method: 'PUT',
+      body: { ...body, id: undefined },
+    },
+  )
 }
 
 export function deleteMenuItem(id: string, version: number): Promise<MenuItemMutationResult> {
-  return apiRequest<MenuItemMutationResult>(`/api/v1/restaurant/menu/items/${encodeURIComponent(id)}`, {
-    method: 'DELETE',
-    body: { version },
-  })
+  return apiRequest<MenuItemMutationResult>(
+    `/api/v1/restaurant/menu/items/${encodeURIComponent(id)}`,
+    {
+      method: 'DELETE',
+      body: { version },
+    },
+  )
 }
 
 export function presignUpload(extension: string, contentType: string): Promise<PresignResult> {
@@ -63,8 +71,11 @@ export function toggleAvailability(
   version: number,
   availabilityStatus?: MenuItemAvailabilityStatus,
 ): Promise<MenuItemMutationResult> {
-  return apiRequest<MenuItemMutationResult>(`/api/v1/restaurant/menu/items/${encodeURIComponent(id)}/availability`, {
-    method: 'PATCH',
-    body: { is_available: isAvailable, version, availability_status: availabilityStatus },
-  })
+  return apiRequest<MenuItemMutationResult>(
+    `/api/v1/restaurant/menu/items/${encodeURIComponent(id)}/availability`,
+    {
+      method: 'PATCH',
+      body: { is_available: isAvailable, version, availability_status: availabilityStatus },
+    },
+  )
 }

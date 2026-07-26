@@ -49,7 +49,11 @@ const VARIANT_STYLE = {
   },
 } as const
 
-export const SecureActionDialog: FC<SecureActionDialogProps> = ({ open, onOpenChange, ...rest }) => {
+export const SecureActionDialog: FC<SecureActionDialogProps> = ({
+  open,
+  onOpenChange,
+  ...rest
+}) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md" showCloseButton={false}>
@@ -102,7 +106,9 @@ function SecureActionBody({
           <Icon className="size-6" />
         </span>
         <DialogTitle>{title}</DialogTitle>
-        <DialogDescription className="text-[var(--text-secondary)]">{description}</DialogDescription>
+        <DialogDescription className="text-[var(--text-secondary)]">
+          {description}
+        </DialogDescription>
       </DialogHeader>
 
       {requireConfirmationText && (

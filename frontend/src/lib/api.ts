@@ -10,11 +10,9 @@ export function errorMessage(error: unknown, fallback: string): string {
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
 
-
 let refreshPromise: Promise<boolean> | null = null
 
 async function attemptRefresh(): Promise<boolean> {
-
   if (refreshPromise) return refreshPromise
   refreshPromise = refreshStaffSession().then((s) => s !== null)
   try {
@@ -24,7 +22,11 @@ async function attemptRefresh(): Promise<boolean> {
   }
 }
 
-async function doFetch<T>(path: string, options: RequestOptions, headers: Record<string, string>): Promise<T> {
+async function doFetch<T>(
+  path: string,
+  options: RequestOptions,
+  headers: Record<string, string>,
+): Promise<T> {
   const { method = 'GET', body, signal } = options
   const res = await fetch(`${API_BASE_URL}${path}`, {
     method,
@@ -64,7 +66,6 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   if (sessionToken) {
     headers['X-Session-Token'] = sessionToken
   } else {
-
     isStaffRequest = true
     const session = getStaffSession()
     if (session?.token) headers.Authorization = `Bearer ${session.token}`

@@ -13,7 +13,12 @@ interface UseStaffTablesValue {
 }
 
 export function useStaffTables(): UseStaffTablesValue {
-  const { data, isLoading, isError, refetch: refetchQuery } = useQuery({
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch: refetchQuery,
+  } = useQuery({
     queryKey: waiterKeys.tables(),
     queryFn: waiterService.getTables,
     refetchInterval: 8_000,

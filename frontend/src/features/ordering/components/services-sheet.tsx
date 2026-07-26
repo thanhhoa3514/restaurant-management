@@ -1,14 +1,5 @@
 import { type FC } from 'react'
-import {
-  Bell,
-  FileText,
-  Globe,
-  X,
-  Check,
-  Droplet,
-  Utensils,
-  Loader2,
-} from 'lucide-react'
+import { Bell, FileText, Globe, X, Check, Droplet, Utensils, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Lang } from '../types'
 import { cn } from '@/lib/utils'
@@ -35,21 +26,27 @@ export const ServicesSheet: FC<ServicesSheetProps> = ({
 
   if (!open) return null
 
-  const handleCallStaff = (reason: string) => {
+  // reason gửi lên luôn là tiếng Việt vì màn hình nhân viên là tiếng Việt; label chỉ để hiện toast cho khách.
+  const handleCallStaff = (reason: string, label: string) => {
     if (!sessionToken) return
-    callWaiter.mutate(sessionToken, {
-      onSuccess: () => {
-        toast.success(lang === 'vi' ? `Đã gửi yêu cầu: ${reason}` : `Request sent: ${reason}`, {
-          icon: <Check className="text-[var(--system-green)]" />,
-        })
-        onClose()
+    callWaiter.mutate(
+      { sessionToken, reason },
+      {
+        onSuccess: () => {
+          toast.success(lang === 'vi' ? `Đã gửi yêu cầu: ${label}` : `Request sent: ${label}`, {
+            icon: <Check className="text-[var(--system-green)]" />,
+          })
+          onClose()
+        },
+        onError: () => {
+          toast.error(
+            lang === 'vi'
+              ? 'Có lỗi xảy ra, vui lòng thử lại!'
+              : 'Error occurred, please try again!',
+          )
+        },
       },
-      onError: () => {
-        toast.error(
-          lang === 'vi' ? 'Có lỗi xảy ra, vui lòng thử lại!' : 'Error occurred, please try again!',
-        )
-      },
-    })
+    )
   }
 
   const handleChangeLang = () => {
@@ -126,19 +123,28 @@ export const ServicesSheet: FC<ServicesSheetProps> = ({
               <ServiceOption
                 icon={<Droplet size={18} />}
                 label={lang === 'vi' ? 'Xin thêm nước' : 'More water'}
-                onClick={() => handleCallStaff(lang === 'vi' ? 'Thêm nước' : 'More water')}
+                onClick={() =>
+                  handleCallStaff('Thêm nước', lang === 'vi' ? 'Thêm nước' : 'More water')
+                }
                 disabled={callWaiter.isPending}
               />
               <ServiceOption
                 icon={<Utensils size={18} />}
                 label={lang === 'vi' ? 'Thêm chén/đũa' : 'More utensils'}
-                onClick={() => handleCallStaff(lang === 'vi' ? 'Thêm chén/đũa' : 'More utensils')}
+                onClick={() =>
+                  handleCallStaff(
+                    'Thêm chén/đũa',
+                    lang === 'vi' ? 'Thêm chén/đũa' : 'More utensils',
+                  )
+                }
                 disabled={callWaiter.isPending}
               />
               <ServiceOption
                 icon={<Bell size={18} />}
                 label={lang === 'vi' ? 'Gọi thanh toán / Hỗ trợ' : 'Checkout / Support'}
-                onClick={() => handleCallStaff(lang === 'vi' ? 'Cần hỗ trợ' : 'Need support')}
+                onClick={() =>
+                  handleCallStaff('Cần hỗ trợ', lang === 'vi' ? 'Cần hỗ trợ' : 'Need support')
+                }
                 highlight
                 disabled={callWaiter.isPending}
               />

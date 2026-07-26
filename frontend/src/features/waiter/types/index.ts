@@ -4,13 +4,7 @@ export { STATUS_FLOW } from '@/constants'
 
 export type TableOccupancy = 'empty' | 'occupied'
 
-export type WFPriority =
-  | 'call'
-  | 'ready'
-  | 'bill'
-  | 'idle'
-  | 'occupied'
-  | 'empty'
+export type WFPriority = 'call' | 'ready' | 'bill' | 'idle' | 'occupied' | 'empty'
 
 export interface WFItem {
   id: string
@@ -37,6 +31,7 @@ export interface WFSession {
   guest_count: number
   guest_name: string
   waiter_called_at: Date | null
+  waiter_call_reason: string
   bill_requested_at: Date | null
   merge_group_id: string | null
   orders: WFOrder[]

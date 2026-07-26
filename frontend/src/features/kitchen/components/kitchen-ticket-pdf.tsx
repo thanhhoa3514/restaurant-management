@@ -128,9 +128,7 @@ export function KitchenTicketPDF({ ticket, now, lang }: KitchenTicketPDFProps) {
           <Text>Wait: {fmtHMS(waitSec)}</Text>
         </View>
 
-        <Text style={{ fontSize: 8, color: '#6b7280', marginBottom: 4 }}>
-          {submittedStr}
-        </Text>
+        <Text style={{ fontSize: 8, color: '#6b7280', marginBottom: 4 }}>{submittedStr}</Text>
 
         <View style={styles.dashed} />
 
@@ -145,13 +143,13 @@ export function KitchenTicketPDF({ ticket, now, lang }: KitchenTicketPDFProps) {
                 <Text style={styles.itemStatus}>{item.status}</Text>
               </View>
               {options ? (
-                <Text style={{ fontSize: 8, color: '#6b7280', paddingLeft: '10%', paddingBottom: 2 }}>
+                <Text
+                  style={{ fontSize: 8, color: '#6b7280', paddingLeft: '10%', paddingBottom: 2 }}
+                >
                   {options}
                 </Text>
               ) : null}
-              {item.notes ? (
-                <Text style={styles.notes}>Note: {item.notes}</Text>
-              ) : null}
+              {item.notes ? <Text style={styles.notes}>Note: {item.notes}</Text> : null}
             </View>
           )
         })}
