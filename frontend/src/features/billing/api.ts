@@ -116,6 +116,16 @@ export function processPayment(args: {
   )
 }
 
+export function cancelPayment(
+  invoiceId: string,
+  paymentId: string,
+): Promise<BillingInvoiceResponse> {
+  return apiRequest<BillingInvoiceResponse>(
+    `/api/v1/restaurant/invoices/${encodeURIComponent(invoiceId)}/payments/${encodeURIComponent(paymentId)}/cancel`,
+    { method: 'POST' },
+  )
+}
+
 export function processPartialPayment(args: {
   invoiceId: string
   paymentMethodCode: string

@@ -40,14 +40,10 @@ export const DiscountDialog: FC<DiscountDialogProps> = ({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="w-full sm:max-w-md bg-[var(--material-thick)]"
-        hideClose
-      >
+      <SheetContent side="right" className="w-full sm:max-w-md bg-[var(--bg-elevated)]" hideClose>
         <SheetHeader title={t('discount_dialog_title')} subtitle={invoice?.number} />
         <div className="flex-1 space-y-5 overflow-y-auto px-5 pb-5">
-          <Card className="border border-[var(--separator)] bg-[var(--material-regular)] p-4 shadow-sm backdrop-blur-2xl">
+          <Card className="border border-[var(--separator)] bg-[var(--surface-grouped)] p-4">
             <label className="text-sm font-semibold text-[var(--text)]" htmlFor="discount-amount">
               {t('discount_amount')}
             </label>
@@ -62,7 +58,7 @@ export const DiscountDialog: FC<DiscountDialogProps> = ({
             <p className="mt-2 text-xs text-[var(--text-tertiary)]">{t('discount_max_hint')}</p>
           </Card>
 
-          <Card className="border border-[var(--separator)] bg-[var(--material-regular)] p-4 shadow-sm backdrop-blur-2xl">
+          <Card className="border border-[var(--separator)] bg-[var(--surface-grouped)] p-4">
             <div className="text-sm font-semibold text-[var(--text)]">{t('discount_reason')}</div>
             <div className="mt-3 grid grid-cols-1 gap-2">
               {reasons.map((item) => (

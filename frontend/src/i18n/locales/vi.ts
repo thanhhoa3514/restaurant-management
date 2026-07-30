@@ -386,6 +386,9 @@ export const vi: LocaleDict = {
     ewallet_simulate_paid: 'Mock: đã thanh toán',
     ewallet_simulate_failed: 'Mock: thất bại',
     ewallet_cancel: 'Huỷ giao dịch',
+    toast_payment_cancelled: 'Đã huỷ giao dịch. Bạn có thể tạo mã QR mới.',
+    toast_payment_cancel_failed: 'Không thể huỷ giao dịch',
+    toast_no_active_payment: 'Không tìm thấy giao dịch đang xử lý',
     ewallet_pending_hint:
       'Bạn có thể chuyển sang phiên khác — giao dịch vẫn chạy nền và sẽ thông báo khi hoàn tất.',
     paid_title: 'Đã thanh toán thành công',

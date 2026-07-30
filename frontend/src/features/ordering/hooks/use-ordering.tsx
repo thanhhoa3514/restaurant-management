@@ -1,5 +1,6 @@
 import { createContext, use, useEffect, useMemo, useReducer, type ReactNode } from 'react'
 import type { CartLine, Screen, Session, Lang } from '../types'
+import { RT_EVENT } from '@/constants/realtime-events'
 
 interface OrderingState {
   session: Session | null
@@ -104,8 +105,8 @@ export function OrderingProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const showPayment = () => dispatch({ type: 'SET_SCREEN', payload: 'payment' })
-    window.addEventListener('billing.payment_initiated', showPayment)
-    return () => window.removeEventListener('billing.payment_initiated', showPayment)
+    window.addEventListener(RT_EVENT.PAYMENT_INITIATED, showPayment)
+    return () => window.removeEventListener(RT_EVENT.PAYMENT_INITIATED, showPayment)
   }, [])
 
   return <OrderingContext.Provider value={value}>{children}</OrderingContext.Provider>

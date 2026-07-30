@@ -101,7 +101,7 @@ const CashierWorkspace: FC = () => {
             {selectedSession && (
               <>
                 {/* Mobile Close Button */}
-                <div className="flex lg:hidden justify-end p-4 pb-0 bg-[var(--surface-grouped)]/55">
+                <div className="flex lg:hidden justify-end p-4 pb-0 bg-[var(--surface-grouped)]">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -113,7 +113,7 @@ const CashierWorkspace: FC = () => {
                 </div>
 
                 {/* Left side: Invoice Details */}
-                <div className="flex flex-1 flex-col overflow-hidden bg-[var(--surface-grouped)]/55 lg:border-r border-[var(--separator)]">
+                <div className="flex flex-1 flex-col overflow-hidden bg-[var(--surface-grouped)] lg:border-r border-[var(--separator)]">
                   <InvoicePanel
                     session={selectedSession}
                     now={state.now}
@@ -189,11 +189,8 @@ function StatPill({
 }) {
   return (
     <Badge
-      className={`hidden rounded-full border-0 px-3 py-1.5 sm:inline-flex ${
-        tone === 'green'
-          ? 'bg-[var(--system-green)]/10 text-[var(--system-green)]'
-          : 'bg-[var(--system-orange)]/10 text-[var(--system-orange)]'
-      }`}
+      variant={tone === 'green' ? 'success' : 'warning'}
+      className="hidden px-3 py-1.5 sm:inline-flex"
     >
       {label} · <span className="font-mono tabular-nums">{value}</span>
     </Badge>

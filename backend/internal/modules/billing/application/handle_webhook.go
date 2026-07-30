@@ -64,6 +64,15 @@ func (s *HandleWebhook) Handle(ctx context.Context, provider string, raw []byte,
 			result.Ignored = true
 			return nil
 		}
+		if isTerminalPaymentStatus(payment.Status) {
+			// A cancelled QR is stored as FAILED. Keep the late bank webhook for
+			// reconciliation, but do not publish a false completion event.
+			if err := s.repo.MarkWebhookError(ctx, eventRowID, "payment already has terminal status "+string(payment.Status)); err != nil {
+				return err
+			}
+			result.Ignored = true
+			return nil
+		}
 		expectedAmountVND := expectedWebhookAmount(payment)
 		if event.AmountVND != expectedAmountVND {
 			if err := s.repo.MarkWebhookError(ctx, eventRowID, fmt.Sprintf("amount mismatch: got %d want %d", event.AmountVND, expectedAmountVND)); err != nil {
@@ -90,6 +99,13 @@ func (s *HandleWebhook) Handle(ctx context.Context, provider string, raw []byte,
 			_ = s.repo.MarkWebhookError(ctx, eventRowID, err.Error())
 			return err
 		}
+		if !webhookTransitionApplied(invoice, payment.ID, event.Status) {
+			if err := s.repo.MarkWebhookError(ctx, eventRowID, "payment status changed before webhook could be applied"); err != nil {
+				return err
+			}
+			result.Ignored = true
+			return nil
+		}
 		if event.Status == domain.PaymentCompleted {
 			if err := s.writePaymentCompleted(ctx, payment.RestaurantID, invoice); err != nil {
 				return err
@@ -107,6 +123,19 @@ func (s *HandleWebhook) Handle(ctx context.Context, provider string, raw []byte,
 		return nil
 	})
 	return result, err
+}
+
+func isTerminalPaymentStatus(status domain.PaymentStatus) bool {
+	return status == domain.PaymentCompleted ||
+		status == domain.PaymentFailed ||
+		status == domain.PaymentRefunded
+}
+
+func webhookTransitionApplied(invoice *domain.Invoice, paymentID uuid.UUID, status domain.PaymentStatus) bool {
+	return invoice != nil &&
+		invoice.Payment != nil &&
+		invoice.Payment.ID == paymentID &&
+		invoice.Payment.Status == status
 }
 
 func expectedWebhookAmount(payment *domain.WebhookPayment) int64 {

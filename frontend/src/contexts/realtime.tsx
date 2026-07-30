@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { playNewOrderSound, playKitchenReadySound, playCallWaiterSound } from '@/lib/sound'
 import { getStaffSession, subscribeStaffSession } from '@/lib/auth'
 import { getGuestRealtimeToken, subscribeGuestRealtimeToken } from '@/lib/realtime-auth'
+import { RT_EVENT, RT_PREFIX } from '@/constants/realtime-events'
 
 const PING_INTERVAL = 25_000
 const INACTIVITY_TIMEOUT = 60_000
@@ -36,7 +37,11 @@ function realtimeAuthMessage():
   | { type: '_auth'; session_token: string }
   | null {
   const staffToken = getStaffSession()?.token
-  if (staffToken) return { type: '_auth', access_token: staffToken }
+  if (staffToken)
+    return {
+      type: '_auth',
+      access_token: staffToken,
+    }
 
   const guestToken = getGuestRealtimeToken() ?? new URLSearchParams(window.location.search).get('s')
   if (guestToken) return { type: '_auth', session_token: guestToken }
@@ -45,21 +50,25 @@ function realtimeAuthMessage():
 
 // `order.updated` / `order.cancelled` (khách sửa/huỷ món) dùng prefix `order.`, không phải `ordering.`
 function isOrderEvent(type: string): boolean {
-  return type.startsWith('ordering.') || type.startsWith('order.')
+  return type.startsWith(RT_PREFIX.ORDERING) || type.startsWith(RT_PREFIX.ORDER)
 }
 
 function shouldInvalidateStaff(type: string): boolean {
   return (
     isOrderEvent(type) ||
-    type.startsWith('dining.') ||
-    type.startsWith('billing.') ||
-    type.startsWith('cancel_request.') ||
-    type.startsWith('catalog.')
+    type.startsWith(RT_PREFIX.DINING) ||
+    type.startsWith(RT_PREFIX.BILLING) ||
+    type.startsWith(RT_PREFIX.CANCEL_REQUEST) ||
+    type.startsWith(RT_PREFIX.CATALOG)
   )
 }
 
 function shouldInvalidateKitchen(type: string): boolean {
-  return isOrderEvent(type) || type.startsWith('cancel_request.') || type.startsWith('catalog.')
+  return (
+    isOrderEvent(type) ||
+    type.startsWith(RT_PREFIX.CANCEL_REQUEST) ||
+    type.startsWith(RT_PREFIX.CATALOG)
+  )
 }
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
@@ -87,20 +96,20 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     if (shouldInvalidateKitchen(type)) {
       void queryClient.invalidateQueries({ queryKey: ['kitchen'] })
     }
-    if (type.startsWith('identity.')) {
+    if (type.startsWith(RT_PREFIX.IDENTITY)) {
       void queryClient.invalidateQueries({ queryKey: ['identity'] })
     }
-    if (type.startsWith('catalog.')) {
+    if (type.startsWith(RT_PREFIX.CATALOG)) {
       void queryClient.invalidateQueries({ queryKey: ['catalog'] })
       void queryClient.invalidateQueries({ queryKey: ['guest-categories'] })
       void queryClient.invalidateQueries({ queryKey: ['guest-items'] })
       void queryClient.invalidateQueries({ queryKey: ['guest-item'] })
     }
-    if (isOrderEvent(type) || type.startsWith('dining.')) {
+    if (isOrderEvent(type) || type.startsWith(RT_PREFIX.DINING)) {
       void queryClient.invalidateQueries({ queryKey: ['guest-orders'] })
       void queryClient.invalidateQueries({ queryKey: ['guest-items'] })
     }
-    if (type.startsWith('billing.') || type === 'dining.session_reopened') {
+    if (type.startsWith(RT_PREFIX.BILLING) || type === RT_EVENT.SESSION_REOPENED) {
       void queryClient.invalidateQueries({ queryKey: ['guest-payment'] })
     }
 
@@ -110,13 +119,25 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   }
 
   const notifyStaff = (type: string, payload: any) => {
-    if (type === 'ordering.order_placed') {
+    if (type === RT_EVENT.PAYMENT_COMPLETED) {
+      const staff = getStaffSession()
+      const canProcessBilling =
+        staff?.permissions.includes('billing.process') ||
+        staff?.role === 'cashier' ||
+        staff?.role === 'admin'
+      if (!canProcessBilling) return
+      const toastID = `payment-completed-${payload?.payment_id || payload?.invoice_id || 'current'}`
+      toast.success('Thanh toán thành công', {
+        id: toastID,
+        description: 'Hóa đơn đã được cập nhật và phiên thanh toán đã hoàn tất.',
+      })
+    } else if (type === RT_EVENT.ORDER_PLACED) {
       playNewOrderSound()
       const tableName = payload?.table_code || payload?.table_number || payload?.table_id
       toast.info(tableName ? `Đơn mới từ Bàn ${tableName}` : 'Có đơn hàng mới!', {
         description: 'Hệ thống đã tự động cập nhật danh sách đơn.',
       })
-    } else if (type === 'ordering.item_status_updated' && payload?.status === 'READY') {
+    } else if (type === RT_EVENT.ITEM_STATUS_UPDATED && payload?.status === 'READY') {
       playKitchenReadySound()
       const tableName = payload?.table_code || payload?.table_number
       const itemName = payload?.item_name || 'Món ăn'
@@ -128,13 +149,13 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           description: 'Vui lòng nhận món và phục vụ cho khách.',
         },
       )
-    } else if (type === 'dining.waiter_called') {
+    } else if (type === RT_EVENT.WAITER_CALLED) {
       playCallWaiterSound()
       const tableName = payload?.table_code || payload?.table_number
       toast.warning(tableName ? `Bàn ${tableName} gọi phục vụ!` : 'Có yêu cầu trợ giúp tại bàn!', {
         description: payload?.reason || 'Vui lòng kiểm tra bàn khách.',
       })
-    } else if (type === 'dining.bill_requested') {
+    } else if (type === RT_EVENT.BILL_REQUESTED) {
       playCallWaiterSound()
       const tableName = payload?.table_code || payload?.table_number
       toast.warning(
@@ -143,7 +164,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           description: 'Đã báo quầy thu ngân.',
         },
       )
-    } else if (type === 'dining.qr_scanned') {
+    } else if (type === RT_EVENT.QR_SCANNED) {
       playNewOrderSound()
       const tableName = payload?.table_code || payload?.table_number
       if (tableName) {
@@ -151,23 +172,26 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       }
     }
   }
-
-  // Khách chỉ quan tâm món của mình: duyệt / bếp nhận / xong / bị từ chối / hết món.
-  // PREPARING và SERVED cố tình im — bếp bấm liên tục sẽ spam, còn SERVED thì món đã ở trước mặt.
   const notifyGuest = (type: string, payload: any) => {
     const vi = ((localStorage.getItem('rest_lang_customer') as string) || 'vi') === 'vi'
     const name = payload?.item_name || (vi ? 'Món' : 'Item')
     const reason = payload?.reason
 
-    if (type === 'ordering.item_confirmed') {
+    if (type === RT_EVENT.PAYMENT_COMPLETED) {
+      const toastID = `payment-completed-${payload?.payment_id || payload?.invoice_id || 'current'}`
+      toast.success(vi ? 'Thanh toán thành công' : 'Payment successful', {
+        id: toastID,
+        description: vi ? 'Hệ thống đã nhận giao dịch của bạn.' : 'Your payment has been received.',
+      })
+    } else if (type === RT_EVENT.ITEM_CONFIRMED) {
       toast.success(vi ? `Đã duyệt "${name}"` : `"${name}" approved`, {
         description: vi ? 'Món đã được chuyển xuống bếp.' : 'Sent to the kitchen.',
       })
-    } else if (type === 'ordering.item_rejected') {
+    } else if (type === RT_EVENT.ITEM_REJECTED) {
       toast.error(vi ? `"${name}" bị từ chối` : `"${name}" was rejected`, { description: reason })
-    } else if (type === 'ordering.item_unavailable') {
+    } else if (type === RT_EVENT.ITEM_UNAVAILABLE) {
       toast.warning(vi ? `"${name}" đã hết` : `"${name}" is sold out`, { description: reason })
-    } else if (type === 'ordering.item_status_updated') {
+    } else if (type === RT_EVENT.ITEM_STATUS_UPDATED) {
       if (payload?.status === 'ACKNOWLEDGED') {
         toast.info(vi ? `Bếp đã nhận "${name}"` : `Kitchen accepted "${name}"`)
       } else if (payload?.status === 'READY') {
@@ -176,7 +200,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           description: vi ? 'Nhân viên đang mang ra bàn.' : 'A server is bringing it over.',
         })
       }
-    } else if (type === 'cancel_request.reviewed') {
+    } else if (type === RT_EVENT.CANCEL_REQUEST_REVIEWED) {
       const approved = payload?.status === 'APPROVED'
       toast.info(
         approved

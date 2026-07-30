@@ -1,10 +1,11 @@
 import { useMemo, useState, type FC } from 'react'
-import { Search } from 'lucide-react'
+import { ChevronRight, Search, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { LIST_CARD, STATUS_VARIANT, WARN_TEXT } from '@/features/cashier/components/panel-styles'
 import {
   fmtClock,
   fmtHMS,
@@ -24,15 +25,6 @@ interface SessionListProps {
   lang: Lang
   t: (key: string, ...args: Array<number | string>) => string
   onSelect: (id: string) => void
-}
-
-const statusTone: Record<SessionStatus, string> = {
-  dining: 'bg-[var(--surface-grouped)] text-[var(--text-secondary)]',
-  bill_requested: 'bg-[var(--system-red)]/10 text-[var(--system-red)]',
-  in_payment: 'bg-[var(--system-orange)]/10 text-[var(--system-orange)]',
-  paid: 'bg-[var(--system-green)]/10 text-[var(--system-green)]',
-  closed: 'bg-[var(--surface-grouped)] text-[var(--text-tertiary)]',
-  voided: 'bg-[var(--system-red)]/10 text-[var(--system-red)]',
 }
 
 export const SessionList: FC<SessionListProps> = ({
@@ -77,13 +69,13 @@ export const SessionList: FC<SessionListProps> = ({
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="space-y-3 border-b border-[var(--separator)] p-4 sm:p-6 bg-[var(--background)] z-10 sticky top-0 shadow-sm">
-        <div className="relative group">
-          <Search className="absolute left-3.5 top-1/2 size-5 -translate-y-1/2 text-[var(--text-tertiary)] transition-colors group-focus-within:text-[var(--system-orange)]" />
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 size-5 -translate-y-1/2 text-[var(--text-tertiary)]" />
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder={t('search_placeholder')}
-            className="h-12 w-full rounded-2xl border-[var(--separator)] bg-[var(--surface-grouped)] pl-11 text-base font-medium shadow-sm transition-all hover:border-[var(--system-orange)]/40 focus-visible:border-[var(--system-orange)] focus-visible:ring-2 focus-visible:ring-[var(--system-orange)]/20"
+            className="h-12 w-full rounded-[var(--radius-xl)] border-[var(--separator)] bg-[var(--surface-grouped)] pl-11 text-base font-medium"
           />
         </div>
         <Tabs
@@ -104,8 +96,11 @@ export const SessionList: FC<SessionListProps> = ({
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[var(--surface-grouped)]">
         {filteredSessions.length === 0 ? (
-          <Card className="border border-[var(--separator)] bg-[var(--material-regular)] p-10 text-center text-base text-[var(--text-tertiary)]">
-            {t('no_sessions')}
+          <Card
+            className={`border border-[var(--separator)] ${LIST_CARD} p-10 text-center text-base text-[var(--text-tertiary)]`}
+          >
+            <Users className="mx-auto size-6" />
+            <p className="mt-3">{t('no_sessions')}</p>
           </Card>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
@@ -154,10 +149,11 @@ function SessionCard({
   return (
     <Button
       variant="secondary"
-      className={`h-full w-full justify-start rounded-2xl border p-0 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-md ${
+      className={`h-full w-full justify-start rounded-[var(--radius-xl)] border p-0 text-left transition-shadow ${LIST_CARD} ${
         selected
-          ? 'border-[var(--system-blue)] bg-[var(--system-blue)]/10 ring-2 ring-[var(--system-blue)]/20'
-          : 'border-[var(--separator)] bg-[var(--background)] hover:border-[var(--system-orange)]/40'
+          ? 'border-[var(--text-secondary)] ring-2 ring-[var(--text)]/20'
+          : /* hover must move away from the list's --surface-grouped background, not onto it */
+            'border-[var(--separator)] hover:ring-1 hover:ring-[var(--text)]/15'
       }`}
       onClick={onSelect}
     >
@@ -173,7 +169,7 @@ function SessionCard({
               {session.guest_name && <span> · {session.guest_name}</span>}
             </div>
           </div>
-          <span className="text-[var(--text-tertiary)]">›</span>
+          <ChevronRight className="size-4 shrink-0 text-[var(--text-tertiary)]" />
         </div>
         <div className="mt-3 flex items-center justify-between text-xs font-normal text-[var(--text-tertiary)]">
           <span>
@@ -182,20 +178,19 @@ function SessionCard({
           <span>{t('items_count', itemsCount(session))}</span>
         </div>
         <div className="mt-2 flex items-center justify-between gap-2">
-          <Badge className={`rounded-full border-0 ${statusTone[session.status]}`}>
-            {t(`status_${session.status}`)}
-          </Badge>
+          <Badge variant={STATUS_VARIANT[session.status]}>{t(`status_${session.status}`)}</Badge>
           <span className="font-bold tabular-nums text-[var(--text)]">
             {fmtVND(sessionTotal(session))}
           </span>
         </div>
+        {/* amber to match the bill_requested badge above — red is reserved for voided */}
         {billAgoSeconds !== null && session.status === 'bill_requested' ? (
-          <div className="mt-2 text-xs font-normal text-[var(--system-red)]">
+          <div className={`mt-2 text-xs font-normal ${WARN_TEXT}`}>
             {t('bill_requested_ago', fmtHMS(billAgoSeconds))}
           </div>
         ) : null}
         {pendingInvoice?.payment ? (
-          <div className="mt-2 text-xs font-normal text-[var(--system-orange)]">
+          <div className={`mt-2 text-xs font-normal ${WARN_TEXT}`}>
             {providerName(pendingInvoice.payment.sub_method)} · pending
           </div>
         ) : null}

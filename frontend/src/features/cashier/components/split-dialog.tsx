@@ -147,7 +147,7 @@ const SplitDialogBody: FC<Omit<SplitDialogProps, 'open'>> = ({
             return (
               <div
                 key={item.id}
-                className="rounded-[var(--radius-lg)] border border-[var(--separator)] bg-[var(--material-regular)] p-3"
+                className="rounded-[var(--radius-lg)] border border-[var(--separator)] bg-[var(--surface-grouped)] p-3"
               >
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold text-[var(--text)]">

@@ -1,4 +1,4 @@
-import { useState, type FC } from 'react'
+import { useEffect, useRef, useState, type FC } from 'react'
 import { CheckCircle2, Copy, Loader2, QrCode, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -24,6 +24,20 @@ export const GuestPaymentScreen: FC = () => {
   const payment = activeInvoice?.payment
   const allPaid = invoices.length > 0 && invoices.every((invoice) => invoice.status === 'PAID')
   const qrFailed = Boolean(payment?.qr_code_url && failedQRURL === payment.qr_code_url)
+  const notifiedPaymentRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!allPaid) return
+    const paymentKey = payment?.id ?? activeInvoice?.id ?? 'current'
+    if (notifiedPaymentRef.current === paymentKey) return
+    notifiedPaymentRef.current = paymentKey
+    toast.success(isVietnamese ? 'Thanh toán thành công' : 'Payment successful', {
+      id: `payment-completed-${paymentKey}`,
+      description: isVietnamese
+        ? 'Hệ thống đã nhận giao dịch của bạn.'
+        : 'Your payment has been received.',
+    })
+  }, [activeInvoice?.id, allPaid, isVietnamese, payment?.id])
 
   const copyPaymentCode = async () => {
     if (!payment?.payment_number) return

@@ -214,6 +214,7 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 		billingapp.NewBuildInvoice(tx, billingRepo, outboxWriter, defaultRID),
 		billingapp.NewAdjustInvoice(tx, billingRepo, outboxWriter, defaultRID),
 		billingapp.NewProcessPayment(tx, billingRepo, outboxWriter, gateways, cfg.PublicBaseURL, defaultRID),
+		billingapp.NewCancelPayment(tx, billingRepo, outboxWriter, defaultRID),
 		billingapp.NewProcessPartialPayment(tx, billingRepo, outboxWriter, defaultRID),
 		billingapp.NewHandleWebhook(tx, billingRepo, outboxWriter, gateways, cfg.MockWebhookSecret, defaultRID),
 		billingapp.NewVoidInvoice(tx, billingRepo, outboxWriter, defaultRID),

@@ -14,6 +14,7 @@ import { errorMessage } from '@/lib/api'
 import { useCreateInvoice } from '@/features/cashier/mutations/useCreateInvoice'
 import { useAdjustInvoice } from '@/features/cashier/mutations/useAdjustInvoice'
 import { useProcessPayment } from '@/features/cashier/mutations/useProcessPayment'
+import { useCancelPayment } from '@/features/cashier/mutations/useCancelPayment'
 import { useProcessPartialPayment } from '@/features/cashier/mutations/useProcessPartialPayment'
 import { useSplitInvoice } from '@/features/cashier/mutations/useSplitInvoice'
 import { useVoidInvoice } from '@/features/cashier/mutations/useVoidInvoice'
@@ -76,6 +77,7 @@ export type CashierAction =
       at?: Date
     }
   | { type: 'failPayment'; sessionId: string; at?: Date }
+  | { type: 'cancelPayment'; sessionId: string }
   | { type: 'closeSession'; sessionId: string }
   | {
       type: 'splitSession'
@@ -144,9 +146,7 @@ function updateActiveInvoice(
 
 function subMethodFromCode(code: string): SubMethod {
   return (
-    ['cash', 'card', 'sepay', 'momo', 'zalopay', 'vnpay', 'mock'].includes(code)
-      ? code
-      : 'sepay'
+    ['cash', 'card', 'sepay', 'momo', 'zalopay', 'vnpay', 'mock'].includes(code) ? code : 'sepay'
   ) as SubMethod
 }
 
@@ -157,6 +157,7 @@ function paymentRecordFromDTO(
   const method: PaymentMethod =
     payment.method_code === 'cash' ? 'cash' : payment.method_code === 'card' ? 'card' : 'ewallet'
   return {
+    id: payment.id,
     method,
     sub_method: subMethodFromCode(payment.method_code),
     status: payment.status.toLowerCase() as PaymentRecord['status'],
@@ -392,6 +393,7 @@ function cashierReducer(state: CashierState, action: CashierAction): CashierStat
     case 'applyDiscount':
     case 'removeDiscount':
     case 'completePayment':
+    case 'cancelPayment':
     case 'addPartialPayment':
     case 'splitSession':
       return state
@@ -483,6 +485,7 @@ export function CashierProvider({ children }: { children: ReactNode }) {
   const createInvoiceMutation = useCreateInvoice()
   const adjustInvoiceMutation = useAdjustInvoice()
   const processPaymentMutation = useProcessPayment()
+  const cancelPaymentMutation = useCancelPayment()
   const processPartialPaymentMutation = useProcessPartialPayment()
   const splitInvoiceMutation = useSplitInvoice()
   const voidInvoiceMutation = useVoidInvoice()
@@ -601,6 +604,26 @@ export function CashierProvider({ children }: { children: ReactNode }) {
 
             break
           }
+          case 'cancelPayment': {
+            if (!currentSession) return
+            const active = activeInvoice(currentSession)
+            if (!active?.id || !active.payment?.id) {
+              toast.error(t('toast_no_active_payment'))
+              break
+            }
+            const response = await cancelPaymentMutation.mutateAsync({
+              invoiceId: active.id,
+              paymentId: active.payment.id,
+            })
+            baseDispatch({
+              type: 'replaceInvoice',
+              sessionId: currentSession.id,
+              invoice: response.invoice,
+            })
+            void queryClient.invalidateQueries({ queryKey: STAFF_TABLES_QUERY_KEY })
+            toast(t('toast_payment_cancelled'))
+            break
+          }
           case 'addPartialPayment': {
             if (!currentSession) return
             const active = activeInvoice(currentSession)
@@ -687,6 +710,9 @@ export function CashierProvider({ children }: { children: ReactNode }) {
               baseDispatch({ type: 'failPayment', sessionId: action.sessionId })
             }
             break
+          case 'cancelPayment':
+            toast.error(errorMessage(error, t('toast_payment_cancel_failed')), { id: toastId })
+            break
           case 'addPartialPayment':
             toast.error(errorMessage(error, t('toast_payment_partial_failed')), { id: toastId })
             break
@@ -708,6 +734,7 @@ export function CashierProvider({ children }: { children: ReactNode }) {
       createInvoiceMutation,
       adjustInvoiceMutation,
       processPaymentMutation,
+      cancelPaymentMutation,
       processPartialPaymentMutation,
       splitInvoiceMutation,
       voidInvoiceMutation,

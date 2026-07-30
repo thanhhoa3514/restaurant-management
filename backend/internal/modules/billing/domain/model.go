@@ -160,6 +160,10 @@ type InvoiceRepository interface {
 	ListSessionInvoices(ctx context.Context, restaurantID, diningSessionID uuid.UUID) ([]*Invoice, error)
 }
 
+type PaymentCancellationRepository interface {
+	CancelProcessingPayment(ctx context.Context, restaurantID, invoiceID, paymentID uuid.UUID) (*Invoice, error)
+}
+
 type OutboxWriter interface {
 	Write(ctx context.Context, event any) error
 }

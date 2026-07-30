@@ -385,6 +385,9 @@ export const en: LocaleDict = {
     ewallet_simulate_paid: 'Mock: mark paid',
     ewallet_simulate_failed: 'Mock: fail',
     ewallet_cancel: 'Cancel transaction',
+    toast_payment_cancelled: 'Transaction cancelled. You can create a new QR code.',
+    toast_payment_cancel_failed: 'Could not cancel transaction',
+    toast_no_active_payment: 'No active payment was found',
     ewallet_pending_hint:
       'You can switch to another session — this transaction continues in the background and will notify you when complete.',
     paid_title: 'Payment successful',

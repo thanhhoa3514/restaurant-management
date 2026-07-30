@@ -11,6 +11,7 @@ import { buildQROrderURL } from '@/features/dining/api'
 import type { GuestTable } from '@/features/dining/types'
 import { cn } from '@/lib/utils'
 import { setGuestRealtimeToken } from '@/lib/realtime-auth'
+import { RT_EVENT } from '@/constants/realtime-events'
 
 interface QRLandingProps {
   qrToken?: string
@@ -49,9 +50,9 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
       }, 600)
     }
 
-    window.addEventListener('dining.session_verified', onVerified)
+    window.addEventListener(RT_EVENT.SESSION_VERIFIED, onVerified)
     return () => {
-      window.removeEventListener('dining.session_verified', onVerified)
+      window.removeEventListener(RT_EVENT.SESSION_VERIFIED, onVerified)
     }
   }, [joinState, dispatch, t])
 

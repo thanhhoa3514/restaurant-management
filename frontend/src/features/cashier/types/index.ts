@@ -61,6 +61,7 @@ export interface Invoice {
 }
 
 export interface PaymentRecord {
+  id?: string
   method: PaymentMethod
   sub_method: SubMethod
   status: PaymentRecordStatus
@@ -94,7 +95,6 @@ export interface CashierSession {
 export interface Provider {
   id: SubMethod
   name: string
-  accent: string
   dot: string
 }
 

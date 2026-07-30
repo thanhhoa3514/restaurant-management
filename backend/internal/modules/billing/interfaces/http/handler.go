@@ -16,6 +16,7 @@ type Handler struct {
 	BuildInvoice          *application.BuildInvoice
 	AdjustInvoice         *application.AdjustInvoice
 	ProcessPayment        *application.ProcessPayment
+	CancelPayment         *application.CancelPayment
 	ProcessPartialPayment *application.ProcessPartialPayment
 	HandleWebhook         *application.HandleWebhook
 	VoidInvoice           *application.VoidInvoice
@@ -25,8 +26,8 @@ type Handler struct {
 	appEnv                string
 }
 
-func NewHandler(buildInvoice *application.BuildInvoice, adjustInvoice *application.AdjustInvoice, processPayment *application.ProcessPayment, processPartialPayment *application.ProcessPartialPayment, handleWebhook *application.HandleWebhook, voidInvoice *application.VoidInvoice, splitInvoice *application.SplitInvoice, listSessionInvoices *application.ListSessionInvoices, guestCheckout *application.GuestCheckout, appEnv string) *Handler {
-	return &Handler{BuildInvoice: buildInvoice, AdjustInvoice: adjustInvoice, ProcessPayment: processPayment, ProcessPartialPayment: processPartialPayment, HandleWebhook: handleWebhook, VoidInvoice: voidInvoice, SplitInvoice: splitInvoice, ListSessionInvoices: listSessionInvoices, GuestCheckout: guestCheckout, appEnv: appEnv}
+func NewHandler(buildInvoice *application.BuildInvoice, adjustInvoice *application.AdjustInvoice, processPayment *application.ProcessPayment, cancelPayment *application.CancelPayment, processPartialPayment *application.ProcessPartialPayment, handleWebhook *application.HandleWebhook, voidInvoice *application.VoidInvoice, splitInvoice *application.SplitInvoice, listSessionInvoices *application.ListSessionInvoices, guestCheckout *application.GuestCheckout, appEnv string) *Handler {
+	return &Handler{BuildInvoice: buildInvoice, AdjustInvoice: adjustInvoice, ProcessPayment: processPayment, CancelPayment: cancelPayment, ProcessPartialPayment: processPartialPayment, HandleWebhook: handleWebhook, VoidInvoice: voidInvoice, SplitInvoice: splitInvoice, ListSessionInvoices: listSessionInvoices, GuestCheckout: guestCheckout, appEnv: appEnv}
 }
 
 func (h *Handler) RegisterGuestRoutes(r *gin.RouterGroup) {
@@ -54,6 +55,7 @@ func (h *Handler) RegisterStaffRoutes(r *gin.RouterGroup, secret string, resolve
 	g.POST("/:id/adjust", h.adjustInvoice)
 	g.POST("/:id/void", h.voidInvoice)
 	g.POST("/:id/pay", h.processPayment)
+	g.POST("/:id/payments/:payment_id/cancel", h.cancelPayment)
 	g.POST("/:id/pay-partial", h.processPartialPayment)
 }
 
@@ -190,6 +192,34 @@ func (h *Handler) processPayment(c *gin.Context) {
 	}
 	req.ActorID = actorID
 	out, err := h.ProcessPayment.Handle(c.Request.Context(), req)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) cancelPayment(c *gin.Context) {
+	invoiceID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid invoice id", err))
+		return
+	}
+	paymentID, err := uuid.Parse(c.Param("payment_id"))
+	if err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid payment id", err))
+		return
+	}
+	actorID, err := uuid.Parse(c.GetString(auth.CtxUserID))
+	if err != nil || actorID == uuid.Nil {
+		httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "invalid user claim"))
+		return
+	}
+	out, err := h.CancelPayment.Handle(c.Request.Context(), application.CancelPaymentRequest{
+		InvoiceID: invoiceID,
+		PaymentID: paymentID,
+		ActorID:   actorID,
+	})
 	if err != nil {
 		httpx.RespondError(c, err)
 		return

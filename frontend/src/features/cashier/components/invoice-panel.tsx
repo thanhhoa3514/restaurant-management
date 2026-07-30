@@ -1,5 +1,5 @@
 import { useState, type FC } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Check, Loader2, ReceiptText } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
+import { LIST_CARD, STATUS_VARIANT, WARN_TEXT } from '@/features/cashier/components/panel-styles'
 import { DiscountDialog } from '@/features/cashier/components/discount-dialog'
 import { SplitDialog } from '@/features/cashier/components/split-dialog'
 import { VoidDialog } from '@/features/cashier/components/void-dialog'
@@ -48,10 +49,12 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
 
   if (!session) {
     return (
-      <div className="flex h-full items-center justify-center p-8 text-center text-[var(--text-tertiary)]">
+      <div className="flex h-full items-center justify-center p-8 text-center">
         <div>
-          <div className="text-5xl">⌘</div>
-          <p className="mt-3 text-sm">{t('select_session_hint')}</p>
+          <div className="mx-auto flex size-14 items-center justify-center rounded-[var(--radius-xl)] bg-[var(--bg-elevated)] text-[var(--text-tertiary)] ring-1 ring-[var(--separator)]">
+            <ReceiptText className="size-6" />
+          </div>
+          <p className="mt-4 text-sm text-[var(--text-tertiary)]">{t('select_session_hint')}</p>
         </div>
       </div>
     )
@@ -72,7 +75,7 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="p-5 pb-3">
-        <Card className="border border-[var(--separator)] bg-[var(--material-regular)] shadow-sm backdrop-blur-2xl">
+        <Card className={`border border-[var(--separator)] ${LIST_CARD}`}>
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -89,7 +92,7 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
                   </span>
                 </div>
               </div>
-              <Badge className="rounded-full border-0 bg-[var(--system-blue)]/10 text-[var(--system-blue)]">
+              <Badge variant={STATUS_VARIANT[session.status]}>
                 {t(`status_${session.status}`)}
               </Badge>
             </div>
@@ -108,8 +111,8 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
                     <TabsTrigger key={inv.id} value={inv.id ?? ''} className="flex-1 gap-1.5">
                       {inv.number}
                       {inv.status === 'PAID' ? (
-                        <Badge className="rounded-full border-0 bg-[var(--system-green)]/10 px-1.5 text-[10px] text-[var(--system-green)]">
-                          ✓
+                        <Badge variant="success" className="px-1.5">
+                          <Check />
                         </Badge>
                       ) : null}
                     </TabsTrigger>
@@ -128,7 +131,7 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
             {invoice.orders.map((order) => (
               <Card
                 key={order.id}
-                className="overflow-hidden border border-[var(--separator)] bg-[var(--material-regular)] shadow-sm backdrop-blur-2xl"
+                className={`overflow-hidden border border-[var(--separator)] ${LIST_CARD}`}
               >
                 <div className="flex items-center justify-between border-b border-[var(--separator)] px-4 py-2 text-sm">
                   <span className="font-semibold text-[var(--text-secondary)]">
@@ -150,9 +153,7 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
                           {lang === 'vi' ? item.options_text_vi : item.options_text_en}
                         </div>
                         {item.notes ? (
-                          <div className="text-xs italic text-[var(--system-orange)]">
-                            “{item.notes}”
-                          </div>
+                          <div className={`text-xs italic ${WARN_TEXT}`}>“{item.notes}”</div>
                         ) : null}
                         <div className="mt-1 text-xs text-[var(--text-tertiary)]">
                           {item.qty} × {fmtVND(item.unit_price_snapshot)}
@@ -169,7 +170,7 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
           </div>
         </section>
 
-        <Card className="border border-[var(--separator)] bg-[var(--material-regular)] shadow-sm backdrop-blur-2xl">
+        <Card className={`border border-[var(--separator)] ${LIST_CARD}`}>
           <CardContent className="space-y-3 p-5">
             <PriceRow label={t('subtotal')} value={fmtVND(invoice.subtotal)} />
             {invoice.service_charge_amount > 0 ? (
@@ -184,8 +185,8 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
               />
             ) : (
               <Button
-                variant="ghost"
-                className="px-0 text-[var(--system-orange)]"
+                variant="link"
+                className="justify-start px-0"
                 disabled={terminal}
                 onClick={() => setDiscountOpen(true)}
               >
@@ -207,7 +208,7 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
             <Separator />
             <div className="flex items-baseline justify-between">
               <span className="text-lg font-bold text-[var(--text)]">{t('total')}</span>
-              <span className="text-4xl font-bold tabular-nums text-[var(--system-orange)]">
+              <span className="text-4xl font-bold tabular-nums text-[var(--text)]">
                 {fmtVND(invoice.total)}
               </span>
             </div>
@@ -230,8 +231,8 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
               </Button>
             </div>
             <Button
-              variant="ghost"
-              className="w-full rounded-[var(--radius-lg)] text-[var(--system-blue)]"
+              variant="outline"
+              className="w-full rounded-[var(--radius-lg)]"
               disabled={terminal || anyInvoicePaidOrPaying}
               onClick={() => setSplitOpen(true)}
             >
@@ -239,8 +240,8 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
             </Button>
             {(session.status === 'bill_requested' || session.status === 'in_payment') && (
               <Button
-                variant="secondary"
-                className="w-full rounded-[var(--radius-lg)] text-[var(--system-green)]"
+                variant="outline"
+                className="w-full rounded-[var(--radius-lg)]"
                 disabled={reopenMutation.isPending}
                 onClick={() => {
                   if (window.confirm(t('reopen_session_confirm'))) {
@@ -307,7 +308,7 @@ function PriceRow({ label, value, tone }: { label: string; value: string; tone?:
     <div className="flex items-center justify-between text-sm">
       <span className="text-[var(--text-secondary)]">{label}</span>
       <span
-        className={`font-semibold tabular-nums ${tone === 'amber' ? 'text-[var(--system-orange)]' : 'text-[var(--text)]'}`}
+        className={`font-semibold tabular-nums ${tone === 'amber' ? WARN_TEXT : 'text-[var(--text)]'}`}
       >
         {value}
       </span>

@@ -1015,6 +1015,49 @@ func (r *Repository) FailWebhookPayment(ctx context.Context, restaurantID, payme
 	return r.LoadInvoice(ctx, restaurantID, payment.InvoiceID)
 }
 
+func (r *Repository) CancelProcessingPayment(ctx context.Context, restaurantID, invoiceID, paymentID uuid.UUID) (*domain.Invoice, error) {
+	payment, err := r.lockPayment(ctx, restaurantID, paymentID)
+	if err != nil {
+		return nil, err
+	}
+	if payment.InvoiceID != invoiceID {
+		return nil, apperr.New(apperr.CodeNotFound, "payment not found for invoice")
+	}
+	switch payment.Status {
+	case domain.PaymentFailed:
+		return r.LoadInvoice(ctx, restaurantID, invoiceID)
+	case domain.PaymentCompleted, domain.PaymentRefunded:
+		return nil, apperr.New(apperr.CodeConflict, "completed payment cannot be cancelled")
+	case domain.PaymentPending, domain.PaymentProcessing:
+		// Continue below. Marking the row FAILED invalidates the old QR reference,
+		// allowing PrepareAsyncPayment to create a fresh payment number on retry.
+	default:
+		return nil, apperr.New(apperr.CodeConflict, "payment cannot be cancelled")
+	}
+
+	commandTag, err := r.q(ctx).Exec(ctx, `
+		UPDATE payments
+		SET status = 'FAILED',
+		    processed_at = NOW(),
+		    transaction_data = COALESCE(transaction_data, '{}'::jsonb)
+		        || '{"cancel_reason":"cancelled_by_cashier"}'::jsonb,
+		    version = version + 1,
+		    updated_at = NOW()
+		WHERE restaurant_id = $1
+		  AND invoice_id = $2
+		  AND id = $3
+		  AND status IN ('PENDING', 'PROCESSING')
+		  AND deleted_at IS NULL
+	`, restaurantID, invoiceID, paymentID)
+	if err != nil {
+		return nil, err
+	}
+	if commandTag.RowsAffected() != 1 {
+		return nil, apperr.New(apperr.CodeConflict, "payment status changed while cancelling")
+	}
+	return r.LoadInvoice(ctx, restaurantID, invoiceID)
+}
+
 func (r *Repository) MarkWebhookProcessed(ctx context.Context, eventRowID uuid.UUID) error {
 	_, err := r.q(ctx).Exec(ctx, `UPDATE payment_webhook_events SET processed_at = NOW() WHERE id = $1`, eventRowID)
 	return err
