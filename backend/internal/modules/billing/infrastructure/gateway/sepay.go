@@ -27,6 +27,7 @@ type SePayConfig struct {
 	AccountName   string
 	WebhookSecret string
 	QRBaseURL     string
+	DemoAmountVND int64
 	Now           func() time.Time
 }
 
@@ -65,9 +66,13 @@ func (s *SePay) Initiate(_ context.Context, in domain.InitiateInput) (domain.Ini
 		return domain.InitiateResult{}, apperr.Wrap(apperr.CodeInternal, "invalid sepay qr base url", err)
 	}
 	query := qrURL.Query()
+	qrAmountVND := in.AmountVND
+	if s.cfg.DemoAmountVND > 0 {
+		qrAmountVND = s.cfg.DemoAmountVND
+	}
 	query.Set("acc", strings.TrimSpace(s.cfg.AccountNumber))
 	query.Set("bank", strings.TrimSpace(s.cfg.BankCode))
-	query.Set("amount", strconv.FormatInt(in.AmountVND, 10))
+	query.Set("amount", strconv.FormatInt(qrAmountVND, 10))
 	query.Set("des", paymentCode)
 	query.Set("template", "compact")
 	query.Set("showinfo", "true")
@@ -81,11 +86,14 @@ func (s *SePay) Initiate(_ context.Context, in domain.InitiateInput) (domain.Ini
 		GatewayTransactionID: "SEPAY-" + paymentCode,
 		QRCodeURL:            qrURL.String(),
 		Raw: map[string]any{
-			"provider":       "sepay",
-			"bank_code":      strings.TrimSpace(s.cfg.BankCode),
-			"account_number": strings.TrimSpace(s.cfg.AccountNumber),
-			"account_name":   strings.TrimSpace(s.cfg.AccountName),
-			"payment_code":   paymentCode,
+			"provider":                    "sepay",
+			"bank_code":                   strings.TrimSpace(s.cfg.BankCode),
+			"account_number":              strings.TrimSpace(s.cfg.AccountNumber),
+			"account_name":                strings.TrimSpace(s.cfg.AccountName),
+			"payment_code":                paymentCode,
+			"invoice_amount_vnd":          in.AmountVND,
+			"expected_webhook_amount_vnd": qrAmountVND,
+			"demo_amount_override":        qrAmountVND != in.AmountVND,
 		},
 	}, nil
 }

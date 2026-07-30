@@ -141,6 +141,10 @@ func TestSePayGatewayInitiateAndParseWebhook(t *testing.T) {
 		query.Get("amount") != "150000" || query.Get("des") != paymentCode {
 		t.Fatalf("unexpected SePay QR query: %s", qrURL.RawQuery)
 	}
+	if result.Raw["expected_webhook_amount_vnd"] != int64(150000) ||
+		result.Raw["demo_amount_override"] != false {
+		t.Fatalf("unexpected SePay reconciliation metadata: %+v", result.Raw)
+	}
 
 	raw := []byte(`{"id":92704,"gateway":"Vietcombank","transactionDate":"2026-07-26 12:00:00","accountNumber":"0000000001","subAccount":"","code":null,"content":"PAY0123456789ABCDEF thanh toan","transferType":"in","description":"sandbox","transferAmount":150000,"accumulated":500000,"referenceCode":"SB1A2B3C4"}`)
 	timestamp := strconv.FormatInt(now.Unix(), 10)
@@ -160,6 +164,38 @@ func TestSePayGatewayInitiateAndParseWebhook(t *testing.T) {
 	ack := gateway.WebhookAck(event)
 	if ack.Status != http.StatusOK || !ack.Unwrapped {
 		t.Fatalf("unexpected SePay ack: %+v", ack)
+	}
+}
+
+func TestSePayGatewayDemoAmountKeepsInvoiceAmountSeparate(t *testing.T) {
+	gateway := NewSePay(SePayConfig{
+		BankCode:      "VPBank",
+		AccountNumber: "123456789",
+		AccountName:   "TEST HOLDER",
+		WebhookSecret: "test-secret",
+		DemoAmountVND: 5000,
+	})
+
+	result, err := gateway.Initiate(context.Background(), domain.InitiateInput{
+		PaymentNumber: "PAY0123456789ABCDEF",
+		AmountVND:     875000,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	qrURL, err := url.Parse(result.QRCodeURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := qrURL.Query().Get("amount"); got != "5000" {
+		t.Fatalf("QR amount=%q, want 5000", got)
+	}
+	if result.Raw["invoice_amount_vnd"] != int64(875000) {
+		t.Fatalf("invoice amount metadata=%v, want 875000", result.Raw["invoice_amount_vnd"])
+	}
+	if result.Raw["expected_webhook_amount_vnd"] != int64(5000) ||
+		result.Raw["demo_amount_override"] != true {
+		t.Fatalf("unexpected SePay demo reconciliation metadata: %+v", result.Raw)
 	}
 }
 

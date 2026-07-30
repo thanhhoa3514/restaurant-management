@@ -1,10 +1,10 @@
 <mxfile host="65bd71144e">
     <diagram id="uc-quan-ly-29a-quan-ly-khu-vuc" name="ĐẶC TẢ USE-CASE QUẢN LÝ — QUẢN LÝ KHU VỰC">
-        <mxGraphModel dx="941" dy="424" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="770" pageHeight="508" math="0" shadow="0">
+        <mxGraphModel dx="848" dy="269" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="770" pageHeight="508" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
-                <mxCell id="title" value="ĐẶC TẢ USE-CASE QUẢN LÝ — QUẢN LÝ KHU VỰC" style="text;html=1;fontSize=14;fontStyle=1;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                <mxCell id="title" value="ĐẶC TẢ USE-CASE QUẢN LÝ&amp;nbsp; QUẢN LÝ KHU VỰC" style="text;html=1;fontSize=14;fontStyle=1;align=center;verticalAlign=middle;" parent="1" vertex="1">
                     <mxGeometry x="40" y="40" width="690" height="40" as="geometry"/>
                 </mxCell>
                 <mxCell id="boundary" value="" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fontSize=11;fontStyle=2;fillColor=none;strokeColor=#000000;" parent="1" vertex="1">

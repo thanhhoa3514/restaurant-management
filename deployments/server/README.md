@@ -74,7 +74,11 @@ SEPAY_ACCOUNT_NUMBER=0000000001
 SEPAY_ACCOUNT_NAME=HO KINH DOANH TEST 3CBA
 SEPAY_WEBHOOK_SECRET=<same-secret-as-SePay-dashboard>
 SEPAY_QR_BASE_URL=https://vietqr.app/img
+SEPAY_DEMO_AMOUNT_VND=0
 ```
+
+`SEPAY_BANK` is accepted as an alias of `SEPAY_BANK_CODE`, and
+`SEPAY_ACCOUNT_HOLDER` is accepted as an alias of `SEPAY_ACCOUNT_NAME`.
 
 Configure the Test Mode payment-code recognizer with prefix `PAY`, minimum and
 maximum suffix length `16`, and character type `Số và chữ`. Configure the
@@ -88,6 +92,13 @@ Select HMAC-SHA256 authentication, the test Vietcombank account, and enable
 `Chỉ gửi khi có mã thanh toán` with the `PAY` prefix. To test end to end, start a
 SePay payment in the cashier UI, then simulate an incoming transaction for the
 exact invoice amount with the generated `PAY...` code in its content.
+
+For a controlled end-to-end test against a real linked bank account, setting
+`SEPAY_DEMO_AMOUNT_VND=5000` keeps the real invoice total on the cashier and
+guest screens but puts `5,000 VND` into the QR. The webhook then expects exactly
+`5,000 VND`, records that received amount, and settles the full invoice so the
+realtime flow can complete. This deliberately bypasses full-value settlement:
+reset it to `0` before accepting real customer payments.
 
 ## Notes
 

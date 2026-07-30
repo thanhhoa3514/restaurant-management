@@ -64,8 +64,9 @@ func (s *HandleWebhook) Handle(ctx context.Context, provider string, raw []byte,
 			result.Ignored = true
 			return nil
 		}
-		if event.AmountVND != payment.AmountVND {
-			if err := s.repo.MarkWebhookError(ctx, eventRowID, fmt.Sprintf("amount mismatch: got %d want %d", event.AmountVND, payment.AmountVND)); err != nil {
+		expectedAmountVND := expectedWebhookAmount(payment)
+		if event.AmountVND != expectedAmountVND {
+			if err := s.repo.MarkWebhookError(ctx, eventRowID, fmt.Sprintf("amount mismatch: got %d want %d", event.AmountVND, expectedAmountVND)); err != nil {
 				return err
 			}
 			result.Ignored = true
@@ -106,6 +107,16 @@ func (s *HandleWebhook) Handle(ctx context.Context, provider string, raw []byte,
 		return nil
 	})
 	return result, err
+}
+
+func expectedWebhookAmount(payment *domain.WebhookPayment) int64 {
+	if payment == nil {
+		return 0
+	}
+	if payment.WebhookAmountVND > 0 {
+		return payment.WebhookAmountVND
+	}
+	return payment.AmountVND
 }
 
 func (s *HandleWebhook) SimulateMock(ctx context.Context, paymentNumber, simResult string) (WebhookResult, error) {

@@ -894,13 +894,24 @@ func (r *Repository) AttachGatewayResult(ctx context.Context, restaurantID, paym
 func (r *Repository) FindWebhookPayment(ctx context.Context, gatewayTransactionID, orderRef string) (*domain.WebhookPayment, error) {
 	payment := &domain.WebhookPayment{}
 	err := r.q(ctx).QueryRow(ctx, `
-		SELECT id, restaurant_id, invoice_id, dining_session_id, payment_number, amount_vnd, status
+		SELECT id, restaurant_id, invoice_id, dining_session_id, payment_number, amount_vnd,
+		       COALESCE(NULLIF(transaction_data->>'expected_webhook_amount_vnd', '')::bigint, amount_vnd),
+		       status
 		FROM payments
 		WHERE deleted_at IS NULL
 		  AND (($1 <> '' AND gateway_transaction_id = $1) OR ($2 <> '' AND payment_number = $2))
 		ORDER BY created_at DESC
 		LIMIT 1
-	`, strings.TrimSpace(gatewayTransactionID), strings.TrimSpace(orderRef)).Scan(&payment.ID, &payment.RestaurantID, &payment.InvoiceID, &payment.DiningSessionID, &payment.PaymentNumber, &payment.AmountVND, &payment.Status)
+	`, strings.TrimSpace(gatewayTransactionID), strings.TrimSpace(orderRef)).Scan(
+		&payment.ID,
+		&payment.RestaurantID,
+		&payment.InvoiceID,
+		&payment.DiningSessionID,
+		&payment.PaymentNumber,
+		&payment.AmountVND,
+		&payment.WebhookAmountVND,
+		&payment.Status,
+	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -945,7 +956,7 @@ func (r *Repository) CompleteWebhookPayment(ctx context.Context, restaurantID, p
 	_, err = r.q(ctx).Exec(ctx, `
 		UPDATE payments
 		SET status = 'COMPLETED',
-		    received_amount_vnd = amount_vnd,
+		    received_amount_vnd = $5,
 		    change_amount_vnd = 0,
 		    processed_at = NOW(),
 		    gateway_transaction_id = COALESCE(NULLIF($3, ''), gateway_transaction_id),
@@ -953,7 +964,7 @@ func (r *Repository) CompleteWebhookPayment(ctx context.Context, restaurantID, p
 		    version = version + 1,
 		    updated_at = NOW()
 		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
-	`, restaurantID, paymentID, event.GatewayTransactionID, payload)
+	`, restaurantID, paymentID, event.GatewayTransactionID, payload, event.AmountVND)
 	if err != nil {
 		return nil, err
 	}
@@ -1167,11 +1178,22 @@ func (r *Repository) findProcessingPayment(ctx context.Context, restaurantID, in
 func (r *Repository) lockPayment(ctx context.Context, restaurantID, paymentID uuid.UUID) (*domain.WebhookPayment, error) {
 	payment := &domain.WebhookPayment{}
 	err := r.q(ctx).QueryRow(ctx, `
-		SELECT id, restaurant_id, invoice_id, dining_session_id, payment_number, amount_vnd, status
+		SELECT id, restaurant_id, invoice_id, dining_session_id, payment_number, amount_vnd,
+		       COALESCE(NULLIF(transaction_data->>'expected_webhook_amount_vnd', '')::bigint, amount_vnd),
+		       status
 		FROM payments
 		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
 		FOR UPDATE
-	`, restaurantID, paymentID).Scan(&payment.ID, &payment.RestaurantID, &payment.InvoiceID, &payment.DiningSessionID, &payment.PaymentNumber, &payment.AmountVND, &payment.Status)
+	`, restaurantID, paymentID).Scan(
+		&payment.ID,
+		&payment.RestaurantID,
+		&payment.InvoiceID,
+		&payment.DiningSessionID,
+		&payment.PaymentNumber,
+		&payment.AmountVND,
+		&payment.WebhookAmountVND,
+		&payment.Status,
+	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, apperr.New(apperr.CodeNotFound, "payment not found")
 	}

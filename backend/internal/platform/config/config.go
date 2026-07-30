@@ -37,6 +37,7 @@ type Config struct {
 	SePayAccountName   string
 	SePayWebhookSecret string
 	SePayQRBaseURL     string
+	SePayDemoAmountVND int64
 
 	ZaloPayEndpoint string
 	ZaloPayAppID    string
@@ -78,11 +79,12 @@ func Load() Config {
 		MoMoAccessKey:   env("MOMO_ACCESS_KEY", ""),
 		MoMoSecretKey:   env("MOMO_SECRET_KEY", ""),
 
-		SePayBankCode:      strings.TrimSpace(env("SEPAY_BANK_CODE", "")),
+		SePayBankCode:      strings.TrimSpace(firstEnv("", "SEPAY_BANK_CODE", "SEPAY_BANK")),
 		SePayAccountNumber: strings.TrimSpace(env("SEPAY_ACCOUNT_NUMBER", "")),
-		SePayAccountName:   strings.TrimSpace(env("SEPAY_ACCOUNT_NAME", "")),
+		SePayAccountName:   strings.TrimSpace(firstEnv("", "SEPAY_ACCOUNT_NAME", "SEPAY_ACCOUNT_HOLDER")),
 		SePayWebhookSecret: env("SEPAY_WEBHOOK_SECRET", ""),
 		SePayQRBaseURL:     strings.TrimRight(env("SEPAY_QR_BASE_URL", "https://vietqr.app/img"), "/"),
+		SePayDemoAmountVND: int64Env("SEPAY_DEMO_AMOUNT_VND", 0),
 
 		ZaloPayEndpoint: strings.TrimRight(env("ZALOPAY_ENDPOINT", ""), "/"),
 		ZaloPayAppID:    env("ZALOPAY_APP_ID", ""),
@@ -104,12 +106,24 @@ func (c Config) Validate() error {
 	if c.AppEnv == "production" && c.JWTSecret == defaultJWTSecret {
 		return errors.New("JWT_SECRET must be set in production")
 	}
+	if c.SePayDemoAmountVND < 0 {
+		return errors.New("SEPAY_DEMO_AMOUNT_VND must be zero or positive")
+	}
 	return nil
 }
 
 func env(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
+	}
+	return fallback
+}
+
+func firstEnv(fallback string, keys ...string) string {
+	for _, key := range keys {
+		if value := os.Getenv(key); value != "" {
+			return value
+		}
 	}
 	return fallback
 }
@@ -134,6 +148,18 @@ func intEnv(key string, fallback int) int {
 		return fallback
 	}
 	n, err := strconv.Atoi(v)
+	if err != nil {
+		return fallback
+	}
+	return n
+}
+
+func int64Env(key string, fallback int64) int64 {
+	v := os.Getenv(key)
+	if v == "" {
+		return fallback
+	}
+	n, err := strconv.ParseInt(v, 10, 64)
 	if err != nil {
 		return fallback
 	}

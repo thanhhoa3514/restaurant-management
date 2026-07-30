@@ -52,6 +52,12 @@ func main() {
 		log.Error("invalid config", slog.Any("error", err))
 		return
 	}
+	if cfg.SePayDemoAmountVND > 0 {
+		log.Warn(
+			"SePay demo amount override enabled — a matching transfer will settle the full invoice",
+			slog.Int64("sepay_demo_amount_vnd", cfg.SePayDemoAmountVND),
+		)
+	}
 	pool, err := postgres.Connect(ctx, cfg.DatabaseURL, cfg.DBMaxConns)
 	if err != nil {
 		log.Error("postgres init failed", slog.Any("error", err))
@@ -268,6 +274,7 @@ func buildGatewayRegistry(cfg config.Config) *billingdomain.GatewayRegistry {
 			AccountName:   cfg.SePayAccountName,
 			WebhookSecret: cfg.SePayWebhookSecret,
 			QRBaseURL:     cfg.SePayQRBaseURL,
+			DemoAmountVND: cfg.SePayDemoAmountVND,
 		}))
 	}
 	if cfg.ZaloPayEndpoint != "" && cfg.ZaloPayAppID != "" && cfg.ZaloPayKey1 != "" && cfg.ZaloPayKey2 != "" {

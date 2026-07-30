@@ -130,13 +130,14 @@ type SplitInvoiceInput struct {
 }
 
 type WebhookPayment struct {
-	ID              uuid.UUID
-	RestaurantID    uuid.UUID
-	InvoiceID       uuid.UUID
-	DiningSessionID uuid.UUID
-	PaymentNumber   string
-	AmountVND       int64
-	Status          PaymentStatus
+	ID               uuid.UUID
+	RestaurantID     uuid.UUID
+	InvoiceID        uuid.UUID
+	DiningSessionID  uuid.UUID
+	PaymentNumber    string
+	AmountVND        int64
+	WebhookAmountVND int64
+	Status           PaymentStatus
 }
 
 type InvoiceRepository interface {
