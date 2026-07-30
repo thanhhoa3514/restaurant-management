@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   DndContext,
   KeyboardSensor,
@@ -34,6 +34,7 @@ export function FloorBuilder() {
   // ponytail: chỉ giữ toạ độ đã kéo trong state, phần còn lại đọc thẳng từ query
   // -> refetch 8s không ghi đè thao tác kéo, không phải đồng bộ hai nguồn.
   const [moved, setMoved] = useState<Record<string, { x: number; y: number }>>({})
+  const canvasRef = useRef<HTMLDivElement>(null)
 
   const tables: TableData[] = dbTables.map((t) => ({
     id: t.id,
@@ -77,12 +78,12 @@ export function FloorBuilder() {
     const current = tables.find((t) => t.id === active.id)
     if (!current) return
 
-    // Approximate pixel to percentage conversion based on typical container
-    const parentWidth = window.innerWidth > 1280 ? 1100 : window.innerWidth - 100
-    const parentHeight = 620
+    // canvas là w-full trong admin shell -> phải đo thật, số cứng làm bàn rơi lệch con trỏ
+    const rect = canvasRef.current?.getBoundingClientRect()
+    if (!rect?.width || !rect.height) return
 
-    const dxPct = (delta.x / parentWidth) * 100
-    const dyPct = (delta.y / parentHeight) * 100
+    const dxPct = (delta.x / rect.width) * 100
+    const dyPct = (delta.y / rect.height) * 100
 
     setMoved((prev) => ({
       ...prev,
@@ -116,7 +117,10 @@ export function FloorBuilder() {
       </div>
 
       <DndContext sensors={sensors} modifiers={[restrictToParentElement]} onDragEnd={handleDragEnd}>
-        <Card className="relative h-[620px] w-full overflow-hidden bg-zinc-50/70 p-0 shadow-inner dark:bg-zinc-950/40">
+        <Card
+          ref={canvasRef}
+          className="relative h-[620px] w-full overflow-hidden bg-zinc-50/70 p-0 shadow-inner dark:bg-zinc-950/40"
+        >
           <div
             className="pointer-events-none absolute inset-0 opacity-70"
             style={{
@@ -173,9 +177,10 @@ function DraggableTable({ table }: { table: TableData }) {
       ref={setNodeRef}
       style={style}
       className={cn(
-        'absolute flex h-20 w-20 flex-col items-center justify-center rounded-[22px] border-2 shadow-lg backdrop-blur-xl',
+        // touch-none: PointerSensor cần nó, không thì cú kéo trên tablet bị scroll nuốt
+        'absolute flex h-20 w-20 touch-none select-none flex-col items-center justify-center rounded-[22px] border-2 shadow-lg backdrop-blur-xl',
         isDragging
-          ? 'scale-110 border-blue-500 bg-blue-50/90 shadow-xl dark:border-blue-400 dark:bg-blue-900/50'
+          ? 'scale-110 cursor-grabbing border-blue-500 bg-blue-50/90 shadow-xl dark:border-blue-400 dark:bg-blue-900/50'
           : 'border-zinc-300 bg-white/90 hover:border-blue-400 dark:border-zinc-700 dark:bg-zinc-800/90 cursor-grab',
       )}
       {...listeners}

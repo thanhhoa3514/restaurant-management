@@ -14,8 +14,10 @@ function parseTableNumber(code: string, name: string): number {
 }
 
 // ponytail: bàn chưa có toạ độ thì xếp lưới theo thứ tự trả về, đủ để không chồng nhau
+// lưới phủ cả canvas (8 cột x 6 hàng = 48 bàn) — dồn xuống đáy thì hàng thứ 3 trở đi
+// rơi khỏi khung y>100, bị overflow-hidden cắt mất và không kéo được trong FloorBuilder
 function fallbackPosition(index: number) {
-  return { x_pct: 12 + (index % 8) * 10, y_pct: 76 + Math.floor(index / 8) * 10 }
+  return { x_pct: 14 + (index % 8) * 11, y_pct: 16 + Math.floor(index / 8) * 13 }
 }
 
 function optionText(item: {

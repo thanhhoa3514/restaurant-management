@@ -4,7 +4,6 @@ import type { CSSProperties } from 'react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { ShellStrings } from '@/i18n'
 import type { StaffRole } from '@/lib/auth'
-import { BRAND } from '@/constants/brand'
 import { cn } from '@/lib/utils'
 import { roleTint, type NavGroup, type NavItem, type StaffView } from '@/components/admin-config'
 
@@ -17,8 +16,6 @@ interface SidebarContentProps {
   onNavigate?: () => void
 }
 
-// Render order for the grouped nav. Filtered to groups that actually have
-// permitted items so a single-permission staff member sees a flat list.
 const GROUP_ORDER: NavGroup[] = ['manage', 'operate']
 
 export function SidebarContent({
@@ -55,9 +52,13 @@ export function SidebarContent({
       style={{ '--staff-tint': roleTint[role] } as CSSProperties}
     >
       <div className="mb-6 flex items-center gap-3 px-2 pt-2">
-        <div className="flex size-11 items-center justify-center rounded-[16px] bg-[var(--text)] text-[13px] font-black tracking-tight text-[var(--bg)]">
-          {BRAND.shortName}
-        </div>
+        {/* logo is a dark-on-transparent mark — no tint tile behind it or the wave disappears */}
+        <img
+          src="/zenith-logo-transparent.png"
+          alt={brandName}
+          className="size-11 shrink-0 object-contain"
+        />
+
         <div className="min-w-0">
           <div className="truncate text-[17px] font-semibold text-[var(--text)]">{brandName}</div>
           <div className="truncate text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--staff-tint)]">
