@@ -31,6 +31,8 @@ type SplitInvoice struct {
 	defaultRestaurantID uuid.UUID
 }
 
+const maxSplitInvoiceGroups = 6
+
 func NewSplitInvoice(tx TxRunner, repo domain.InvoiceRepository, outbox domain.OutboxWriter, defaultRestaurantID uuid.UUID) *SplitInvoice {
 	return &SplitInvoice{tx: tx, repo: repo, outbox: outbox, defaultRestaurantID: defaultRestaurantID}
 }
@@ -42,6 +44,9 @@ func (s *SplitInvoice) Handle(ctx context.Context, in SplitInvoiceRequest) (Spli
 	}
 	if len(in.Groups) < 2 {
 		return out, apperr.New(apperr.CodeInvalid, "split requires at least 2 groups")
+	}
+	if len(in.Groups) > maxSplitInvoiceGroups {
+		return out, apperr.New(apperr.CodeInvalid, "split supports at most 6 groups")
 	}
 	groups := make([]domain.SplitGroupInput, 0, len(in.Groups))
 	for _, g := range in.Groups {

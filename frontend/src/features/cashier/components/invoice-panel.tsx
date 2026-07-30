@@ -26,7 +26,10 @@ interface InvoicePanelProps {
   onRemoveDiscount: (sessionId: string) => void
   onCloseSession: (sessionId: string) => void
   onSelectInvoice: (sessionId: string, invoiceId: string) => void
-  onSplit: (sessionId: string, groups: { label: string; order_item_ids: string[] }[]) => void
+  onSplit: (
+    sessionId: string,
+    groups: { label: string; order_item_ids: string[] }[],
+  ) => Promise<boolean>
   onSessionReopened?: () => void
 }
 
@@ -69,8 +72,12 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
   )
   const split = session.invoices.length > 1
   const anyInvoicePaidOrPaying = session.invoices.some(
-    (inv) => inv.status === 'PAID' || inv.payment?.status === 'processing',
+    (inv) =>
+      inv.status === 'PAID' ||
+      inv.payment?.status === 'pending' ||
+      inv.payment?.status === 'processing',
   )
+  const hasDiscount = session.invoices.some((inv) => (inv.discount?.amount ?? 0) > 0)
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -233,11 +240,16 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
             <Button
               variant="outline"
               className="w-full rounded-[var(--radius-lg)]"
-              disabled={terminal || anyInvoicePaidOrPaying}
+              disabled={terminal || anyInvoicePaidOrPaying || hasDiscount}
               onClick={() => setSplitOpen(true)}
             >
               {t('split_invoice')}
             </Button>
+            {hasDiscount ? (
+              <p className="text-xs text-[var(--text-tertiary)]">
+                {t('split_remove_discount_first')}
+              </p>
+            ) : null}
             {(session.status === 'bill_requested' || session.status === 'in_payment') && (
               <Button
                 variant="outline"
@@ -294,10 +306,7 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
         lang={lang}
         t={t}
         onOpenChange={setSplitOpen}
-        onConfirm={(groups) => {
-          onSplit(session.id, groups)
-          setSplitOpen(false)
-        }}
+        onConfirm={(groups) => onSplit(session.id, groups)}
       />
     </div>
   )

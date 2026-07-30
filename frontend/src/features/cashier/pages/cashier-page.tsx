@@ -57,9 +57,6 @@ const CashierWorkspace: FC = () => {
       </ShellHeaderCenter>
 
       <ShellHeaderActions>
-        <div className="hidden w-[180px] sm:block shrink-0">
-          <TakeawayPanel lang={state.lang} t={t} />
-        </div>
         <StatPill label={t('pending_label')} value={pendingCount} tone="orange" />
         <StatPill label={t('closed_today')} value={closedToday} tone="green" />
         <LanguageSwitcher
@@ -75,12 +72,6 @@ const CashierWorkspace: FC = () => {
       </ShellHeaderActions>
 
       <div className="flex min-h-0 flex-1 h-[calc(100dvh-64px)] flex-col overflow-hidden bg-[var(--surface-grouped)]">
-        {/* Mobile Takeaway Panel */}
-        <div className="p-4 pb-0 sm:hidden bg-[var(--background)]">
-          <TakeawayPanel lang={state.lang} t={t} />
-        </div>
-
-        {/* Main Grid View */}
         <SessionList
           sessions={state.sessions}
           selectedId={state.selectedSessionId}
@@ -88,6 +79,14 @@ const CashierWorkspace: FC = () => {
           lang={state.lang}
           t={t}
           onSelect={(id) => dispatch({ type: 'selectSession', sessionId: id })}
+          actions={
+            <TakeawayPanel
+              lang={state.lang}
+              t={t}
+              compact
+              className="h-10 w-full rounded-[10px] px-4 text-sm shadow-none bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto"
+            />
+          }
         />
       </div>
 

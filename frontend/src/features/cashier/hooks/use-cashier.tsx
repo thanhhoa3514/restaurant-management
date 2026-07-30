@@ -2,11 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createContext, use, useEffect, useMemo, useReducer, type ReactNode } from 'react'
 import { toast } from 'sonner'
 
-import {
-  listSessionInvoices,
-  type BillingInvoiceDTO,
-  type BillingPaymentDTO,
-} from '@/features/billing/api'
+import { type BillingInvoiceDTO, type BillingPaymentDTO } from '@/features/billing/api'
 import { CS_DICT } from '@/i18n'
 import { activeInvoice, fmtVND, makeTxnId } from '@/features/cashier/helpers'
 import { fetchStaffTables } from '@/features/waiter/api'
@@ -17,6 +13,7 @@ import { useProcessPayment } from '@/features/cashier/mutations/useProcessPaymen
 import { useCancelPayment } from '@/features/cashier/mutations/useCancelPayment'
 import { useProcessPartialPayment } from '@/features/cashier/mutations/useProcessPartialPayment'
 import { useSplitInvoice } from '@/features/cashier/mutations/useSplitInvoice'
+import { useListSessionInvoices } from '@/features/cashier/mutations/useListSessionInvoices'
 import { useVoidInvoice } from '@/features/cashier/mutations/useVoidInvoice'
 import { useCloseDiningSession } from '@/features/cashier/mutations/useCloseDiningSession'
 import { toCashierSessions, toInvoiceItem } from '@/features/cashier/helpers/mappers'
@@ -103,10 +100,12 @@ type TFunction = (key: string, ...args: Array<number | string>) => string
 
 interface CashierContextValue {
   state: CashierState
-  dispatch: React.Dispatch<CashierAction>
+  dispatch: CashierDispatch
   selectedSession: CashierSession | null
   t: TFunction
 }
+
+export type CashierDispatch = (action: CashierAction) => Promise<boolean>
 
 const CASHIER_QUERY_KEY = ['cashier', 'sessions'] as const
 const STAFF_TABLES_QUERY_KEY = ['staff', 'tables'] as const
@@ -236,15 +235,22 @@ function mergeInvoiceDTO(
   }
 }
 
-function statusFromInvoice(
-  invoice: Invoice,
+function statusFromInvoices(
+  invoices: Invoice[],
   priorStatus: CashierSession['status'],
 ): CashierSession['status'] {
-  if (invoice.status === 'PAID') return 'paid'
-  if (invoice.status === 'PARTIALLY_PAID') return 'in_payment'
   if (priorStatus === 'closed') return 'closed'
-  if (invoice.payment?.status === 'processing' || invoice.payment?.status === 'pending')
+  if (invoices.length > 0 && invoices.every((invoice) => invoice.status === 'PAID')) return 'paid'
+  if (
+    invoices.some(
+      (invoice) =>
+        invoice.status === 'PARTIALLY_PAID' ||
+        invoice.payment?.status === 'processing' ||
+        invoice.payment?.status === 'pending',
+    )
+  ) {
     return 'in_payment'
+  }
   return 'bill_requested'
 }
 
@@ -277,7 +283,7 @@ function applyInvoiceDTO(
 
   return {
     ...session,
-    status: statusFromInvoice(merged, session.status),
+    status: statusFromInvoices(invoices, session.status),
     invoices,
     activeInvoiceId: merged.id ?? null,
   }
@@ -304,10 +310,9 @@ function replaceInvoicesInSession(
   const activeInvoiceId = invoices.some((inv) => inv.id === session.activeInvoiceId)
     ? session.activeInvoiceId
     : (invoices[0]?.id ?? null)
-  const active = invoices.find((inv) => inv.id === activeInvoiceId) ?? invoices[0]
   return {
     ...session,
-    status: statusFromInvoice(active, session.status),
+    status: statusFromInvoices(invoices, session.status),
     invoices,
     activeInvoiceId,
   }
@@ -326,7 +331,10 @@ function cashierReducer(state: CashierState, action: CashierAction): CashierStat
                 ...incoming,
                 invoices: existing!.invoices,
                 activeInvoiceId: existing!.activeInvoiceId,
-                status: existing!.status,
+                status:
+                  incoming.status === 'dining'
+                    ? 'dining'
+                    : statusFromInvoices(existing!.invoices, incoming.status),
               }
             : incoming
         }),
@@ -347,7 +355,6 @@ function cashierReducer(state: CashierState, action: CashierAction): CashierStat
           return {
             ...session,
             activeInvoiceId: action.invoiceId,
-            status: statusFromInvoice(invoice, session.status),
           }
         }),
       }
@@ -427,14 +434,15 @@ function cashierReducer(state: CashierState, action: CashierAction): CashierStat
         sessions: updateSession(state.sessions, action.sessionId, (session) => {
           const invoice = activeInvoice(session)
           if (!invoice?.payment) return session
+          const updated = updateActiveInvoice(session, (inv) => ({
+            ...inv,
+            payment: inv.payment
+              ? { ...inv.payment, status: 'failed', completed_at: action.at ?? state.now }
+              : null,
+          }))
           return {
-            ...updateActiveInvoice(session, (inv) => ({
-              ...inv,
-              payment: inv.payment
-                ? { ...inv.payment, status: 'failed', completed_at: action.at ?? state.now }
-                : null,
-            })),
-            status: 'bill_requested',
+            ...updated,
+            status: statusFromInvoices(updated.invoices, session.status),
           }
         }),
       }
@@ -528,8 +536,15 @@ export function CashierProvider({ children }: { children: ReactNode }) {
     () => state.sessions.find((session) => session.id === state.selectedSessionId) ?? null,
     [state.sessions, state.selectedSessionId],
   )
+  const selectedSessionID = selectedSession?.id ?? null
+  const selectedSessionStatus = selectedSession?.status ?? null
+  const selectedInvoiceQuery = useListSessionInvoices(
+    selectedSession && selectedSessionStatus !== 'closed' && selectedSessionStatus !== 'dining'
+      ? selectedSessionID
+      : null,
+  )
 
-  const dispatch = useMemo<React.Dispatch<CashierAction>>(
+  const dispatch = useMemo<CashierDispatch>(
     () => (action) => {
       const run = async () => {
         const currentSession =
@@ -695,37 +710,41 @@ export function CashierProvider({ children }: { children: ReactNode }) {
             baseDispatch(action)
         }
       }
-      void run().catch((error: unknown) => {
-        const toastId = `cashier-action-${action.type}`
-        switch (action.type) {
-          case 'applyDiscount':
-            toast.error(errorMessage(error, t('toast_discount_apply_failed')), { id: toastId })
-            break
-          case 'removeDiscount':
-            toast.error(errorMessage(error, t('toast_discount_remove_failed')), { id: toastId })
-            break
-          case 'completePayment':
-            toast.error(errorMessage(error, t('toast_payment_failed')), { id: toastId })
-            if (action.method === 'ewallet') {
-              baseDispatch({ type: 'failPayment', sessionId: action.sessionId })
-            }
-            break
-          case 'cancelPayment':
-            toast.error(errorMessage(error, t('toast_payment_cancel_failed')), { id: toastId })
-            break
-          case 'addPartialPayment':
-            toast.error(errorMessage(error, t('toast_payment_partial_failed')), { id: toastId })
-            break
-          case 'splitSession':
-            toast.error(errorMessage(error, t('toast_split_failed')), { id: toastId })
-            break
-          case 'closeSession':
-            toast.error(errorMessage(error, t('toast_close_session_failed')), { id: toastId })
-            break
-          default:
-            toast.error(errorMessage(error, t('toast_action_failed')), { id: toastId })
-        }
-      })
+      return run().then(
+        () => true,
+        (error: unknown) => {
+          const toastId = `cashier-action-${action.type}`
+          switch (action.type) {
+            case 'applyDiscount':
+              toast.error(errorMessage(error, t('toast_discount_apply_failed')), { id: toastId })
+              break
+            case 'removeDiscount':
+              toast.error(errorMessage(error, t('toast_discount_remove_failed')), { id: toastId })
+              break
+            case 'completePayment':
+              toast.error(errorMessage(error, t('toast_payment_failed')), { id: toastId })
+              if (action.method === 'ewallet') {
+                baseDispatch({ type: 'failPayment', sessionId: action.sessionId })
+              }
+              break
+            case 'cancelPayment':
+              toast.error(errorMessage(error, t('toast_payment_cancel_failed')), { id: toastId })
+              break
+            case 'addPartialPayment':
+              toast.error(errorMessage(error, t('toast_payment_partial_failed')), { id: toastId })
+              break
+            case 'splitSession':
+              toast.error(errorMessage(error, t('toast_split_failed')), { id: toastId })
+              break
+            case 'closeSession':
+              toast.error(errorMessage(error, t('toast_close_session_failed')), { id: toastId })
+              break
+            default:
+              toast.error(errorMessage(error, t('toast_action_failed')), { id: toastId })
+          }
+          return false
+        },
+      )
     },
     [
       queryClient,
@@ -743,23 +762,35 @@ export function CashierProvider({ children }: { children: ReactNode }) {
   )
 
   useEffect(() => {
-    if (!selectedSession || selectedSession.status === 'closed') return
-    if (selectedSession.invoices.some((inv) => inv.id)) return
-    const id = selectedSession.id
-    // Only load an invoice that already exists — building one here would flip the
-    // session to AWAITING_PAYMENT (payment lock) just from viewing the table.
-    void listSessionInvoices(id)
-      .then((response) => {
-        if (response.invoices.length > 0) {
-          baseDispatch({ type: 'replaceInvoices', sessionId: id, invoices: response.invoices })
-        }
-      })
-      .catch((error: unknown) => {
-        toast.error(errorMessage(error, t('toast_load_invoice_failed')), {
-          id: `cashier-invoice-load-${id}`,
-        })
-      })
-  }, [selectedSession, t])
+    if (
+      !selectedSessionID ||
+      selectedSessionStatus === 'closed' ||
+      selectedSessionStatus === 'dining' ||
+      !selectedInvoiceQuery.data
+    ) {
+      return
+    }
+    if (selectedInvoiceQuery.data.invoices.length === 0) return
+    baseDispatch({
+      type: 'replaceInvoices',
+      sessionId: selectedSessionID,
+      invoices: selectedInvoiceQuery.data.invoices,
+    })
+  }, [selectedInvoiceQuery.data, selectedSessionID, selectedSessionStatus])
+
+  useEffect(() => {
+    if (
+      !selectedSessionID ||
+      selectedSessionStatus === 'closed' ||
+      selectedSessionStatus === 'dining' ||
+      !selectedInvoiceQuery.error
+    ) {
+      return
+    }
+    toast.error(errorMessage(selectedInvoiceQuery.error, t('toast_load_invoice_failed')), {
+      id: `cashier-invoice-load-${selectedSessionID}`,
+    })
+  }, [selectedInvoiceQuery.error, selectedSessionID, selectedSessionStatus, t])
 
   const value = useMemo(
     () => ({ state, dispatch, selectedSession, t }),

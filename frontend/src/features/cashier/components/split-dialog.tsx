@@ -1,4 +1,5 @@
 import { useMemo, useState, type FC } from 'react'
+import { Loader2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -19,7 +20,7 @@ interface SplitDialogProps {
   lang: Lang
   t: (key: string, ...args: Array<number | string>) => string
   onOpenChange: (open: boolean) => void
-  onConfirm: (groups: { label: string; order_item_ids: string[] }[]) => void
+  onConfirm: (groups: { label: string; order_item_ids: string[] }[]) => Promise<boolean>
 }
 
 function billableItems(session: CashierSession | null): LineItem[] {
@@ -93,6 +94,7 @@ const SplitDialogBody: FC<Omit<SplitDialogProps, 'open'>> = ({
   const items = useMemo(() => billableItems(session), [session])
   const [groupCount, setGroupCount] = useState(2)
   const [assignment, setAssignment] = useState<Record<string, number>>({})
+  const [submitting, setSubmitting] = useState(false)
 
   const groupLabels = Array.from({ length: groupCount }, (_, i) => t('split_group_label', i + 1))
   const groupOf = (itemId: string) => assignment[itemId] ?? 0
@@ -111,7 +113,7 @@ const SplitDialogBody: FC<Omit<SplitDialogProps, 'open'>> = ({
               variant="secondary"
               size="icon-sm"
               className="rounded-full"
-              disabled={groupCount <= 2}
+              disabled={submitting || groupCount <= 2}
               onClick={() => {
                 const removedIdx = groupCount - 1
                 setAssignment((current) => {
@@ -133,7 +135,7 @@ const SplitDialogBody: FC<Omit<SplitDialogProps, 'open'>> = ({
               variant="secondary"
               size="icon-sm"
               className="rounded-full"
-              disabled={groupCount >= GROUP_TONES.length}
+              disabled={submitting || groupCount >= GROUP_TONES.length}
               onClick={() => setGroupCount((n) => n + 1)}
             >
               +
@@ -162,6 +164,7 @@ const SplitDialogBody: FC<Omit<SplitDialogProps, 'open'>> = ({
                     <button
                       key={idx}
                       type="button"
+                      disabled={submitting}
                       onClick={() => setAssignment((current) => ({ ...current, [item.id]: idx }))}
                       className={cn(
                         'rounded-full px-3 py-1 text-xs font-semibold transition-colors',
@@ -195,24 +198,32 @@ const SplitDialogBody: FC<Omit<SplitDialogProps, 'open'>> = ({
         <Button
           variant="secondary"
           className="flex-1 rounded-[var(--radius-lg)]"
+          disabled={submitting}
           onClick={() => onOpenChange(false)}
         >
           {t('cancel')}
         </Button>
         <Button
           className="flex-1 rounded-[var(--radius-lg)]"
-          disabled={!valid || items.length === 0}
-          onClick={() =>
-            onConfirm(
-              groupLabels.map((label, idx) => ({
-                label,
-                order_item_ids: items
-                  .filter((item) => groupOf(item.id) === idx)
-                  .map((item) => item.id),
-              })),
-            )
-          }
+          disabled={submitting || !valid || items.length === 0}
+          onClick={async () => {
+            setSubmitting(true)
+            try {
+              const success = await onConfirm(
+                groupLabels.map((label, idx) => ({
+                  label,
+                  order_item_ids: items
+                    .filter((item) => groupOf(item.id) === idx)
+                    .map((item) => item.id),
+                })),
+              )
+              if (success) onOpenChange(false)
+            } finally {
+              setSubmitting(false)
+            }
+          }}
         >
+          {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
           {t('split_confirm')}
         </Button>
       </div>

@@ -323,7 +323,8 @@ func (r *Repository) SplitInvoice(ctx context.Context, restaurantID uuid.UUID, i
 	}
 
 	existingRows, err := r.q(ctx).Query(ctx, `
-		SELECT id, status
+		SELECT id, status, discount_amount_vnd,
+		       service_charge_basis_points, vat_basis_points
 		FROM invoices
 		WHERE restaurant_id = $1 AND dining_session_id = $2 AND status <> 'VOID' AND deleted_at IS NULL
 		FOR UPDATE
@@ -332,16 +333,38 @@ func (r *Repository) SplitInvoice(ctx context.Context, restaurantID uuid.UUID, i
 		return nil, err
 	}
 	var existingIDs []uuid.UUID
+	var serviceBPS, vatBPS int
+	hasChargeSnapshot := false
 	for existingRows.Next() {
 		var id uuid.UUID
 		var invStatus string
-		if err := existingRows.Scan(&id, &invStatus); err != nil {
+		var discountAmountVND int64
+		var invoiceServiceBPS, invoiceVATBPS int
+		if err := existingRows.Scan(
+			&id,
+			&invStatus,
+			&discountAmountVND,
+			&invoiceServiceBPS,
+			&invoiceVATBPS,
+		); err != nil {
 			existingRows.Close()
 			return nil, err
 		}
 		if invStatus != "PENDING" && invStatus != "DRAFT" {
 			existingRows.Close()
 			return nil, apperr.New(apperr.CodeConflict, "cannot split a session with paid invoices")
+		}
+		if discountAmountVND > 0 {
+			existingRows.Close()
+			return nil, apperr.New(apperr.CodeConflict, "remove invoice discount before splitting")
+		}
+		if !hasChargeSnapshot {
+			serviceBPS = invoiceServiceBPS
+			vatBPS = invoiceVATBPS
+			hasChargeSnapshot = true
+		} else if serviceBPS != invoiceServiceBPS || vatBPS != invoiceVATBPS {
+			existingRows.Close()
+			return nil, apperr.New(apperr.CodeConflict, "invoice charge rates are inconsistent")
 		}
 		existingIDs = append(existingIDs, id)
 	}
@@ -371,9 +394,11 @@ func (r *Repository) SplitInvoice(ctx context.Context, restaurantID uuid.UUID, i
 		}
 	}
 
-	vatBPS, serviceBPS, err := r.restaurantChargeRates(ctx, restaurantID)
-	if err != nil {
-		return nil, err
+	if !hasChargeSnapshot {
+		vatBPS, serviceBPS, err = r.restaurantChargeRates(ctx, restaurantID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	invoices := make([]*domain.Invoice, 0, len(input.Groups))
@@ -942,6 +967,9 @@ func (r *Repository) InsertWebhookEvent(ctx context.Context, restaurantID uuid.U
 }
 
 func (r *Repository) CompleteWebhookPayment(ctx context.Context, restaurantID, paymentID uuid.UUID, event domain.WebhookEvent) (*domain.Invoice, error) {
+	if err := r.lockPaymentDiningSession(ctx, restaurantID, paymentID); err != nil {
+		return nil, err
+	}
 	payment, err := r.lockPayment(ctx, restaurantID, paymentID)
 	if err != nil {
 		return nil, err
@@ -1124,10 +1152,30 @@ func (r *Repository) LoadInvoice(ctx context.Context, restaurantID, invoiceID uu
 }
 
 func (r *Repository) lockPayableInvoice(ctx context.Context, restaurantID, invoiceID uuid.UUID) (uuid.UUID, bool, int64, error) {
+	// Keep the global billing lock order session -> invoice -> payment. SplitInvoice
+	// uses the same order, so a cashier payment cannot deadlock with a concurrent split.
+	var linkedSessionID pgtype.UUID
+	err := r.q(ctx).QueryRow(ctx, `
+		SELECT dining_session_id
+		FROM invoices
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, restaurantID, invoiceID).Scan(&linkedSessionID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return uuid.Nil, false, 0, apperr.New(apperr.CodeNotFound, "invoice not found")
+	}
+	if err != nil {
+		return uuid.Nil, false, 0, err
+	}
+	if linkedSessionID.Valid {
+		if err := r.lockDiningSession(ctx, restaurantID, uuid.UUID(linkedSessionID.Bytes)); err != nil {
+			return uuid.Nil, false, 0, err
+		}
+	}
+
 	var diningSessionID, orderID pgtype.UUID
 	var invoiceStatus string
 	var totalAmount int64
-	err := r.q(ctx).QueryRow(ctx, `
+	err = r.q(ctx).QueryRow(ctx, `
 		SELECT dining_session_id, order_id, status, total_amount_vnd
 		FROM invoices
 		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
@@ -1156,6 +1204,43 @@ func (r *Repository) lockPayableInvoice(ctx context.Context, restaurantID, invoi
 		return uuid.Nil, false, 0, apperr.New(apperr.CodeInternal, "invoice has no linked session or order")
 	}
 	return id, isTakeaway, totalAmount, nil
+}
+
+func (r *Repository) lockPaymentDiningSession(ctx context.Context, restaurantID, paymentID uuid.UUID) error {
+	// Webhook completion also follows session -> payment -> invoice. The preliminary
+	// read is revalidated by lockPayment after the session lock is acquired.
+	var diningSessionID pgtype.UUID
+	err := r.q(ctx).QueryRow(ctx, `
+		SELECT i.dining_session_id
+		FROM payments p
+		JOIN invoices i ON i.restaurant_id = p.restaurant_id AND i.id = p.invoice_id
+		WHERE p.restaurant_id = $1 AND p.id = $2
+		  AND p.deleted_at IS NULL AND i.deleted_at IS NULL
+	`, restaurantID, paymentID).Scan(&diningSessionID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return apperr.New(apperr.CodeNotFound, "payment not found")
+	}
+	if err != nil {
+		return err
+	}
+	if !diningSessionID.Valid {
+		return nil
+	}
+	return r.lockDiningSession(ctx, restaurantID, uuid.UUID(diningSessionID.Bytes))
+}
+
+func (r *Repository) lockDiningSession(ctx context.Context, restaurantID, diningSessionID uuid.UUID) error {
+	var lockedID uuid.UUID
+	err := r.q(ctx).QueryRow(ctx, `
+		SELECT id
+		FROM dining_sessions
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+		FOR UPDATE
+	`, restaurantID, diningSessionID).Scan(&lockedID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return apperr.New(apperr.CodeNotFound, "dining session not found")
+	}
+	return err
 }
 
 func (r *Repository) ensureNoPaymentConflict(ctx context.Context, restaurantID, invoiceID, allowedProcessingMethodID uuid.UUID) error {

@@ -7,31 +7,30 @@ import {
   X,
   Minus,
   Trash2,
-  User,
-  Phone,
   ShoppingBag,
-  UtensilsCrossed,
   ImageOff,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Separator } from '@/components/ui/separator'
 import { useCategoriesQuery, useMenuItemsQuery } from '@/features/catalog/queries'
 import type { AdminMenuItemSummaryDTO, AdminCategoryDTO } from '@/features/catalog/types'
 import type { StaffTakeawayInput } from '@/features/cashier/api'
 import { usePlaceTakeawayOrder } from '@/features/cashier/mutations/usePlaceTakeawayOrder'
 import { fmtVND } from '@/features/cashier/helpers'
+import { LIST_CARD } from '@/features/cashier/components/panel-styles'
 import { errorMessage } from '@/lib/api'
+import { cn } from '@/lib/utils'
 
 interface TakeawayPanelProps {
   lang: 'vi' | 'en'
   t: (key: string, ...args: Array<string | number>) => string
   compact?: boolean
+  /* trigger-button overrides — cashier drops the orange fill to sit in its neutral toolbar */
+  className?: string
 }
 
 interface CartLine {
@@ -43,7 +42,10 @@ interface CartLine {
   options: { option_id: string; quantity: number }[]
 }
 
-export const TakeawayPanel: FC<TakeawayPanelProps> = ({ t, compact }) => {
+const SECTION_LABEL =
+  'text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]'
+
+export const TakeawayPanel: FC<TakeawayPanelProps> = ({ t, compact, className }) => {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [categoryId, setCategoryId] = useState<string | undefined>(undefined)
@@ -112,6 +114,11 @@ export const TakeawayPanel: FC<TakeawayPanelProps> = ({ t, compact }) => {
     () => cart.reduce((s, l) => s + l.unit_price_vnd * l.quantity, 0),
     [cart],
   )
+  /* lets a menu tile show what is already in the cart instead of a hover-only affordance */
+  const cartQty = useMemo(
+    () => new Map(cart.map((l) => [l.menu_item_id, l.quantity])),
+    [cart],
+  )
 
   const reset = useCallback(() => {
     setCart([])
@@ -120,6 +127,11 @@ export const TakeawayPanel: FC<TakeawayPanelProps> = ({ t, compact }) => {
     setSearch('')
     setCategoryId(undefined)
   }, [])
+
+  const close = useCallback(() => {
+    setOpen(false)
+    reset()
+  }, [reset])
 
   const handleSubmit = useCallback(() => {
     if (cart.length === 0) return
@@ -157,11 +169,12 @@ export const TakeawayPanel: FC<TakeawayPanelProps> = ({ t, compact }) => {
   return (
     <>
       <Button
-        className={
+        className={cn(
           compact
             ? 'rounded-xl gap-1.5 font-semibold h-9 px-3 text-xs shadow-sm transition-all hover:shadow-md bg-[var(--system-orange)] hover:bg-[var(--system-orange)]/90 text-white shrink-0'
-            : 'w-full rounded-2xl gap-2 font-semibold h-12 shadow-sm transition-all hover:shadow-md bg-[var(--system-orange)] hover:bg-[var(--system-orange)]/90 text-white'
-        }
+            : 'w-full rounded-2xl gap-2 font-semibold h-12 shadow-sm transition-all hover:shadow-md bg-[var(--system-orange)] hover:bg-[var(--system-orange)]/90 text-white',
+          className,
+        )}
         onClick={() => setOpen(true)}
       >
         <ShoppingCart className={compact ? 'size-4' : 'size-5'} />
@@ -171,8 +184,8 @@ export const TakeawayPanel: FC<TakeawayPanelProps> = ({ t, compact }) => {
       <Dialog
         open={open}
         onOpenChange={(v) => {
-          setOpen(v)
-          if (!v) reset()
+          if (v) setOpen(true)
+          else close()
         }}
       >
         <DialogContent
@@ -181,306 +194,228 @@ export const TakeawayPanel: FC<TakeawayPanelProps> = ({ t, compact }) => {
         >
           <DialogTitle className="sr-only">{t('takeaway_order')}</DialogTitle>
           <div className="flex h-[90dvh] flex-col md:flex-row">
-            {/* LEFT PANEL: Menu Selection */}
-            <div className="flex flex-1 flex-col bg-[var(--background)]">
-              {/* Header */}
-              <div className="flex items-center justify-between border-b border-[var(--separator)] px-6 py-5 bg-[var(--background)] z-10 sticky top-0">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400">
-                    <UtensilsCrossed className="size-6" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold tracking-tight text-[var(--foreground)]">
-                      {t('takeaway_order')}
-                    </h2>
-                    <p className="text-sm text-[var(--text-tertiary)]">
-                      Chọn món nhanh chóng và tiện lợi
-                    </p>
-                  </div>
+            {/* LEFT PANEL: menu */}
+            <div className="flex min-h-0 flex-1 flex-col bg-[var(--background)]">
+              <div className="flex items-center justify-between gap-3 border-b border-[var(--separator)] px-5 py-4">
+                <div className="flex items-center gap-2.5">
+                  <ShoppingBag className="size-5 text-[var(--text-secondary)]" />
+                  <h2 className="text-lg font-semibold tracking-tight text-[var(--text)]">
+                    {t('takeaway_order')}
+                  </h2>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="rounded-full flex md:hidden"
-                  onClick={() => setOpen(false)}
+                  aria-label={t('takeaway_cancel')}
+                  className="rounded-full text-[var(--text-tertiary)] md:hidden"
+                  onClick={close}
                 >
                   <X className="size-5" />
                 </Button>
               </div>
 
-              {/* Filters & Search */}
-              <div className="px-6 py-4 space-y-4 z-10 bg-[var(--background)] border-b border-[var(--separator)]/50">
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-[var(--text-tertiary)]" />
+              <div className="space-y-3 border-b border-[var(--separator)] px-5 py-4">
+                <div className="relative max-w-sm">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--text-tertiary)]" />
                   <Input
                     placeholder={t('takeaway_search')}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="h-12 rounded-2xl pl-12 bg-[var(--surface-grouped)] border-[var(--separator)] text-base focus-visible:ring-[var(--system-orange)] focus-visible:border-[var(--system-orange)] shadow-sm"
+                    className="pl-9 pr-9"
                   />
+                  {search ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={t('takeaway_search_clear')}
+                      className="absolute right-1 top-1/2 size-8 -translate-y-1/2 rounded-full text-[var(--text-tertiary)]"
+                      onClick={() => setSearch('')}
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  ) : null}
                 </div>
 
-                <div className="flex flex-wrap gap-2 max-h-[88px] overflow-y-auto pr-2 pb-1 scrollbar-hide">
-                  <Badge
-                    variant={!categoryId ? 'default' : 'secondary'}
-                    className={`cursor-pointer rounded-full px-5 py-2 text-sm font-medium transition-all ${
-                      !categoryId
-                        ? 'bg-[var(--system-orange)] hover:bg-[var(--system-orange)]/90 text-white shadow-sm border-transparent'
-                        : 'bg-[var(--surface-grouped)] hover:bg-[var(--separator)] text-[var(--foreground)] border-[var(--separator)] hover:border-[var(--system-orange)]/50'
-                    }`}
+                {/* real buttons, not click-handling badges — these are keyboard-reachable filters */}
+                <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+                  <CategoryChip
+                    active={!categoryId}
+                    label={t('takeaway_all')}
                     onClick={() => setCategoryId(undefined)}
-                  >
-                    {t('takeaway_all')}
-                  </Badge>
+                  />
                   {categories.map((cat: AdminCategoryDTO) => (
-                    <Badge
+                    <CategoryChip
                       key={cat.id}
-                      variant={categoryId === cat.id ? 'default' : 'secondary'}
-                      className={`cursor-pointer rounded-full px-5 py-2 text-sm font-medium transition-all ${
-                        categoryId === cat.id
-                          ? 'bg-[var(--system-orange)] hover:bg-[var(--system-orange)]/90 text-white shadow-sm border-transparent'
-                          : 'bg-[var(--surface-grouped)] hover:bg-[var(--separator)] text-[var(--foreground)] border-[var(--separator)] hover:border-[var(--system-orange)]/50'
-                      }`}
+                      active={categoryId === cat.id}
+                      label={cat.name}
                       onClick={() => setCategoryId(cat.id)}
-                    >
-                      {cat.name}
-                    </Badge>
+                    />
                   ))}
                 </div>
               </div>
 
-              {/* Product Grid */}
-              <div className="flex-1 overflow-y-auto p-6 bg-[var(--surface-grouped)]">
+              <div className="flex-1 overflow-y-auto bg-[var(--surface-grouped)] p-5">
                 {itemsLoading ? (
                   <div className="flex h-full items-center justify-center">
-                    <Loader2 className="size-10 animate-spin text-[var(--system-orange)]" />
+                    <Loader2 className="size-8 animate-spin text-[var(--text-tertiary)]" />
+                  </div>
+                ) : filtered.length === 0 ? (
+                  <div className="flex h-full flex-col items-center justify-center gap-3 text-[var(--text-tertiary)]">
+                    <Search className="size-8" />
+                    <p className="text-base font-medium text-[var(--text)]">
+                      {t('takeaway_no_items')}
+                    </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
                     {filtered.map((item: AdminMenuItemSummaryDTO) => (
-                      <Card
+                      <MenuTile
                         key={item.id}
-                        className="group relative flex cursor-pointer flex-col overflow-hidden rounded-[20px] border border-[var(--separator)] bg-[var(--background)] shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-[var(--system-orange)]/40"
-                        onClick={() => addToCart(item)}
-                      >
-                        <div className="aspect-[4/3] w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
-                          {item.image_url ? (
-                            <img
-                              src={item.image_url}
-                              alt={item.name}
-                              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-slate-300 dark:text-slate-700">
-                              <ImageOff className="size-10 opacity-50" />
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex flex-1 flex-col p-4">
-                          <div className="mb-2 line-clamp-2 text-sm font-bold leading-tight text-[var(--foreground)]">
-                            {item.name}
-                          </div>
-                          <div className="mt-auto pt-1 text-base font-bold text-[var(--system-orange)]">
-                            {item.has_variants && item.price_from_vnd != null
-                              ? `${fmtVND(item.price_from_vnd)}+`
-                              : fmtVND(item.base_price_vnd)}
-                          </div>
-                        </div>
-
-                        {/* Overlay add button on hover */}
-                        <div className="absolute bottom-3 right-3 flex size-9 scale-90 items-center justify-center rounded-full bg-[var(--system-orange)] text-white opacity-0 shadow-md transition-all duration-300 group-hover:scale-100 group-hover:opacity-100">
-                          <Plus className="size-5" />
-                        </div>
-                      </Card>
+                        item={item}
+                        qty={cartQty.get(item.id) ?? 0}
+                        onAdd={() => addToCart(item)}
+                      />
                     ))}
-                    {filtered.length === 0 && (
-                      <div className="col-span-full flex flex-col items-center justify-center py-20 text-[var(--text-tertiary)]">
-                        <div className="mb-4 rounded-full bg-[var(--separator)]/30 p-6">
-                          <ShoppingBag className="size-12 opacity-40" />
-                        </div>
-                        <p className="text-xl font-medium text-[var(--foreground)]">
-                          {t('takeaway_no_items')}
-                        </p>
-                        <p className="text-sm mt-2">Hãy thử tìm kiếm bằng một từ khóa khác</p>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
             </div>
 
-            {/* RIGHT PANEL: Cart & Customer */}
-            <div className="flex w-full flex-col border-l border-[var(--separator)] bg-[var(--background)] md:w-[420px] shrink-0">
-              {/* Close Button Desktop */}
-              <div className="hidden md:flex justify-end p-4 pb-0">
+            {/* RIGHT PANEL: cart + customer */}
+            <div className="flex min-h-0 w-full shrink-0 flex-col border-t border-[var(--separator)] bg-[var(--background)] md:w-[380px] md:border-l md:border-t-0">
+              <div className="flex items-center justify-between gap-3 border-b border-[var(--separator)] px-5 py-4">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-semibold text-[var(--text)]">
+                    {t('takeaway_cart')}
+                  </h3>
+                  {totalItems > 0 ? (
+                    <Badge variant="secondary" className="tabular-nums">
+                      {totalItems} {t('takeaway_items')}
+                    </Badge>
+                  ) : null}
+                </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="rounded-full hover:bg-[var(--separator)] text-[var(--text-tertiary)]"
-                  onClick={() => {
-                    setOpen(false)
-                    reset()
-                  }}
+                  aria-label={t('takeaway_cancel')}
+                  className="hidden rounded-full text-[var(--text-tertiary)] md:inline-flex"
+                  onClick={close}
                 >
                   <X className="size-5" />
                 </Button>
               </div>
 
-              {/* Customer Info Section */}
-              <div className="p-6 pb-5">
-                <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[var(--foreground)]">
-                  <div className="flex size-8 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
-                    <User className="size-4" />
-                  </div>
-                  Thông tin khách hàng
-                </h3>
-                <div className="space-y-3">
-                  <div className="relative">
-                    <User className="absolute left-3.5 top-1/2 size-4.5 -translate-y-1/2 text-[var(--text-tertiary)]" />
-                    <Input
-                      placeholder={t('takeaway_customer_name')}
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      className="h-12 rounded-xl pl-11 border-[var(--separator)] bg-[var(--surface-grouped)] focus-visible:ring-blue-500 font-medium"
-                    />
-                  </div>
-                  <div className="relative">
-                    <Phone className="absolute left-3.5 top-1/2 size-4.5 -translate-y-1/2 text-[var(--text-tertiary)]" />
-                    <Input
-                      placeholder={t('takeaway_customer_phone')}
-                      value={customerPhone}
-                      onChange={(e) => setCustomerPhone(e.target.value)}
-                      className="h-12 rounded-xl pl-11 border-[var(--separator)] bg-[var(--surface-grouped)] focus-visible:ring-blue-500 font-medium"
-                    />
-                  </div>
-                </div>
+              <div className="space-y-2 border-b border-[var(--separator)] px-5 py-4">
+                <div className={SECTION_LABEL}>{t('takeaway_customer_info')}</div>
+                <Input
+                  placeholder={t('takeaway_customer_name')}
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                />
+                <Input
+                  placeholder={t('takeaway_customer_phone')}
+                  inputMode="tel"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                />
               </div>
 
-              <Separator className="bg-[var(--separator)]/50" />
-
-              {/* Cart Items Section */}
-              <div className="flex flex-1 flex-col overflow-hidden">
-                <div className="flex items-center justify-between p-6 pb-3">
-                  <h3 className="flex items-center gap-2 text-lg font-bold text-[var(--foreground)]">
-                    <div className="flex size-8 items-center justify-center rounded-full bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-400">
-                      <ShoppingCart className="size-4" />
-                    </div>
-                    {t('takeaway_cart')}
-                  </h3>
-                  <Badge
-                    variant="secondary"
-                    className="rounded-full bg-[var(--system-orange)]/10 text-[var(--system-orange)] px-3 py-1 font-bold"
-                  >
-                    {totalItems} món
-                  </Badge>
-                </div>
-
-                <div className="flex-1 overflow-y-auto px-6 pb-6">
-                  {cart.length === 0 ? (
-                    <div className="flex h-full flex-col items-center justify-center text-[var(--text-tertiary)]">
-                      <ShoppingCart className="mb-4 size-14 opacity-20" />
-                      <p className="text-base font-medium text-[var(--foreground)]">
-                        Giỏ hàng trống
-                      </p>
-                      <p className="text-sm text-center mt-1">
-                        Hãy chọn các món hấp dẫn từ thực đơn bên trái
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {cart.map((line) => (
-                        <div
-                          key={line.menu_item_id}
-                          className="flex flex-col gap-3 rounded-2xl border border-[var(--separator)] bg-[var(--surface-grouped)] p-4 shadow-sm transition-all hover:border-[var(--system-orange)]/30"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1">
-                              <div className="font-bold text-[var(--foreground)] text-sm leading-snug">
-                                {line.name}
-                              </div>
-                              <div className="mt-1 font-medium text-[var(--system-orange)] text-sm">
-                                {fmtVND(line.unit_price_vnd)}
-                              </div>
+              <div className="flex-1 overflow-y-auto px-5 py-4">
+                {cart.length === 0 ? (
+                  <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-[var(--text-tertiary)]">
+                    <ShoppingCart className="size-8" />
+                    <p className="text-base font-medium text-[var(--text)]">
+                      {t('takeaway_cart_empty')}
+                    </p>
+                    <p className="text-sm">{t('takeaway_cart_empty_hint')}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {cart.map((line) => (
+                      <div
+                        key={line.menu_item_id}
+                        className={`rounded-[var(--radius-xl)] border border-[var(--separator)] p-3 ${LIST_CARD}`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-semibold text-[var(--text)]">
+                              {line.name}
                             </div>
-                            <div className="font-bold text-[var(--foreground)] text-base">
-                              {fmtVND(line.unit_price_vnd * line.quantity)}
+                            <div className="mt-0.5 text-xs text-[var(--text-tertiary)]">
+                              {fmtVND(line.unit_price_vnd)}
                             </div>
                           </div>
-
-                          <div className="flex items-center justify-between mt-1">
-                            <button
-                              className="text-sm font-medium text-red-500 hover:text-red-600 flex items-center gap-1 px-2 py-1 -ml-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
-                              onClick={() => updateQty(line.menu_item_id, -line.quantity)}
-                            >
-                              <Trash2 className="size-4" /> Xóa
-                            </button>
-
-                            <div className="flex items-center rounded-full border border-[var(--separator)] bg-[var(--background)] shadow-sm">
-                              <button
-                                className="flex size-9 items-center justify-center rounded-l-full text-[var(--foreground)] transition-colors hover:bg-[var(--separator)]"
-                                onClick={() => updateQty(line.menu_item_id, -1)}
-                              >
-                                {line.quantity === 1 ? (
-                                  <Trash2 className="size-4 text-red-500" />
-                                ) : (
-                                  <Minus className="size-4" />
-                                )}
-                              </button>
-                              <span className="w-10 text-center text-sm font-bold tabular-nums text-[var(--foreground)]">
-                                {line.quantity}
-                              </span>
-                              <button
-                                className="flex size-9 items-center justify-center rounded-r-full text-[var(--foreground)] transition-colors hover:bg-[var(--separator)]"
-                                onClick={() => updateQty(line.menu_item_id, 1)}
-                              >
-                                <Plus className="size-4" />
-                              </button>
-                            </div>
+                          <div className="shrink-0 text-sm font-bold tabular-nums text-[var(--text)]">
+                            {fmtVND(line.unit_price_vnd * line.quantity)}
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+
+                        <div className="mt-3 flex items-center justify-between">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="-ml-2 px-2 text-[var(--system-red)] hover:bg-[var(--system-red)]/10"
+                            onClick={() => updateQty(line.menu_item_id, -line.quantity)}
+                          >
+                            <Trash2 />
+                            {t('takeaway_remove')}
+                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="secondary"
+                              size="icon-sm"
+                              aria-label="-1"
+                              onClick={() => updateQty(line.menu_item_id, -1)}
+                            >
+                              <Minus />
+                            </Button>
+                            <span className="w-8 text-center text-sm font-bold tabular-nums text-[var(--text)]">
+                              {line.quantity}
+                            </span>
+                            <Button
+                              variant="secondary"
+                              size="icon-sm"
+                              aria-label="+1"
+                              onClick={() => updateQty(line.menu_item_id, 1)}
+                            >
+                              <Plus />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {/* Checkout Footer */}
-              <div className="border-t border-[var(--separator)] bg-[var(--surface-grouped)] p-6 pt-5 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
-                <div className="mb-5 flex items-center justify-between">
-                  <span className="text-base font-medium text-[var(--text-tertiary)]">
-                    {t('takeaway_total')}
-                  </span>
-                  <span className="text-3xl font-black text-[var(--system-orange)] tabular-nums tracking-tight">
+              <div className="border-t border-[var(--separator)] bg-[var(--surface-grouped)] px-5 py-4">
+                <div className="mb-3 flex items-baseline justify-between">
+                  <span className={SECTION_LABEL}>{t('takeaway_total')}</span>
+                  <span className="text-2xl font-bold tabular-nums tracking-tight text-[var(--text)]">
                     {fmtVND(totalVND)}
                   </span>
                 </div>
-
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                   <Button
-                    variant="outline"
-                    className="h-[56px] flex-[0.8] rounded-2xl border-[var(--separator)] font-bold text-base bg-[var(--background)] hover:bg-[var(--separator)] hover:text-[var(--foreground)] transition-colors"
-                    onClick={() => {
-                      setOpen(false)
-                      reset()
-                    }}
+                    variant="secondary"
+                    className="h-11 flex-1 rounded-[12px]"
+                    onClick={close}
                   >
-                    Hủy
+                    {t('takeaway_cancel')}
                   </Button>
                   <Button
-                    className="h-[56px] flex-[2] rounded-2xl bg-[var(--system-orange)] text-lg font-bold text-white shadow-[0_8px_16px_-6px_rgba(var(--system-orange-rgb),0.4)] hover:bg-[var(--system-orange)]/90 hover:shadow-[0_12px_20px_-8px_rgba(var(--system-orange-rgb),0.5)] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                    className="h-11 flex-[2] rounded-[12px] bg-primary text-primary-foreground hover:bg-primary/90"
                     disabled={
                       cart.length === 0 || !customerName.trim() || takeawayMutation.isPending
                     }
                     onClick={handleSubmit}
                   >
                     {takeawayMutation.isPending ? (
-                      <Loader2 className="size-6 animate-spin" />
+                      <Loader2 className="animate-spin" />
                     ) : (
-                      <>
-                        <ShoppingCart className="mr-2 size-5" />
-                        {t('takeaway_place_order')}
-                      </>
+                      <ShoppingCart />
                     )}
+                    {t('takeaway_place_order')}
                   </Button>
                 </div>
               </div>
@@ -489,5 +424,81 @@ export const TakeawayPanel: FC<TakeawayPanelProps> = ({ t, compact }) => {
         </DialogContent>
       </Dialog>
     </>
+  )
+}
+
+function CategoryChip({
+  active,
+  label,
+  onClick,
+}: {
+  active: boolean
+  label: string
+  onClick: () => void
+}) {
+  return (
+    <Button
+      size="sm"
+      variant={active ? 'default' : 'secondary'}
+      aria-pressed={active}
+      className={cn(
+        'shrink-0 rounded-full font-medium',
+        active
+          ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+          : 'border border-[var(--separator)]',
+      )}
+      onClick={onClick}
+    >
+      {label}
+    </Button>
+  )
+}
+
+function MenuTile({
+  item,
+  qty,
+  onAdd,
+}: {
+  item: AdminMenuItemSummaryDTO
+  qty: number
+  onAdd: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onAdd}
+      className={cn(
+        'group relative flex cursor-pointer flex-col overflow-hidden rounded-[var(--radius-xl)] border text-left transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--system-blue)]',
+        LIST_CARD,
+        qty > 0
+          ? 'border-[var(--text-secondary)] ring-2 ring-[var(--text)]/20'
+          : 'border-[var(--separator)] hover:ring-1 hover:ring-[var(--text)]/15',
+      )}
+    >
+      <div className="aspect-[4/3] w-full overflow-hidden bg-[var(--surface-grouped)]">
+        {item.image_url ? (
+          <img src={item.image_url} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-[var(--text-tertiary)]">
+            <ImageOff className="size-8" />
+          </div>
+        )}
+      </div>
+      <div className="flex flex-1 flex-col p-3">
+        <div className="line-clamp-2 text-sm font-semibold leading-snug text-[var(--text)]">
+          {item.name}
+        </div>
+        <div className="mt-auto pt-2 text-sm font-bold tabular-nums text-[var(--text)]">
+          {item.has_variants && item.price_from_vnd != null
+            ? `${fmtVND(item.price_from_vnd)}+`
+            : fmtVND(item.base_price_vnd)}
+        </div>
+      </div>
+      {qty > 0 ? (
+        <Badge className="absolute right-2 top-2 min-w-6 justify-center px-1.5 tabular-nums">
+          {qty}
+        </Badge>
+      ) : null}
+    </button>
   )
 }

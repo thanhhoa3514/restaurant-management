@@ -1,5 +1,5 @@
-import { useMemo, useState, type FC } from 'react'
-import { ChevronRight, Search, Users } from 'lucide-react'
+import { useMemo, useState, type FC, type ReactNode } from 'react'
+import { BellRing, ChevronRight, Clock, Search, Users, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -25,6 +25,8 @@ interface SessionListProps {
   lang: Lang
   t: (key: string, ...args: Array<number | string>) => string
   onSelect: (id: string) => void
+  /* page-level actions parked in the toolbar so they sit with search/sort instead of the shell header */
+  actions?: ReactNode
 }
 
 export const SessionList: FC<SessionListProps> = ({
@@ -34,9 +36,13 @@ export const SessionList: FC<SessionListProps> = ({
   lang,
   t,
   onSelect,
+  actions,
 }) => {
   const [search, setSearch] = useState('')
   const [sortMode, setSortMode] = useState<SortMode>('newest')
+  const billRequestedCount = sessions.filter(
+    (session) => session.status === 'bill_requested',
+  ).length
 
   const filteredSessions = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -68,30 +74,52 @@ export const SessionList: FC<SessionListProps> = ({
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="space-y-3 border-b border-[var(--separator)] p-4 sm:p-6 bg-[var(--background)] z-10 sticky top-0 shadow-sm">
-        <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 size-5 -translate-y-1/2 text-[var(--text-tertiary)]" />
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder={t('search_placeholder')}
-            className="h-12 w-full rounded-[var(--radius-xl)] border-[var(--separator)] bg-[var(--surface-grouped)] pl-11 text-base font-medium"
-          />
+      <div className="sticky top-0 z-10 border-b border-[var(--separator)] bg-[var(--background)] p-4 sm:p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative sm:max-w-xs sm:flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--text-tertiary)]" />
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={t('search_placeholder')}
+              className="pl-9 pr-9"
+            />
+            {search ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={t('search_clear')}
+                className="absolute right-1 top-1/2 size-8 -translate-y-1/2 rounded-full text-[var(--text-tertiary)]"
+                onClick={() => setSearch('')}
+              >
+                <X className="size-4" />
+              </Button>
+            ) : null}
+          </div>
+          <Tabs
+            value={sortMode}
+            onValueChange={(value) => setSortMode(value as SortMode)}
+            className="shrink-0"
+          >
+            {/* same variant prefix as the base h-8 so tailwind-merge actually drops it */}
+            <TabsList className="group-data-horizontal/tabs:h-10 p-1">
+              <TabsTrigger value="newest" className="px-3">
+                <Clock />
+                {t('sort_newest')}
+              </TabsTrigger>
+              <TabsTrigger value="bill" className="px-3">
+                <BellRing />
+                {t('sort_bill')}
+                {billRequestedCount > 0 ? (
+                  <Badge variant="warning" className="px-1.5 tabular-nums">
+                    {billRequestedCount}
+                  </Badge>
+                ) : null}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          {actions ? <div className="sm:ml-auto">{actions}</div> : null}
         </div>
-        <Tabs
-          value={sortMode}
-          onValueChange={(value) => setSortMode(value as SortMode)}
-          className="w-full"
-        >
-          <TabsList className="w-full bg-[var(--surface-grouped)]">
-            <TabsTrigger value="newest" className="flex-1">
-              {t('sort_newest')}
-            </TabsTrigger>
-            <TabsTrigger value="bill" className="flex-1">
-              {t('sort_bill')}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[var(--surface-grouped)]">

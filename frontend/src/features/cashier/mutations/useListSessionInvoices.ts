@@ -6,5 +6,6 @@ export function useListSessionInvoices(diningSessionId: string | null) {
     queryKey: ['cashier', 'invoices', diningSessionId],
     queryFn: () => listSessionInvoices(diningSessionId!),
     enabled: !!diningSessionId,
+    refetchInterval: 8_000,
   })
 }
