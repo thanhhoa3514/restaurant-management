@@ -57,6 +57,7 @@ type InvoiceItemDTO struct {
 	ID                uuid.UUID  `json:"id"`
 	OrderItemID       *uuid.UUID `json:"order_item_id"`
 	NameSnapshot      string     `json:"name_snapshot"`
+	IsTakeaway        bool       `json:"is_takeaway"`
 	UnitPriceVND      int64      `json:"unit_price_vnd"`
 	Quantity          int        `json:"quantity"`
 	SubtotalVND       int64      `json:"subtotal_vnd"`
@@ -87,6 +88,7 @@ func toResponse(inv *domain.Invoice) InvoiceResponse {
 			ID:                item.ID,
 			OrderItemID:       item.OrderItemID,
 			NameSnapshot:      item.NameSnapshot,
+			IsTakeaway:        item.IsTakeaway,
 			UnitPriceVND:      item.UnitPriceVND,
 			Quantity:          item.Quantity,
 			SubtotalVND:       item.SubtotalVND,

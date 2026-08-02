@@ -46,6 +46,7 @@ function toWaiterItem(item: StaffOrderItemDTO, submittedAt: string): WFItem {
     status: item.status.toLowerCase() as WaiterItemStatus,
     status_history: statusHistory<WaiterItemStatus>(item.status_history, item.status, submittedAt),
     unit_price: item.unit_price_vnd,
+    is_takeaway: item.is_takeaway,
   }
 }
 

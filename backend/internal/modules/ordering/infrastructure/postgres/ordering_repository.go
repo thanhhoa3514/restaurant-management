@@ -862,7 +862,7 @@ type kitchenItemRow struct {
 func (r *Repository) fetchKitchenTicketItems(ctx context.Context, restaurantID uuid.UUID, ticketIDs []uuid.UUID) ([]kitchenItemRow, []uuid.UUID, error) {
 	rows, err := r.q(ctx).Query(ctx, `
 		SELECT kti.kitchen_ticket_id, kti.id, kti.order_item_id, oi.menu_item_id, oi.item_name_snapshot,
-		       oi.variant_name_snapshot, oi.quantity, oi.status, COALESCE(oi.note, '')
+		       oi.variant_name_snapshot, oi.quantity, oi.is_takeaway, oi.status, COALESCE(oi.note, '')
 		FROM kitchen_ticket_items kti
 		JOIN order_items oi ON oi.id = kti.order_item_id AND oi.restaurant_id = kti.restaurant_id AND oi.deleted_at IS NULL
 		WHERE kti.restaurant_id = $1 AND kti.kitchen_ticket_id = ANY($2) AND kti.status <> 'CANCELLED'
@@ -878,7 +878,7 @@ func (r *Repository) fetchKitchenTicketItems(ctx context.Context, restaurantID u
 	for rows.Next() {
 		var row kitchenItemRow
 		var variant pgtype.Text
-		if err := rows.Scan(&row.ticketID, &row.item.ID, &row.item.OrderItemID, &row.item.MenuItemID, &row.item.NameSnapshot, &variant, &row.item.Quantity, &row.item.Status, &row.item.Note); err != nil {
+		if err := rows.Scan(&row.ticketID, &row.item.ID, &row.item.OrderItemID, &row.item.MenuItemID, &row.item.NameSnapshot, &variant, &row.item.Quantity, &row.item.IsTakeaway, &row.item.Status, &row.item.Note); err != nil {
 			return nil, nil, err
 		}
 		if variant.Valid {

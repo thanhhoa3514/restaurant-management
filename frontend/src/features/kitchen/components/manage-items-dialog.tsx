@@ -139,6 +139,11 @@ const ManagedItem: FC<{
               }`}
             >
               {name}
+              {item.is_takeaway ? (
+                <Badge variant="warning" className="ml-2 rounded-full align-middle text-[10px]">
+                  {t('takeaway_badge')}
+                </Badge>
+              ) : null}
             </div>
             {options && <div className="mt-0.5 text-sm text-muted-foreground">{options}</div>}
             {item.notes && (

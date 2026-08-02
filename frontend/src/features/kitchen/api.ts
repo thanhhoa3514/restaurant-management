@@ -7,6 +7,7 @@ export interface KitchenTicketItemDTO {
   name_snapshot: string
   variant_name_snapshot: string | null
   quantity: number
+  is_takeaway: boolean
   status: string
   note: string
   options: Array<{

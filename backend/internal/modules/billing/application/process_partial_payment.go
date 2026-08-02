@@ -85,6 +85,7 @@ func (s *ProcessPartialPayment) Handle(ctx context.Context, in ProcessPartialPay
 				Payload: map[string]any{
 					"invoice_id":          invoice.ID,
 					"dining_session_id":   invoice.DiningSessionID,
+					"dining_session_ids":  paymentEventSessionIDs(invoice),
 					"payment_method_code": method.Code,
 					"amount_vnd":          paidAmount,
 					"running_paid_vnd":    invoice.PaidAmountVND,

@@ -20,6 +20,7 @@ export interface LineItem {
   qty: number
   unit_price_snapshot: number
   line_total: number
+  is_takeaway: boolean
   _order_id?: string
   _order_submitted_at?: Date
 }

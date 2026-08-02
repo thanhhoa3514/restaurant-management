@@ -1,4 +1,3 @@
-/* eslint-disable react-doctor/prefer-dynamic-import */
 import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer'
 import type { Ticket } from '@/features/kitchen/types'
 import { fmtHMS } from '@/features/kitchen/helpers'
@@ -139,7 +138,10 @@ export function KitchenTicketPDF({ ticket, now, lang }: KitchenTicketPDFProps) {
             <View key={item.id}>
               <View style={styles.itemRow}>
                 <Text style={styles.itemQty}>x{item.qty}</Text>
-                <Text style={styles.itemName}>{name}</Text>
+                <Text style={styles.itemName}>
+                  {name}
+                  {item.is_takeaway ? (lang === 'vi' ? ' · MANG VỀ' : ' · TAKEAWAY') : ''}
+                </Text>
                 <Text style={styles.itemStatus}>{item.status}</Text>
               </View>
               {options ? (

@@ -208,6 +208,7 @@ func (s *HandleWebhook) writePaymentCompleted(ctx context.Context, restaurantID 
 		Payload: map[string]any{
 			"invoice_id":          invoice.ID,
 			"dining_session_id":   invoice.DiningSessionID,
+			"dining_session_ids":  paymentEventSessionIDs(invoice),
 			"payment_id":          invoice.Payment.ID,
 			"payment_number":      invoice.Payment.PaymentNumber,
 			"payment_method_code": invoice.Payment.MethodCode,

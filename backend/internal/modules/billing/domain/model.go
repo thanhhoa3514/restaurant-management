@@ -61,6 +61,7 @@ type InvoiceItem struct {
 	InvoiceID         uuid.UUID
 	OrderItemID       *uuid.UUID
 	NameSnapshot      string
+	IsTakeaway        bool
 	UnitPriceVND      int64
 	Quantity          int
 	SubtotalVND       int64

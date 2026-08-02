@@ -155,6 +155,7 @@ func (s *ProcessPayment) writePaymentCompleted(ctx context.Context, invoice *dom
 		Payload: map[string]any{
 			"invoice_id":          invoice.ID,
 			"dining_session_id":   invoice.DiningSessionID,
+			"dining_session_ids":  paymentEventSessionIDs(invoice),
 			"payment_id":          invoice.Payment.ID,
 			"payment_method_code": invoice.Payment.MethodCode,
 			"amount_vnd":          invoice.Payment.AmountVND,
@@ -185,4 +186,17 @@ func (s *ProcessPayment) writePaymentCompleted(ctx context.Context, invoice *dom
 		}
 	}
 	return nil
+}
+
+func paymentEventSessionIDs(invoice *domain.Invoice) []uuid.UUID {
+	if invoice == nil {
+		return []uuid.UUID{}
+	}
+	if len(invoice.ClosedSessionIDs) > 0 {
+		return invoice.ClosedSessionIDs
+	}
+	if invoice.DiningSessionID != uuid.Nil {
+		return []uuid.UUID{invoice.DiningSessionID}
+	}
+	return []uuid.UUID{}
 }

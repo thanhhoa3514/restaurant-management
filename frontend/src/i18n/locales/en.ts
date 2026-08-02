@@ -469,6 +469,7 @@ export const en: LocaleDict = {
     takeaway_cart_empty_hint: 'Pick items from the menu',
     takeaway_remove: 'Remove',
     takeaway_cancel: 'Cancel',
+    takeaway_badge: 'Takeaway',
     today_short: '2024-11-27',
   },
   kitchen: {
@@ -525,6 +526,7 @@ export const en: LocaleDict = {
     cancel_reject: 'Reject',
     cancel_approved: 'Item cancellation approved',
     cancel_rejected: 'Cancel request rejected',
+    takeaway_badge: 'Takeaway',
   },
   waiter: {
     floor_view: 'Floor View',
@@ -622,6 +624,13 @@ export const en: LocaleDict = {
     takeaway_cart_empty_hint: 'Pick items from the menu',
     takeaway_remove: 'Remove',
     takeaway_cancel: 'Cancel',
+    takeaway_badge: 'Takeaway',
+    takeaway_add_to_table: 'Add takeaway items',
+    takeaway_for_table: (table: string) => `Takeaway items · ${table}`,
+    takeaway_added_to_table: 'Takeaway items added to table',
+    takeaway_bill_link: 'Pay with this table',
+    takeaway_bill_link_hint: 'Items go to the kitchen and are included in this table bill.',
+    takeaway_place_for_table: 'Add to table',
   },
   ordering: {
     restaurant: BRAND.name.en,

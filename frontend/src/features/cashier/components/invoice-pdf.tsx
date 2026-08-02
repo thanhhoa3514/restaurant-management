@@ -181,6 +181,7 @@ export const InvoicePDF = ({ session, t, lang }: InvoicePDFProps) => {
             <View key={item.id} style={styles.tableRow}>
               <Text style={[styles.colName, { paddingLeft: 4, fontFamily: 'Roboto-Bold' }]}>
                 {lang === 'vi' ? item.name_snapshot_vi : item.name_snapshot_en}
+                {item.is_takeaway ? ` · ${t('takeaway_badge')}` : ''}
               </Text>
               <Text style={styles.colQty}>{item.qty}</Text>
               <Text style={styles.colPrice}>{fmtVND(item.unit_price_snapshot)}</Text>

@@ -17,6 +17,7 @@ export interface WFItem {
   status: ItemStatus
   status_history: StatusHistoryEntry[]
   unit_price: number
+  is_takeaway: boolean
 }
 
 export interface WFOrder {

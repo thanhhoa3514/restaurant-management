@@ -470,6 +470,7 @@ export const vi: LocaleDict = {
     takeaway_cart_empty_hint: 'Chọn món từ thực đơn bên cạnh',
     takeaway_remove: 'Xóa',
     takeaway_cancel: 'Hủy',
+    takeaway_badge: 'Mang về',
     today_short: '27/11/2024',
   },
   kitchen: {
@@ -526,6 +527,7 @@ export const vi: LocaleDict = {
     cancel_reject: 'Từ chối',
     cancel_approved: 'Đã chấp nhận hủy món',
     cancel_rejected: 'Đã từ chối yêu cầu hủy',
+    takeaway_badge: 'Mang về',
   },
   waiter: {
     floor_view: 'Phòng phục vụ',
@@ -623,6 +625,13 @@ export const vi: LocaleDict = {
     takeaway_cart_empty_hint: 'Chọn món từ thực đơn bên cạnh',
     takeaway_remove: 'Xóa',
     takeaway_cancel: 'Hủy',
+    takeaway_badge: 'Mang về',
+    takeaway_add_to_table: 'Thêm món mang về',
+    takeaway_for_table: (table: string) => `Món mang về · ${table}`,
+    takeaway_added_to_table: 'Đã thêm món mang về vào bàn',
+    takeaway_bill_link: 'Thanh toán cùng bàn',
+    takeaway_bill_link_hint: 'Món sẽ vào bếp và được tính trong hóa đơn của bàn này.',
+    takeaway_place_for_table: 'Thêm vào bàn',
   },
   ordering: {
     restaurant: BRAND.name.vi,

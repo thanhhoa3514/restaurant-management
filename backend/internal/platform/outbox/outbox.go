@@ -240,8 +240,28 @@ func realtimeTopic(restaurantID uuid.UUID, payload any) realtime.Topic {
 		return topic
 	}
 	topic.SessionID = firstPayloadUUID(values, "session_id", "dining_session_id")
+	topic.SessionIDs = payloadUUIDs(values, "dining_session_ids")
 	topic.TableID = firstPayloadUUID(values, "table_id")
 	return topic
+}
+
+func payloadUUIDs(values map[string]any, key string) []uuid.UUID {
+	rawValues, ok := values[key].([]any)
+	if !ok {
+		return nil
+	}
+	ids := make([]uuid.UUID, 0, len(rawValues))
+	for _, raw := range rawValues {
+		value, ok := raw.(string)
+		if !ok {
+			continue
+		}
+		id, err := uuid.Parse(value)
+		if err == nil && id != uuid.Nil {
+			ids = append(ids, id)
+		}
+	}
+	return ids
 }
 
 func firstPayloadUUID(values map[string]any, keys ...string) uuid.UUID {

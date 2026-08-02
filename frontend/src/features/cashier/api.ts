@@ -28,6 +28,7 @@ export interface StaffTakeawayItemDTO {
   total_amount_vnd: number
   status: string
   station: string
+  is_takeaway: boolean
 }
 
 export interface StaffTakeawayResult {
@@ -47,4 +48,19 @@ export function placeStaffTakeawayOrder(input: StaffTakeawayInput): Promise<Staf
     method: 'POST',
     body: input,
   })
+}
+
+export type StaffSessionTakeawayInput = Pick<StaffTakeawayInput, 'items' | 'note'>
+
+export function addStaffSessionTakeawayItems(
+  sessionId: string,
+  input: StaffSessionTakeawayInput,
+): Promise<StaffTakeawayResult> {
+  return apiRequest<StaffTakeawayResult>(
+    `/api/v1/restaurant/sessions/${encodeURIComponent(sessionId)}/takeaway-items`,
+    {
+      method: 'POST',
+      body: input,
+    },
+  )
 }

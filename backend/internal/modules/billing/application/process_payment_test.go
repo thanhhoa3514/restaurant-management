@@ -30,6 +30,14 @@ func TestWritePaymentCompletedOnlyClosesSessionsReportedByTransaction(t *testing
 	if len(events.events) != 1 || events.events[0].EventType != "billing.payment_completed" {
 		t.Fatalf("an open split bill must not emit session closed: %+v", events.events)
 	}
+	payload, ok := events.events[0].Payload.(map[string]any)
+	if !ok {
+		t.Fatalf("payment event payload has type %T", events.events[0].Payload)
+	}
+	sessionIDs, ok := payload["dining_session_ids"].([]uuid.UUID)
+	if !ok || len(sessionIDs) != 1 || sessionIDs[0] != primaryID {
+		t.Fatalf("open bill payment audience = %#v, want primary session", payload["dining_session_ids"])
+	}
 
 	events.events = nil
 	invoice.ClosedSessionIDs = []uuid.UUID{primaryID, memberID}
@@ -41,6 +49,14 @@ func TestWritePaymentCompletedOnlyClosesSessionsReportedByTransaction(t *testing
 	}
 	if events.events[1].AggregateID != primaryID || events.events[2].AggregateID != memberID {
 		t.Fatalf("merged session events have wrong scope: %+v", events.events)
+	}
+	payload, ok = events.events[0].Payload.(map[string]any)
+	if !ok {
+		t.Fatalf("payment event payload has type %T", events.events[0].Payload)
+	}
+	sessionIDs, ok = payload["dining_session_ids"].([]uuid.UUID)
+	if !ok || len(sessionIDs) != 2 || sessionIDs[0] != primaryID || sessionIDs[1] != memberID {
+		t.Fatalf("closed merged bill audience = %#v", payload["dining_session_ids"])
 	}
 }
 

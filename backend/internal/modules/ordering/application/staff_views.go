@@ -117,6 +117,7 @@ type KitchenTicketItemDTO struct {
 	NameSnapshot        string           `json:"name_snapshot"`
 	VariantNameSnapshot *string          `json:"variant_name_snapshot"`
 	Quantity            int              `json:"quantity"`
+	IsTakeaway          bool             `json:"is_takeaway"`
 	Status              string           `json:"status"`
 	Note                string           `json:"note"`
 	Options             []StaffOptionDTO `json:"options"`

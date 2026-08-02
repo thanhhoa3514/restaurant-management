@@ -459,8 +459,10 @@ func (r *Repository) SplitInvoice(ctx context.Context, restaurantID uuid.UUID, i
 }
 
 func (r *Repository) ListSessionInvoices(ctx context.Context, restaurantID, diningSessionID uuid.UUID) ([]*domain.Invoice, error) {
-	// Bàn phụ trong nhóm gộp không giữ hoá đơn — trả hoá đơn của phiên chủ
-	primaryID, _, err := r.billingSessions(ctx, restaurantID, diningSessionID)
+	// Receipt reads deliberately keep the historical merge relationship after
+	// checkout. Payment deactivates the merge group but leaves merge_group_id on
+	// its closed sessions; an explicit split clears merge_group_id instead.
+	primaryID, err := r.billingPrimaryForRead(ctx, restaurantID, diningSessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -477,6 +479,30 @@ func (r *Repository) ListSessionInvoices(ctx context.Context, restaurantID, dini
 		invoices = append(invoices, invoice)
 	}
 	return invoices, nil
+}
+
+func (r *Repository) billingPrimaryForRead(ctx context.Context, restaurantID, diningSessionID uuid.UUID) (uuid.UUID, error) {
+	var primaryID uuid.UUID
+	err := r.q(ctx).QueryRow(ctx, `
+		SELECT member.id
+		FROM dining_sessions self
+		JOIN dining_sessions member
+		  ON member.restaurant_id = self.restaurant_id
+		 AND (
+		      (self.merge_group_id IS NULL AND member.id = self.id)
+		      OR (self.merge_group_id IS NOT NULL AND member.merge_group_id = self.merge_group_id)
+		 )
+		 AND member.deleted_at IS NULL
+		WHERE self.restaurant_id = $1
+		  AND self.id = $2
+		  AND self.deleted_at IS NULL
+		ORDER BY member.opened_at, member.id
+		LIMIT 1
+	`, restaurantID, diningSessionID).Scan(&primaryID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return uuid.Nil, apperr.New(apperr.CodeNotFound, "dining session not found")
+	}
+	return primaryID, err
 }
 
 func (r *Repository) ListPaidInvoices(ctx context.Context, restaurantID uuid.UUID, filter domain.PaidInvoiceFilter) (domain.PaidInvoicePage, error) {
@@ -1174,7 +1200,7 @@ func (r *Repository) AttachGatewayResult(ctx context.Context, restaurantID, paym
 func (r *Repository) FindWebhookPayment(ctx context.Context, gatewayTransactionID, orderRef string) (*domain.WebhookPayment, error) {
 	payment := &domain.WebhookPayment{}
 	err := r.q(ctx).QueryRow(ctx, `
-		SELECT id, restaurant_id, invoice_id, dining_session_id, payment_number, amount_vnd,
+		SELECT id, restaurant_id, invoice_id, COALESCE(dining_session_id, order_id), payment_number, amount_vnd,
 		       COALESCE(NULLIF(transaction_data->>'expected_webhook_amount_vnd', '')::bigint, amount_vnd),
 		       status
 		FROM payments
@@ -1716,7 +1742,7 @@ func (r *Repository) findProcessingPayment(ctx context.Context, restaurantID, in
 	var processed pgtype.Timestamptz
 	var raw []byte
 	err := r.q(ctx).QueryRow(ctx, `
-		SELECT p.id, p.invoice_id, p.dining_session_id, p.payment_number,
+		SELECT p.id, p.invoice_id, COALESCE(p.dining_session_id, p.order_id), p.payment_number,
 		       pm.code, pm.type, p.amount_vnd, COALESCE(p.received_amount_vnd, 0), p.change_amount_vnd,
 		       p.status, p.reference_code, p.gateway_transaction_id, COALESCE(p.transaction_data, '{}'::jsonb), p.processed_at
 		FROM payments p
@@ -1742,7 +1768,7 @@ func (r *Repository) findProcessingPayment(ctx context.Context, restaurantID, in
 func (r *Repository) lockPayment(ctx context.Context, restaurantID, paymentID uuid.UUID) (*domain.WebhookPayment, error) {
 	payment := &domain.WebhookPayment{}
 	err := r.q(ctx).QueryRow(ctx, `
-		SELECT id, restaurant_id, invoice_id, dining_session_id, payment_number, amount_vnd,
+		SELECT id, restaurant_id, invoice_id, COALESCE(dining_session_id, order_id), payment_number, amount_vnd,
 		       COALESCE(NULLIF(transaction_data->>'expected_webhook_amount_vnd', '')::bigint, amount_vnd),
 		       status
 		FROM payments
@@ -1862,6 +1888,7 @@ func (r *Repository) closeSessionAndFreeTable(ctx context.Context, restaurantID,
 type billableItem struct {
 	OrderItemID       uuid.UUID
 	NameSnapshot      string
+	IsTakeaway        bool
 	UnitPriceVND      int64
 	Quantity          int
 	SubtotalVND       int64
@@ -1871,7 +1898,7 @@ type billableItem struct {
 
 func (r *Repository) billableItems(ctx context.Context, restaurantID uuid.UUID, diningSessionIDs []uuid.UUID) ([]billableItem, int64, error) {
 	rows, err := r.q(ctx).Query(ctx, `
-		SELECT oi.id, oi.item_name_snapshot, oi.unit_price_vnd, oi.quantity,
+		SELECT oi.id, oi.item_name_snapshot, oi.is_takeaway, oi.unit_price_vnd, oi.quantity,
 		       oi.subtotal_vnd, oi.discount_amount_vnd, oi.total_amount_vnd
 		FROM order_items oi
 		JOIN orders o ON o.restaurant_id = oi.restaurant_id AND o.id = oi.order_id
@@ -1891,7 +1918,7 @@ func (r *Repository) billableItems(ctx context.Context, restaurantID uuid.UUID, 
 	var subtotal int64
 	for rows.Next() {
 		var item billableItem
-		if err := rows.Scan(&item.OrderItemID, &item.NameSnapshot, &item.UnitPriceVND, &item.Quantity, &item.SubtotalVND, &item.DiscountAmountVND, &item.TotalAmountVND); err != nil {
+		if err := rows.Scan(&item.OrderItemID, &item.NameSnapshot, &item.IsTakeaway, &item.UnitPriceVND, &item.Quantity, &item.SubtotalVND, &item.DiscountAmountVND, &item.TotalAmountVND); err != nil {
 			return nil, 0, err
 		}
 		subtotal += item.TotalAmountVND
@@ -1903,17 +1930,17 @@ func (r *Repository) billableItems(ctx context.Context, restaurantID uuid.UUID, 
 func (r *Repository) insertInvoiceItem(ctx context.Context, restaurantID, invoiceID uuid.UUID, item billableItem, displayOrder int) error {
 	_, err := r.q(ctx).Exec(ctx, `
 		INSERT INTO invoice_items (
-			restaurant_id, invoice_id, order_item_id, item_type, name_snapshot,
+			restaurant_id, invoice_id, order_item_id, item_type, name_snapshot, is_takeaway,
 			unit_price_vnd, quantity, subtotal_vnd, discount_amount_vnd, total_amount_vnd, display_order
 		)
-		VALUES ($1, $2, $3, 'MENU_ITEM', $4, $5, $6, $7, $8, $9, $10)
-	`, restaurantID, invoiceID, item.OrderItemID, item.NameSnapshot, item.UnitPriceVND, item.Quantity, item.SubtotalVND, item.DiscountAmountVND, item.TotalAmountVND, displayOrder)
+		VALUES ($1, $2, $3, 'MENU_ITEM', $4, $5, $6, $7, $8, $9, $10, $11)
+	`, restaurantID, invoiceID, item.OrderItemID, item.NameSnapshot, item.IsTakeaway, item.UnitPriceVND, item.Quantity, item.SubtotalVND, item.DiscountAmountVND, item.TotalAmountVND, displayOrder)
 	return err
 }
 
 func (r *Repository) loadInvoiceItems(ctx context.Context, restaurantID, invoiceID uuid.UUID) ([]domain.InvoiceItem, error) {
 	rows, err := r.q(ctx).Query(ctx, `
-		SELECT id, invoice_id, order_item_id, name_snapshot, unit_price_vnd, quantity,
+		SELECT id, invoice_id, order_item_id, name_snapshot, is_takeaway, unit_price_vnd, quantity,
 		       subtotal_vnd, discount_amount_vnd, total_amount_vnd
 		FROM invoice_items
 		WHERE restaurant_id = $1 AND invoice_id = $2
@@ -1927,7 +1954,7 @@ func (r *Repository) loadInvoiceItems(ctx context.Context, restaurantID, invoice
 	for rows.Next() {
 		var item domain.InvoiceItem
 		var orderItemID pgtype.UUID
-		if err := rows.Scan(&item.ID, &item.InvoiceID, &orderItemID, &item.NameSnapshot, &item.UnitPriceVND, &item.Quantity, &item.SubtotalVND, &item.DiscountAmountVND, &item.TotalAmountVND); err != nil {
+		if err := rows.Scan(&item.ID, &item.InvoiceID, &orderItemID, &item.NameSnapshot, &item.IsTakeaway, &item.UnitPriceVND, &item.Quantity, &item.SubtotalVND, &item.DiscountAmountVND, &item.TotalAmountVND); err != nil {
 			return nil, err
 		}
 		if orderItemID.Valid {
@@ -1945,7 +1972,7 @@ func (r *Repository) loadLatestPayment(ctx context.Context, restaurantID, invoic
 	var processed pgtype.Timestamptz
 	var raw []byte
 	err := r.q(ctx).QueryRow(ctx, `
-		SELECT p.id, p.invoice_id, p.dining_session_id, p.payment_number,
+		SELECT p.id, p.invoice_id, COALESCE(p.dining_session_id, p.order_id), p.payment_number,
 		       pm.code, pm.type, p.amount_vnd, COALESCE(p.received_amount_vnd, 0), p.change_amount_vnd,
 		       p.status, p.reference_code, p.gateway_transaction_id, COALESCE(p.transaction_data, '{}'::jsonb), p.processed_at
 		FROM payments p
@@ -1970,7 +1997,7 @@ func (r *Repository) loadLatestPayment(ctx context.Context, restaurantID, invoic
 
 func (r *Repository) loadInvoicePayments(ctx context.Context, restaurantID, invoiceID uuid.UUID) ([]domain.Payment, error) {
 	rows, err := r.q(ctx).Query(ctx, `
-		SELECT p.id, p.invoice_id, p.dining_session_id, p.payment_number,
+		SELECT p.id, p.invoice_id, COALESCE(p.dining_session_id, p.order_id), p.payment_number,
 		       pm.code, pm.type, p.amount_vnd, COALESCE(p.received_amount_vnd, 0), p.change_amount_vnd,
 		       p.status, p.reference_code, p.gateway_transaction_id, COALESCE(p.transaction_data, '{}'::jsonb), p.processed_at
 		FROM payments p

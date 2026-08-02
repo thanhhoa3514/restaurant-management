@@ -27,6 +27,10 @@ type Topic struct {
 	Role         string
 	TableID      uuid.UUID
 	SessionID    uuid.UUID
+	// SessionIDs is used only for event fan-out. Authenticated subscriptions use
+	// SessionID; keeping the audience list on the event topic lets staff receive
+	// one event while every guest session in a merged bill receives it too.
+	SessionIDs []uuid.UUID
 }
 type Event struct {
 	Type    string `json:"type"`
@@ -121,6 +125,11 @@ func matches(subscriber, event Topic, eventType string) bool {
 	if event.SessionID != uuid.Nil && subscriber.SessionID == event.SessionID {
 		return true
 	}
+	for _, sessionID := range event.SessionIDs {
+		if sessionID != uuid.Nil && subscriber.SessionID == sessionID {
+			return true
+		}
+	}
 	return event.TableID != uuid.Nil && subscriber.TableID == event.TableID
 }
 
@@ -141,7 +150,7 @@ func (h *Hub) writePump(s *subscription) {
 			}
 		case <-ticker.C:
 			topic, err := h.authenticate(s.authPayload)
-			if err != nil || topic != s.topic {
+			if err != nil || !sameSubscriptionTopic(topic, s.topic) {
 				return
 			}
 			if err := s.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
@@ -149,6 +158,13 @@ func (h *Hub) writePump(s *subscription) {
 			}
 		}
 	}
+}
+
+func sameSubscriptionTopic(a, b Topic) bool {
+	return a.RestaurantID == b.RestaurantID &&
+		a.Role == b.Role &&
+		a.TableID == b.TableID &&
+		a.SessionID == b.SessionID
 }
 
 func (h *Hub) readPump(s *subscription) {

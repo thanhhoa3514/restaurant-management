@@ -12,6 +12,7 @@ export interface KDSItem {
   options_text_vi: string
   options_text_en: string
   notes: string
+  is_takeaway: boolean
   status: ItemStatus
   status_history: StatusHistoryEntry[]
 }

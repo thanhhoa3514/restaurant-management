@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
+import { TakeawayPanel } from '@/features/cashier/components/takeaway-panel'
 import { wfFmtClock, wfFmtHMS, wfFmtMin, wfFmtVND } from '@/features/waiter/helpers'
 import { cn } from '@/lib/utils'
 import type { ItemStatus, Lang, WFItem, WFSession, WFTable } from '@/features/waiter/types'
@@ -36,6 +37,13 @@ interface ReadyItem {
   orderId: string
 }
 
+interface TableSheetState {
+  confirmBill: boolean
+  showOpenForm: boolean
+  guestCount: number
+  notes: string
+}
+
 export const TableSheet: FC<TableSheetProps> = ({
   open,
   table,
@@ -55,7 +63,7 @@ export const TableSheet: FC<TableSheetProps> = ({
   mergeSiblings,
 }) => {
   const [{ confirmBill, showOpenForm, guestCount, notes }, dispatch] = useReducer(
-    (s: any, a: any) => ({ ...s, ...a }),
+    (state: TableSheetState, patch: Partial<TableSheetState>) => ({ ...state, ...patch }),
     { confirmBill: false, showOpenForm: false, guestCount: 2, notes: '' },
   )
 
@@ -218,6 +226,16 @@ export const TableSheet: FC<TableSheetProps> = ({
                   {t('merge_split')}
                 </Button>
               )}
+              {!table.session?.bill_requested_at && (
+                <TakeawayPanel
+                  compact
+                  lang={lang}
+                  t={t}
+                  sessionId={table.session?.id}
+                  tableLabel={`${t('table')} ${table.code}`}
+                  className="max-sm:h-11 max-sm:flex-1"
+                />
+              )}
               {table.session?.bill_requested_at ? (
                 <Badge variant="default" className="shrink-0 rounded-full px-3 py-1.5">
                   {t('signal_bill')}
@@ -358,7 +376,7 @@ const OccupiedBody: FC<OccupiedBodyProps> = ({
                 <QuantityPill qty={item.qty} />
                 <div className="min-w-0 flex-1">
                   <div className="font-semibold leading-tight text-[var(--text)]">
-                    {lang === 'vi' ? item.name_vi : item.name_en}
+                    <ItemName item={item} lang={lang} t={t} />
                   </div>
                   <div className="mt-1 text-sm text-[var(--text-secondary)]">
                     {lang === 'vi' ? item.options_text_vi : item.options_text_en}
@@ -479,7 +497,7 @@ const OrderItemRow: FC<OrderItemRowProps> = ({ item, lang, t }) => {
             served ? 'text-[var(--text-tertiary)] line-through' : 'text-[var(--text)]',
           )}
         >
-          {lang === 'vi' ? item.name_vi : item.name_en}
+          <ItemName item={item} lang={lang} t={t} />
         </div>
         <div
           className={cn(
@@ -515,7 +533,7 @@ const PlacedItemRow: FC<PlacedItemRowProps> = ({ item, lang, t, onConfirm, onRej
         <QuantityPill qty={item.qty} />
         <div className="min-w-0 flex-1">
           <div className="font-semibold leading-tight text-[var(--text)]">
-            {lang === 'vi' ? item.name_vi : item.name_en}
+            <ItemName item={item} lang={lang} t={t} />
           </div>
           <div className="mt-1 text-sm text-[var(--text-secondary)]">
             {lang === 'vi' ? item.options_text_vi : item.options_text_en}
@@ -584,6 +602,21 @@ const QuantityPill: FC<{ qty: number; muted?: boolean }> = ({ qty, muted }) => (
     )}
   >
     ×{qty}
+  </span>
+)
+
+const ItemName: FC<{
+  item: WFItem
+  lang: Lang
+  t: (key: string, ...args: Array<string | number>) => string
+}> = ({ item, lang, t }) => (
+  <span className="inline-flex flex-wrap items-center gap-2">
+    <span>{lang === 'vi' ? item.name_vi : item.name_en}</span>
+    {item.is_takeaway ? (
+      <Badge variant="warning" className="rounded-full px-2 py-0 text-[10px] no-underline">
+        {t('takeaway_badge')}
+      </Badge>
+    ) : null}
   </span>
 )
 

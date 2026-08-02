@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input'
 import { useCategoriesQuery, useMenuItemsQuery } from '@/features/catalog/queries'
 import type { AdminMenuItemSummaryDTO, AdminCategoryDTO } from '@/features/catalog/types'
 import type { StaffTakeawayInput } from '@/features/cashier/api'
+import { useAddSessionTakeawayItems } from '@/features/cashier/mutations/useAddSessionTakeawayItems'
 import { usePlaceTakeawayOrder } from '@/features/cashier/mutations/usePlaceTakeawayOrder'
 import { fmtVND } from '@/features/cashier/helpers'
 import { LIST_CARD } from '@/features/cashier/components/panel-styles'
@@ -29,6 +30,8 @@ interface TakeawayPanelProps {
   lang: 'vi' | 'en'
   t: (key: string, ...args: Array<string | number>) => string
   compact?: boolean
+  sessionId?: string
+  tableLabel?: string
   /* trigger-button overrides — cashier drops the orange fill to sit in its neutral toolbar */
   className?: string
 }
@@ -42,10 +45,15 @@ interface CartLine {
   options: { option_id: string; quantity: number }[]
 }
 
-const SECTION_LABEL =
-  'text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]'
+const SECTION_LABEL = 'text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]'
 
-export const TakeawayPanel: FC<TakeawayPanelProps> = ({ t, compact, className }) => {
+export const TakeawayPanel: FC<TakeawayPanelProps> = ({
+  t,
+  compact,
+  className,
+  sessionId,
+  tableLabel,
+}) => {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [categoryId, setCategoryId] = useState<string | undefined>(undefined)
@@ -53,6 +61,14 @@ export const TakeawayPanel: FC<TakeawayPanelProps> = ({ t, compact, className })
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const takeawayMutation = usePlaceTakeawayOrder()
+  const sessionTakeawayMutation = useAddSessionTakeawayItems()
+  const isSessionTakeaway = Boolean(sessionId)
+  const isPending = isSessionTakeaway
+    ? sessionTakeawayMutation.isPending
+    : takeawayMutation.isPending
+  const panelTitle = isSessionTakeaway
+    ? t('takeaway_for_table', tableLabel ?? '')
+    : t('takeaway_order')
 
   const { data: categories = [], error: categoriesError } = useCategoriesQuery()
   const {
@@ -115,10 +131,7 @@ export const TakeawayPanel: FC<TakeawayPanelProps> = ({ t, compact, className })
     [cart],
   )
   /* lets a menu tile show what is already in the cart instead of a hover-only affordance */
-  const cartQty = useMemo(
-    () => new Map(cart.map((l) => [l.menu_item_id, l.quantity])),
-    [cart],
-  )
+  const cartQty = useMemo(() => new Map(cart.map((l) => [l.menu_item_id, l.quantity])), [cart])
 
   const reset = useCallback(() => {
     setCart([])
@@ -135,36 +148,60 @@ export const TakeawayPanel: FC<TakeawayPanelProps> = ({ t, compact, className })
 
   const handleSubmit = useCallback(() => {
     if (cart.length === 0) return
-    if (!customerName.trim()) {
+    if (!isSessionTakeaway && !customerName.trim()) {
       toast.error(t('takeaway_name_required'))
       return
     }
 
+    const items = cart.map((line) => ({
+      menu_item_id: line.menu_item_id,
+      quantity: line.quantity,
+      note: line.note,
+      options: line.options,
+    }))
+    const handleSuccess = (result: { order_number: string; total_vnd: number }) => {
+      toast.success(
+        isSessionTakeaway
+          ? `${t('takeaway_added_to_table')} — ${fmtVND(result.total_vnd)}`
+          : `${t('takeaway_order_placed')} #${result.order_number} — ${fmtVND(result.total_vnd)}`,
+      )
+      reset()
+      setOpen(false)
+    }
+    const handleError = (err: unknown) => {
+      toast.error(errorMessage(err, t('toast_takeaway_failed')), {
+        id: 'takeaway-create-error',
+      })
+    }
+
+    if (sessionId) {
+      sessionTakeawayMutation.mutate(
+        { sessionId, input: { items } },
+        { onSuccess: handleSuccess, onError: handleError },
+      )
+      return
+    }
+
     const input: StaffTakeawayInput = {
-      items: cart.map((l) => ({
-        menu_item_id: l.menu_item_id,
-        quantity: l.quantity,
-        note: l.note,
-        options: l.options,
-      })),
+      items,
       customer_name: customerName.trim(),
       customer_phone: customerPhone.trim(),
     }
     takeawayMutation.mutate(input, {
-      onSuccess: (result) => {
-        toast.success(
-          `${t('takeaway_order_placed')} #${result.order_number} — ${fmtVND(result.total_vnd)}`,
-        )
-        reset()
-        setOpen(false)
-      },
-      onError: (err) => {
-        toast.error(errorMessage(err, t('toast_takeaway_failed')), {
-          id: 'takeaway-create-error',
-        })
-      },
+      onSuccess: handleSuccess,
+      onError: handleError,
     })
-  }, [cart, customerName, customerPhone, t, reset, takeawayMutation])
+  }, [
+    cart,
+    customerName,
+    customerPhone,
+    isSessionTakeaway,
+    reset,
+    sessionId,
+    sessionTakeawayMutation,
+    t,
+    takeawayMutation,
+  ])
 
   return (
     <>
@@ -178,7 +215,7 @@ export const TakeawayPanel: FC<TakeawayPanelProps> = ({ t, compact, className })
         onClick={() => setOpen(true)}
       >
         <ShoppingCart className={compact ? 'size-4' : 'size-5'} />
-        {t('takeaway_order')}
+        {isSessionTakeaway ? t('takeaway_add_to_table') : t('takeaway_order')}
       </Button>
 
       <Dialog
@@ -192,7 +229,7 @@ export const TakeawayPanel: FC<TakeawayPanelProps> = ({ t, compact, className })
           showCloseButton={false}
           className="max-h-[95dvh] w-[95vw] sm:max-w-[95vw] md:max-w-5xl lg:max-w-6xl xl:max-w-7xl gap-0 overflow-hidden rounded-3xl p-0 shadow-2xl border border-[var(--separator)] bg-[var(--background)]"
         >
-          <DialogTitle className="sr-only">{t('takeaway_order')}</DialogTitle>
+          <DialogTitle className="sr-only">{panelTitle}</DialogTitle>
           <div className="flex h-[90dvh] flex-col md:flex-row">
             {/* LEFT PANEL: menu */}
             <div className="flex min-h-0 flex-1 flex-col bg-[var(--background)]">
@@ -200,7 +237,7 @@ export const TakeawayPanel: FC<TakeawayPanelProps> = ({ t, compact, className })
                 <div className="flex items-center gap-2.5">
                   <ShoppingBag className="size-5 text-[var(--text-secondary)]" />
                   <h2 className="text-lg font-semibold tracking-tight text-[var(--text)]">
-                    {t('takeaway_order')}
+                    {panelTitle}
                   </h2>
                 </div>
                 <Button
@@ -305,20 +342,29 @@ export const TakeawayPanel: FC<TakeawayPanelProps> = ({ t, compact, className })
                 </Button>
               </div>
 
-              <div className="space-y-2 border-b border-[var(--separator)] px-5 py-4">
-                <div className={SECTION_LABEL}>{t('takeaway_customer_info')}</div>
-                <Input
-                  placeholder={t('takeaway_customer_name')}
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                />
-                <Input
-                  placeholder={t('takeaway_customer_phone')}
-                  inputMode="tel"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                />
-              </div>
+              {isSessionTakeaway ? (
+                <div className="border-b border-[var(--separator)] px-5 py-4">
+                  <div className={SECTION_LABEL}>{t('takeaway_bill_link')}</div>
+                  <p className="mt-1 text-sm leading-5 text-[var(--text-secondary)]">
+                    {t('takeaway_bill_link_hint')}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2 border-b border-[var(--separator)] px-5 py-4">
+                  <div className={SECTION_LABEL}>{t('takeaway_customer_info')}</div>
+                  <Input
+                    placeholder={t('takeaway_customer_name')}
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                  />
+                  <Input
+                    placeholder={t('takeaway_customer_phone')}
+                    inputMode="tel"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                  />
+                </div>
+              )}
 
               <div className="flex-1 overflow-y-auto px-5 py-4">
                 {cart.length === 0 ? (
@@ -406,16 +452,12 @@ export const TakeawayPanel: FC<TakeawayPanelProps> = ({ t, compact, className })
                   <Button
                     className="h-11 flex-[2] rounded-[12px] bg-primary text-primary-foreground hover:bg-primary/90"
                     disabled={
-                      cart.length === 0 || !customerName.trim() || takeawayMutation.isPending
+                      cart.length === 0 || (!isSessionTakeaway && !customerName.trim()) || isPending
                     }
                     onClick={handleSubmit}
                   >
-                    {takeawayMutation.isPending ? (
-                      <Loader2 className="animate-spin" />
-                    ) : (
-                      <ShoppingCart />
-                    )}
-                    {t('takeaway_place_order')}
+                    {isPending ? <Loader2 className="animate-spin" /> : <ShoppingCart />}
+                    {isSessionTakeaway ? t('takeaway_place_for_table') : t('takeaway_place_order')}
                   </Button>
                 </div>
               </div>

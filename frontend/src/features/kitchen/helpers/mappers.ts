@@ -69,6 +69,7 @@ function toKdsItem(item: KitchenTicketDTO['items'][number], submittedAt: string)
     options_text_vi: opts,
     options_text_en: opts,
     notes: item.note,
+    is_takeaway: item.is_takeaway,
     status: item.status.toLowerCase() as KdsItemStatus,
     status_history: statusHistory<KdsItemStatus>(item.status_history, item.status, submittedAt),
   }

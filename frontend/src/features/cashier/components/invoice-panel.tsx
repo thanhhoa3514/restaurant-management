@@ -155,6 +155,14 @@ export const InvoicePanel: FC<InvoicePanelProps> = ({
                       <div className="min-w-0">
                         <div className="font-semibold text-[var(--text)]">
                           {lang === 'vi' ? item.name_snapshot_vi : item.name_snapshot_en}
+                          {item.is_takeaway ? (
+                            <Badge
+                              variant="warning"
+                              className="ml-2 rounded-full px-2 py-0 align-middle text-[10px]"
+                            >
+                              {t('takeaway_badge')}
+                            </Badge>
+                          ) : null}
                         </div>
                         <div className="text-sm text-[var(--text-tertiary)]">
                           {lang === 'vi' ? item.options_text_vi : item.options_text_en}

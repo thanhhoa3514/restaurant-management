@@ -109,7 +109,17 @@ func TestTopicMatchingIsTenantAndGuestSessionScoped(t *testing.T) {
 	require.True(t, matches(staff, Topic{RestaurantID: restaurantID}, "billing.payment_completed"))
 	require.False(t, matches(staff, Topic{RestaurantID: otherRestaurantID}, "ordering.order_placed"))
 	require.True(t, matches(guest, Topic{RestaurantID: restaurantID, SessionID: sessionID}, "ordering.item_status_updated"))
+	require.True(t, matches(guest, Topic{RestaurantID: restaurantID, SessionIDs: []uuid.UUID{uuid.New(), sessionID}}, "billing.payment_completed"))
 	require.True(t, matches(guest, Topic{RestaurantID: restaurantID}, "catalog.item_updated"))
 	require.False(t, matches(guest, Topic{RestaurantID: restaurantID, SessionID: uuid.New()}, "ordering.item_status_updated"))
 	require.False(t, matches(guest, Topic{RestaurantID: otherRestaurantID, TableID: tableID}, "dining.waiter_called"))
+}
+
+func TestSameSubscriptionTopicIgnoresEventAudience(t *testing.T) {
+	restaurantID := uuid.New()
+	sessionID := uuid.New()
+	base := Topic{RestaurantID: restaurantID, Role: "GUEST", SessionID: sessionID}
+	withAudience := base
+	withAudience.SessionIDs = []uuid.UUID{sessionID, uuid.New()}
+	require.True(t, sameSubscriptionTopic(base, withAudience))
 }

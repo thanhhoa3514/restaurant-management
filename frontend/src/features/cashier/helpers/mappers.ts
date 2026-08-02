@@ -27,6 +27,7 @@ function toLineItem(item: StaffOrderItemDTO): LineItem {
     qty: item.quantity,
     unit_price_snapshot: item.unit_price_vnd,
     line_total: item.total_amount_vnd,
+    is_takeaway: item.is_takeaway,
     _order_id: item.order_id,
   }
 }
@@ -42,6 +43,7 @@ export function toInvoiceItem(item: BillingInvoiceItemDTO): LineItem {
     qty: item.quantity,
     unit_price_snapshot: item.unit_price_vnd,
     line_total: item.total_amount_vnd,
+    is_takeaway: item.is_takeaway,
   }
 }
 

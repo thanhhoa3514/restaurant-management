@@ -216,6 +216,7 @@ export const ReceiptDialog: FC<ReceiptDialogProps> = ({ open, session, t, lang, 
                         )}
                       >
                         {lang === 'vi' ? item.name_snapshot_vi : item.name_snapshot_en}
+                        {item.is_takeaway ? ` · ${t('takeaway_badge')}` : ''}
                       </div>
                       <div className="text-[11px] text-zinc-500 mt-0.5">
                         {item.qty} × {fmtVND(item.unit_price_snapshot)}

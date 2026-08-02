@@ -208,6 +208,11 @@ const ItemRow: FC<{ item: KDSItem; lang: Lang; t: TicketCardProps['t'] }> = ({ i
             }`}
           >
             {name}
+            {item.is_takeaway ? (
+              <span className="ml-2 inline-flex rounded-full bg-orange-100 px-2 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wide text-orange-700 no-underline dark:bg-orange-500/15 dark:text-orange-300">
+                {t('takeaway_badge' as KdsKey)}
+              </span>
+            ) : null}
           </div>
           {options && (
             <div className={`mt-1 text-[13px] font-medium leading-snug ${surface.textMuted}`}>

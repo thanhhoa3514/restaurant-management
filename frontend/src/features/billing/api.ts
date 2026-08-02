@@ -4,6 +4,7 @@ export interface BillingInvoiceItemDTO {
   id: string
   order_item_id: string | null
   name_snapshot: string
+  is_takeaway: boolean
   unit_price_vnd: number
   quantity: number
   subtotal_vnd: number
