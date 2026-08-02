@@ -26,6 +26,7 @@ type fakeRepo struct {
 	activeErr     error
 	tablesWithQR  []domain.TableWithQR
 	deactivated   bool
+	abandoned     bool
 	createdQR     *domain.QRCode
 	createQRErr   error
 
@@ -33,6 +34,8 @@ type fakeRepo struct {
 	updatedTable   *domain.Table
 	deletedTableID uuid.UUID
 	savedPositions []domain.TablePosition
+
+	devices []*domain.SessionDevice
 }
 
 func (r *fakeRepo) FindTable(context.Context, uuid.UUID, uuid.UUID) (*domain.Table, error) {
@@ -104,12 +107,6 @@ func (r *fakeRepo) SoftDeleteTable(_ context.Context, _, tableID uuid.UUID) erro
 	r.deletedTableID = tableID
 	return nil
 }
-func (r *fakeRepo) UpdateSessionCustomerName(_ context.Context, sessionID uuid.UUID, name string) error {
-	if r.activeSession != nil && r.activeSession.ID == sessionID {
-		r.activeSession.CustomerName = name
-	}
-	return nil
-}
 func (r *fakeRepo) CloseSession(context.Context, uuid.UUID, uuid.UUID, *uuid.UUID) (*domain.DiningSession, bool, error) {
 	if r.activeErr != nil {
 		return nil, false, r.activeErr
@@ -119,6 +116,19 @@ func (r *fakeRepo) CloseSession(context.Context, uuid.UUID, uuid.UUID, *uuid.UUI
 	}
 	r.activeSession.Status = domain.SessionClosed
 	return r.activeSession, true, nil
+}
+func (r *fakeRepo) AbandonPendingSession(_ context.Context, _, sessionID uuid.UUID, actorID *uuid.UUID) error {
+	r.abandoned = true
+	if r.activeSession != nil {
+		r.activeSession.Status = domain.SessionClosed
+	}
+	for _, device := range r.devices {
+		if device.SessionID == sessionID && device.Status == domain.DevicePending {
+			device.Status = domain.DeviceRejected
+			device.ApprovedBy = actorID
+		}
+	}
+	return nil
 }
 func (r *fakeRepo) DeactivateActiveQR(context.Context, uuid.UUID, uuid.UUID, *uuid.UUID, string) error {
 	r.deactivated = true
@@ -160,6 +170,61 @@ func (r *fakeRepo) VerifySession(_ context.Context, _, _ uuid.UUID, _ *uuid.UUID
 	}
 	r.activeSession.Status = domain.SessionActive
 	return nil
+}
+
+func (r *fakeRepo) CreateSessionDevice(_ context.Context, d *domain.SessionDevice) error {
+	d.ID = uuid.New()
+	r.devices = append(r.devices, d)
+	return nil
+}
+func (r *fakeRepo) FindSessionDevice(_ context.Context, sessionID uuid.UUID, deviceID string) (*domain.SessionDevice, error) {
+	for _, d := range r.devices {
+		if d.SessionID == sessionID && d.DeviceID == deviceID {
+			return d, nil
+		}
+	}
+	return nil, apperr.New(apperr.CodeNotFound, "device not found")
+}
+func (r *fakeRepo) FindSessionDeviceByID(_ context.Context, _, rowID uuid.UUID) (*domain.SessionDevice, error) {
+	for _, d := range r.devices {
+		if d.ID == rowID {
+			return d, nil
+		}
+	}
+	return nil, apperr.New(apperr.CodeNotFound, "device not found")
+}
+func (r *fakeRepo) FindDeviceByToken(_ context.Context, token string) (*domain.SessionDevice, error) {
+	for _, d := range r.devices {
+		if d.SessionToken == token {
+			return d, nil
+		}
+	}
+	return nil, apperr.New(apperr.CodeNotFound, "device not found")
+}
+func (r *fakeRepo) FindPendingDevices(_ context.Context, _ uuid.UUID) ([]domain.PendingDeviceDTO, error) {
+	out := make([]domain.PendingDeviceDTO, 0)
+	for _, d := range r.devices {
+		if d.Status == domain.DevicePending {
+			out = append(out, domain.PendingDeviceDTO{DeviceID: d.ID, SessionID: d.SessionID, TableID: d.RestaurantID, GuestName: d.GuestName, IsOwner: d.IsOwner})
+		}
+	}
+	return out, nil
+}
+func (r *fakeRepo) SetDeviceStatus(_ context.Context, _, rowID uuid.UUID, status domain.DeviceStatus, actorID *uuid.UUID) (*domain.SessionDevice, error) {
+	for _, d := range r.devices {
+		if d.ID == rowID {
+			if d.Status != domain.DevicePending {
+				return nil, apperr.New(apperr.CodeConflict, "device is not pending")
+			}
+			d.Status = status
+			d.ApprovedBy = actorID
+			return d, nil
+		}
+	}
+	return nil, apperr.New(apperr.CodeNotFound, "device not found")
+}
+func (r *fakeRepo) FindListTableTest(_ context.Context, _ uuid.UUID) ([]domain.ListTableTest, error) {
+	return nil, nil
 }
 
 func (r *fakeRepo) CreateQR(_ context.Context, qr *domain.QRCode) error {
@@ -221,35 +286,95 @@ func TestJoinSession(t *testing.T) {
 	rid := uuid.New()
 	tableID := uuid.New()
 	qr := &domain.QRCode{ID: uuid.New(), RestaurantID: rid, TableID: tableID, Token: "qr", IsActive: true}
-	session := &domain.DiningSession{ID: uuid.New(), RestaurantID: rid, TableID: tableID, SessionToken: "shared-token", Status: domain.SessionActive}
+	newActive := func() *domain.DiningSession {
+		return &domain.DiningSession{ID: uuid.New(), RestaurantID: rid, TableID: tableID, SessionToken: "shared-token", Status: domain.SessionActive}
+	}
 
-	t.Run("active session returns token", func(t *testing.T) {
-		outbox := &fakeDiningOutbox{}
-		svc := NewJoinSession(fakeTx{}, &fakeRepo{activeQR: qr, activeSession: session}, outbox)
-		out, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "qr", IPHash: "ip1", UserAgent: "ua", TraceID: "trace"})
-		require.NoError(t, err)
-		require.Equal(t, "shared-token", out.SessionToken)
-		require.Equal(t, session.ID, *out.SessionID)
-		require.Equal(t, string(domain.SessionActive), out.Status)
-		require.Len(t, outbox.writes, 1)
-		require.Equal(t, "dining.qr_scanned", outbox.writes[0].EventType)
-		require.Equal(t, "qr_code", outbox.writes[0].AggregateType)
-		require.Equal(t, qr.ID, outbox.writes[0].AggregateID)
-		require.Equal(t, "qr_scan:"+qr.ID.String()+":"+session.ID.String(), outbox.writes[0].DedupeKey)
+	t.Run("missing device_id is invalid", func(t *testing.T) {
+		svc := NewJoinSession(fakeTx{}, &fakeRepo{activeQR: qr, activeSession: newActive()}, nil)
+		_, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "qr"})
+		require.True(t, apperr.Is(err, apperr.CodeInvalid))
 	})
 
-	t.Run("repeated join returns same token", func(t *testing.T) {
-		repo := &fakeRepo{activeQR: qr, activeSession: session}
-		svc := NewJoinSession(fakeTx{}, repo, nil)
-		first, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "qr"})
+	t.Run("unknown device on active session waits for waiter", func(t *testing.T) {
+		repo := &fakeRepo{activeQR: qr, activeSession: newActive()}
+		outbox := &fakeDiningOutbox{}
+		svc := NewJoinSession(fakeTx{}, repo, outbox)
+		out, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "qr", DeviceID: "devA", GuestName: "Friend", IPHash: "ip1"})
 		require.NoError(t, err)
-		second, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "qr"})
+		// A shared link never gets an instant seat: unknown device is PENDING.
+		require.Equal(t, "PENDING_VERIFICATION", out.Status)
+		require.NotEmpty(t, out.SessionToken)
+		require.NotEqual(t, "shared-token", out.SessionToken)
+		require.Len(t, repo.devices, 1)
+		require.Equal(t, domain.DevicePending, repo.devices[0].Status)
+		require.False(t, repo.devices[0].IsOwner)
+		require.Len(t, outbox.writes, 1)
+		require.Equal(t, "pending_device", outbox.writes[0].Payload.(map[string]any)["outcome"])
+	})
+
+	t.Run("approved device on active session enters immediately", func(t *testing.T) {
+		session := newActive()
+		repo := &fakeRepo{
+			activeQR:      qr,
+			activeSession: session,
+			devices: []*domain.SessionDevice{{
+				ID: uuid.New(), RestaurantID: rid, SessionID: session.ID,
+				DeviceID: "devA", Status: domain.DeviceApproved, SessionToken: "tok-A",
+			}},
+		}
+		svc := NewJoinSession(fakeTx{}, repo, nil)
+		out, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "qr", DeviceID: "devA", ResumeToken: "tok-A"})
+		require.NoError(t, err)
+		require.Equal(t, string(domain.SessionActive), out.Status)
+		require.Equal(t, "tok-A", out.SessionToken)
+		require.Len(t, repo.devices, 1) // no new device row
+	})
+
+	t.Run("repeated join by same device returns same token, still pending", func(t *testing.T) {
+		repo := &fakeRepo{activeQR: qr, activeSession: newActive()}
+		svc := NewJoinSession(fakeTx{}, repo, nil)
+		first, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "qr", DeviceID: "devA"})
+		require.NoError(t, err)
+		second, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "qr", DeviceID: "devA", ResumeToken: first.SessionToken})
 		require.NoError(t, err)
 		require.Equal(t, first.SessionToken, second.SessionToken)
-		require.Equal(t, *first.SessionID, *second.SessionID)
+		require.Equal(t, "PENDING_VERIFICATION", second.Status)
+		require.Len(t, repo.devices, 1)
 	})
 
-	t.Run("no active session creates PENDING_VERIFICATION", func(t *testing.T) {
+	t.Run("known device id without its token cannot recover credential", func(t *testing.T) {
+		session := newActive()
+		repo := &fakeRepo{
+			activeQR:      qr,
+			activeSession: session,
+			devices: []*domain.SessionDevice{{
+				ID: uuid.New(), RestaurantID: rid, SessionID: session.ID,
+				DeviceID: "devA", Status: domain.DeviceApproved, SessionToken: "tok-A",
+			}},
+		}
+		svc := NewJoinSession(fakeTx{}, repo, nil)
+		out, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "qr", DeviceID: "devA"})
+		require.True(t, apperr.Is(err, apperr.CodeUnauthorized))
+		require.Empty(t, out.SessionToken)
+	})
+
+	t.Run("rejected device cannot rejoin", func(t *testing.T) {
+		session := newActive()
+		repo := &fakeRepo{
+			activeQR:      qr,
+			activeSession: session,
+			devices: []*domain.SessionDevice{{
+				ID: uuid.New(), RestaurantID: rid, SessionID: session.ID,
+				DeviceID: "devA", Status: domain.DeviceRejected, SessionToken: "tok-A",
+			}},
+		}
+		svc := NewJoinSession(fakeTx{}, repo, nil)
+		_, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "qr", DeviceID: "devA"})
+		require.True(t, apperr.Is(err, apperr.CodeForbidden))
+	})
+
+	t.Run("no active session creates PENDING owner device", func(t *testing.T) {
 		repo := &fakeRepo{
 			activeQR:  qr,
 			activeErr: apperr.New(apperr.CodeNotFound, "none"),
@@ -257,19 +382,19 @@ func TestJoinSession(t *testing.T) {
 		}
 		outbox := &fakeDiningOutbox{}
 		svc := NewJoinSession(fakeTx{}, repo, outbox)
-		out, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "qr", GuestName: "Nguyen Van A", IPHash: "ip1"})
+		out, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "qr", DeviceID: "devA", GuestName: "Nguyen Van A", IPHash: "ip1"})
 		require.NoError(t, err)
 		require.Equal(t, "PENDING_VERIFICATION", out.Status)
 		require.NotEmpty(t, out.SessionToken)
-		require.NotNil(t, out.SessionID)
-		require.NotNil(t, out.TableID)
 		require.Equal(t, "T01", out.TableCode)
 		require.Equal(t, "Bàn 1", out.TableName)
 		require.NotNil(t, repo.created)
 		require.Equal(t, domain.SessionPendingVerification, repo.created.Status)
 		require.Equal(t, "Nguyen Van A", repo.created.CustomerName)
+		require.Len(t, repo.devices, 1)
+		require.True(t, repo.devices[0].IsOwner)
+		require.Equal(t, "Nguyen Van A", repo.devices[0].GuestName)
 		require.Len(t, outbox.writes, 1)
-		require.Equal(t, "dining.qr_scanned", outbox.writes[0].EventType)
 		require.Equal(t, "pending_verification", outbox.writes[0].Payload.(map[string]any)["outcome"])
 	})
 
@@ -277,7 +402,7 @@ func TestJoinSession(t *testing.T) {
 		revokedQR := &domain.QRCode{ID: uuid.New(), RestaurantID: rid, TableID: tableID, Token: "old", IsActive: false}
 		outbox := &fakeDiningOutbox{}
 		svc := NewJoinSession(fakeTx{}, &fakeRepo{activeQR: revokedQR}, outbox)
-		_, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "old", IPHash: "ip2"})
+		_, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "old", DeviceID: "devA", IPHash: "ip2"})
 		require.True(t, apperr.Is(err, apperr.CodeUnauthorized))
 		require.Len(t, outbox.writes, 1)
 		require.Equal(t, "qr_scan:"+revokedQR.ID.String()+":invalid_or_revoked:ip2", outbox.writes[0].DedupeKey)
@@ -286,10 +411,102 @@ func TestJoinSession(t *testing.T) {
 	t.Run("unknown qr unauthorized", func(t *testing.T) {
 		outbox := &fakeDiningOutbox{}
 		svc := NewJoinSession(fakeTx{}, &fakeRepo{resolveErr: apperr.New(apperr.CodeNotFound, "missing")}, outbox)
-		_, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "bad"})
+		_, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "bad", DeviceID: "devA"})
 		require.True(t, apperr.Is(err, apperr.CodeUnauthorized))
 		require.Empty(t, outbox.writes)
 	})
+}
+
+func TestApproveDevice(t *testing.T) {
+	rid := uuid.New()
+	tableID := uuid.New()
+	actor := uuid.New()
+
+	t.Run("approving owner device activates the session", func(t *testing.T) {
+		session := &domain.DiningSession{ID: uuid.New(), RestaurantID: rid, TableID: tableID, Status: domain.SessionPendingVerification}
+		dev := &domain.SessionDevice{ID: uuid.New(), RestaurantID: rid, SessionID: session.ID, DeviceID: "devA", Status: domain.DevicePending, IsOwner: true}
+		repo := &fakeRepo{activeSession: session, devices: []*domain.SessionDevice{dev}}
+		outbox := &fakeDiningOutbox{}
+		svc := NewApproveDevice(fakeTx{}, repo, outbox, rid)
+		out, err := svc.Handle(context.Background(), ApproveDeviceRequest{DeviceID: dev.ID, ActorID: actor, Action: "approve"})
+		require.NoError(t, err)
+		require.Equal(t, string(domain.DeviceApproved), out.Status)
+		require.Equal(t, domain.SessionActive, session.Status)
+		require.Equal(t, "dining.session_verified", outbox.writes[0].EventType)
+	})
+
+	t.Run("approving a later device does not reset the active session", func(t *testing.T) {
+		session := &domain.DiningSession{ID: uuid.New(), RestaurantID: rid, TableID: tableID, Status: domain.SessionActive}
+		dev := &domain.SessionDevice{ID: uuid.New(), RestaurantID: rid, SessionID: session.ID, DeviceID: "devB", Status: domain.DevicePending, IsOwner: false}
+		repo := &fakeRepo{activeSession: session, devices: []*domain.SessionDevice{dev}}
+		outbox := &fakeDiningOutbox{}
+		svc := NewApproveDevice(fakeTx{}, repo, outbox, rid)
+		_, err := svc.Handle(context.Background(), ApproveDeviceRequest{DeviceID: dev.ID, ActorID: actor, Action: "approve"})
+		require.NoError(t, err)
+		require.Equal(t, domain.SessionActive, session.Status) // never returns to PENDING
+		require.Equal(t, "dining.device_approved", outbox.writes[0].EventType)
+	})
+
+	t.Run("non-owner cannot activate a pending session", func(t *testing.T) {
+		session := &domain.DiningSession{ID: uuid.New(), RestaurantID: rid, TableID: tableID, Status: domain.SessionPendingVerification}
+		dev := &domain.SessionDevice{ID: uuid.New(), RestaurantID: rid, SessionID: session.ID, DeviceID: "devB", Status: domain.DevicePending, IsOwner: false}
+		repo := &fakeRepo{activeSession: session, devices: []*domain.SessionDevice{dev}}
+		svc := NewApproveDevice(fakeTx{}, repo, &fakeDiningOutbox{}, rid)
+		_, err := svc.Handle(context.Background(), ApproveDeviceRequest{DeviceID: dev.ID, ActorID: actor, Action: "approve"})
+		require.True(t, apperr.Is(err, apperr.CodeConflict))
+		require.Equal(t, domain.DevicePending, dev.Status)
+		require.Equal(t, domain.SessionPendingVerification, session.Status)
+	})
+
+	for _, action := range []string{"", "rejcet", "allow"} {
+		t.Run("invalid action "+action, func(t *testing.T) {
+			session := &domain.DiningSession{ID: uuid.New(), RestaurantID: rid, TableID: tableID, Status: domain.SessionPendingVerification}
+			dev := &domain.SessionDevice{ID: uuid.New(), RestaurantID: rid, SessionID: session.ID, Status: domain.DevicePending, IsOwner: true}
+			repo := &fakeRepo{activeSession: session, devices: []*domain.SessionDevice{dev}}
+			svc := NewApproveDevice(fakeTx{}, repo, nil, rid)
+			_, err := svc.Handle(context.Background(), ApproveDeviceRequest{DeviceID: dev.ID, ActorID: actor, Action: action})
+			require.True(t, apperr.Is(err, apperr.CodeInvalid))
+			require.Equal(t, domain.DevicePending, dev.Status)
+		})
+	}
+
+	t.Run("reject marks the device rejected", func(t *testing.T) {
+		session := &domain.DiningSession{ID: uuid.New(), RestaurantID: rid, TableID: tableID, Status: domain.SessionActive}
+		dev := &domain.SessionDevice{ID: uuid.New(), RestaurantID: rid, SessionID: session.ID, DeviceID: "devB", Status: domain.DevicePending}
+		repo := &fakeRepo{activeSession: session, devices: []*domain.SessionDevice{dev}}
+		svc := NewApproveDevice(fakeTx{}, repo, &fakeDiningOutbox{}, rid)
+		out, err := svc.Handle(context.Background(), ApproveDeviceRequest{DeviceID: dev.ID, ActorID: actor, Action: "reject"})
+		require.NoError(t, err)
+		require.Equal(t, string(domain.DeviceRejected), out.Status)
+		require.Equal(t, domain.DeviceRejected, dev.Status)
+	})
+
+	t.Run("rejecting owner of a pending table abandons the session", func(t *testing.T) {
+		session := &domain.DiningSession{ID: uuid.New(), RestaurantID: rid, TableID: tableID, Status: domain.SessionPendingVerification}
+		dev := &domain.SessionDevice{ID: uuid.New(), RestaurantID: rid, SessionID: session.ID, DeviceID: "devA", Status: domain.DevicePending, IsOwner: true}
+		other := &domain.SessionDevice{ID: uuid.New(), RestaurantID: rid, SessionID: session.ID, DeviceID: "devB", Status: domain.DevicePending}
+		repo := &fakeRepo{activeSession: session, devices: []*domain.SessionDevice{dev, other}}
+		svc := NewApproveDevice(fakeTx{}, repo, &fakeDiningOutbox{}, rid)
+		_, err := svc.Handle(context.Background(), ApproveDeviceRequest{DeviceID: dev.ID, ActorID: actor, Action: "reject"})
+		require.NoError(t, err)
+		require.True(t, repo.abandoned) // table freed, not left as a zombie PENDING session
+		require.Equal(t, domain.SessionClosed, session.Status)
+		require.Equal(t, domain.DeviceRejected, other.Status)
+	})
+}
+
+func TestDeviceStatus(t *testing.T) {
+	rid := uuid.New()
+	dev := &domain.SessionDevice{ID: uuid.New(), RestaurantID: rid, SessionID: uuid.New(), DeviceID: "devA", Status: domain.DevicePending, SessionToken: "tok-A"}
+	repo := &fakeRepo{devices: []*domain.SessionDevice{dev}}
+	svc := NewDeviceStatus(repo)
+
+	out, err := svc.Handle(context.Background(), DeviceStatusRequest{Token: "tok-A"})
+	require.NoError(t, err)
+	require.Equal(t, "PENDING", out.Status)
+
+	_, err = svc.Handle(context.Background(), DeviceStatusRequest{Token: ""})
+	require.True(t, apperr.Is(err, apperr.CodeInvalid))
 }
 
 func TestManageTableQR(t *testing.T) {

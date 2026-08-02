@@ -64,15 +64,6 @@ export interface CloseSessionResult {
   status: string
 }
 
-export function staffVerifySession(
-  sessionId: string,
-): Promise<{ session_id: string; status: string }> {
-  return apiRequest<{ session_id: string; status: string }>(
-    `/api/v1/restaurant/sessions/${encodeURIComponent(sessionId)}/verify`,
-    { method: 'POST' },
-  )
-}
-
 export interface DailySessionItem {
   id: string
   session_code: string
@@ -178,8 +169,11 @@ export function fetchPendingSessions(): Promise<PendingSession[]> {
   return apiRequest<PendingSession[]>('/api/v1/restaurant/sessions/pending-verification')
 }
 
-export function verifySession(sessionId: string, action: 'approve' | 'reject'): Promise<void> {
-  return apiRequest<void>(`/api/v1/restaurant/sessions/${encodeURIComponent(sessionId)}/verify`, {
+// Approve or reject one waiting device by its session_devices row id. Approving
+// the table's owner device flips the session ACTIVE; approving a later device
+// just lets that phone in — the backend decides which based on the row.
+export function verifyDevice(deviceId: string, action: 'approve' | 'reject'): Promise<void> {
+  return apiRequest<void>(`/api/v1/restaurant/devices/${encodeURIComponent(deviceId)}/verify`, {
     method: 'POST',
     body: { action },
   })

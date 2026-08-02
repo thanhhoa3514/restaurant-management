@@ -1,0 +1,20 @@
+{
+  "stack": "React 19, TypeScript, Vite, Tailwind CSS 4, TanStack Router and Query",
+  "existing_tokens": "frontend/src/index.css",
+  "fonts": ["SF Pro Display", "SF Pro Text", "SF Mono"],
+  "theme_modes": ["light", "dark"],
+  "motion_library": null,
+  "design_genre": "modern-minimal",
+  "macrostructure": "Workbench",
+  "tone": "utilitarian/austere",
+  "audience": ["restaurant manager", "cashier"],
+  "primary_jobs": ["find paid invoices", "review revenue", "inspect invoice details"],
+  "imagery": "none",
+  "shell": "preserve existing authenticated admin shell and sidebar",
+  "constraints": [
+    "reuse the existing palette",
+    "do not add gradients",
+    "do not edit routeTree.gen.ts manually",
+    "render mobile results as cards instead of a horizontally scrolling table"
+  ]
+}

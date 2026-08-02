@@ -1005,6 +1005,9 @@ func (r *Repository) UpdateOrderItemStatus(ctx context.Context, restaurantID, it
 	if err := r.syncKitchenStatus(ctx, restaurantID, orderID, itemID, status, actorID); err != nil {
 		return orderingapp.UpdateItemStatusResponse{}, err
 	}
+	if err := r.bumpOrderVersionForItem(ctx, restaurantID, itemID); err != nil {
+		return orderingapp.UpdateItemStatusResponse{}, err
+	}
 	return c.resp(itemID, status), nil
 }
 
@@ -1097,7 +1100,26 @@ func (r *Repository) MarkItemUnavailable(ctx context.Context, restaurantID, item
 	`, restaurantID, itemID); err != nil {
 		return orderingapp.UpdateItemStatusResponse{}, err
 	}
+	if err := r.bumpOrderVersionForItem(ctx, restaurantID, itemID); err != nil {
+		return orderingapp.UpdateItemStatusResponse{}, err
+	}
 	return c.resp(itemID, "UNAVAILABLE"), nil
+}
+
+// bumpOrderVersionForItem increments the parent order's optimistic-lock
+// version whenever a child item's status changes. Without this, a guest who
+// fetched the order while a line was PLACED still holds a matching
+// orders.version after staff confirm/reject that line — so a stale guest edit
+// (which omits the now-confirmed line) sails past the version guard in
+// GuestEditOrder and silently no-ops, leaving the line live and billable.
+func (r *Repository) bumpOrderVersionForItem(ctx context.Context, restaurantID, itemID uuid.UUID) error {
+	_, err := r.q(ctx).Exec(ctx, `
+		UPDATE orders
+		SET version = version + 1, updated_at = NOW()
+		WHERE restaurant_id = $1
+		  AND id = (SELECT order_id FROM order_items WHERE restaurant_id = $1 AND id = $2)
+	`, restaurantID, itemID)
+	return err
 }
 
 // ConfirmOrderItem promotes a PLACED item to PENDING, releasing it to the
@@ -1119,6 +1141,9 @@ func (r *Repository) ConfirmOrderItem(ctx context.Context, restaurantID, itemID 
 		INSERT INTO order_item_status_history (restaurant_id, order_item_id, from_status, to_status, changed_by, changed_by_role)
 		VALUES ($1, $2, $3, 'PENDING', $4, $5)
 	`, restaurantID, itemID, current, actorID, nullString(actorRole)); err != nil {
+		return orderingapp.UpdateItemStatusResponse{}, err
+	}
+	if err := r.bumpOrderVersionForItem(ctx, restaurantID, itemID); err != nil {
 		return orderingapp.UpdateItemStatusResponse{}, err
 	}
 	return c.resp(itemID, "PENDING"), nil
@@ -1165,6 +1190,9 @@ func (r *Repository) RejectOrderItem(ctx context.Context, restaurantID, itemID u
 			  AND kti.status <> 'CANCELLED'
 		  )
 	`, restaurantID, itemID); err != nil {
+		return orderingapp.UpdateItemStatusResponse{}, err
+	}
+	if err := r.bumpOrderVersionForItem(ctx, restaurantID, itemID); err != nil {
 		return orderingapp.UpdateItemStatusResponse{}, err
 	}
 	return c.resp(itemID, "CANCELLED"), nil

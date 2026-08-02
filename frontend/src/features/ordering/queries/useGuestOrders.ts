@@ -7,5 +7,9 @@ export function useGuestOrders(sessionToken?: string) {
     queryKey: ['guest-orders', sessionToken],
     queryFn: () => fetchGuestOrders(sessionToken!),
     enabled: !!sessionToken,
+    // Polling floor: realtime is the fast path, but if the socket drops or a
+    // confirm lands during a reconnect gap the guest still sees status changes
+    // within ~15s instead of never.
+    refetchInterval: 15_000,
   })
 }

@@ -209,7 +209,7 @@ export const ActionCenterPanel: FC = () => {
               ) : (
                 pendingSessions?.map((session) => (
                   <div
-                    key={session.session_id}
+                    key={session.device_id}
                     className="flex flex-col gap-3 rounded-2xl bg-[var(--bg-elevated)] p-4 shadow-sm border border-[var(--separator)] transition-all"
                   >
                     <div className="flex items-center gap-3">
@@ -222,6 +222,15 @@ export const ActionCenterPanel: FC = () => {
                         </h4>
                         <p className="text-[13px] font-medium text-[var(--text-secondary)]">
                           {session.customer_name}
+                          <span className="ml-2 rounded-full bg-[var(--separator)]/60 px-2 py-0.5 text-[11px] font-semibold text-[var(--text-tertiary)]">
+                            {session.is_owner
+                              ? state.lang === 'vi'
+                                ? 'Mở bàn'
+                                : 'Opens table'
+                              : state.lang === 'vi'
+                                ? 'Xin vào bàn'
+                                : 'Joining'}
+                          </span>
                         </p>
                       </div>
                     </div>
@@ -232,7 +241,7 @@ export const ActionCenterPanel: FC = () => {
                         className="flex-1 h-9 rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950 font-semibold gap-1.5"
                         disabled={verifyMutation.isPending}
                         onClick={() =>
-                          verifyMutation.mutate({ sessionId: session.session_id, action: 'reject' })
+                          verifyMutation.mutate({ deviceId: session.device_id, action: 'reject' })
                         }
                       >
                         <X className="size-4" strokeWidth={2.5} />
@@ -243,19 +252,25 @@ export const ActionCenterPanel: FC = () => {
                         disabled={verifyMutation.isPending}
                         onClick={() =>
                           verifyMutation.mutate({
-                            sessionId: session.session_id,
+                            deviceId: session.device_id,
                             action: 'approve',
                           })
                         }
                       >
                         {verifyMutation.isPending &&
-                        verifyMutation.variables?.sessionId === session.session_id &&
+                        verifyMutation.variables?.deviceId === session.device_id &&
                         verifyMutation.variables?.action === 'approve' ? (
                           <Loader2 size={16} className="animate-spin" />
                         ) : (
                           <Check className="size-4" strokeWidth={2.5} />
                         )}
-                        {state.lang === 'vi' ? 'Mở bàn' : 'Approve'}
+                        {session.is_owner
+                          ? state.lang === 'vi'
+                            ? 'Mở bàn'
+                            : 'Approve'
+                          : state.lang === 'vi'
+                            ? 'Cho vào'
+                            : 'Let in'}
                       </Button>
                     </div>
                   </div>

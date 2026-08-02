@@ -24,7 +24,8 @@ type Handler struct {
 	MergeSessions       *application.MergeSessions
 	SplitSessions       *application.SplitSessions
 	ListPendingSessions *application.ListPendingSessions
-	StaffVerifySession  *application.StaffVerifySession
+	ApproveDevice       *application.ApproveDevice
+	DeviceStatus        *application.DeviceStatus
 	SaveTable           *application.SaveTable
 	SaveTablePositions  *application.SaveTablePositions
 	DeleteTable         *application.DeleteTable
@@ -33,11 +34,15 @@ type Handler struct {
 	DeleteArea          *application.DeleteArea
 	ListDailySessions   *application.ListDailySessions
 	GetSessionDetail    *application.GetSessionDetail
+	GetListTableTest    *application.ListTable
 }
 
-func (h *Handler) RegisterGuestRoutes(r *gin.RouterGroup) {
-	r.POST("/sessions/join", h.joinSession)
+func (h *Handler) RegisterGuestRoutes(r *gin.RouterGroup, joinMiddleware ...gin.HandlerFunc) {
+	joinHandlers := append(joinMiddleware, h.joinSession)
+	r.POST("/sessions/join", joinHandlers...)
+	r.GET("/sessions/device-status", h.deviceStatus)
 	r.GET("/tables", h.listGuestTables)
+	r.GET("/listtabletest", h.listTableTest)
 }
 
 func (h *Handler) RegisterStaffRoutes(r *gin.RouterGroup, secret string, resolver auth.PermissionResolver, defaultRestaurantID uuid.UUID) {
@@ -65,7 +70,7 @@ func (h *Handler) RegisterStaffRoutes(r *gin.RouterGroup, secret string, resolve
 	serve.POST("/sessions/merge", h.mergeSessions)
 	serve.POST("/sessions/split", h.splitSessions)
 	serve.GET("/sessions/pending-verification", h.listPendingSessions)
-	serve.POST("/sessions/:sessionId/verify", h.staffVerifySession)
+	serve.POST("/devices/:deviceId/verify", h.staffVerifyDevice)
 }
 
 func (h *Handler) openSession(c *gin.Context) {
@@ -89,12 +94,14 @@ func (h *Handler) openSession(c *gin.Context) {
 }
 
 func (h *Handler) joinSession(c *gin.Context) {
+	c.Header("Cache-Control", "no-store")
 	var req application.JoinSessionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
 		return
 	}
 	req.IPHash = hashClientIP(c.ClientIP())
+	req.ResumeToken = c.GetHeader("X-Session-Token")
 	req.UserAgent = c.Request.UserAgent()
 	req.TraceID = c.GetHeader("X-Request-ID")
 	if req.TraceID == "" {
@@ -217,10 +224,10 @@ func (h *Handler) listPendingSessions(c *gin.Context) {
 	httpx.Respond(c, http.StatusOK, out, nil)
 }
 
-func (h *Handler) staffVerifySession(c *gin.Context) {
-	sessionID, err := uuid.Parse(c.Param("sessionId"))
+func (h *Handler) staffVerifyDevice(c *gin.Context) {
+	deviceID, err := uuid.Parse(c.Param("deviceId"))
 	if err != nil {
-		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid session id", err))
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid device id", err))
 		return
 	}
 	actorID, err := uuid.Parse(c.GetString(auth.CtxUserID))
@@ -228,9 +235,25 @@ func (h *Handler) staffVerifySession(c *gin.Context) {
 		httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "invalid user claim"))
 		return
 	}
-	out, err := h.StaffVerifySession.Handle(c.Request.Context(), application.VerifySessionRequest{
-		SessionID: sessionID,
-		ActorID:   actorID,
+	var body application.ApproveDeviceRequest
+	if err := c.ShouldBindJSON(&body); err != nil {
+		httpx.RespondError(c, apperr.Wrap(apperr.CodeInvalid, "invalid request body", err))
+		return
+	}
+	body.DeviceID = deviceID
+	body.ActorID = actorID
+	out, err := h.ApproveDevice.Handle(c.Request.Context(), body)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+
+func (h *Handler) deviceStatus(c *gin.Context) {
+	c.Header("Cache-Control", "no-store")
+	out, err := h.DeviceStatus.Handle(c.Request.Context(), application.DeviceStatusRequest{
+		Token: c.GetHeader("X-Session-Token"),
 	})
 	if err != nil {
 		httpx.RespondError(c, err)
@@ -380,6 +403,14 @@ func (h *Handler) getSessionDetail(c *gin.Context) {
 		return
 	}
 	out, err := h.GetSessionDetail.Handle(c.Request.Context(), sessionID)
+	if err != nil {
+		httpx.RespondError(c, err)
+		return
+	}
+	httpx.Respond(c, http.StatusOK, out, nil)
+}
+func (h *Handler) listTableTest(c *gin.Context) {
+	out, err := h.GetListTableTest.Handle(c.Request.Context())
 	if err != nil {
 		httpx.RespondError(c, err)
 		return

@@ -23,6 +23,47 @@ const (
 	OpenedViaStaff  OpenedVia = "STAFF"
 )
 
+// DeviceStatus gates a single physical phone that joined a session. Only an
+// APPROVED device holds a usable session token; a PENDING device waits for a
+// waiter, so a shared QR link can never bypass the confirmation gate.
+type DeviceStatus string
+
+const (
+	DevicePending  DeviceStatus = "PENDING"
+	DeviceApproved DeviceStatus = "APPROVED"
+	DeviceRejected DeviceStatus = "REJECTED"
+)
+
+// SessionDevice is one phone attached to a dining session. The session still
+// owns the table and the bill; devices only decide who is allowed to order.
+// The first device to open a table is the owner and its name becomes the
+// session's single displayed customer name (one name per table).
+type SessionDevice struct {
+	ID           uuid.UUID
+	RestaurantID uuid.UUID
+	SessionID    uuid.UUID
+	DeviceID     string
+	GuestName    string
+	Status       DeviceStatus
+	SessionToken string
+	IsOwner      bool
+	ApprovedBy   *uuid.UUID
+	ApprovedAt   *time.Time
+}
+
+// PendingDeviceDTO is one waiting phone as the waiter sees it: which table,
+// which name typed, and whether it is the table's first (owner) device.
+type PendingDeviceDTO struct {
+	DeviceID  uuid.UUID `json:"device_id"` // session_devices.id (opaque row id)
+	SessionID uuid.UUID `json:"session_id"`
+	TableID   uuid.UUID `json:"table_id"`
+	TableCode string    `json:"table_code"`
+	TableName string    `json:"table_name"`
+	GuestName string    `json:"customer_name"`
+	IsOwner   bool      `json:"is_owner"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type Area struct {
 	ID           uuid.UUID
 	RestaurantID uuid.UUID
@@ -60,6 +101,10 @@ type QRCode struct {
 	Token        string
 	IsActive     bool
 	CreatedBy    *uuid.UUID
+}
+type ListTableTest struct {
+	TableId   uuid.UUID
+	Tablename string
 }
 
 type TableWithQR struct {
@@ -123,9 +168,9 @@ type DiningRepository interface {
 	UpdateTablePositions(ctx context.Context, restaurantID uuid.UUID, positions []TablePosition) error
 	SoftDeleteTable(ctx context.Context, restaurantID, tableID uuid.UUID) error
 	CloseSession(ctx context.Context, restaurantID, sessionID uuid.UUID, closedBy *uuid.UUID) (*DiningSession, bool, error)
+	AbandonPendingSession(ctx context.Context, restaurantID, sessionID uuid.UUID, closedBy *uuid.UUID) error
 	DeactivateActiveQR(ctx context.Context, restaurantID, tableID uuid.UUID, deactivatedBy *uuid.UUID, reason string) error
 	CreateQR(ctx context.Context, qr *QRCode) error
-	UpdateSessionCustomerName(ctx context.Context, sessionID uuid.UUID, name string) error
 	CreateArea(ctx context.Context, a *Area) error
 	UpdateArea(ctx context.Context, a *Area) error
 	FindArea(ctx context.Context, restaurantID, areaID uuid.UUID) (*Area, error)
@@ -135,6 +180,14 @@ type DiningRepository interface {
 	FindSessionsPendingVerification(ctx context.Context, restaurantID uuid.UUID) ([]DiningSession, error)
 	VerifySession(ctx context.Context, restaurantID, sessionID uuid.UUID, verifiedBy *uuid.UUID) error
 
+	// Per-device join gate.
+	CreateSessionDevice(ctx context.Context, d *SessionDevice) error
+	FindSessionDevice(ctx context.Context, sessionID uuid.UUID, deviceID string) (*SessionDevice, error)
+	FindSessionDeviceByID(ctx context.Context, restaurantID, rowID uuid.UUID) (*SessionDevice, error)
+	FindDeviceByToken(ctx context.Context, token string) (*SessionDevice, error)
+	FindPendingDevices(ctx context.Context, restaurantID uuid.UUID) ([]PendingDeviceDTO, error)
+	SetDeviceStatus(ctx context.Context, restaurantID, rowID uuid.UUID, status DeviceStatus, actorID *uuid.UUID) (*SessionDevice, error)
+
 	ListDailySessions(ctx context.Context, restaurantID uuid.UUID, filter ListDailySessionsFilter) (ListDailySessionsResponse, error)
 	GetSessionDetail(ctx context.Context, restaurantID, sessionID uuid.UUID) (SessionDetailDTO, error)
 
@@ -143,6 +196,7 @@ type DiningRepository interface {
 	FindActiveMergeGroup(ctx context.Context, restaurantID, groupID uuid.UUID) (*MergeGroup, error)
 	FindSessionsByMergeGroup(ctx context.Context, restaurantID, groupID uuid.UUID) ([]DiningSession, error)
 	UpdateSessionMergeGroup(ctx context.Context, sessionID uuid.UUID, mergeGroupID *uuid.UUID) error
+	FindListTableTest(ctx context.Context, restaurantId uuid.UUID) ([]ListTableTest, error)
 }
 
 type OutboxWriter interface {

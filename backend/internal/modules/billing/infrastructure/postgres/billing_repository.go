@@ -479,6 +479,248 @@ func (r *Repository) ListSessionInvoices(ctx context.Context, restaurantID, dini
 	return invoices, nil
 }
 
+func (r *Repository) ListPaidInvoices(ctx context.Context, restaurantID uuid.UUID, filter domain.PaidInvoiceFilter) (domain.PaidInvoicePage, error) {
+	where, args := paidInvoiceWhere(restaurantID, filter)
+	out := domain.PaidInvoicePage{Items: []domain.PaidInvoiceRecord{}, PaymentMethods: []domain.PaidInvoicePaymentMethod{}}
+
+	summaryQuery := `
+		SELECT COUNT(*),
+		       COALESCE(SUM(i.total_amount_vnd), 0),
+		       COALESCE(SUM(i.discount_amount_vnd), 0),
+		       COALESCE(ROUND(AVG(i.total_amount_vnd)), 0)::bigint
+		FROM invoices i
+		LEFT JOIN dining_sessions ds
+		  ON ds.restaurant_id = i.restaurant_id AND ds.id = i.dining_session_id AND ds.deleted_at IS NULL
+		LEFT JOIN tables t
+		  ON t.restaurant_id = i.restaurant_id AND t.id = ds.table_id AND t.deleted_at IS NULL
+		LEFT JOIN orders o
+		  ON o.restaurant_id = i.restaurant_id AND o.id = i.order_id AND o.deleted_at IS NULL
+	` + where
+	if err := r.q(ctx).QueryRow(ctx, summaryQuery, args...).Scan(
+		&out.Summary.InvoiceCount,
+		&out.Summary.TotalRevenueVND,
+		&out.Summary.TotalDiscountVND,
+		&out.Summary.AverageInvoiceVND,
+	); err != nil {
+		return domain.PaidInvoicePage{}, err
+	}
+	out.Total = out.Summary.InvoiceCount
+
+	listArgs := append([]any{}, args...)
+	limitPosition := len(listArgs) + 1
+	listArgs = append(listArgs, filter.Limit)
+	offsetPosition := len(listArgs) + 1
+	listArgs = append(listArgs, filter.Offset)
+	rows, err := r.q(ctx).Query(ctx, fmt.Sprintf(`
+		SELECT i.id, i.invoice_number, i.paid_at,
+		       i.subtotal_vnd, i.discount_amount_vnd, i.service_charge_amount_vnd,
+		       i.vat_amount_vnd, i.total_amount_vnd, i.paid_amount_vnd,
+		       COALESCE(ds.session_code, o.order_number, ''),
+		       CASE
+		         WHEN i.order_id IS NOT NULL THEN 'Mang về'
+		         ELSE COALESCE(NULLIF(t.name, ''), t.code, '')
+		       END,
+		       COALESCE(ds.customer_name, o.customer_name, ''),
+		       COALESCE((
+		         SELECT SUM(ii.quantity)::int
+		         FROM invoice_items ii
+		         WHERE ii.restaurant_id = i.restaurant_id AND ii.invoice_id = i.id
+		       ), 0),
+		       COALESCE((
+		         SELECT string_agg(DISTINCT pm.code, ' · ' ORDER BY pm.code)
+		         FROM payments p
+		         JOIN payment_methods pm
+		           ON pm.restaurant_id = p.restaurant_id AND pm.id = p.payment_method_id
+		         WHERE p.restaurant_id = i.restaurant_id AND p.invoice_id = i.id
+		           AND p.status = 'COMPLETED' AND p.deleted_at IS NULL
+		       ), ''),
+		       COALESCE((
+		         SELECT string_agg(DISTINCT pm.name, ' · ' ORDER BY pm.name)
+		         FROM payments p
+		         JOIN payment_methods pm
+		           ON pm.restaurant_id = p.restaurant_id AND pm.id = p.payment_method_id
+		         WHERE p.restaurant_id = i.restaurant_id AND p.invoice_id = i.id
+		           AND p.status = 'COMPLETED' AND p.deleted_at IS NULL
+		       ), '')
+		FROM invoices i
+		LEFT JOIN dining_sessions ds
+		  ON ds.restaurant_id = i.restaurant_id AND ds.id = i.dining_session_id AND ds.deleted_at IS NULL
+		LEFT JOIN tables t
+		  ON t.restaurant_id = i.restaurant_id AND t.id = ds.table_id AND t.deleted_at IS NULL
+		LEFT JOIN orders o
+		  ON o.restaurant_id = i.restaurant_id AND o.id = i.order_id AND o.deleted_at IS NULL
+		%s
+		ORDER BY i.paid_at DESC, i.id DESC
+		LIMIT $%d OFFSET $%d
+	`, where, limitPosition, offsetPosition), listArgs...)
+	if err != nil {
+		return domain.PaidInvoicePage{}, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var item domain.PaidInvoiceRecord
+		if err := rows.Scan(
+			&item.ID,
+			&item.InvoiceNumber,
+			&item.PaidAt,
+			&item.SubtotalVND,
+			&item.DiscountAmountVND,
+			&item.ServiceChargeVND,
+			&item.VATAmountVND,
+			&item.TotalAmountVND,
+			&item.PaidAmountVND,
+			&item.SessionReference,
+			&item.TableLabel,
+			&item.CustomerName,
+			&item.ItemCount,
+			&item.PaymentMethodCodes,
+			&item.PaymentMethodNames,
+		); err != nil {
+			return domain.PaidInvoicePage{}, err
+		}
+		out.Items = append(out.Items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return domain.PaidInvoicePage{}, err
+	}
+
+	methodRows, err := r.q(ctx).Query(ctx, `
+		SELECT DISTINCT pm.code, pm.name
+		FROM payment_methods pm
+		JOIN payments p
+		  ON p.restaurant_id = pm.restaurant_id AND p.payment_method_id = pm.id
+		  AND p.status = 'COMPLETED' AND p.deleted_at IS NULL
+		JOIN invoices i
+		  ON i.restaurant_id = p.restaurant_id AND i.id = p.invoice_id
+		  AND i.status = 'PAID' AND i.deleted_at IS NULL
+		WHERE pm.restaurant_id = $1 AND pm.deleted_at IS NULL
+		ORDER BY pm.name
+	`, restaurantID)
+	if err != nil {
+		return domain.PaidInvoicePage{}, err
+	}
+	defer methodRows.Close()
+	for methodRows.Next() {
+		var method domain.PaidInvoicePaymentMethod
+		if err := methodRows.Scan(&method.Code, &method.Name); err != nil {
+			return domain.PaidInvoicePage{}, err
+		}
+		out.PaymentMethods = append(out.PaymentMethods, method)
+	}
+	if err := methodRows.Err(); err != nil {
+		return domain.PaidInvoicePage{}, err
+	}
+	return out, nil
+}
+
+func (r *Repository) GetPaidInvoice(ctx context.Context, restaurantID, invoiceID uuid.UUID) (*domain.PaidInvoiceDetail, error) {
+	var detail domain.PaidInvoiceDetail
+	err := r.q(ctx).QueryRow(ctx, `
+		SELECT COALESCE(ds.session_code, o.order_number, ''),
+		       CASE
+		         WHEN i.order_id IS NOT NULL THEN 'Mang về'
+		         ELSE COALESCE(NULLIF(t.name, ''), t.code, '')
+		       END,
+		       COALESCE(ds.customer_name, o.customer_name, ''),
+		       COALESCE(ds.customer_phone, o.customer_phone, '')
+		FROM invoices i
+		LEFT JOIN dining_sessions ds
+		  ON ds.restaurant_id = i.restaurant_id AND ds.id = i.dining_session_id AND ds.deleted_at IS NULL
+		LEFT JOIN tables t
+		  ON t.restaurant_id = i.restaurant_id AND t.id = ds.table_id AND t.deleted_at IS NULL
+		LEFT JOIN orders o
+		  ON o.restaurant_id = i.restaurant_id AND o.id = i.order_id AND o.deleted_at IS NULL
+		WHERE i.restaurant_id = $1 AND i.id = $2
+		  AND i.status = 'PAID' AND i.deleted_at IS NULL
+	`, restaurantID, invoiceID).Scan(
+		&detail.Context.SessionReference,
+		&detail.Context.TableLabel,
+		&detail.Context.CustomerName,
+		&detail.Context.CustomerPhone,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperr.New(apperr.CodeNotFound, "paid invoice not found")
+	}
+	if err != nil {
+		return nil, err
+	}
+	invoice, err := r.LoadInvoice(ctx, restaurantID, invoiceID)
+	if err != nil {
+		return nil, err
+	}
+	if invoice.Status != domain.InvoicePaid {
+		return nil, apperr.New(apperr.CodeNotFound, "paid invoice not found")
+	}
+	detail.Invoice = invoice
+	return &detail, nil
+}
+
+func paidInvoiceWhere(restaurantID uuid.UUID, filter domain.PaidInvoiceFilter) (string, []any) {
+	conditions := []string{
+		"i.restaurant_id = $1",
+		"i.status = 'PAID'",
+		"i.deleted_at IS NULL",
+		"i.paid_at IS NOT NULL",
+	}
+	args := []any{restaurantID}
+	add := func(condition string, value any) {
+		args = append(args, value)
+		conditions = append(conditions, fmt.Sprintf(condition, len(args)))
+	}
+	if filter.From != nil {
+		add(`i.paid_at >= (
+			$%d::date AT TIME ZONE COALESCE(
+				(SELECT restaurant.timezone FROM restaurants restaurant WHERE restaurant.id = i.restaurant_id),
+				'Asia/Ho_Chi_Minh'
+			)
+		)`, *filter.From)
+	}
+	if filter.ToExclusive != nil {
+		add(`i.paid_at < (
+			$%d::date AT TIME ZONE COALESCE(
+				(SELECT restaurant.timezone FROM restaurants restaurant WHERE restaurant.id = i.restaurant_id),
+				'Asia/Ho_Chi_Minh'
+			)
+		)`, *filter.ToExclusive)
+	}
+	if filter.Search != "" {
+		add(`(
+			i.invoice_number ILIKE $%[1]d
+			OR COALESCE(ds.session_code, '') ILIKE $%[1]d
+			OR COALESCE(t.code, '') ILIKE $%[1]d
+			OR COALESCE(t.name, '') ILIKE $%[1]d
+			OR COALESCE(ds.customer_name, o.customer_name, '') ILIKE $%[1]d
+			OR COALESCE(ds.customer_phone, o.customer_phone, '') ILIKE $%[1]d
+			OR COALESCE(o.order_number, '') ILIKE $%[1]d
+			OR EXISTS (
+				SELECT 1 FROM payments search_payment
+				WHERE search_payment.restaurant_id = i.restaurant_id
+				  AND search_payment.invoice_id = i.id
+				  AND search_payment.deleted_at IS NULL
+				  AND (
+				    COALESCE(search_payment.payment_number, '') ILIKE $%[1]d
+				    OR COALESCE(search_payment.reference_code, '') ILIKE $%[1]d
+				  )
+			)
+		)`, "%"+filter.Search+"%")
+	}
+	if filter.PaymentMethodCode != "" {
+		add(`EXISTS (
+			SELECT 1
+			FROM payments method_payment
+			JOIN payment_methods method
+			  ON method.restaurant_id = method_payment.restaurant_id
+			  AND method.id = method_payment.payment_method_id
+			WHERE method_payment.restaurant_id = i.restaurant_id
+			  AND method_payment.invoice_id = i.id
+			  AND method_payment.status = 'COMPLETED'
+			  AND method_payment.deleted_at IS NULL
+			  AND LOWER(method.code) = $%d
+		)`, filter.PaymentMethodCode)
+	}
+	return "WHERE " + strings.Join(conditions, "\n AND "), args
+}
+
 func (r *Repository) GuestSessionStatus(ctx context.Context, restaurantID, diningSessionID uuid.UUID) (string, error) {
 	var status string
 	err := r.q(ctx).QueryRow(ctx, `

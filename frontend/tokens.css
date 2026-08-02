@@ -1,0 +1,27 @@
+:root {
+  --invoice-paper: var(--bg);
+  --invoice-surface: var(--bg-elevated);
+  --invoice-surface-muted: var(--surface-grouped);
+  --invoice-ink: var(--text);
+  --invoice-ink-muted: var(--text-secondary);
+  --invoice-ink-faint: var(--text-tertiary);
+  --invoice-rule: var(--separator);
+  --invoice-focus: var(--system-blue);
+  --invoice-focus-ring: color-mix(in srgb, var(--invoice-focus) 20%, transparent);
+  --invoice-success: var(--system-green);
+  --invoice-danger: var(--system-red);
+  --invoice-display-font: 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+  --invoice-body-font: 'SF Pro Text', system-ui, sans-serif;
+  --invoice-mono-font: var(--invoice-body-font);
+  --invoice-content-max: 92rem;
+  --invoice-radius-sm: 0.625rem;
+  --invoice-radius-md: 0.875rem;
+  --invoice-radius-lg: 1.125rem;
+  --invoice-space-1: 0.25rem;
+  --invoice-space-2: 0.5rem;
+  --invoice-space-3: 0.75rem;
+  --invoice-space-4: 1rem;
+  --invoice-space-5: 1.25rem;
+  --invoice-space-6: 1.5rem;
+  --invoice-space-8: 2rem;
+}

@@ -2,6 +2,8 @@ package application
 
 import (
 	"context"
+	"crypto/sha256"
+	"crypto/subtle"
 	"strings"
 	"time"
 
@@ -15,9 +17,13 @@ import (
 type JoinSessionRequest struct {
 	QRToken   string `json:"qr_token"`
 	GuestName string `json:"guest_name"`
-	IPHash    string `json:"-"`
-	UserAgent string `json:"-"`
-	TraceID   string `json:"-"`
+	DeviceID  string `json:"device_id"`
+	// ResumeToken proves that a returning client already owns this device's
+	// credential. DeviceID identifies a row; it is not a secret by itself.
+	ResumeToken string `json:"-"`
+	IPHash      string `json:"-"`
+	UserAgent   string `json:"-"`
+	TraceID     string `json:"-"`
 }
 
 type JoinSessionResponse struct {
@@ -44,6 +50,11 @@ func (s *JoinSession) Handle(ctx context.Context, req JoinSessionRequest) (JoinS
 	if qrToken == "" {
 		return out, apperr.New(apperr.CodeInvalid, "qr_token is required")
 	}
+	deviceID := strings.TrimSpace(req.DeviceID)
+	if deviceID == "" {
+		return out, apperr.New(apperr.CodeInvalid, "device_id is required")
+	}
+	guestName := strings.TrimSpace(req.GuestName)
 	err := s.tx.Run(ctx, func(ctx context.Context) error {
 		qr, err := s.repo.FindQRByToken(ctx, qrToken)
 		if err != nil {
@@ -64,7 +75,9 @@ func (s *JoinSession) Handle(ctx context.Context, req JoinSessionRequest) (JoinS
 			if !apperr.Is(err, apperr.CodeNotFound) {
 				return err
 			}
-			// No active session — create a new one in PENDING_VERIFICATION.
+			// No open session — this device opens the table as its owner. The
+			// owner's typed name becomes the session's single customer name and
+			// is never overwritten by later joiners (one name per table).
 			sessionCode, codeErr := randomCode("S", 12)
 			if codeErr != nil {
 				return codeErr
@@ -81,55 +94,96 @@ func (s *JoinSession) Handle(ctx context.Context, req JoinSessionRequest) (JoinS
 				SessionToken: sessionToken,
 				Status:       domain.SessionPendingVerification,
 				OpenedVia:    domain.OpenedViaQRScan,
-			}
-			if name := strings.TrimSpace(req.GuestName); name != "" {
-				session.CustomerName = name
+				CustomerName: guestName,
 			}
 			if err := s.repo.CreateSession(ctx, session); err != nil {
 				return err
 			}
-			out = JoinSessionResponse{
-				Status:       string(session.Status),
-				SessionToken: session.SessionToken,
-				SessionID:    &session.ID,
-				TableID:      &session.TableID,
+			dev, derr := s.registerDevice(ctx, session, deviceID, guestName, true)
+			if derr != nil {
+				return derr
 			}
-			if table, tableErr := s.repo.FindTable(ctx, qr.RestaurantID, qr.TableID); tableErr == nil && table != nil {
-				out.TableCode = table.Code
-				out.TableName = table.Name
-			}
+			out = s.deviceResponse(ctx, qr, session, dev)
 			return s.writeQRScanEvent(ctx, qr, session, "pending_verification", req)
 		}
-		out = JoinSessionResponse{
-			Status:       string(session.Status),
-			SessionToken: session.SessionToken,
-			SessionID:    &session.ID,
-			TableID:      &session.TableID,
-		}
-		if table, err := s.repo.FindTable(ctx, qr.RestaurantID, qr.TableID); err == nil && table != nil {
-			out.TableCode = table.Code
-			out.TableName = table.Name
-		}
-		if name := strings.TrimSpace(req.GuestName); name != "" {
-			if err := s.repo.UpdateSessionCustomerName(ctx, session.ID, name); err != nil {
+
+		// A session is already open on this table. Look the device up: a known
+		// device (this phone refreshing, or already approved) is answered from
+		// its own record; an unknown device is registered PENDING and must wait
+		// for the waiter — a shared link never gets an instant seat.
+		dev, derr := s.repo.FindSessionDevice(ctx, session.ID, deviceID)
+		switch {
+		case derr == nil:
+			if dev.Status == domain.DeviceRejected {
+				return apperr.New(apperr.CodeForbidden, "join request was declined by staff")
+			}
+			if !sameToken(req.ResumeToken, dev.SessionToken) {
+				return apperr.New(apperr.CodeUnauthorized, "device resume token is required")
+			}
+			out = s.deviceResponse(ctx, qr, session, dev)
+			return nil
+		case apperr.Is(derr, apperr.CodeNotFound):
+			dev, err = s.registerDevice(ctx, session, deviceID, guestName, false)
+			if err != nil {
 				return err
 			}
-			session.CustomerName = name
+			out = s.deviceResponse(ctx, qr, session, dev)
+			return s.writeQRScanEvent(ctx, qr, session, "pending_device", req)
+		default:
+			return derr
 		}
-		return s.writeQRScanEvent(ctx, qr, session, scanOutcome(session.Status), req)
 	})
 	return out, err
 }
 
-func scanOutcome(status domain.SessionStatus) string {
-	switch status {
-	case domain.SessionActive:
-		return "joined_active"
-	case domain.SessionAwaitingPayment:
-		return "awaiting_payment"
-	default:
-		return strings.ToLower(string(status))
+func sameToken(provided, expected string) bool {
+	providedHash := sha256.Sum256([]byte(strings.TrimSpace(provided)))
+	expectedHash := sha256.Sum256([]byte(expected))
+	return strings.TrimSpace(provided) != "" && subtle.ConstantTimeCompare(providedHash[:], expectedHash[:]) == 1
+}
+
+// registerDevice mints a per-device bearer token and inserts a PENDING device
+// row. The token is only a usable credential once a waiter approves the row.
+func (s *JoinSession) registerDevice(ctx context.Context, session *domain.DiningSession, deviceID, guestName string, isOwner bool) (*domain.SessionDevice, error) {
+	token, err := randomToken(32)
+	if err != nil {
+		return nil, err
 	}
+	dev := &domain.SessionDevice{
+		RestaurantID: session.RestaurantID,
+		SessionID:    session.ID,
+		DeviceID:     deviceID,
+		GuestName:    guestName,
+		Status:       domain.DevicePending,
+		SessionToken: token,
+		IsOwner:      isOwner,
+	}
+	if err := s.repo.CreateSessionDevice(ctx, dev); err != nil {
+		return nil, err
+	}
+	return dev, nil
+}
+
+// deviceResponse frames a device row for the guest client. An APPROVED device
+// on a live session reports the session status (the client proceeds to the
+// menu); a PENDING device reports PENDING_VERIFICATION (the client waits and
+// polls DeviceStatus with the returned token).
+func (s *JoinSession) deviceResponse(ctx context.Context, qr *domain.QRCode, session *domain.DiningSession, dev *domain.SessionDevice) JoinSessionResponse {
+	status := string(domain.SessionPendingVerification)
+	if dev.Status == domain.DeviceApproved {
+		status = string(session.Status)
+	}
+	out := JoinSessionResponse{
+		Status:       status,
+		SessionToken: dev.SessionToken,
+		SessionID:    &session.ID,
+		TableID:      &session.TableID,
+	}
+	if table, err := s.repo.FindTable(ctx, qr.RestaurantID, qr.TableID); err == nil && table != nil {
+		out.TableCode = table.Code
+		out.TableName = table.Name
+	}
+	return out
 }
 
 func (s *JoinSession) writeQRScanEvent(ctx context.Context, qr *domain.QRCode, session *domain.DiningSession, outcome string, req JoinSessionRequest) error {

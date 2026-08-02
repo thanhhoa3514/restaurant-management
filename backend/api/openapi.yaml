@@ -4,8 +4,9 @@ info:
   version: 0.1.0
   description: >
     HTTP API for QR-based restaurant ordering. Most staff endpoints require a JWT
-    bearer token and a server-resolved permission. Guest endpoints under /api/v1/guest require an
-    X-Session-Token issued by /api/v1/dining/join-session. Public endpoints require
+    bearer token and a server-resolved permission. Protected guest endpoints under
+    /api/v1/customer require an X-Session-Token issued by
+    /api/v1/customer/sessions/join. Public endpoints require
     neither.
   x-response-envelope:
     description: Every JSON response includes the numeric HTTP status in `code`.
@@ -226,11 +227,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/InvoiceResponse'
 
-  /api/v1/dining/join-session:
+  /api/v1/customer/sessions/join:
     post:
       tags: [dining]
-      summary: QR guest entry; issues session token
+      summary: Join a table from its QR token
+      description: >
+        Registers a new browser device as PENDING. A returning device must send
+        its previously issued token in X-Session-Token before the same token is
+        returned again; device_id alone is not a credential.
       security: []
+      parameters:
+        - name: X-Session-Token
+          in: header
+          required: false
+          description: Existing per-device token used only when resuming a known device.
+          schema: { type: string }
       requestBody:
         required: true
         content:
@@ -240,6 +251,84 @@ paths:
       responses:
         '200':
           description: Session joined
+          headers:
+            Cache-Control:
+              schema: { type: string, example: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JoinSessionResponse'
+        '401':
+          description: Invalid QR token or missing/invalid resume token
+        '429':
+          description: More than 20 join attempts from the same IP within one minute
+
+  /api/v1/customer/sessions/device-status:
+    get:
+      tags: [dining]
+      summary: Poll the current device approval status
+      security:
+        - sessionToken: []
+      responses:
+        '200':
+          description: Device status
+          headers:
+            Cache-Control:
+              schema: { type: string, example: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceStatusResponse'
+        '404':
+          description: Device token not found
+
+  /api/v1/restaurant/sessions/pending-verification:
+    get:
+      tags: [dining]
+      summary: List devices waiting for waiter approval
+      description: 'Permission: dining.serve'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Pending devices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PendingDevice'
+
+  /api/v1/restaurant/devices/{deviceId}/verify:
+    post:
+      tags: [dining]
+      summary: Approve or reject one waiting device
+      description: 'Permission: dining.serve. Only the owner can activate a pending session.'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyDeviceRequest'
+      responses:
+        '200':
+          description: Device decision recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyDeviceResponse'
+        '400':
+          description: Malformed body or unsupported action
+        '409':
+          description: Device is not pending or owner must be approved first
+
   /api/v1/dining/open-session:
     post:
       tags: [dining]
@@ -634,6 +723,80 @@ paths:
                         items: { type: object }
         '401':
           description: Missing, invalid, or expired guest session token
+
+  /api/v1/restaurant/invoices/paid:
+    get:
+      tags: [billing]
+      summary: List paid invoices for the current restaurant
+      description: 'Permission: billing.process. Summary values use the complete filtered result, not only the current page.'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: page_size
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: search
+          in: query
+          description: Invoice, session, order, table, customer, payment, or reference code
+          schema: { type: string, maxLength: 120 }
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+        - name: payment_method
+          in: query
+          schema: { type: string, example: sepay }
+      responses:
+        '200':
+          description: Paginated paid invoice ledger
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code, data]
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    $ref: '#/components/schemas/PaidInvoiceListResponse'
+        '400':
+          description: Invalid date range or filter
+        '401':
+          description: Invalid or expired staff token
+        '403':
+          description: Missing billing.process permission
+
+  /api/v1/restaurant/invoices/paid/{id}:
+    get:
+      tags: [billing]
+      summary: Get a paid invoice with item and payment snapshots
+      description: 'Permission: billing.process. The invoice must belong to the current restaurant.'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Paid invoice detail
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code, data]
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    $ref: '#/components/schemas/PaidInvoiceDetailResponse'
+        '404':
+          description: Paid invoice not found in the current restaurant
+
 components:
   securitySchemes:
     bearerAuth:
@@ -671,9 +834,60 @@ components:
         password: { type: string, format: password, example: demo1234 }
     JoinSessionRequest:
       type: object
-      required: [qr_token]
+      required: [qr_token, device_id]
+      additionalProperties: false
       properties:
         qr_token: { type: string }
+        guest_name: { type: string, maxLength: 150 }
+        device_id:
+          type: string
+          description: Stable client identifier; not a credential.
+    JoinSessionResponse:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, example: PENDING_VERIFICATION }
+        session_token: { type: string }
+        session_id: { type: string, format: uuid }
+        table_id: { type: string, format: uuid }
+        table_code: { type: string }
+        table_name: { type: string }
+    DeviceStatusResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED]
+    VerifyDeviceRequest:
+      type: object
+      required: [action]
+      additionalProperties: false
+      properties:
+        action:
+          type: string
+          enum: [approve, reject]
+    VerifyDeviceResponse:
+      type: object
+      required: [device_id, status]
+      properties:
+        device_id: { type: string, format: uuid }
+        status:
+          type: string
+          enum: [APPROVED, REJECTED]
+    PendingDevice:
+      type: object
+      required:
+        [device_id, session_id, table_id, table_code, table_name, customer_name, is_owner, created_at]
+      properties:
+        device_id: { type: string, format: uuid }
+        session_id: { type: string, format: uuid }
+        table_id: { type: string, format: uuid }
+        table_code: { type: string }
+        table_name: { type: string }
+        customer_name: { type: string }
+        is_owner: { type: boolean }
+        created_at: { type: string, format: date-time }
     OpenSessionRequest:
       type: object
       required: [table_id]
@@ -802,3 +1016,76 @@ components:
           type: string
           enum: [success, failed]
           default: success
+    PaidInvoiceListItem:
+      type: object
+      required:
+        [id, invoice_number, paid_at, total_amount_vnd, paid_amount_vnd, item_count, payment_method_codes, payment_method_names]
+      properties:
+        id: { type: string, format: uuid }
+        invoice_number: { type: string }
+        paid_at: { type: string, format: date-time }
+        subtotal_vnd: { type: integer, format: int64 }
+        discount_amount_vnd: { type: integer, format: int64 }
+        service_charge_amount_vnd: { type: integer, format: int64 }
+        vat_amount_vnd: { type: integer, format: int64 }
+        total_amount_vnd: { type: integer, format: int64 }
+        paid_amount_vnd: { type: integer, format: int64 }
+        session_reference: { type: string }
+        table_label: { type: string }
+        customer_name: { type: string }
+        item_count: { type: integer }
+        payment_method_codes:
+          type: array
+          items: { type: string }
+        payment_method_names:
+          type: array
+          items: { type: string }
+    PaidInvoiceListResponse:
+      type: object
+      required: [items, summary, payment_methods, pagination]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaidInvoiceListItem'
+        summary:
+          type: object
+          required: [invoice_count, total_revenue_vnd, total_discount_vnd, average_invoice_vnd]
+          properties:
+            invoice_count: { type: integer, format: int64 }
+            total_revenue_vnd: { type: integer, format: int64 }
+            total_discount_vnd: { type: integer, format: int64 }
+            average_invoice_vnd: { type: integer, format: int64 }
+        payment_methods:
+          type: array
+          items:
+            type: object
+            required: [code, name]
+            properties:
+              code: { type: string }
+              name: { type: string }
+        pagination:
+          type: object
+          required: [page, page_size, total_items, total_pages]
+          properties:
+            page: { type: integer }
+            page_size: { type: integer }
+            total_items: { type: integer, format: int64 }
+            total_pages: { type: integer }
+    PaidInvoiceDetailResponse:
+      type: object
+      required: [invoice, context]
+      properties:
+        invoice:
+          type: object
+          description: Invoice, item, and completed payment snapshots returned by the billing application.
+          required: [id, invoice_number, status, items, payments]
+          additionalProperties: true
+        context:
+          type: object
+          required: [session_reference, table_label, customer_name, customer_phone]
+          properties:
+            session_reference: { type: string }
+            table_label: { type: string }
+            customer_name: { type: string }
+            customer_phone: { type: string }

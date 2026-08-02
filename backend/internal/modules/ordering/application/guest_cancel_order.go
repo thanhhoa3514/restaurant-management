@@ -52,6 +52,11 @@ func (s *GuestCancelOrder) Handle(ctx context.Context, req GuestCancelOrderReque
 		}
 		lineIDs := make([]uuid.UUID, 0, len(lines))
 		for _, line := range lines {
+			// Already-cancelled lines are dead weight, not a reason to reject —
+			// a guest who cancelled one dish earlier can still delete the order.
+			if line.Status == "CANCELLED" {
+				continue
+			}
 			if line.Status != string(domain.StatusPlaced) {
 				return apperr.New(apperr.CodeConflict, "order has items already confirmed by staff")
 			}

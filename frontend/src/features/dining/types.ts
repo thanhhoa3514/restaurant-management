@@ -32,10 +32,16 @@ export interface ManageTableQRResult {
   rotated: boolean
 }
 
+// One waiting phone (device) the waiter must approve or reject. `device_id` is
+// the session_devices row id the verify endpoint acts on; `is_owner` marks the
+// phone that first opened the table.
 export interface PendingSession {
+  device_id: string
   session_id: string
   table_id: string
   table_code: string
   table_name: string
   customer_name: string
+  is_owner: boolean
+  created_at: string
 }

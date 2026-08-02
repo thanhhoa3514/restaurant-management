@@ -6,6 +6,7 @@ import {
   CreditCard,
   LayoutDashboard,
   QrCode,
+  ReceiptText,
   Settings,
   Table2,
   UsersRound,
@@ -17,12 +18,20 @@ export type NavHref =
   | '/admin'
   | '/admin/table-qrs'
   | '/admin/sessions'
+  | '/admin/invoices'
   | '/admin/catalog'
   | '/admin/staff'
   | '/admin/reports'
   | '/admin/settings'
 export type AdminView = 'dashboard' | 'cashier' | 'waiter' | 'kitchen'
-export type ManageRoute = 'table-qrs' | 'sessions' | 'catalog' | 'staff' | 'reports' | 'settings'
+export type ManageRoute =
+  | 'table-qrs'
+  | 'sessions'
+  | 'invoices'
+  | 'catalog'
+  | 'staff'
+  | 'reports'
+  | 'settings'
 export type StaffView = AdminView | ManageRoute
 
 export type NavGroup = 'manage' | 'operate'
@@ -65,6 +74,13 @@ export const navItems: NavItem[] = [
     href: '/admin/sessions',
     icon: Clock,
     permission: 'dining.manage',
+  },
+  {
+    id: 'invoices',
+    group: 'manage',
+    href: '/admin/invoices',
+    icon: ReceiptText,
+    permission: 'billing.process',
   },
   {
     id: 'catalog',

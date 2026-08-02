@@ -56,9 +56,11 @@ func NewGuestEditOrder(tx TxRunner, repo domain.OrderEditRepository, outbox doma
 
 func (s *GuestEditOrder) Handle(ctx context.Context, req GuestEditOrderRequest) (GuestOrderMutationResponse, error) {
 	var out GuestOrderMutationResponse
-	if len(req.Items) == 0 {
-		return out, apperr.New(apperr.CodeInvalid, "items required; to cancel the whole order use DELETE /orders/:orderId")
-	}
+	// Empty items is valid: it means "remove every line I'm still allowed to
+	// remove" (i.e. cancel my remaining PLACED lines) while leaving any
+	// staff-confirmed lines untouched. This is how the guest deletes their last
+	// unconfirmed dish in a mixed order — whole-order DELETE would fail there
+	// because it requires every line to be PLACED.
 	if req.Version <= 0 {
 		return out, apperr.New(apperr.CodeInvalid, "version required")
 	}

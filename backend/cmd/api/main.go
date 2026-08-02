@@ -122,7 +122,8 @@ func main() {
 	swaggerui.Register(router)
 
 	api := router.Group("/api/v1")
-	wireRoutes(api, tx, dispatcher, pool, cfg, s3Client)
+	stopRateLimiters := wireRoutes(api, tx, dispatcher, pool, cfg, s3Client)
+	defer stopRateLimiters()
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddr,
@@ -144,7 +145,7 @@ func main() {
 	}
 }
 
-func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outbox.Dispatcher, pool *pgxpool.Pool, cfg config.Config, s3Client *storage.Client) {
+func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outbox.Dispatcher, pool *pgxpool.Pool, cfg config.Config, s3Client *storage.Client) func() {
 	secret := cfg.JWTSecret
 	defaultRID := cfg.DefaultRestaurantID
 
@@ -175,7 +176,8 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 		MergeSessions:       diningapp.NewMergeSessions(tx, diningRepo, outboxWriter, defaultRID),
 		SplitSessions:       diningapp.NewSplitSessions(tx, diningRepo, outboxWriter, defaultRID),
 		ListPendingSessions: diningapp.NewListPendingSessions(diningRepo, defaultRID),
-		StaffVerifySession:  diningapp.NewStaffVerifySession(tx, diningRepo, outboxWriter, defaultRID),
+		ApproveDevice:       diningapp.NewApproveDevice(tx, diningRepo, outboxWriter, defaultRID),
+		DeviceStatus:        diningapp.NewDeviceStatus(diningRepo),
 		SaveTable:           diningapp.NewSaveTable(tx, diningRepo, defaultRID),
 		SaveTablePositions:  diningapp.NewSaveTablePositions(tx, diningRepo, defaultRID),
 		DeleteTable:         diningapp.NewDeleteTable(tx, diningRepo, defaultRID),
@@ -184,6 +186,7 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 		DeleteArea:          diningapp.NewDeleteArea(tx, diningRepo, defaultRID),
 		ListDailySessions:   diningapp.NewListDailySessions(diningRepo, defaultRID),
 		GetSessionDetail:    diningapp.NewGetSessionDetail(diningRepo, defaultRID),
+		GetListTableTest:    diningapp.NewListTable(diningRepo, defaultRID),
 	}
 
 	orderingRepo := orderingrepo.NewRepository(pool, defaultRID)
@@ -220,17 +223,17 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 		billingapp.NewVoidInvoice(tx, billingRepo, outboxWriter, defaultRID),
 		billingapp.NewSplitInvoice(tx, billingRepo, outboxWriter, defaultRID),
 		billingapp.NewListSessionInvoices(billingRepo, defaultRID),
+		billingapp.NewPaidInvoices(billingRepo, defaultRID),
 		billingapp.NewGuestCheckout(billingRepo, defaultRID),
 		cfg.AppEnv,
 	)
 
-	orderRateLimiter := ratelimit.NewSlidingWindow(30, 1*time.Minute)
-	defer orderRateLimiter.Stop()
-	paymentRateLimiter := ratelimit.NewSlidingWindow(120, 1*time.Minute)
-	defer paymentRateLimiter.Stop()
+	joinRateLimiter := ratelimit.NewSlidingWindow(20, time.Minute)
+	orderRateLimiter := ratelimit.NewSlidingWindow(30, time.Minute)
+	paymentRateLimiter := ratelimit.NewSlidingWindow(120, time.Minute)
 
 	customer := api.Group("/customer")
-	diningHandler.RegisterGuestRoutes(customer)
+	diningHandler.RegisterGuestRoutes(customer, joinRateLimiter.Middleware(ratelimit.IPKey))
 	catalogHandler.RegisterGuestRoutes(customer)
 
 	orders := api.Group("/customer", auth.QRSessionToken(diningRepo), orderRateLimiter.Middleware(ratelimit.GuestSessionKey))
@@ -248,6 +251,12 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 	billingHandler.RegisterStaffRoutes(restaurant, secret, identityRepo, defaultRID)
 
 	billingHandler.RegisterWebhookRoutes(api)
+
+	return func() {
+		joinRateLimiter.Stop()
+		orderRateLimiter.Stop()
+		paymentRateLimiter.Stop()
+	}
 }
 
 func buildGatewayRegistry(cfg config.Config) *billingdomain.GatewayRegistry {

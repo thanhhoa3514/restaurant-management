@@ -204,6 +204,13 @@ func (h *Hub) readPump(s *subscription) {
 		}
 		s.conn.SetReadDeadline(time.Now().Add(pongWait))
 		if isInternalPing(msg) {
+			// Reply so the client sees inbound traffic and keeps its own
+			// inactivity monitor from closing an otherwise-healthy socket.
+			pong, _ := json.Marshal(Event{Type: "_pong"})
+			select {
+			case s.send <- pong:
+			default:
+			}
 			continue
 		}
 	}

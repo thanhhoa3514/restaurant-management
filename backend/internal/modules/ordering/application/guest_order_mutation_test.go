@@ -220,13 +220,25 @@ func TestGuestEditOrderStaleVersionRejected(t *testing.T) {
 	require.Empty(t, repo.cancelled)
 }
 
-func TestGuestEditOrderRequiresVersionAndItems(t *testing.T) {
-	repo, rid, sid, orderID, _, _ := newEditRepo()
+func TestGuestEditOrderRequiresVersion(t *testing.T) {
+	repo, rid, sid, _, _, _ := newEditRepo()
 	_, err := NewGuestEditOrder(fakeTx{}, repo, nil, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{})
 	require.True(t, apperr.Is(err, apperr.CodeInvalid))
+}
 
-	_, err = NewGuestEditOrder(fakeTx{}, repo, nil, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{OrderID: orderID, Version: 1})
-	require.True(t, apperr.Is(err, apperr.CodeInvalid))
+func TestGuestEditOrderEmptyItemsCancelsPlacedLines(t *testing.T) {
+	repo, rid, sid, orderID, lineA, lineB := newEditRepo()
+	outbox := &fakeOutbox{}
+	// Empty items = "remove every line I'm still allowed to remove". With both
+	// lines PLACED, both get cancelled — this is the mixed-order last-dish delete
+	// path that whole-order DELETE can't serve.
+	out, err := NewGuestEditOrder(fakeTx{}, repo, outbox, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestEditOrderRequest{OrderID: orderID, Version: 1})
+
+	require.NoError(t, err)
+	require.Empty(t, repo.updated)
+	require.ElementsMatch(t, []uuid.UUID{lineA, lineB}, repo.cancelled)
+	require.Equal(t, 2, out.Version)
+	require.Equal(t, 1, outbox.writes)
 }
 
 func TestGuestEditOrderConfirmedLineReturnsLineConflict(t *testing.T) {
@@ -309,6 +321,19 @@ func TestGuestCancelOrderCancelsOnlyWhenAllLinesPlaced(t *testing.T) {
 	_, err = NewGuestCancelOrder(fakeTx{}, repo, nil, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestCancelOrderRequest{OrderID: orderID})
 	require.True(t, apperr.Is(err, apperr.CodeConflict))
 	require.Empty(t, repo.cancelled)
+}
+
+func TestGuestCancelOrderSkipsAlreadyCancelledLines(t *testing.T) {
+	// A line the guest cancelled earlier must not block cancelling the order:
+	// only the remaining PLACED line gets cancelled, the dead line is ignored.
+	repo, rid, sid, orderID, lineA, lineB := newEditRepo()
+	repo.lines[1].Status = "CANCELLED"
+	repo.finishStatus = "CANCELLED"
+	_, err := NewGuestCancelOrder(fakeTx{}, repo, &fakeOutbox{}, rid).Handle(guestOrderCtx(rid, sid, uuid.New()), GuestCancelOrderRequest{OrderID: orderID})
+
+	require.NoError(t, err)
+	require.Equal(t, []uuid.UUID{lineA}, repo.cancelled)
+	require.NotContains(t, repo.cancelled, lineB)
 }
 
 func TestGuestRequestCancelPreparingLineCreatesPendingRequest(t *testing.T) {

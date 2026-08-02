@@ -15,6 +15,7 @@ import {
   sessionTotal,
 } from '@/features/cashier/helpers'
 import type { CashierSession, Lang, SessionStatus } from '@/features/cashier/types'
+import { cn } from '@/lib/utils'
 
 type SortMode = 'newest' | 'bill'
 
@@ -131,7 +132,8 @@ export const SessionList: FC<SessionListProps> = ({
             <p className="mt-3">{t('no_sessions')}</p>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-4">
+            {/* auto-fill thay vì cột cố định: thẻ không hẹp dưới 15rem nên số tiền dài vẫn đủ chỗ */}
             {filteredSessions.map((session) => (
               <SessionCard
                 key={session.id}
@@ -175,39 +177,45 @@ function SessionCard({
   const pendingInvoice = session.invoices.find((inv) => inv.payment?.status === 'pending')
 
   return (
-    <Button
-      variant="secondary"
-      className={`h-full w-full justify-start rounded-[var(--radius-xl)] border p-0 text-left transition-shadow ${LIST_CARD} ${
+    /* button thường, không dùng <Button>: variant kèm whitespace-nowrap làm số tiền dài tràn khỏi thẻ */
+    <button
+      type="button"
+      className={cn(
+        'w-full cursor-pointer rounded-[var(--radius-xl)] border p-3 text-left transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--system-blue)]',
+        LIST_CARD,
         selected
           ? 'border-[var(--text-secondary)] ring-2 ring-[var(--text)]/20'
           : /* hover must move away from the list's --surface-grouped background, not onto it */
-            'border-[var(--separator)] hover:ring-1 hover:ring-[var(--text)]/15'
-      }`}
+            'border-[var(--separator)] hover:ring-1 hover:ring-[var(--text)]/15',
+      )}
       onClick={onSelect}
     >
-      <div className="w-full p-3">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-lg font-bold text-[var(--text)]">
+      <div className="w-full">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className="truncate text-lg font-bold text-[var(--text)]">
               {t('table')} {session.table_label}
             </div>
-            <div className="mt-0.5 text-xs font-normal text-[var(--text-tertiary)]">
+            <div className="mt-0.5 truncate text-xs font-normal text-[var(--text-tertiary)]">
               {lang === 'vi' ? session.area_name_vi : session.area_name_en} ·{' '}
               {t('guests', session.guest_count)}
               {session.guest_name && <span> · {session.guest_name}</span>}
             </div>
           </div>
-          <ChevronRight className="size-4 shrink-0 text-[var(--text-tertiary)]" />
+          <ChevronRight className="mt-1 size-4 shrink-0 text-[var(--text-tertiary)]" />
         </div>
-        <div className="mt-3 flex items-center justify-between text-xs font-normal text-[var(--text-tertiary)]">
-          <span>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs font-normal text-[var(--text-tertiary)]">
+          <span className="truncate">
             {fmtClock(session.started_at)} · {t('elapsed_min', elapsedMinutes)}
           </span>
-          <span>{t('items_count', itemsCount(session))}</span>
+          <span className="shrink-0">{t('items_count', itemsCount(session))}</span>
         </div>
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <Badge variant={STATUS_VARIANT[session.status]}>{t(`status_${session.status}`)}</Badge>
-          <span className="font-bold tabular-nums text-[var(--text)]">
+        {/* wrap khi hẹp: tiền xuống dòng riêng thay vì đè lên badge trạng thái */}
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+          <Badge variant={STATUS_VARIANT[session.status]} className="max-w-full">
+            <span className="truncate">{t(`status_${session.status}`)}</span>
+          </Badge>
+          <span className="ml-auto text-base font-bold tabular-nums text-[var(--text)]">
             {fmtVND(sessionTotal(session))}
           </span>
         </div>
@@ -223,6 +231,6 @@ function SessionCard({
           </div>
         ) : null}
       </div>
-    </Button>
+    </button>
   )
 }

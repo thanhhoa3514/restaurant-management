@@ -66,22 +66,13 @@ func (r *Repository) ActiveQRForTable(ctx context.Context, restaurantID, tableID
 
 func (r *Repository) CreateSession(ctx context.Context, s *domain.DiningSession) error {
 	err := r.q(ctx).QueryRow(ctx, `
-		INSERT INTO dining_sessions (restaurant_id, table_id, qr_code_id, session_code, session_token, status, opened_by, opened_via)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO dining_sessions (restaurant_id, table_id, qr_code_id, session_code, session_token, status, opened_by, opened_via, customer_name)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id
-	`, s.RestaurantID, s.TableID, s.QRCodeID, s.SessionCode, s.SessionToken, s.Status, s.OpenedBy, s.OpenedVia).Scan(&s.ID)
+	`, s.RestaurantID, s.TableID, s.QRCodeID, s.SessionCode, s.SessionToken, s.Status, s.OpenedBy, s.OpenedVia, s.CustomerName).Scan(&s.ID)
 	if pg.IsUniqueViolation(err) {
 		return apperr.New(apperr.CodeConflict, "active session already exists")
 	}
-	return err
-}
-
-func (r *Repository) UpdateSessionCustomerName(ctx context.Context, sessionID uuid.UUID, name string) error {
-	_, err := r.q(ctx).Exec(ctx, `
-		UPDATE dining_sessions
-		SET customer_name = $1, updated_at = NOW()
-		WHERE id = $2 AND deleted_at IS NULL
-	`, name, sessionID)
 	return err
 }
 
@@ -119,18 +110,26 @@ func (r *Repository) FindActiveSessionByTable(ctx context.Context, restaurantID,
 
 func (r *Repository) ValidateSessionToken(ctx context.Context, token string) (auth.SessionAuth, error) {
 	var out auth.SessionAuth
+	// A token is only a usable ordering credential once its device is APPROVED
+	// by a waiter — that is the whole confirmation gate. A PENDING device (a
+	// freshly shared link, or the first guest before verification) is rejected
+	// here, so it cannot open the guest websocket or reach any ordering route;
+	// it polls DeviceStatus over plain HTTP until approved instead.
+	//
 	// Keep a short read window after checkout so the guest can receive the final
 	// payment event, refresh once, and download the receipt. Domain write paths
 	// still reject CLOSED sessions.
 	err := r.q(ctx).QueryRow(ctx, `
-		SELECT restaurant_id, id, table_id
-		FROM dining_sessions
-		WHERE session_token = $1
+		SELECT ds.restaurant_id, ds.id, ds.table_id
+		FROM session_devices sd
+		JOIN dining_sessions ds ON ds.id = sd.session_id
+		WHERE sd.session_token = $1
+		  AND sd.status = 'APPROVED'
 		  AND (
-		      status IN ('PENDING_VERIFICATION', 'ACTIVE', 'AWAITING_PAYMENT')
-		      OR (status = 'CLOSED' AND closed_at >= NOW() - INTERVAL '30 minutes')
+		      ds.status IN ('ACTIVE', 'AWAITING_PAYMENT')
+		      OR (ds.status = 'CLOSED' AND ds.closed_at >= NOW() - INTERVAL '30 minutes')
 		  )
-		  AND deleted_at IS NULL
+		  AND ds.deleted_at IS NULL
 	`, strings.TrimSpace(token)).Scan(&out.RestaurantID, &out.SessionID, &out.TableID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return auth.SessionAuth{}, apperr.New(apperr.CodeUnauthorized, "invalid session token")
@@ -336,6 +335,50 @@ func (r *Repository) CloseSession(ctx context.Context, restaurantID, sessionID u
 	return s, true, nil
 }
 
+// AbandonPendingSession closes a session that never activated (owner rejected
+// at the join gate). Soft-deleting it clears the one-open-per-table unique
+// index so the table can be re-opened; CloseSession refuses non-ACTIVE
+// sessions, so this is a separate, narrower path. Also frees the table row.
+func (r *Repository) AbandonPendingSession(ctx context.Context, restaurantID, sessionID uuid.UUID, closedBy *uuid.UUID) error {
+	tag, err := r.q(ctx).Exec(ctx, `
+		UPDATE dining_sessions
+		SET status = 'CLOSED',
+		    deleted_at = NOW(),
+		    closed_at = COALESCE(closed_at, NOW()),
+		    closed_by = COALESCE(closed_by, $3),
+		    version = version + 1,
+		    updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2
+		  AND status = 'PENDING_VERIFICATION' AND deleted_at IS NULL
+	`, restaurantID, sessionID, closedBy)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return nil
+	}
+	// Every phone waiting on the abandoned session must receive a terminal
+	// status instead of polling PENDING forever. This runs in the caller's
+	// transaction together with the session soft-delete.
+	if _, err := r.q(ctx).Exec(ctx, `
+		UPDATE session_devices
+		SET status = 'REJECTED',
+		    approved_by = $3,
+		    approved_at = NOW(),
+		    updated_at = NOW()
+		WHERE restaurant_id = $1 AND session_id = $2 AND status = 'PENDING'
+	`, restaurantID, sessionID, closedBy); err != nil {
+		return err
+	}
+	_, err = r.q(ctx).Exec(ctx, `
+		UPDATE tables
+		SET status = 'AVAILABLE', version = version + 1, updated_at = NOW()
+		WHERE restaurant_id = $1 AND deleted_at IS NULL
+		  AND id = (SELECT table_id FROM dining_sessions WHERE restaurant_id = $1 AND id = $2)
+	`, restaurantID, sessionID)
+	return err
+}
+
 func activeSessionSelect(where string) string {
 	return `
 		SELECT id, restaurant_id, table_id, qr_code_id, session_code, session_token, status, opened_via, opened_by, merge_group_id, version, closed_at
@@ -500,6 +543,113 @@ func (r *Repository) VerifySession(ctx context.Context, restaurantID, sessionID 
 		return apperr.New(apperr.CodeNotFound, "pending session not found")
 	}
 	return nil
+}
+
+func (r *Repository) CreateSessionDevice(ctx context.Context, d *domain.SessionDevice) error {
+	err := r.q(ctx).QueryRow(ctx, `
+		INSERT INTO session_devices (restaurant_id, session_id, device_id, guest_name, status, session_token, is_owner)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id
+	`, d.RestaurantID, d.SessionID, d.DeviceID, d.GuestName, string(d.Status), d.SessionToken, d.IsOwner).Scan(&d.ID)
+	if pg.IsUniqueViolation(err) {
+		return apperr.New(apperr.CodeConflict, "device already joined this session")
+	}
+	return err
+}
+
+const sessionDeviceSelect = `
+	SELECT id, restaurant_id, session_id, device_id, COALESCE(guest_name, ''), status, session_token, is_owner, approved_by, approved_at
+	FROM session_devices
+`
+
+func scanSessionDevice(row pgx.Row) (*domain.SessionDevice, error) {
+	d := &domain.SessionDevice{}
+	var status string
+	var approvedBy pgtype.UUID
+	var approvedAt pgtype.Timestamptz
+	if err := row.Scan(&d.ID, &d.RestaurantID, &d.SessionID, &d.DeviceID, &d.GuestName, &status, &d.SessionToken, &d.IsOwner, &approvedBy, &approvedAt); err != nil {
+		return nil, err
+	}
+	d.Status = domain.DeviceStatus(status)
+	if approvedBy.Valid {
+		id := uuid.UUID(approvedBy.Bytes)
+		d.ApprovedBy = &id
+	}
+	if approvedAt.Valid {
+		t := approvedAt.Time
+		d.ApprovedAt = &t
+	}
+	return d, nil
+}
+
+func (r *Repository) FindSessionDevice(ctx context.Context, sessionID uuid.UUID, deviceID string) (*domain.SessionDevice, error) {
+	d, err := scanSessionDevice(r.q(ctx).QueryRow(ctx, sessionDeviceSelect+`WHERE session_id = $1 AND device_id = $2`, sessionID, deviceID))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperr.New(apperr.CodeNotFound, "device not found")
+	}
+	return d, err
+}
+
+func (r *Repository) FindSessionDeviceByID(ctx context.Context, restaurantID, rowID uuid.UUID) (*domain.SessionDevice, error) {
+	d, err := scanSessionDevice(r.q(ctx).QueryRow(ctx, sessionDeviceSelect+`WHERE restaurant_id = $1 AND id = $2`, restaurantID, rowID))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperr.New(apperr.CodeNotFound, "device not found")
+	}
+	return d, err
+}
+
+func (r *Repository) FindDeviceByToken(ctx context.Context, token string) (*domain.SessionDevice, error) {
+	d, err := scanSessionDevice(r.q(ctx).QueryRow(ctx, sessionDeviceSelect+`WHERE session_token = $1`, strings.TrimSpace(token)))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperr.New(apperr.CodeNotFound, "device not found")
+	}
+	return d, err
+}
+
+func (r *Repository) FindPendingDevices(ctx context.Context, restaurantID uuid.UUID) ([]domain.PendingDeviceDTO, error) {
+	rows, err := r.q(ctx).Query(ctx, `
+		SELECT sd.id, sd.session_id, sd.guest_name, sd.is_owner, sd.created_at,
+		       ds.table_id, t.code, t.name
+		FROM session_devices sd
+		JOIN dining_sessions ds ON ds.id = sd.session_id AND ds.deleted_at IS NULL
+		JOIN tables t ON t.id = ds.table_id
+		WHERE sd.restaurant_id = $1
+		  AND sd.status = 'PENDING'
+		  AND ds.status IN ('PENDING_VERIFICATION', 'ACTIVE', 'AWAITING_PAYMENT')
+		ORDER BY sd.created_at
+	`, restaurantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]domain.PendingDeviceDTO, 0)
+	for rows.Next() {
+		var d domain.PendingDeviceDTO
+		if err := rows.Scan(&d.DeviceID, &d.SessionID, &d.GuestName, &d.IsOwner, &d.CreatedAt, &d.TableID, &d.TableCode, &d.TableName); err != nil {
+			return nil, err
+		}
+		out = append(out, d)
+	}
+	return out, rows.Err()
+}
+
+func (r *Repository) SetDeviceStatus(ctx context.Context, restaurantID, rowID uuid.UUID, status domain.DeviceStatus, actorID *uuid.UUID) (*domain.SessionDevice, error) {
+	// Only PENDING devices transition — makes approve/reject idempotent-safe and
+	// blocks re-approving a device the waiter already rejected.
+	d, err := scanSessionDevice(r.q(ctx).QueryRow(ctx, `
+		UPDATE session_devices
+		SET status = $3,
+		    approved_by = $4,
+		    approved_at = NOW(),
+		    updated_at = NOW()
+		WHERE restaurant_id = $1 AND id = $2 AND status = 'PENDING'
+		RETURNING id, restaurant_id, session_id, device_id, COALESCE(guest_name, ''), status, session_token, is_owner, approved_by, approved_at
+	`, restaurantID, rowID, string(status), actorID))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperr.New(apperr.CodeConflict, "device is not pending")
+	}
+	return d, err
 }
 
 func (r *Repository) ListAreas(ctx context.Context, restaurantID uuid.UUID) ([]domain.Area, error) {
@@ -967,4 +1117,23 @@ func (r *Repository) GetSessionDetail(ctx context.Context, restaurantID, session
 	}
 
 	return detail, nil
+}
+func (r *Repository) FindListTableTest(ctx context.Context, restaurantID uuid.UUID) ([]domain.ListTableTest, error) {
+	var out = make([]domain.ListTableTest, 0)
+
+	row, err := r.q(ctx).Query(ctx, `select id, name from tables`, &restaurantID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for row.Next() {
+		var o domain.ListTableTest
+		if err := row.Scan(&o.TableId, &o.Tablename); err != nil {
+			return nil, err
+		}
+		out = append(out, o)
+	}
+	return out, nil
+
 }

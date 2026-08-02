@@ -1,4 +1,6 @@
 import { apiRequest } from '@/lib/api'
+import { getDeviceId } from '@/lib/device'
+import { loadDeviceResumeToken, saveDeviceResumeToken } from '@/features/ordering/session-store'
 import type {
   JoinSessionResult,
   ApiCategory,
@@ -13,10 +15,27 @@ import type {
   GuestCheckoutResponse,
 } from './types'
 
-export function joinDiningSession(qrToken: string, guestName?: string): Promise<JoinSessionResult> {
-  return apiRequest<JoinSessionResult>('/api/v1/customer/sessions/join', {
+export async function joinDiningSession(
+  qrToken: string,
+  guestName?: string,
+): Promise<JoinSessionResult> {
+  const resumeToken = loadDeviceResumeToken(qrToken)
+  const result = await apiRequest<JoinSessionResult>('/api/v1/customer/sessions/join', {
     method: 'POST',
-    body: { qr_token: qrToken, guest_name: guestName },
+    body: { qr_token: qrToken, guest_name: guestName, device_id: getDeviceId() },
+    sessionToken: resumeToken,
+  })
+  if (result.session_token) {
+    saveDeviceResumeToken(qrToken, result.session_token)
+  }
+  return result
+}
+
+// Poll with the device token in a header so it never enters browser history,
+// proxy URLs, or ordinary access logs.
+export function fetchDeviceStatus(token: string): Promise<{ status: string }> {
+  return apiRequest<{ status: string }>('/api/v1/customer/sessions/device-status', {
+    sessionToken: token,
   })
 }
 

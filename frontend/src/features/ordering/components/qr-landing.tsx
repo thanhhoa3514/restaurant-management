@@ -7,11 +7,11 @@ import { useOrdering } from '../hooks/use-ordering'
 import { DICT, type OrderingDict as Dict } from '@/i18n'
 import { useJoinSession } from '@/features/ordering/mutations/useJoinSession'
 import { useGuestTables } from '@/features/ordering/queries/useGuestTables'
+import { fetchDeviceStatus } from '@/features/ordering/api'
 import { buildQROrderURL } from '@/features/dining/api'
 import type { GuestTable } from '@/features/dining/types'
 import { cn } from '@/lib/utils'
 import { setGuestRealtimeToken } from '@/lib/realtime-auth'
-import { RT_EVENT } from '@/constants/realtime-events'
 
 interface QRLandingProps {
   qrToken?: string
@@ -29,6 +29,7 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
   const [guestName, setGuestName] = useState('')
   const [nameError, setNameError] = useState('')
   const [pendingJoinToken, setPendingJoinToken] = useState<string | null>(null)
+  const [retryAfterSeconds, setRetryAfterSeconds] = useState(0)
   const joinMutation = useJoinSession()
 
   const {
@@ -39,22 +40,64 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
   } = useGuestTables(!qrToken)
 
   useEffect(() => {
+    if (retryAfterSeconds <= 0) return
+    const timer = window.setTimeout(() => {
+      if (retryAfterSeconds === 1) {
+        setNameError('')
+      }
+      setRetryAfterSeconds((seconds) => Math.max(0, seconds - 1))
+    }, 1000)
+    return () => window.clearTimeout(timer)
+  }, [retryAfterSeconds])
+
+  // A device awaiting the waiter has no ordering credential yet, so it cannot
+  // open the realtime socket — the only way it learns of the waiter's decision
+  // is by polling the device-status endpoint with its (not-yet-usable) token.
+  useEffect(() => {
     if (joinState !== 'pending_verification') return
+    const token = state.session?.token
+    if (!token) return
 
-    const onVerified = () => {
-      setJoinState('ready')
-      setMessage(t.qr_ready)
-      toast.success(state.lang === 'vi' ? 'Chào mừng bạn đến với Zenith!' : 'Welcome to Zenith!')
-      setTimeout(() => {
-        dispatch({ type: 'SET_SCREEN', payload: 'menu' })
-      }, 600)
-    }
+    let cancelled = false
+    const interval = setInterval(() => {
+      void fetchDeviceStatus(token)
+        .then(({ status }) => {
+          if (cancelled) return
+          if (status === 'APPROVED') {
+            clearInterval(interval)
+            // Token is now usable — arm the socket and flip the session ACTIVE so
+            // order-page persists it (a PENDING session is deliberately not saved).
+            setGuestRealtimeToken(token)
+            if (state.session) {
+              dispatch({
+                type: 'SET_SESSION',
+                payload: { ...state.session, status: 'ACTIVE' },
+              })
+            }
+            setJoinState('ready')
+            setMessage(t.qr_ready)
+            toast.success(
+              state.lang === 'vi' ? 'Chào mừng bạn đến với Zenith!' : 'Welcome to Zenith!',
+            )
+            setTimeout(() => {
+              dispatch({ type: 'SET_SCREEN', payload: 'menu' })
+            }, 600)
+          } else if (status === 'REJECTED') {
+            clearInterval(interval)
+            setJoinState('error')
+            setMessage(t.qr_declined)
+          }
+        })
+        .catch(() => {
+          // transient network error — keep polling
+        })
+    }, 3000)
 
-    window.addEventListener(RT_EVENT.SESSION_VERIFIED, onVerified)
     return () => {
-      window.removeEventListener(RT_EVENT.SESSION_VERIFIED, onVerified)
+      cancelled = true
+      clearInterval(interval)
     }
-  }, [joinState, dispatch, t])
+  }, [joinState, state.session, state.lang, dispatch, t])
 
   const handleJoin = useCallback(
     (token: string, name?: string) => {
@@ -72,7 +115,8 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
             }
 
             if (joined.status === 'PENDING_VERIFICATION') {
-              setGuestRealtimeToken(joined.session_token || '')
+              // Don't arm the realtime socket yet — a PENDING token is rejected
+              // by the WS handshake. Wait for approval, then connect (below).
               setJoinState('pending_verification')
               setMessage(t.qr_pending_verification)
               dispatch({
@@ -116,12 +160,22 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
           },
           onError: (err) => {
             setJoinState('error')
+            if (err instanceof ApiError && err.status === 429) {
+              setRetryAfterSeconds(60)
+              setMessage(t.qr_rate_limited)
+              if (!qrToken) {
+                setJoinState('idle')
+                setNameError(t.qr_rate_limited)
+              }
+              return
+            }
+            setRetryAfterSeconds(0)
             setMessage(err instanceof ApiError && err.status === 0 ? t.qr_network : t.qr_invalid)
           },
         },
       )
     },
-    [dispatch, t, joinMutation],
+    [dispatch, t, joinMutation, qrToken],
   )
 
   const handleJoinWithName = useCallback(() => {
@@ -165,6 +219,7 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
         guestName={guestName}
         nameError={nameError}
         isPending={joinMutation.isPending}
+        retryAfterSeconds={retryAfterSeconds}
         onSelectTable={(token) => {
           attemptedToken.current = null
           setGuestName('')
@@ -199,6 +254,7 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
       nameError={nameError}
       isPending={joinMutation.isPending}
       hasSession={Boolean(state.session)}
+      retryAfterSeconds={retryAfterSeconds}
       onNameChange={handleNameChange}
       onSubmitName={handleJoinWithName}
       onRetry={() => {
@@ -220,6 +276,8 @@ function NameForm({
   isPending,
   t,
   secondaryAction,
+  isDisabled = false,
+  submitLabel,
 }: {
   guestName: string
   nameError: string
@@ -228,18 +286,20 @@ function NameForm({
   isPending: boolean
   t: Dict
   secondaryAction?: ReactNode
+  isDisabled?: boolean
+  submitLabel?: string
 }) {
   const submitButton = (
     <button
       type="button"
-      disabled={isPending}
+      disabled={isPending || isDisabled}
       onClick={onSubmit}
       className={cn(
         'flex cursor-pointer items-center justify-center rounded-2xl bg-[var(--text)] text-[var(--bg)] font-semibold shadow-lg transition-all active:scale-[0.98] disabled:opacity-50',
         secondaryAction ? 'flex-1 h-12 text-sm' : 'mt-5 h-14 w-full text-base',
       )}
     >
-      {isPending ? <Loader2 className="size-5 animate-spin" /> : t.qr_join_table}
+      {isPending ? <Loader2 className="size-5 animate-spin" /> : (submitLabel ?? t.qr_join_table)}
     </button>
   )
 
@@ -253,7 +313,7 @@ function NameForm({
         className="w-full rounded-xl border border-[var(--separator)] bg-white px-4 py-3 text-base text-[var(--text)] outline-none transition focus:border-blue-400"
         autoFocus
         onKeyDown={(e) => {
-          if (e.key === 'Enter') onSubmit()
+          if (e.key === 'Enter' && !isPending && !isDisabled) onSubmit()
         }}
       />
       {nameError && <p className="mt-2 text-xs text-red-500">{nameError}</p>}
@@ -282,6 +342,7 @@ function TablePicker({
   guestName,
   nameError,
   isPending,
+  retryAfterSeconds,
   onSelectTable,
   onNameChange,
   onSubmitName,
@@ -297,6 +358,7 @@ function TablePicker({
   guestName: string
   nameError: string
   isPending: boolean
+  retryAfterSeconds: number
   onSelectTable: (token: string) => void
   onNameChange: (value: string) => void
   onSubmitName: () => void
@@ -393,6 +455,12 @@ function TablePicker({
               onChange={onNameChange}
               onSubmit={onSubmitName}
               isPending={isPending}
+              isDisabled={retryAfterSeconds > 0}
+              submitLabel={
+                retryAfterSeconds > 0
+                  ? t.qr_retry_in.replace('{seconds}', String(retryAfterSeconds))
+                  : undefined
+              }
               t={t}
               secondaryAction={
                 <button
@@ -422,6 +490,7 @@ function JoinFlow({
   nameError,
   isPending,
   hasSession,
+  retryAfterSeconds,
   onNameChange,
   onSubmitName,
   onRetry,
@@ -434,6 +503,7 @@ function JoinFlow({
   nameError: string
   isPending: boolean
   hasSession: boolean
+  retryAfterSeconds: number
   onNameChange: (value: string) => void
   onSubmitName: () => void
   onRetry: () => void
@@ -441,7 +511,7 @@ function JoinFlow({
   const displayToken = `•••${qrToken.slice(-6)}`
   const showNameForm = joinState === 'idle' && !hasSession
   const showStatus = joinState !== 'idle'
-  const canRetry = joinState !== 'joining' && !isPending
+  const canRetry = joinState !== 'joining' && !isPending && retryAfterSeconds === 0
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--bg)] px-6">
@@ -557,11 +627,13 @@ function JoinFlow({
             >
               {joinState === 'joining'
                 ? t.qr_joining
-                : joinState === 'pending_verification'
-                  ? t.qr_please_wait
-                  : joinState === 'not_opened' || joinState === 'error'
-                    ? t.qr_retry
-                    : t.start_ordering}
+                : retryAfterSeconds > 0
+                  ? t.qr_retry_in.replace('{seconds}', String(retryAfterSeconds))
+                  : joinState === 'pending_verification'
+                    ? t.qr_please_wait
+                    : joinState === 'not_opened' || joinState === 'error'
+                      ? t.qr_retry
+                      : t.start_ordering}
             </button>
           </>
         )}

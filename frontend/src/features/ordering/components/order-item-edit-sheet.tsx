@@ -10,6 +10,8 @@ import { ApiError, errorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import type { Lang, OrderItemDTO, EditOrderInput, EditOrderLineInput } from '../types'
 
+import { DeleteOrderItemDialog, type DeleteOrderItemDialogStatus } from './delete-order-item-dialog'
+
 interface OrderItemEditSheetProps {
   item: OrderItemDTO
   allItems: OrderItemDTO[]
@@ -37,9 +39,19 @@ export const OrderItemEditSheet: FC<OrderItemEditSheetProps> = ({
   const [qty, setQty] = useState(item.quantity)
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteDialogStatus, setDeleteDialogStatus] = useState<DeleteOrderItemDialogStatus>('idle')
+  const [deleteDialogError, setDeleteDialogError] = useState<string>()
 
   const editableItems = allItems.filter((i) => i.status === 'PLACED')
-  const isLastEditable = editableItems.length <= 1
+  // "Last item" means the last *live* line in the order — deleting it empties
+  // the order, so route to whole-order cancel. Counting only PLACED items was
+  // wrong: in a mixed order (one PLACED + a staff-confirmed line) it would call
+  // whole-order cancel, which the backend rejects because a confirmed line
+  // exists, leaving the dish undeletable and still billed. When other live
+  // lines remain we take the edit path, which cancels just this PLACED line.
+  const liveItems = allItems.filter((i) => i.status !== 'CANCELLED')
+  const isLastEditable = liveItems.length <= 1
 
   if (!open) return null
 
@@ -96,20 +108,9 @@ export const OrderItemEditSheet: FC<OrderItemEditSheetProps> = ({
   const handleDelete = async () => {
     if (!sessionToken) return
     if (isLastEditable) {
-      const confirmed = window.confirm(t.delete_last_item_confirm)
-      if (!confirmed) return
-      setSaving(true)
-      try {
-        await cancelMutation.mutateAsync(orderId)
-        toast.success(t.toast_item_removed)
-        onClose()
-      } catch (err) {
-        toast.error(
-          errorMessage(err, lang === 'vi' ? 'Không thể xoá đơn.' : 'Could not delete order.'),
-        )
-      } finally {
-        setSaving(false)
-      }
+      setDeleteDialogError(undefined)
+      setDeleteDialogStatus('idle')
+      setDeleteDialogOpen(true)
       return
     }
     setSaving(true)
@@ -131,6 +132,25 @@ export const OrderItemEditSheet: FC<OrderItemEditSheetProps> = ({
         }
       }
       toast.error(msg)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDeleteLastItem = async () => {
+    setSaving(true)
+    setDeleteDialogError(undefined)
+    setDeleteDialogStatus('loading')
+    try {
+      await cancelMutation.mutateAsync(orderId)
+      setDeleteDialogStatus('success')
+      setDeleteDialogOpen(false)
+      onClose()
+    } catch (err) {
+      setDeleteDialogStatus('error')
+      setDeleteDialogError(
+        errorMessage(err, lang === 'vi' ? 'Không thể xoá đơn.' : 'Could not delete order.'),
+      )
     } finally {
       setSaving(false)
     }
@@ -286,6 +306,23 @@ export const OrderItemEditSheet: FC<OrderItemEditSheetProps> = ({
           </div>
         </div>
       </div>
+
+      <DeleteOrderItemDialog
+        open={deleteDialogOpen}
+        lang={lang}
+        itemName={name}
+        quantity={item.quantity}
+        status={deleteDialogStatus}
+        errorMessage={deleteDialogError}
+        onOpenChange={(nextOpen) => {
+          setDeleteDialogOpen(nextOpen)
+          if (!nextOpen) {
+            setDeleteDialogStatus('idle')
+            setDeleteDialogError(undefined)
+          }
+        }}
+        onConfirm={handleDeleteLastItem}
+      />
     </>
   )
 }

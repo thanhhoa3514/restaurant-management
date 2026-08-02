@@ -1,6 +1,7 @@
-import { useEffect } from 'react'
-import { useNavigate, useSearch } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
+import { useSearch } from '@tanstack/react-router'
 import { OrderingProvider, useOrdering } from '@/features/ordering/hooks/use-ordering'
+import { loadSession, saveSession, clearSession } from '@/features/ordering/session-store'
 import { QRLanding } from '@/features/ordering/components/qr-landing'
 import { MenuScreen } from '@/features/ordering/components/menu-screen'
 import { OrderStatusScreen } from '@/features/ordering/components/order-status-screen'
@@ -20,53 +21,40 @@ export function OrderPage() {
 
 function OrderFlow() {
   const { state, dispatch } = useOrdering()
-  const navigate = useNavigate()
-  const {
-    t: qrToken,
-    s: sessionTokenParam,
-    table: tableParam,
-    tableId: tableIdParam,
-  } = useSearch({ from: '/order' })
+  const { t: qrToken } = useSearch({ from: '/order' })
   const { data: checkout } = useGuestPayment(state.session?.token)
 
-  // Restore session from URL params on mount (page refresh / deep link)
+  // Restore a persisted session from *localStorage* (not the URL) on mount, so a
+  // refresh survives without ever putting the bearer token in a shareable link.
+  // Read synchronously so the menu doesn't flash the QR landing first.
+  const [persisted] = useState(() => loadSession())
   useEffect(() => {
-    if (sessionTokenParam && !state.session) {
-      setGuestRealtimeToken(sessionTokenParam)
-      dispatch({
-        type: 'SET_SESSION',
-        payload: {
-          token: sessionTokenParam,
-          table: tableParam || '',
-          startedAt: new Date(),
-          sessionId: sessionTokenParam,
-          tableId: tableIdParam,
-        },
-      })
+    if (persisted && !state.session) {
+      setGuestRealtimeToken(persisted.token)
+      dispatch({ type: 'SET_SESSION', payload: persisted })
       dispatch({ type: 'SET_SCREEN', payload: 'menu' })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Sync session to URL so F5 / deep-link works
+  // Persist the live session to localStorage so a refresh can restore it. Never
+  // persist a device still PENDING_VERIFICATION here: its token can't order yet,
+  // and restore forces the menu screen. The narrower device-resume store keeps
+  // that token instead, so qr-landing can prove ownership and resume waiting.
   useEffect(() => {
-    if (state.session?.token && state.session.token !== sessionTokenParam) {
-      navigate({
-        to: '/order',
-        search: {
-          t: undefined,
-          s: state.session.token,
-          table: state.session.table,
-          tableId: state.session.tableId,
-        },
-        replace: true,
-      })
+    if (state.session?.token && state.session.status !== 'PENDING_VERIFICATION') {
+      saveSession(state.session)
     }
-  }, [state.session, navigate, sessionTokenParam])
+  }, [state.session])
 
   useEffect(() => {
     const invoices = checkout?.invoices ?? []
     const allPaid = invoices.length > 0 && invoices.every((invoice) => invoice.status === 'PAID')
     if (allPaid) {
+      // Session is finished — drop the persisted token so a later refresh starts
+      // clean instead of restoring a dead session. The in-memory session (and its
+      // token, still needed for the invoice PDF) is untouched.
+      clearSession()
       if (state.wantsDigitalInvoice && state.screen !== 'invoice' && state.screen !== 'qr') {
         dispatch({ type: 'SET_SCREEN', payload: 'invoice' })
       }
@@ -89,9 +77,9 @@ function OrderFlow() {
     }
   }, [checkout, dispatch, state.screen, state.wantsDigitalInvoice])
 
-  // If we have a session token in the URL but the session hasn't been restored yet,
-  // we shouldn't render the QR landing page to avoid flashing the TablePicker.
-  if (sessionTokenParam && !state.session) {
+  // A persisted session is being restored — hold a spinner instead of flashing
+  // the QR landing / table picker before the restore effect runs.
+  if (persisted && !state.session) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-[var(--bg)]">
         <div className="size-8 animate-spin rounded-full border-4 border-[var(--separator)] border-t-[var(--system-blue)]" />
