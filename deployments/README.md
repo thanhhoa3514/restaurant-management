@@ -32,12 +32,20 @@ sudo usermod -aG docker $USER   # re-login after
 
 git clone <repo> && cd restaurant-management/deployments
 cp .env.prod.example .env
-# edit .env — set every CHANGE_ME (DB, MinIO, JWT_SECRET, staff password)
+# edit .env — set every CHANGE_ME (DB, MinIO, JWT_SECRET, setup password)
 
 docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 ```
 
-Boot order is automatic: postgres healthy → migrate → seed → api → web.
+Boot order is automatic: postgres healthy → migrate → api → web. Production
+deploys never run the demo seed command.
+
+On a brand-new database only, bootstrap the restaurant and staff accounts once:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env run --rm --no-deps \
+  --entrypoint /bin/restaurant-setup api
+```
 
 ## 4. Verify
 
@@ -47,7 +55,8 @@ curl -I http://localhost/health              # → 200 via nginx
 ```
 
 Then `https://jackiengo.io.vn` → open, `https://jackiengo.io.vn/order` → QR flow.
-Staff login: manager account from seed, password = `DEMO_SEED_PASSWORD`.
+Staff login: manager account from the one-time setup, password =
+`SETUP_ADMIN_PASSWORD`.
 
 ## Notes / ceilings
 
@@ -59,4 +68,4 @@ Staff login: manager account from seed, password = `DEMO_SEED_PASSWORD`.
   kitchen/routes). Bundling is fine (vite/esbuild). Fix the types, then restore
   `tsc -b` for CI.
 - **Update deploy**: `git pull && docker compose -f docker-compose.prod.yml --env-file .env up -d --build`.
-  `migrate`/`seed` re-run each up; both are idempotent.
+  Migrations re-run safely on each deploy; demo seed data is never applied.

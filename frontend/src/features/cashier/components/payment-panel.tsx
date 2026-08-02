@@ -110,7 +110,6 @@ export const PaymentPanel: FC<PaymentPanelProps> = ({
             invoice={invoice}
             payment={payment}
             t={t}
-            dispatch={dispatch}
             onReceipt={onReceipt}
           />
         ) : partiallyPaid ? (

@@ -96,14 +96,14 @@ func (s *ProcessPartialPayment) Handle(ctx context.Context, in ProcessPartialPay
 				return err
 			}
 
-			if invoice.Status == domain.InvoicePaid && invoice.DiningSessionID != uuidNil {
+			for _, sessionID := range invoice.ClosedSessionIDs {
 				if err := s.outbox.Write(ctx, outbox.WriteEvent{
 					RestaurantID:  s.defaultRestaurantID,
 					AggregateType: "dining_session",
-					AggregateID:   invoice.DiningSessionID,
+					AggregateID:   sessionID,
 					EventType:     "dining.session_closed",
 					Payload: map[string]any{
-						"dining_session_id": invoice.DiningSessionID,
+						"dining_session_id": sessionID,
 						"invoice_id":        invoice.ID,
 						"closed_by":         in.ActorID,
 						"reason":            "payment_completed",

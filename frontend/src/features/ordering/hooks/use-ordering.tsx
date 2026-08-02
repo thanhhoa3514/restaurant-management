@@ -27,6 +27,7 @@ type Action =
   | { type: 'OPEN_CART' }
   | { type: 'CLOSE_CART' }
   | { type: 'CLEAR_CART' }
+  | { type: 'END_SESSION' }
 
 function orderingReducer(state: OrderingState, action: Action): OrderingState {
   switch (action.type) {
@@ -77,6 +78,9 @@ function orderingReducer(state: OrderingState, action: Action): OrderingState {
 
     case 'CLEAR_CART':
       return { ...state, cart: [] }
+
+    case 'END_SESSION':
+      return { ...state, session: null, cart: [], screen: 'qr', cartOpen: false, placing: false }
 
     default:
       return state

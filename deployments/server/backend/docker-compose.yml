@@ -7,17 +7,6 @@ services:
       - restaurant
     restart: "no"
 
-  seed:
-    image: restaurant-api:${TAG}
-    entrypoint: ["/bin/restaurant-seed"]
-    env_file: .env
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-    networks:
-      - restaurant
-    restart: "no"
-
   api:
     image: restaurant-api:${TAG}
     container_name: api
@@ -28,7 +17,7 @@ services:
     volumes:
       - ../../logs/api:/logs
     depends_on:
-      seed:
+      migrate:
         condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]

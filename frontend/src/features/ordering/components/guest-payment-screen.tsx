@@ -7,6 +7,8 @@ import { Card } from '@/components/ui/card'
 import { useOrdering } from '@/features/ordering/hooks/use-ordering'
 import { useGuestPayment } from '@/features/ordering/queries/useGuestPayment'
 import { formatVND } from '@/features/ordering/helpers'
+import { clearSession } from '@/features/ordering/session-store'
+import { setGuestRealtimeToken } from '@/lib/realtime-auth'
 
 export const GuestPaymentScreen: FC = () => {
   const { state, dispatch } = useOrdering()
@@ -113,8 +115,9 @@ export const GuestPaymentScreen: FC = () => {
               <Button
                 className="mt-5 h-12 w-full"
                 onClick={() => {
-                  dispatch({ type: 'CLEAR_CART' })
-                  dispatch({ type: 'SET_SCREEN', payload: 'qr' })
+                  clearSession()
+                  setGuestRealtimeToken('')
+                  dispatch({ type: 'END_SESSION' })
                 }}
               >
                 {isVietnamese ? 'Hoàn tất' : 'Finish'}

@@ -33,6 +33,20 @@ services:
       retries: 10
     restart: unless-stopped
 
+  migrate:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    entrypoint: ["/bin/restaurant-migrate"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      APP_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   api:
     build:
       context: ../backend
@@ -69,8 +83,6 @@ services:
       minio:
         condition: service_healthy
       migrate:
-        condition: service_completed_successfully
-      seed:
         condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]

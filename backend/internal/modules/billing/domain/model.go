@@ -51,6 +51,9 @@ type Invoice struct {
 	Items                    []InvoiceItem
 	Payment                  *Payment  // latest/completed payment (backward compat)
 	Payments                 []Payment // all payments (supports multi-method)
+	// ClosedSessionIDs is populated only when this payment closes the complete
+	// dining bill. It is internal transaction metadata, not part of the API DTO.
+	ClosedSessionIDs []uuid.UUID
 }
 
 type InvoiceItem struct {
@@ -162,6 +165,17 @@ type InvoiceRepository interface {
 
 type PaymentCancellationRepository interface {
 	CancelProcessingPayment(ctx context.Context, restaurantID, invoiceID, paymentID uuid.UUID) (*Invoice, error)
+}
+
+type SessionCancellationResult struct {
+	SessionID        uuid.UUID
+	SessionIDs       []uuid.UUID
+	VoidedInvoiceIDs []uuid.UUID
+	ClosedNow        bool
+}
+
+type SessionCancellationRepository interface {
+	CancelSession(ctx context.Context, restaurantID, sessionID, actorID uuid.UUID) (*SessionCancellationResult, error)
 }
 
 type OutboxWriter interface {

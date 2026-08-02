@@ -227,6 +227,31 @@ paths:
               schema:
                 $ref: '#/components/schemas/InvoiceResponse'
 
+  /api/v1/restaurant/billing/sessions/{sessionId}/cancel:
+    post:
+      tags: [billing]
+      summary: Cancel a dining session and void its unpaid invoices
+      description: >
+        Permission: billing.process. The invoices, dining session, merged-session
+        members, and tables are updated atomically. Sessions with a partial or
+        in-flight payment must resolve that payment first.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Session cancelled and closed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelSessionResponse'
+        '409':
+          description: Session has a partial or in-flight payment
+
   /api/v1/customer/sessions/join:
     post:
       tags: [dining]
@@ -898,6 +923,15 @@ components:
       required: [session_id]
       properties:
         session_id: { type: string, format: uuid }
+    CancelSessionResponse:
+      type: object
+      required: [id, status, voided_invoice_ids]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [CLOSED] }
+        voided_invoice_ids:
+          type: array
+          items: { type: string, format: uuid }
     ManageTableQRRequest:
       type: object
       required: [table_id]

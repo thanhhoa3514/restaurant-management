@@ -24,7 +24,7 @@ interface InvoicePanelProps {
   t: (key: string, ...args: Array<number | string>) => string
   onApplyDiscount: (sessionId: string, amount: number, reason: string) => void
   onRemoveDiscount: (sessionId: string) => void
-  onCloseSession: (sessionId: string) => void
+  onCloseSession: (sessionId: string) => Promise<boolean>
   onSelectInvoice: (sessionId: string, invoiceId: string) => void
   onSplit: (
     sessionId: string,

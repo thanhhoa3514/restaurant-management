@@ -7,7 +7,7 @@ interface VoidDialogProps {
   session: CashierSession | null
   t: (key: string, ...args: Array<number | string>) => string
   onOpenChange: (open: boolean) => void
-  onConfirm: () => void
+  onConfirm: () => Promise<boolean>
 }
 
 export const VoidDialog: FC<VoidDialogProps> = ({ open, session, t, onOpenChange, onConfirm }) => {

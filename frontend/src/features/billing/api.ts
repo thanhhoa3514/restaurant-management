@@ -58,6 +58,12 @@ export interface BillingInvoiceListResponse {
   invoices: BillingInvoiceDTO[]
 }
 
+export interface CancelBillingSessionResponse {
+  id: string
+  status: 'CLOSED'
+  voided_invoice_ids: string[]
+}
+
 function buildInvoice(diningSessionId: string): Promise<BillingInvoiceResponse> {
   return apiRequest<BillingInvoiceResponse>('/api/v1/restaurant/invoices', {
     method: 'POST',
@@ -122,6 +128,13 @@ export function cancelPayment(
 ): Promise<BillingInvoiceResponse> {
   return apiRequest<BillingInvoiceResponse>(
     `/api/v1/restaurant/invoices/${encodeURIComponent(invoiceId)}/payments/${encodeURIComponent(paymentId)}/cancel`,
+    { method: 'POST' },
+  )
+}
+
+export function cancelBillingSession(sessionId: string): Promise<CancelBillingSessionResponse> {
+  return apiRequest<CancelBillingSessionResponse>(
+    `/api/v1/restaurant/billing/sessions/${encodeURIComponent(sessionId)}/cancel`,
     { method: 'POST' },
   )
 }

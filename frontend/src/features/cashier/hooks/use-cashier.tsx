@@ -14,8 +14,7 @@ import { useCancelPayment } from '@/features/cashier/mutations/useCancelPayment'
 import { useProcessPartialPayment } from '@/features/cashier/mutations/useProcessPartialPayment'
 import { useSplitInvoice } from '@/features/cashier/mutations/useSplitInvoice'
 import { useListSessionInvoices } from '@/features/cashier/mutations/useListSessionInvoices'
-import { useVoidInvoice } from '@/features/cashier/mutations/useVoidInvoice'
-import { useCloseDiningSession } from '@/features/cashier/mutations/useCloseDiningSession'
+import { useCancelBillingSession } from '@/features/cashier/mutations/useCancelBillingSession'
 import { toCashierSessions, toInvoiceItem } from '@/features/cashier/helpers/mappers'
 import type {
   CashierSession,
@@ -27,6 +26,7 @@ import type {
   PaymentRecord,
   SubMethod,
 } from '@/features/cashier/types'
+import { RT_EVENT } from '@/constants/realtime-events'
 
 export interface CashierState {
   sessions: CashierSession[]
@@ -496,8 +496,7 @@ export function CashierProvider({ children }: { children: ReactNode }) {
   const cancelPaymentMutation = useCancelPayment()
   const processPartialPaymentMutation = useProcessPartialPayment()
   const splitInvoiceMutation = useSplitInvoice()
-  const voidInvoiceMutation = useVoidInvoice()
-  const closeDiningSessionMutation = useCloseDiningSession()
+  const cancelBillingSessionMutation = useCancelBillingSession()
   const { data: staffTablesData, error: staffTablesError } = useQuery({
     queryKey: STAFF_TABLES_QUERY_KEY,
     queryFn: fetchStaffTables,
@@ -520,6 +519,22 @@ export function CashierProvider({ children }: { children: ReactNode }) {
       id: 'cashier-sessions-load-error',
     })
   }, [staffTablesError, t])
+
+  useEffect(() => {
+    const handleSessionClosed = (event: Event) => {
+      const detail = (event as CustomEvent<Record<string, unknown>>).detail ?? {}
+      const ids = Array.isArray(detail.dining_session_ids)
+        ? detail.dining_session_ids.filter((id): id is string => typeof id === 'string')
+        : typeof detail.dining_session_id === 'string'
+          ? [detail.dining_session_id]
+          : []
+      for (const sessionId of ids) {
+        baseDispatch({ type: 'closeSession', sessionId })
+      }
+    }
+    window.addEventListener(RT_EVENT.SESSION_CLOSED, handleSessionClosed)
+    return () => window.removeEventListener(RT_EVENT.SESSION_CLOSED, handleSessionClosed)
+  }, [])
 
   useEffect(() => {
     queryClient.setQueryData(CASHIER_QUERY_KEY, state.sessions)
@@ -687,22 +702,15 @@ export function CashierProvider({ children }: { children: ReactNode }) {
           }
           case 'closeSession': {
             if (!currentSession) return
-            let voided = false
-            for (const invoice of currentSession.invoices) {
-              if (invoice.id && invoice.status !== 'PAID' && invoice.status !== 'VOID') {
-                await voidInvoiceMutation.mutateAsync({
-                  invoiceId: invoice.id,
-                  voidReason: 'void_session',
-                })
-                voided = true
-              }
-            }
-            await closeDiningSessionMutation.mutateAsync(currentSession.id)
+            const result = await cancelBillingSessionMutation.mutateAsync(currentSession.id)
             baseDispatch(action)
             void queryClient.invalidateQueries({ queryKey: STAFF_TABLES_QUERY_KEY })
 
-            if (voided) toast(t('toast_session_voided', currentSession.table_label))
-            else toast(t('toast_session_closed', currentSession.table_label))
+            if (result.voided_invoice_ids.length > 0) {
+              toast(t('toast_session_voided', currentSession.table_label))
+            } else {
+              toast(t('toast_session_closed', currentSession.table_label))
+            }
 
             break
           }
@@ -756,8 +764,7 @@ export function CashierProvider({ children }: { children: ReactNode }) {
       cancelPaymentMutation,
       processPartialPaymentMutation,
       splitInvoiceMutation,
-      voidInvoiceMutation,
-      closeDiningSessionMutation,
+      cancelBillingSessionMutation,
     ],
   )
 

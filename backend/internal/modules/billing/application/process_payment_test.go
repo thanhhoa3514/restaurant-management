@@ -1,12 +1,48 @@
 package application
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/uuid"
 
 	"restaurant-management/internal/modules/billing/domain"
 )
+
+func TestWritePaymentCompletedOnlyClosesSessionsReportedByTransaction(t *testing.T) {
+	restaurantID := uuid.New()
+	primaryID := uuid.New()
+	memberID := uuid.New()
+	invoice := &domain.Invoice{
+		ID:              uuid.New(),
+		DiningSessionID: primaryID,
+		Payment: &domain.Payment{
+			ID:     uuid.New(),
+			Status: domain.PaymentCompleted,
+		},
+	}
+	events := &cancelSessionOutbox{}
+	useCase := &ProcessPayment{outbox: events, defaultRestaurantID: restaurantID}
+
+	if err := useCase.writePaymentCompleted(context.Background(), invoice, uuid.New()); err != nil {
+		t.Fatal(err)
+	}
+	if len(events.events) != 1 || events.events[0].EventType != "billing.payment_completed" {
+		t.Fatalf("an open split bill must not emit session closed: %+v", events.events)
+	}
+
+	events.events = nil
+	invoice.ClosedSessionIDs = []uuid.UUID{primaryID, memberID}
+	if err := useCase.writePaymentCompleted(context.Background(), invoice, uuid.New()); err != nil {
+		t.Fatal(err)
+	}
+	if len(events.events) != 3 {
+		t.Fatalf("expected payment plus two session events, got %+v", events.events)
+	}
+	if events.events[1].AggregateID != primaryID || events.events[2].AggregateID != memberID {
+		t.Fatalf("merged session events have wrong scope: %+v", events.events)
+	}
+}
 
 func TestIsGatewayOnlyPaymentMethod(t *testing.T) {
 	tests := []struct {

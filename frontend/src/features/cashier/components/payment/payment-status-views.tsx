@@ -176,14 +176,12 @@ export function PaidView({
   invoice,
   payment,
   t,
-  dispatch,
   onReceipt,
 }: {
   session: CashierSession
   invoice: Invoice
   payment: NonNullable<Invoice['payment']>
   t: PaymentT
-  dispatch: React.Dispatch<CashierAction>
   onReceipt: (sessionId: string) => void
 }) {
   return (
@@ -224,13 +222,6 @@ export function PaidView({
       >
         <Printer />
         {t('print_receipt')}
-      </Button>
-      <Button
-        variant="outline"
-        className={cn(PAYMENT_OUTLINE_BUTTON, 'w-full')}
-        onClick={() => dispatch({ type: 'closeSession', sessionId: session.id })}
-      >
-        {t('close_session')}
       </Button>
       <Button
         variant="ghost"

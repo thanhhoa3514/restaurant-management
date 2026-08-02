@@ -10,6 +10,8 @@ import type { Session } from '../types'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import { clearSession } from '@/features/ordering/session-store'
+import { setGuestRealtimeToken } from '@/lib/realtime-auth'
 
 const createInvoiceNumber = (session: Session | null) => {
   const seed = session
@@ -65,9 +67,9 @@ export const GuestInvoiceScreen: FC = () => {
   }, [ordersData])
 
   const handleFinish = () => {
-    // Clear cart and session, then redirect to landing page
-    dispatch({ type: 'CLEAR_CART' })
-    dispatch({ type: 'SET_SCREEN', payload: 'qr' })
+    clearSession()
+    setGuestRealtimeToken('')
+    dispatch({ type: 'END_SESSION' })
   }
 
   const currentDateString = useMemo(() => fmtDateTime(new Date()), [])

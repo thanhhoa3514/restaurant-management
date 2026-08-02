@@ -166,18 +166,23 @@ func (s *ProcessPayment) writePaymentCompleted(ctx context.Context, invoice *dom
 	}); err != nil {
 		return err
 	}
-	return s.outbox.Write(ctx, outbox.WriteEvent{
-		RestaurantID:  s.defaultRestaurantID,
-		AggregateType: "dining_session",
-		AggregateID:   invoice.DiningSessionID,
-		EventType:     "dining.session_closed",
-		Payload: map[string]any{
-			"dining_session_id": invoice.DiningSessionID,
-			"invoice_id":        invoice.ID,
-			"closed_by":         actorID,
-			"reason":            "payment_completed",
-		},
-		Metadata: map[string]any{"actor_type": "STAFF", "action": "session.closed"},
-		Priority: 3,
-	})
+	for _, sessionID := range invoice.ClosedSessionIDs {
+		if err := s.outbox.Write(ctx, outbox.WriteEvent{
+			RestaurantID:  s.defaultRestaurantID,
+			AggregateType: "dining_session",
+			AggregateID:   sessionID,
+			EventType:     "dining.session_closed",
+			Payload: map[string]any{
+				"dining_session_id": sessionID,
+				"invoice_id":        invoice.ID,
+				"closed_by":         actorID,
+				"reason":            "payment_completed",
+			},
+			Metadata: map[string]any{"actor_type": "STAFF", "action": "session.closed"},
+			Priority: 3,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }

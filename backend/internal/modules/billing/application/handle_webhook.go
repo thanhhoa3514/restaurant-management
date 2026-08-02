@@ -221,19 +221,24 @@ func (s *HandleWebhook) writePaymentCompleted(ctx context.Context, restaurantID 
 	}); err != nil {
 		return err
 	}
-	return s.outbox.Write(ctx, outbox.WriteEvent{
-		RestaurantID:  restaurantID,
-		AggregateType: "dining_session",
-		AggregateID:   invoice.DiningSessionID,
-		EventType:     "dining.session_closed",
-		Payload: map[string]any{
-			"dining_session_id": invoice.DiningSessionID,
-			"invoice_id":        invoice.ID,
-			"reason":            "payment_completed",
-		},
-		Metadata: map[string]any{"actor_type": "SYSTEM", "action": "session.closed"},
-		Priority: 3,
-	})
+	for _, sessionID := range invoice.ClosedSessionIDs {
+		if err := s.outbox.Write(ctx, outbox.WriteEvent{
+			RestaurantID:  restaurantID,
+			AggregateType: "dining_session",
+			AggregateID:   sessionID,
+			EventType:     "dining.session_closed",
+			Payload: map[string]any{
+				"dining_session_id": sessionID,
+				"invoice_id":        invoice.ID,
+				"reason":            "payment_completed",
+			},
+			Metadata: map[string]any{"actor_type": "SYSTEM", "action": "session.closed"},
+			Priority: 3,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *HandleWebhook) writePaymentFailed(ctx context.Context, restaurantID uuid.UUID, invoice *domain.Invoice) error {

@@ -109,7 +109,11 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       void queryClient.invalidateQueries({ queryKey: ['guest-orders'] })
       void queryClient.invalidateQueries({ queryKey: ['guest-items'] })
     }
-    if (type.startsWith(RT_PREFIX.BILLING) || type === RT_EVENT.SESSION_REOPENED) {
+    if (
+      type.startsWith(RT_PREFIX.BILLING) ||
+      type === RT_EVENT.SESSION_REOPENED ||
+      type === RT_EVENT.SESSION_CLOSED
+    ) {
       void queryClient.invalidateQueries({ queryKey: ['guest-payment'] })
     }
 
@@ -182,6 +186,12 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       toast.success(vi ? 'Thanh toán thành công' : 'Payment successful', {
         id: toastID,
         description: vi ? 'Hệ thống đã nhận giao dịch của bạn.' : 'Your payment has been received.',
+      })
+    } else if (type === RT_EVENT.SESSION_CLOSED && payload?.reason !== 'payment_completed') {
+      toast.info(vi ? 'Phiên tại bàn đã kết thúc' : 'Your table session has ended', {
+        description: vi
+          ? 'Thu ngân đã đóng phiên. Bạn có thể quét lại mã bàn khi cần gọi món.'
+          : 'The cashier closed this session. Scan the table QR to start again.',
       })
     } else if (type === RT_EVENT.ITEM_CONFIRMED) {
       toast.success(vi ? `Đã duyệt "${name}"` : `"${name}" approved`, {

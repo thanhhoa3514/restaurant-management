@@ -1,5 +1,5 @@
 import { type FC, useState } from 'react'
-import { ChevronLeft, Loader2, Phone, ShoppingBag } from 'lucide-react'
+import { ChevronLeft, Phone, ShoppingBag } from 'lucide-react'
 import { toast } from 'sonner'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '@/i18n'
@@ -22,7 +22,6 @@ export const SessionSummary: FC = () => {
   const sessionTotal = ordersData?.session_total_vnd ?? 0
 
   const [payConfirmOpen, setPayConfirmOpen] = useState(false)
-  const [requestingBill, setRequestingBill] = useState(false)
 
   return (
     <div className="flex min-h-dvh flex-col bg-[var(--surface-grouped)]">
@@ -152,36 +151,13 @@ export const SessionSummary: FC = () => {
         t={t}
         onOpenChange={setPayConfirmOpen}
         onConfirm={async (wantsDigitalInvoice) => {
-          if (!sessionToken) return
-          setRequestingBill(true)
-          try {
-            await requestBill(sessionToken)
-            toast.success(t.toast_bill)
-            dispatch({ type: 'SET_DIGITAL_INVOICE', payload: wantsDigitalInvoice })
-            dispatch({ type: 'SET_SCREEN', payload: 'payment' })
-          } catch {
-            toast.error(t.toast_error || 'Yêu cầu thất bại, vui lòng thử lại')
-          } finally {
-            setRequestingBill(false)
-          }
+          if (!sessionToken) throw new Error('missing session token')
+          await requestBill(sessionToken)
+          toast.success(t.toast_bill)
+          dispatch({ type: 'SET_DIGITAL_INVOICE', payload: wantsDigitalInvoice })
+          dispatch({ type: 'SET_SCREEN', payload: 'payment' })
         }}
       />
-
-      {requestingBill && (
-        <div className="fixed inset-0 z-[600] flex flex-col items-center justify-center bg-black/60 backdrop-blur-xl text-center text-white animate-in fade-in duration-300">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="animate-spin h-10 w-10 text-system-blue" />
-            <div className="font-bold text-lg">
-              {state.lang === 'vi' ? 'Đang xử lý thanh toán...' : 'Processing payment...'}
-            </div>
-            <p className="text-sm text-zinc-300 max-w-xs px-6 leading-relaxed">
-              {state.lang === 'vi'
-                ? 'Hóa đơn điện tử đang được tạo và gửi trực tiếp đến thiết bị của bạn'
-                : 'E-invoice is being generated and pushed to your device'}
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

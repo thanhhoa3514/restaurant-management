@@ -8,7 +8,7 @@ copy each `.env.example` → `.env` and fill every `CHANGE_ME`.
 ├── apps/
 │   ├── postgres/   docker-compose.yml + .env
 │   ├── minio/      docker-compose.yml + .env
-│   ├── backend/    docker-compose.yml + .env   (image restaurant-api — migrate → seed → api)
+│   ├── backend/    docker-compose.yml + .env   (image restaurant-api — migrate → api)
 │   ├── frontend/   docker-compose.yml + .env   (image restaurant-web — static SPA)
 │   └── nginx/      docker-compose.yml + nginx.conf   (edge proxy, port 80)
 ├── data/           postgres + minio volumes (created automatically)
@@ -39,13 +39,25 @@ docker load -i restaurant-images-prod-<sha>.tar.gz
 
 cd ~/containers/apps/postgres && docker compose up -d
 cd ~/containers/apps/minio    && docker compose up -d
-cd ~/containers/apps/backend  && docker compose up -d   # runs migrate → seed → api
+cd ~/containers/apps/backend  && docker compose up -d   # runs migrate → api
 cd ~/containers/apps/frontend && docker compose up -d
 cd ~/containers/apps/nginx    && docker compose up -d
 ```
 
 Postgres/minio only need starting once; for an update only backend/frontend
-need `docker load` + `up -d` again (migrate/seed re-run, both idempotent).
+need `docker load` + `up -d` again. Migrations re-run safely; production never
+runs the demo seed command.
+
+On a brand-new database only, bootstrap the restaurant and staff accounts once
+after the migration completes:
+
+```bash
+cd ~/containers/apps/backend
+docker compose run --rm --no-deps --entrypoint /bin/restaurant-setup api
+```
+
+Existing installations that already have restaurant and staff data do not run
+this command again.
 
 After deploying a release that contains bundled menu images, verify that the
 web container has the files and serves the correct content type:

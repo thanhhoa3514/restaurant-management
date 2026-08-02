@@ -1,5 +1,5 @@
 import { useState, type FC } from 'react'
-import { AlertTriangle, ShieldAlert, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, Loader2, ShieldAlert, ShieldCheck } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -31,7 +31,7 @@ export interface SecureActionDialogProps {
 
   // Event handlers
   onOpenChange: (open: boolean) => void
-  onConfirm: () => void
+  onConfirm: () => void | boolean | Promise<void | boolean>
 }
 
 const VARIANT_STYLE = {
@@ -77,6 +77,7 @@ function SecureActionBody({
   onConfirm,
 }: Omit<SecureActionDialogProps, 'open'>) {
   const [userInput, setUserInput] = useState('')
+  const [pending, setPending] = useState(false)
 
   const isVerified = (() => {
     if (!requireConfirmationText) return true
@@ -88,10 +89,15 @@ function SecureActionBody({
   const buttonVariant = variant === 'destructive' ? 'destructive' : 'default'
   const { Icon, iconClass } = VARIANT_STYLE[variant]
 
-  const confirm = () => {
-    if (!isVerified) return
-    onConfirm()
-    onOpenChange(false)
+  const confirm = async () => {
+    if (!isVerified || pending) return
+    setPending(true)
+    try {
+      const confirmed = await onConfirm()
+      if (confirmed !== false) onOpenChange(false)
+    } finally {
+      setPending(false)
+    }
   }
 
   return (
@@ -123,7 +129,7 @@ function SecureActionBody({
             placeholder={requireConfirmationText}
             onChange={(event) => setUserInput(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === 'Enter') confirm()
+              if (event.key === 'Enter') void confirm()
             }}
             autoComplete="off"
             autoFocus
@@ -135,6 +141,7 @@ function SecureActionBody({
         <Button
           variant="secondary"
           className="flex-1 rounded-[var(--radius-lg)]"
+          disabled={pending}
           onClick={() => onOpenChange(false)}
         >
           {cancelText}
@@ -146,9 +153,10 @@ function SecureActionBody({
             variant === 'warning' &&
               'bg-[var(--system-orange)] text-white hover:bg-[var(--system-orange)]/90',
           )}
-          disabled={!isVerified}
-          onClick={confirm}
+          disabled={!isVerified || pending}
+          onClick={() => void confirm()}
         >
+          {pending ? <Loader2 className="size-4 animate-spin motion-reduce:animate-none" /> : null}
           {confirmText}
         </Button>
       </DialogFooter>

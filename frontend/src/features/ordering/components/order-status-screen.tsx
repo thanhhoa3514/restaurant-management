@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { OrderItemEditSheet } from './order-item-edit-sheet'
+import { GuestPayConfirmDialog } from './guest-pay-confirm-dialog'
 
 const STATUS_COLORS: Record<string, string> = {
   PLACED: 'bg-system-orange/15 text-system-orange',
@@ -56,6 +57,7 @@ export const OrderStatusScreen: FC = () => {
     order: GuestOrderDTO
     item: OrderItemDTO
   } | null>(null)
+  const [payConfirmOpen, setPayConfirmOpen] = useState(false)
 
   return (
     <div className="flex min-h-dvh flex-col bg-[var(--surface-grouped)]">
@@ -154,32 +156,7 @@ export const OrderStatusScreen: FC = () => {
             size="lg"
             disabled={requestBill.isPending}
             className="flex-1 rounded-2xl h-14 text-[14px] sm:text-base font-bold bg-[var(--text)] text-[var(--bg)] hover:opacity-90 transition-all shadow-md active:scale-[0.98] border-0"
-            onClick={() => {
-              if (
-                window.confirm(
-                  state.lang === 'vi'
-                    ? 'Bạn có chắc chắn muốn yêu cầu thanh toán không? Bàn sẽ được khóa để tính tiền.'
-                    : 'Are you sure you want to request the bill? The table will be locked.',
-                )
-              ) {
-                if (!sessionToken) return
-                requestBill.mutate(sessionToken, {
-                  onSuccess: () => {
-                    toast.success(
-                      state.lang === 'vi' ? 'Đã gửi yêu cầu thanh toán.' : 'Checkout request sent.',
-                    )
-                    dispatch({ type: 'SET_SCREEN', payload: 'payment' })
-                  },
-                  onError: () => {
-                    toast.error(
-                      state.lang === 'vi'
-                        ? 'Có lỗi xảy ra, vui lòng thử lại!'
-                        : 'Error occurred, please try again!',
-                    )
-                  },
-                })
-              }
-            }}
+            onClick={() => setPayConfirmOpen(true)}
           >
             {requestBill.isPending ? (
               <Loader2 size={18} className="mr-1.5 animate-spin" />
@@ -190,6 +167,20 @@ export const OrderStatusScreen: FC = () => {
           </Button>
         </div>
       </div>
+
+      <GuestPayConfirmDialog
+        open={payConfirmOpen}
+        tableName={state.session?.table ? String(state.session.table) : ''}
+        t={t}
+        onOpenChange={setPayConfirmOpen}
+        onConfirm={async (wantsDigitalInvoice) => {
+          if (!sessionToken) throw new Error('missing session token')
+          await requestBill.mutateAsync(sessionToken)
+          dispatch({ type: 'SET_DIGITAL_INVOICE', payload: wantsDigitalInvoice })
+          toast.success(t.toast_bill)
+          dispatch({ type: 'SET_SCREEN', payload: 'payment' })
+        }}
+      />
     </div>
   )
 }

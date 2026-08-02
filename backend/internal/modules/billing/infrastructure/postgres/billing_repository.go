@@ -927,11 +927,17 @@ func (r *Repository) ProcessPayment(ctx context.Context, restaurantID uuid.UUID,
 	if err != nil {
 		return nil, err
 	}
-	if err := r.closeSessionAndFreeTable(ctx, restaurantID, diningSessionID, input.ProcessedBy); err != nil {
+	closedSessionIDs, err := r.closeSessionAndFreeTable(ctx, restaurantID, diningSessionID, input.ProcessedBy)
+	if err != nil {
 		return nil, err
 	}
 	_ = paymentID
-	return r.LoadInvoice(ctx, restaurantID, input.InvoiceID)
+	invoice, err := r.LoadInvoice(ctx, restaurantID, input.InvoiceID)
+	if err != nil {
+		return nil, err
+	}
+	invoice.ClosedSessionIDs = closedSessionIDs
+	return invoice, nil
 }
 
 func (r *Repository) ProcessPartialPayment(ctx context.Context, restaurantID uuid.UUID, input domain.PartialPaymentInput) (*domain.Invoice, error) {
@@ -1022,9 +1028,16 @@ func (r *Repository) ProcessPartialPayment(ctx context.Context, restaurantID uui
 	}
 
 	if newStatus == "PAID" {
-		if err := r.closeSessionAndFreeTable(ctx, restaurantID, diningSessionID, input.ProcessedBy); err != nil {
+		closedSessionIDs, err := r.closeSessionAndFreeTable(ctx, restaurantID, diningSessionID, input.ProcessedBy)
+		if err != nil {
 			return nil, err
 		}
+		invoice, err := r.LoadInvoice(ctx, restaurantID, input.InvoiceID)
+		if err != nil {
+			return nil, err
+		}
+		invoice.ClosedSessionIDs = closedSessionIDs
+		return invoice, nil
 	}
 
 	_ = paymentID
@@ -1252,10 +1265,16 @@ func (r *Repository) CompleteWebhookPayment(ctx context.Context, restaurantID, p
 	if err != nil {
 		return nil, err
 	}
-	if err := r.closeSessionAndFreeTable(ctx, restaurantID, payment.DiningSessionID, uuid.Nil); err != nil {
+	closedSessionIDs, err := r.closeSessionAndFreeTable(ctx, restaurantID, payment.DiningSessionID, uuid.Nil)
+	if err != nil {
 		return nil, err
 	}
-	return r.LoadInvoice(ctx, restaurantID, payment.InvoiceID)
+	invoice, err := r.LoadInvoice(ctx, restaurantID, payment.InvoiceID)
+	if err != nil {
+		return nil, err
+	}
+	invoice.ClosedSessionIDs = closedSessionIDs
+	return invoice, nil
 }
 
 func (r *Repository) FailWebhookPayment(ctx context.Context, restaurantID, paymentID uuid.UUID, event domain.WebhookEvent) (*domain.Invoice, error) {
@@ -1326,6 +1345,181 @@ func (r *Repository) CancelProcessingPayment(ctx context.Context, restaurantID, 
 		return nil, apperr.New(apperr.CodeConflict, "payment status changed while cancelling")
 	}
 	return r.LoadInvoice(ctx, restaurantID, invoiceID)
+}
+
+// CancelSession atomically voids every still-unpaid invoice, closes all members
+// of a merged dining session, and releases their tables. Completed/processing
+// payments must be handled explicitly before cancellation so accounting data is
+// never discarded by a session-level action.
+func (r *Repository) CancelSession(ctx context.Context, restaurantID, sessionID, actorID uuid.UUID) (*domain.SessionCancellationResult, error) {
+	primaryID, memberIDs, err := r.billingSessions(ctx, restaurantID, sessionID)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := r.q(ctx).Query(ctx, `
+		SELECT id, status
+		FROM dining_sessions
+		WHERE restaurant_id = $1 AND id = ANY($2) AND deleted_at IS NULL
+		ORDER BY CASE WHEN id = $3 THEN 0 ELSE 1 END, id
+		FOR UPDATE
+	`, restaurantID, memberIDs, primaryID)
+	if err != nil {
+		return nil, err
+	}
+	allClosed := true
+	lockedCount := 0
+	for rows.Next() {
+		var id uuid.UUID
+		var status string
+		if err := rows.Scan(&id, &status); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		lockedCount++
+		if status != "CLOSED" {
+			allClosed = false
+		}
+		if status != "ACTIVE" && status != "AWAITING_PAYMENT" && status != "CLOSED" {
+			rows.Close()
+			return nil, apperr.New(apperr.CodeConflict, "dining session is not cancellable")
+		}
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if lockedCount != len(memberIDs) {
+		return nil, apperr.New(apperr.CodeNotFound, "dining session not found")
+	}
+	if allClosed {
+		return &domain.SessionCancellationResult{
+			SessionID:  primaryID,
+			SessionIDs: memberIDs,
+			ClosedNow:  false,
+		}, nil
+	}
+
+	var hasInFlightPayment bool
+	if err := r.q(ctx).QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			FROM payments p
+			JOIN invoices i
+			  ON i.restaurant_id = p.restaurant_id AND i.id = p.invoice_id
+			WHERE i.restaurant_id = $1
+			  AND i.dining_session_id = ANY($2)
+			  AND i.deleted_at IS NULL
+			  AND p.status IN ('PENDING', 'PROCESSING')
+			  AND p.deleted_at IS NULL
+		)
+	`, restaurantID, memberIDs).Scan(&hasInFlightPayment); err != nil {
+		return nil, err
+	}
+	if hasInFlightPayment {
+		return nil, apperr.New(apperr.CodeConflict, "cancel the active payment before cancelling the session")
+	}
+
+	var hasPartialPayment bool
+	if err := r.q(ctx).QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			FROM invoices
+			WHERE restaurant_id = $1
+			  AND dining_session_id = ANY($2)
+			  AND status = 'PARTIALLY_PAID'
+			  AND deleted_at IS NULL
+		)
+	`, restaurantID, memberIDs).Scan(&hasPartialPayment); err != nil {
+		return nil, err
+	}
+	if hasPartialPayment {
+		return nil, apperr.New(apperr.CodeConflict, "partially paid session cannot be cancelled")
+	}
+
+	voidRows, err := r.q(ctx).Query(ctx, `
+		UPDATE invoices
+		SET status = 'VOID',
+		    voided_reason = 'CANCELLED_BY_CASHIER',
+		    voided_at = NOW(),
+		    voided_by = $3,
+		    version = version + 1,
+		    updated_at = NOW()
+		WHERE restaurant_id = $1
+		  AND dining_session_id = ANY($2)
+		  AND status IN ('DRAFT', 'PENDING')
+		  AND deleted_at IS NULL
+		RETURNING id
+	`, restaurantID, memberIDs, actorID)
+	if err != nil {
+		return nil, err
+	}
+	voidedInvoiceIDs := make([]uuid.UUID, 0)
+	for voidRows.Next() {
+		var invoiceID uuid.UUID
+		if err := voidRows.Scan(&invoiceID); err != nil {
+			voidRows.Close()
+			return nil, err
+		}
+		voidedInvoiceIDs = append(voidedInvoiceIDs, invoiceID)
+	}
+	voidRows.Close()
+	if err := voidRows.Err(); err != nil {
+		return nil, err
+	}
+
+	if _, err := r.q(ctx).Exec(ctx, `
+		UPDATE dining_sessions
+		SET status = 'CLOSED',
+		    closed_at = COALESCE(closed_at, NOW()),
+		    closed_by = COALESCE(closed_by, $3),
+		    version = version + 1,
+		    updated_at = NOW()
+		WHERE restaurant_id = $1
+		  AND id = ANY($2)
+		  AND status <> 'CLOSED'
+		  AND deleted_at IS NULL
+	`, restaurantID, memberIDs, actorID); err != nil {
+		return nil, err
+	}
+
+	if _, err := r.q(ctx).Exec(ctx, `
+		UPDATE tables
+		SET status = 'AVAILABLE', version = version + 1, updated_at = NOW()
+		WHERE restaurant_id = $1
+		  AND id IN (
+			SELECT table_id
+			FROM dining_sessions
+			WHERE restaurant_id = $1 AND id = ANY($2) AND deleted_at IS NULL
+		  )
+		  AND deleted_at IS NULL
+	`, restaurantID, memberIDs); err != nil {
+		return nil, err
+	}
+
+	if len(memberIDs) > 1 {
+		if _, err := r.q(ctx).Exec(ctx, `
+			UPDATE table_merge_groups
+			SET is_active = FALSE, version = version + 1, updated_at = NOW()
+			WHERE restaurant_id = $1
+			  AND id = (
+				SELECT merge_group_id
+				FROM dining_sessions
+				WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+			  )
+			  AND is_active = TRUE
+			  AND deleted_at IS NULL
+		`, restaurantID, primaryID); err != nil {
+			return nil, err
+		}
+	}
+
+	return &domain.SessionCancellationResult{
+		SessionID:        primaryID,
+		SessionIDs:       memberIDs,
+		VoidedInvoiceIDs: voidedInvoiceIDs,
+		ClosedNow:        true,
+	}, nil
 }
 
 func (r *Repository) MarkWebhookProcessed(ctx context.Context, eventRowID uuid.UUID) error {
@@ -1573,50 +1767,56 @@ func (r *Repository) lockPayment(ctx context.Context, restaurantID, paymentID uu
 	return payment, nil
 }
 
-func (r *Repository) closeSessionAndFreeTable(ctx context.Context, restaurantID, diningSessionID, actorID uuid.UUID) error {
+func (r *Repository) closeSessionAndFreeTable(ctx context.Context, restaurantID, diningSessionID, actorID uuid.UUID) ([]uuid.UUID, error) {
+	primaryID, memberIDs, err := r.billingSessions(ctx, restaurantID, diningSessionID)
+	if err != nil {
+		return nil, err
+	}
+
 	var openInvoices int
 	if err := r.q(ctx).QueryRow(ctx, `
 		SELECT COUNT(*) FROM invoices
-		WHERE restaurant_id = $1 AND (dining_session_id = $2 OR order_id = $2)
+		WHERE restaurant_id = $1
+		  AND (dining_session_id = ANY($2) OR order_id = $3)
 		  AND status NOT IN ('PAID', 'VOID') AND deleted_at IS NULL
-	`, restaurantID, diningSessionID).Scan(&openInvoices); err != nil {
-		return err
+	`, restaurantID, memberIDs, primaryID).Scan(&openInvoices); err != nil {
+		return nil, err
 	}
 	if !shouldCloseSession(openInvoices) {
-		return nil
+		return nil, nil
 	}
 
-	var tableID pgtype.UUID
-	err := r.q(ctx).QueryRow(ctx, `
-		SELECT table_id
+	var lockedSessionID uuid.UUID
+	err = r.q(ctx).QueryRow(ctx, `
+		SELECT id
 		FROM dining_sessions
 		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
 		FOR UPDATE
-	`, restaurantID, diningSessionID).Scan(&tableID)
+	`, restaurantID, primaryID).Scan(&lockedSessionID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Might be a Takeaway order
 		var orderType string
 		err = r.q(ctx).QueryRow(ctx, `
 			SELECT order_type FROM orders
 			WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
-		`, restaurantID, diningSessionID).Scan(&orderType)
+		`, restaurantID, primaryID).Scan(&orderType)
 		if errors.Is(err, pgx.ErrNoRows) {
-			return apperr.New(apperr.CodeNotFound, "dining session or order not found")
+			return nil, apperr.New(apperr.CodeNotFound, "dining session or order not found")
 		}
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if orderType == "TAKEAWAY" {
 			_, err = r.q(ctx).Exec(ctx, `
 				UPDATE orders SET status = 'PAID', updated_at = NOW()
 				WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
-			`, restaurantID, diningSessionID)
-			return err
+			`, restaurantID, primaryID)
+			return nil, err
 		}
-		return apperr.New(apperr.CodeInvalid, "not a valid session or takeaway order")
+		return nil, apperr.New(apperr.CodeInvalid, "not a valid session or takeaway order")
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var actor any
 	if actorID != uuid.Nil {
@@ -1625,20 +1825,38 @@ func (r *Repository) closeSessionAndFreeTable(ctx context.Context, restaurantID,
 	if _, err := r.q(ctx).Exec(ctx, `
 		UPDATE dining_sessions
 		SET status = 'CLOSED', closed_at = COALESCE(closed_at, NOW()), closed_by = COALESCE(closed_by, $3), version = version + 1, updated_at = NOW()
-		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
-	`, restaurantID, diningSessionID, actor); err != nil {
-		return err
+		WHERE restaurant_id = $1 AND id = ANY($2) AND status <> 'CLOSED' AND deleted_at IS NULL
+	`, restaurantID, memberIDs, actor); err != nil {
+		return nil, err
 	}
-	if tableID.Valid {
+	if _, err := r.q(ctx).Exec(ctx, `
+		UPDATE tables
+		SET status = 'AVAILABLE', version = version + 1, updated_at = NOW()
+		WHERE restaurant_id = $1
+		  AND id IN (
+			SELECT table_id FROM dining_sessions
+			WHERE restaurant_id = $1 AND id = ANY($2) AND deleted_at IS NULL
+		  )
+		  AND deleted_at IS NULL
+	`, restaurantID, memberIDs); err != nil {
+		return nil, err
+	}
+	if len(memberIDs) > 1 {
 		if _, err := r.q(ctx).Exec(ctx, `
-			UPDATE tables
-			SET status = 'AVAILABLE', version = version + 1, updated_at = NOW()
-			WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
-		`, restaurantID, tableID.Bytes); err != nil {
-			return err
+			UPDATE table_merge_groups
+			SET is_active = FALSE, version = version + 1, updated_at = NOW()
+			WHERE restaurant_id = $1
+			  AND id = (
+				SELECT merge_group_id FROM dining_sessions
+				WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+			  )
+			  AND is_active = TRUE
+			  AND deleted_at IS NULL
+		`, restaurantID, primaryID); err != nil {
+			return nil, err
 		}
 	}
-	return nil
+	return memberIDs, nil
 }
 
 type billableItem struct {

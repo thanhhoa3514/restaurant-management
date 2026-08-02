@@ -22,7 +22,9 @@ export function OrderPage() {
 function OrderFlow() {
   const { state, dispatch } = useOrdering()
   const { t: qrToken } = useSearch({ from: '/order' })
-  const { data: checkout } = useGuestPayment(state.session?.token)
+  // Realtime makes this immediate; polling is the fallback when a guest's
+  // websocket drops, so payment/cashier cancellation still ends the UI.
+  const { data: checkout } = useGuestPayment(state.session?.token, true)
 
   // Restore a persisted session from *localStorage* (not the URL) on mount, so a
   // refresh survives without ever putting the bearer token in a shareable link.
@@ -61,6 +63,13 @@ function OrderFlow() {
       return
     }
 
+    if (checkout?.session_status === 'CLOSED') {
+      clearSession()
+      setGuestRealtimeToken('')
+      if (state.session) dispatch({ type: 'END_SESSION' })
+      return
+    }
+
     if (checkout?.session_status === 'ACTIVE') {
       if (state.screen === 'payment') {
         dispatch({ type: 'SET_SCREEN', payload: 'order' })
@@ -75,7 +84,7 @@ function OrderFlow() {
     ) {
       dispatch({ type: 'SET_SCREEN', payload: 'payment' })
     }
-  }, [checkout, dispatch, state.screen, state.wantsDigitalInvoice])
+  }, [checkout, dispatch, state.screen, state.session, state.wantsDigitalInvoice])
 
   // A persisted session is being restored — hold a spinner instead of flashing
   // the QR landing / table picker before the restore effect runs.
