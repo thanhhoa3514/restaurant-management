@@ -118,7 +118,9 @@ func (r *Repository) ValidateAccessToken(ctx context.Context, token string) (aut
 	//
 	// Keep a short read window after checkout so the guest can receive the final
 	// payment event, refresh once, and download the receipt. Domain write paths
-	// still reject CLOSED sessions.
+	// still reject CLOSED sessions. Staff-initiated CloseSession revokes the
+	// device rows outright, so this window only ever covers the payment-settle
+	// close path — hence it is intentionally brief.
 	err := r.q(ctx).QueryRow(ctx, `
 		SELECT ds.restaurant_id, ds.id, ds.table_id
 		FROM session_devices sd
@@ -127,7 +129,7 @@ func (r *Repository) ValidateAccessToken(ctx context.Context, token string) (aut
 		  AND sd.status = 'APPROVED'
 		  AND (
 		      ds.status IN ('ACTIVE', 'AWAITING_PAYMENT')
-		      OR (ds.status = 'CLOSED' AND ds.closed_at >= NOW() - INTERVAL '30 minutes')
+		      OR (ds.status = 'CLOSED' AND ds.closed_at >= NOW() - INTERVAL '5 minutes')
 		  )
 		  AND ds.deleted_at IS NULL
 	`, strings.TrimSpace(token)).Scan(&out.RestaurantID, &out.SessionID, &out.TableID)
@@ -332,6 +334,22 @@ func (r *Repository) CloseSession(ctx context.Context, restaurantID, sessionID u
 	`, restaurantID, closingIDs); err != nil {
 		return nil, false, err
 	}
+
+	// Wipe guest access on close: expire every device credential for the closed
+	// session(s). Rotating access_token to fresh garbage destroys the secret the
+	// guest's phone still holds (the column is NOT NULL UNIQUE, so it cannot be
+	// blanked to '' across multiple devices) and REVOKED fails the APPROVED gate
+	// in ValidateAccessToken immediately — no reliance on the read-grace window.
+	if _, err := r.q(ctx).Exec(ctx, `
+		UPDATE session_devices
+		SET status = 'REVOKED',
+		    access_token = gen_random_uuid()::text,
+		    updated_at = NOW()
+		WHERE restaurant_id = $1 AND session_id = ANY($2) AND status <> 'REVOKED'
+	`, restaurantID, closingIDs); err != nil {
+		return nil, false, err
+	}
+
 	return s, true, nil
 }
 

@@ -25,13 +25,15 @@ const (
 
 // DeviceStatus gates a single physical phone that joined a session. Only an
 // APPROVED device holds a usable access token; a PENDING device waits for a
-// waiter, so a shared QR link can never bypass the confirmation gate.
+// waiter, so a shared QR link can never bypass the confirmation gate. REVOKED is
+// terminal: the session closed and the device's credential was expired outright.
 type DeviceStatus string
 
 const (
 	DevicePending  DeviceStatus = "PENDING"
 	DeviceApproved DeviceStatus = "APPROVED"
 	DeviceRejected DeviceStatus = "REJECTED"
+	DeviceRevoked  DeviceStatus = "REVOKED"
 )
 
 // SessionDevice is one phone attached to a dining session. The session still
