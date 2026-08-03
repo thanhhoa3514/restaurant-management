@@ -66,10 +66,10 @@ func (r *Repository) ActiveQRForTable(ctx context.Context, restaurantID, tableID
 
 func (r *Repository) CreateSession(ctx context.Context, s *domain.DiningSession) error {
 	err := r.q(ctx).QueryRow(ctx, `
-		INSERT INTO dining_sessions (restaurant_id, table_id, qr_code_id, session_code, session_token, status, opened_by, opened_via, customer_name)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO dining_sessions (restaurant_id, table_id, qr_code_id, session_code, status, opened_by, opened_via, customer_name)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id
-	`, s.RestaurantID, s.TableID, s.QRCodeID, s.SessionCode, s.SessionToken, s.Status, s.OpenedBy, s.OpenedVia, s.CustomerName).Scan(&s.ID)
+	`, s.RestaurantID, s.TableID, s.QRCodeID, s.SessionCode, s.Status, s.OpenedBy, s.OpenedVia, s.CustomerName).Scan(&s.ID)
 	if pg.IsUniqueViolation(err) {
 		return apperr.New(apperr.CodeConflict, "active session already exists")
 	}
@@ -96,7 +96,7 @@ func (r *Repository) FindActiveSessionByTable(ctx context.Context, restaurantID,
 	s := &domain.DiningSession{}
 	var qrCodeID, openedBy, mergeGroupID pgtype.UUID
 	err := r.q(ctx).QueryRow(ctx, activeSessionSelect(`restaurant_id = $1 AND table_id = $2`), restaurantID, tableID).Scan(
-		&s.ID, &s.RestaurantID, &s.TableID, &qrCodeID, &s.SessionCode, &s.SessionToken, &s.Status, &s.OpenedVia, &openedBy, &mergeGroupID, &s.Version, &s.ClosedAt,
+		&s.ID, &s.RestaurantID, &s.TableID, &qrCodeID, &s.SessionCode, &s.Status, &s.OpenedVia, &openedBy, &mergeGroupID, &s.Version, &s.ClosedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, apperr.New(apperr.CodeNotFound, "active session not found")
@@ -108,8 +108,8 @@ func (r *Repository) FindActiveSessionByTable(ctx context.Context, restaurantID,
 	return s, nil
 }
 
-func (r *Repository) ValidateSessionToken(ctx context.Context, token string) (auth.SessionAuth, error) {
-	var out auth.SessionAuth
+func (r *Repository) ValidateAccessToken(ctx context.Context, token string) (auth.DeviceAccessAuth, error) {
+	var out auth.DeviceAccessAuth
 	// A token is only a usable ordering credential once its device is APPROVED
 	// by a waiter — that is the whole confirmation gate. A PENDING device (a
 	// freshly shared link, or the first guest before verification) is rejected
@@ -123,7 +123,7 @@ func (r *Repository) ValidateSessionToken(ctx context.Context, token string) (au
 		SELECT ds.restaurant_id, ds.id, ds.table_id
 		FROM session_devices sd
 		JOIN dining_sessions ds ON ds.id = sd.session_id
-		WHERE sd.session_token = $1
+		WHERE sd.access_token = $1
 		  AND sd.status = 'APPROVED'
 		  AND (
 		      ds.status IN ('ACTIVE', 'AWAITING_PAYMENT')
@@ -132,10 +132,10 @@ func (r *Repository) ValidateSessionToken(ctx context.Context, token string) (au
 		  AND ds.deleted_at IS NULL
 	`, strings.TrimSpace(token)).Scan(&out.RestaurantID, &out.SessionID, &out.TableID)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return auth.SessionAuth{}, apperr.New(apperr.CodeUnauthorized, "invalid session token")
+		return auth.DeviceAccessAuth{}, apperr.New(apperr.CodeUnauthorized, "invalid device access token")
 	}
 	if err != nil {
-		return auth.SessionAuth{}, err
+		return auth.DeviceAccessAuth{}, err
 	}
 	return out, nil
 }
@@ -226,12 +226,12 @@ func (r *Repository) CloseSession(ctx context.Context, restaurantID, sessionID u
 	s := &domain.DiningSession{}
 	var qrCodeID, openedBy, mergeGroupID pgtype.UUID
 	err := r.q(ctx).QueryRow(ctx, `
-		SELECT id, restaurant_id, table_id, qr_code_id, session_code, COALESCE(session_token, ''), status, opened_via, opened_by, merge_group_id, version, closed_at
+		SELECT id, restaurant_id, table_id, qr_code_id, session_code, status, opened_via, opened_by, merge_group_id, version, closed_at
 		FROM dining_sessions
 		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
 		FOR UPDATE
 	`, restaurantID, sessionID).Scan(
-		&s.ID, &s.RestaurantID, &s.TableID, &qrCodeID, &s.SessionCode, &s.SessionToken, &s.Status, &s.OpenedVia, &openedBy, &mergeGroupID, &s.Version, &s.ClosedAt,
+		&s.ID, &s.RestaurantID, &s.TableID, &qrCodeID, &s.SessionCode, &s.Status, &s.OpenedVia, &openedBy, &mergeGroupID, &s.Version, &s.ClosedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, false, apperr.New(apperr.CodeNotFound, "dining session not found")
@@ -381,7 +381,7 @@ func (r *Repository) AbandonPendingSession(ctx context.Context, restaurantID, se
 
 func activeSessionSelect(where string) string {
 	return `
-		SELECT id, restaurant_id, table_id, qr_code_id, session_code, session_token, status, opened_via, opened_by, merge_group_id, version, closed_at
+		SELECT id, restaurant_id, table_id, qr_code_id, session_code, status, opened_via, opened_by, merge_group_id, version, closed_at
 		FROM dining_sessions
 		WHERE ` + where + `
 		  AND status IN ('PENDING_VERIFICATION', 'ACTIVE', 'AWAITING_PAYMENT')
@@ -395,11 +395,11 @@ func (r *Repository) FindSessionByID(ctx context.Context, restaurantID, sessionI
 	s := &domain.DiningSession{}
 	var qrCodeID, openedBy, mergeGroupID pgtype.UUID
 	err := r.q(ctx).QueryRow(ctx, `
-		SELECT id, restaurant_id, table_id, qr_code_id, session_code, session_token, status, opened_via, opened_by, merge_group_id, version, closed_at
+		SELECT id, restaurant_id, table_id, qr_code_id, session_code, status, opened_via, opened_by, merge_group_id, version, closed_at
 		FROM dining_sessions
 		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
 	`, restaurantID, sessionID).Scan(
-		&s.ID, &s.RestaurantID, &s.TableID, &qrCodeID, &s.SessionCode, &s.SessionToken, &s.Status, &s.OpenedVia, &openedBy, &mergeGroupID, &s.Version, &s.ClosedAt,
+		&s.ID, &s.RestaurantID, &s.TableID, &qrCodeID, &s.SessionCode, &s.Status, &s.OpenedVia, &openedBy, &mergeGroupID, &s.Version, &s.ClosedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, apperr.New(apperr.CodeNotFound, "dining session not found")
@@ -467,7 +467,7 @@ func fullSessionRow(s *domain.DiningSession, qrCodeID, openedBy, mergeGroupID *p
 
 func (r *Repository) FindSessionsByMergeGroup(ctx context.Context, restaurantID, groupID uuid.UUID) ([]domain.DiningSession, error) {
 	rows, err := r.q(ctx).Query(ctx, `
-		SELECT id, restaurant_id, table_id, qr_code_id, session_code, session_token, status, opened_via, opened_by, merge_group_id, version, closed_at
+		SELECT id, restaurant_id, table_id, qr_code_id, session_code, status, opened_via, opened_by, merge_group_id, version, closed_at
 		FROM dining_sessions
 		WHERE restaurant_id = $1 AND merge_group_id = $2 AND status IN ('ACTIVE', 'AWAITING_PAYMENT') AND deleted_at IS NULL
 		ORDER BY opened_at
@@ -481,7 +481,7 @@ func (r *Repository) FindSessionsByMergeGroup(ctx context.Context, restaurantID,
 	for rows.Next() {
 		var s domain.DiningSession
 		var qrCodeID, openedBy, mergeGroupID pgtype.UUID
-		if err := rows.Scan(&s.ID, &s.RestaurantID, &s.TableID, &qrCodeID, &s.SessionCode, &s.SessionToken, &s.Status, &s.OpenedVia, &openedBy, &mergeGroupID, &s.Version, &s.ClosedAt); err != nil {
+		if err := rows.Scan(&s.ID, &s.RestaurantID, &s.TableID, &qrCodeID, &s.SessionCode, &s.Status, &s.OpenedVia, &openedBy, &mergeGroupID, &s.Version, &s.ClosedAt); err != nil {
 			return nil, err
 		}
 		fullSessionRow(&s, &qrCodeID, &openedBy, &mergeGroupID)
@@ -501,7 +501,7 @@ func (r *Repository) UpdateSessionMergeGroup(ctx context.Context, sessionID uuid
 
 func (r *Repository) FindSessionsPendingVerification(ctx context.Context, restaurantID uuid.UUID) ([]domain.DiningSession, error) {
 	rows, err := r.q(ctx).Query(ctx, `
-		SELECT id, restaurant_id, table_id, qr_code_id, session_code, session_token, status, opened_via, opened_by, merge_group_id, version, closed_at
+		SELECT id, restaurant_id, table_id, qr_code_id, session_code, status, opened_via, opened_by, merge_group_id, version, closed_at
 		FROM dining_sessions
 		WHERE restaurant_id = $1 AND status = 'PENDING_VERIFICATION' AND deleted_at IS NULL
 		ORDER BY opened_at
@@ -515,7 +515,7 @@ func (r *Repository) FindSessionsPendingVerification(ctx context.Context, restau
 	for rows.Next() {
 		var s domain.DiningSession
 		var qrCodeID, openedBy, mergeGroupID pgtype.UUID
-		if err := rows.Scan(&s.ID, &s.RestaurantID, &s.TableID, &qrCodeID, &s.SessionCode, &s.SessionToken, &s.Status, &s.OpenedVia, &openedBy, &mergeGroupID, &s.Version, &s.ClosedAt); err != nil {
+		if err := rows.Scan(&s.ID, &s.RestaurantID, &s.TableID, &qrCodeID, &s.SessionCode, &s.Status, &s.OpenedVia, &openedBy, &mergeGroupID, &s.Version, &s.ClosedAt); err != nil {
 			return nil, err
 		}
 		fullSessionRow(&s, &qrCodeID, &openedBy, &mergeGroupID)
@@ -547,10 +547,10 @@ func (r *Repository) VerifySession(ctx context.Context, restaurantID, sessionID 
 
 func (r *Repository) CreateSessionDevice(ctx context.Context, d *domain.SessionDevice) error {
 	err := r.q(ctx).QueryRow(ctx, `
-		INSERT INTO session_devices (restaurant_id, session_id, device_id, guest_name, status, session_token, is_owner)
+		INSERT INTO session_devices (restaurant_id, session_id, device_id, guest_name, status, access_token, is_owner)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id
-	`, d.RestaurantID, d.SessionID, d.DeviceID, d.GuestName, string(d.Status), d.SessionToken, d.IsOwner).Scan(&d.ID)
+	`, d.RestaurantID, d.SessionID, d.DeviceID, d.GuestName, string(d.Status), d.AccessToken, d.IsOwner).Scan(&d.ID)
 	if pg.IsUniqueViolation(err) {
 		return apperr.New(apperr.CodeConflict, "device already joined this session")
 	}
@@ -558,7 +558,7 @@ func (r *Repository) CreateSessionDevice(ctx context.Context, d *domain.SessionD
 }
 
 const sessionDeviceSelect = `
-	SELECT id, restaurant_id, session_id, device_id, COALESCE(guest_name, ''), status, session_token, is_owner, approved_by, approved_at
+	SELECT id, restaurant_id, session_id, device_id, COALESCE(guest_name, ''), status, access_token, is_owner, approved_by, approved_at
 	FROM session_devices
 `
 
@@ -567,7 +567,7 @@ func scanSessionDevice(row pgx.Row) (*domain.SessionDevice, error) {
 	var status string
 	var approvedBy pgtype.UUID
 	var approvedAt pgtype.Timestamptz
-	if err := row.Scan(&d.ID, &d.RestaurantID, &d.SessionID, &d.DeviceID, &d.GuestName, &status, &d.SessionToken, &d.IsOwner, &approvedBy, &approvedAt); err != nil {
+	if err := row.Scan(&d.ID, &d.RestaurantID, &d.SessionID, &d.DeviceID, &d.GuestName, &status, &d.AccessToken, &d.IsOwner, &approvedBy, &approvedAt); err != nil {
 		return nil, err
 	}
 	d.Status = domain.DeviceStatus(status)
@@ -599,7 +599,7 @@ func (r *Repository) FindSessionDeviceByID(ctx context.Context, restaurantID, ro
 }
 
 func (r *Repository) FindDeviceByToken(ctx context.Context, token string) (*domain.SessionDevice, error) {
-	d, err := scanSessionDevice(r.q(ctx).QueryRow(ctx, sessionDeviceSelect+`WHERE session_token = $1`, strings.TrimSpace(token)))
+	d, err := scanSessionDevice(r.q(ctx).QueryRow(ctx, sessionDeviceSelect+`WHERE access_token = $1`, strings.TrimSpace(token)))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, apperr.New(apperr.CodeNotFound, "device not found")
 	}
@@ -635,8 +635,7 @@ func (r *Repository) FindPendingDevices(ctx context.Context, restaurantID uuid.U
 }
 
 func (r *Repository) SetDeviceStatus(ctx context.Context, restaurantID, rowID uuid.UUID, status domain.DeviceStatus, actorID *uuid.UUID) (*domain.SessionDevice, error) {
-	// Only PENDING devices transition — makes approve/reject idempotent-safe and
-	// blocks re-approving a device the waiter already rejected.
+
 	d, err := scanSessionDevice(r.q(ctx).QueryRow(ctx, `
 		UPDATE session_devices
 		SET status = $3,
@@ -644,7 +643,7 @@ func (r *Repository) SetDeviceStatus(ctx context.Context, restaurantID, rowID uu
 		    approved_at = NOW(),
 		    updated_at = NOW()
 		WHERE restaurant_id = $1 AND id = $2 AND status = 'PENDING'
-		RETURNING id, restaurant_id, session_id, device_id, COALESCE(guest_name, ''), status, session_token, is_owner, approved_by, approved_at
+		RETURNING id, restaurant_id, session_id, device_id, COALESCE(guest_name, ''), status, access_token, is_owner, approved_by, approved_at
 	`, restaurantID, rowID, string(status), actorID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, apperr.New(apperr.CodeConflict, "device is not pending")
@@ -825,14 +824,9 @@ func (r *Repository) ListDailySessions(ctx context.Context, restaurantID uuid.UU
 	var out domain.ListDailySessionsResponse
 	out.Sessions = make([]domain.DailySessionItemDTO, 0)
 
-	var dateFilterStart, dateFilterEnd *time.Time
 	if filter.Date != "" {
-		if t, err := time.Parse("2006-01-02", filter.Date); err == nil {
-			loc := time.Local
-			start := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, loc)
-			end := start.Add(24 * time.Hour)
-			dateFilterStart = &start
-			dateFilterEnd = &end
+		if _, err := time.Parse("2006-01-02", filter.Date); err != nil {
+			return out, apperr.New(apperr.CodeInvalid, "date must use YYYY-MM-DD format")
 		}
 	}
 
@@ -854,23 +848,24 @@ func (r *Repository) ListDailySessions(ctx context.Context, restaurantID uuid.UU
 			COALESCE(inv_stats.total_vnd, 0) AS total_amount_vnd,
 			COALESCE(order_stats.item_count, 0) AS total_items_count
 		FROM dining_sessions ds
-		JOIN tables t ON t.id = ds.table_id
-		LEFT JOIN areas a ON a.id = t.area_id
-		LEFT JOIN users u_open ON u_open.id = ds.opened_by
-		LEFT JOIN users u_close ON u_close.id = ds.closed_by
-		LEFT JOIN (
-			SELECT dining_session_id, SUM(grand_total_vnd) AS total_vnd
+		JOIN restaurants r ON r.id = ds.restaurant_id
+		JOIN tables t ON t.restaurant_id = ds.restaurant_id AND t.id = ds.table_id
+		LEFT JOIN areas a ON a.restaurant_id = ds.restaurant_id AND a.id = t.area_id
+		LEFT JOIN users u_open ON u_open.restaurant_id = ds.restaurant_id AND u_open.id = ds.opened_by
+		LEFT JOIN users u_close ON u_close.restaurant_id = ds.restaurant_id AND u_close.id = ds.closed_by
+		LEFT JOIN LATERAL (
+			SELECT SUM(total_amount_vnd) AS total_vnd
 			FROM invoices
-			WHERE status = 'PAID' AND deleted_at IS NULL
-			GROUP BY dining_session_id
-		) inv_stats ON inv_stats.dining_session_id = ds.id
-		LEFT JOIN (
-			SELECT dining_session_id, SUM(quantity) AS item_count
+			WHERE restaurant_id = ds.restaurant_id AND dining_session_id = ds.id
+			  AND status = 'PAID' AND deleted_at IS NULL
+		) inv_stats ON TRUE
+		LEFT JOIN LATERAL (
+			SELECT SUM(quantity) AS item_count
 			FROM order_items
-			WHERE status NOT IN ('CANCELLED', 'UNAVAILABLE') AND deleted_at IS NULL
-			GROUP BY dining_session_id
-		) order_stats ON order_stats.dining_session_id = ds.id
-		WHERE ds.restaurant_id = $1
+			WHERE restaurant_id = ds.restaurant_id AND dining_session_id = ds.id
+			  AND status <> 'CANCELLED' AND deleted_at IS NULL
+		) order_stats ON TRUE
+		WHERE ds.restaurant_id = $1 AND ds.deleted_at IS NULL
 	`
 	args := []any{restaurantID}
 	idx := 2
@@ -880,10 +875,11 @@ func (r *Repository) ListDailySessions(ctx context.Context, restaurantID uuid.UU
 		args = append(args, filter.Status)
 		idx++
 	}
-	if dateFilterStart != nil && dateFilterEnd != nil {
-		query += fmt.Sprintf(" AND ds.opened_at >= $%d AND ds.opened_at < $%d", idx, idx+1)
-		args = append(args, *dateFilterStart, *dateFilterEnd)
-		idx += 2
+	if filter.Date != "" {
+		query += fmt.Sprintf(` AND ds.opened_at >= ($%[1]d::date AT TIME ZONE r.timezone)
+			AND ds.opened_at < (($%[1]d::date + INTERVAL '1 day') AT TIME ZONE r.timezone)`, idx)
+		args = append(args, filter.Date)
+		idx++
 	}
 	if filter.Search != "" {
 		searchTerm := "%" + strings.ToLower(filter.Search) + "%"
@@ -944,6 +940,9 @@ func (r *Repository) ListDailySessions(ctx context.Context, restaurantID uuid.UU
 		}
 		out.Stats.TotalRevenueVND += item.TotalAmountVND
 	}
+	if err := rows.Err(); err != nil {
+		return out, err
+	}
 
 	return out, nil
 }
@@ -972,23 +971,23 @@ func (r *Repository) GetSessionDetail(ctx context.Context, restaurantID, session
 			COALESCE(inv_stats.total_vnd, 0) AS total_amount_vnd,
 			COALESCE(order_stats.item_count, 0) AS total_items_count
 		FROM dining_sessions ds
-		JOIN tables t ON t.id = ds.table_id
-		LEFT JOIN areas a ON a.id = t.area_id
-		LEFT JOIN users u_open ON u_open.id = ds.opened_by
-		LEFT JOIN users u_close ON u_close.id = ds.closed_by
-		LEFT JOIN (
-			SELECT dining_session_id, SUM(grand_total_vnd) AS total_vnd
+		JOIN tables t ON t.restaurant_id = ds.restaurant_id AND t.id = ds.table_id
+		LEFT JOIN areas a ON a.restaurant_id = ds.restaurant_id AND a.id = t.area_id
+		LEFT JOIN users u_open ON u_open.restaurant_id = ds.restaurant_id AND u_open.id = ds.opened_by
+		LEFT JOIN users u_close ON u_close.restaurant_id = ds.restaurant_id AND u_close.id = ds.closed_by
+		LEFT JOIN LATERAL (
+			SELECT SUM(total_amount_vnd) AS total_vnd
 			FROM invoices
-			WHERE status = 'PAID' AND deleted_at IS NULL
-			GROUP BY dining_session_id
-		) inv_stats ON inv_stats.dining_session_id = ds.id
-		LEFT JOIN (
-			SELECT dining_session_id, SUM(quantity) AS item_count
+			WHERE restaurant_id = ds.restaurant_id AND dining_session_id = ds.id
+			  AND status = 'PAID' AND deleted_at IS NULL
+		) inv_stats ON TRUE
+		LEFT JOIN LATERAL (
+			SELECT SUM(quantity) AS item_count
 			FROM order_items
-			WHERE status NOT IN ('CANCELLED', 'UNAVAILABLE') AND deleted_at IS NULL
-			GROUP BY dining_session_id
-		) order_stats ON order_stats.dining_session_id = ds.id
-		WHERE ds.restaurant_id = $1 AND ds.id = $2
+			WHERE restaurant_id = ds.restaurant_id AND dining_session_id = ds.id
+			  AND status <> 'CANCELLED' AND deleted_at IS NULL
+		) order_stats ON TRUE
+		WHERE ds.restaurant_id = $1 AND ds.id = $2 AND ds.deleted_at IS NULL
 	`, restaurantID, sessionID).Scan(
 		&detail.ID,
 		&detail.SessionCode,
@@ -1026,7 +1025,7 @@ func (r *Repository) GetSessionDetail(ctx context.Context, restaurantID, session
 			o.submitted_at,
 			o.status AS order_status,
 			oi.id AS order_item_id,
-			COALESCE(oi.name_snapshot, mi.name) AS menu_item_name,
+			oi.item_name_snapshot AS menu_item_name,
 			oi.variant_name_snapshot,
 			oi.quantity,
 			oi.unit_price_vnd,
@@ -1036,57 +1035,62 @@ func (r *Repository) GetSessionDetail(ctx context.Context, restaurantID, session
 			COALESCE(oi.station, 'KITCHEN') AS station,
 			COALESCE(oi.note, '') AS note
 		FROM orders o
-		JOIN order_items oi ON oi.order_id = o.id
-		LEFT JOIN menu_items mi ON mi.id = oi.menu_item_id
-		WHERE o.restaurant_id = $1 AND o.dining_session_id = $2 AND o.deleted_at IS NULL
+		JOIN order_items oi ON oi.restaurant_id = o.restaurant_id AND oi.order_id = o.id
+		WHERE o.restaurant_id = $1 AND o.dining_session_id = $2
+		  AND oi.dining_session_id = $2 AND o.deleted_at IS NULL AND oi.deleted_at IS NULL
 		ORDER BY o.submitted_at ASC, oi.created_at ASC
 	`, restaurantID, sessionID)
-	if err == nil {
-		defer orderRows.Close()
-		orderMap := make(map[uuid.UUID]*domain.SessionOrderDetailDTO)
-		orderOrder := make([]uuid.UUID, 0)
+	if err != nil {
+		return detail, err
+	}
+	defer orderRows.Close()
+	orderMap := make(map[uuid.UUID]*domain.SessionOrderDetailDTO)
+	orderOrder := make([]uuid.UUID, 0)
 
-		for orderRows.Next() {
-			var orderID uuid.UUID
-			var orderNum string
-			var subAt time.Time
-			var orderStatus string
-			var item domain.SessionOrderItemDetailDTO
+	for orderRows.Next() {
+		var orderID uuid.UUID
+		var orderNum string
+		var subAt time.Time
+		var orderStatus string
+		var item domain.SessionOrderItemDetailDTO
 
-			if err := orderRows.Scan(
-				&orderID,
-				&orderNum,
-				&subAt,
-				&orderStatus,
-				&item.OrderItemID,
-				&item.MenuItemName,
-				&item.VariantName,
-				&item.Quantity,
-				&item.UnitPriceVND,
-				&item.OptionsTotalVND,
-				&item.SubtotalVND,
-				&item.Status,
-				&item.Station,
-				&item.Note,
-			); err == nil {
-				ord, exists := orderMap[orderID]
-				if !exists {
-					ord = &domain.SessionOrderDetailDTO{
-						OrderID:     orderID,
-						OrderNumber: orderNum,
-						SubmittedAt: subAt,
-						Status:      orderStatus,
-						Items:       make([]domain.SessionOrderItemDetailDTO, 0),
-					}
-					orderMap[orderID] = ord
-					orderOrder = append(orderOrder, orderID)
-				}
-				ord.Items = append(ord.Items, item)
+		if err := orderRows.Scan(
+			&orderID,
+			&orderNum,
+			&subAt,
+			&orderStatus,
+			&item.OrderItemID,
+			&item.MenuItemName,
+			&item.VariantName,
+			&item.Quantity,
+			&item.UnitPriceVND,
+			&item.OptionsTotalVND,
+			&item.SubtotalVND,
+			&item.Status,
+			&item.Station,
+			&item.Note,
+		); err != nil {
+			return detail, err
+		}
+		ord, exists := orderMap[orderID]
+		if !exists {
+			ord = &domain.SessionOrderDetailDTO{
+				OrderID:     orderID,
+				OrderNumber: orderNum,
+				SubmittedAt: subAt,
+				Status:      orderStatus,
+				Items:       make([]domain.SessionOrderItemDetailDTO, 0),
 			}
+			orderMap[orderID] = ord
+			orderOrder = append(orderOrder, orderID)
 		}
-		for _, id := range orderOrder {
-			detail.Orders = append(detail.Orders, *orderMap[id])
-		}
+		ord.Items = append(ord.Items, item)
+	}
+	if err := orderRows.Err(); err != nil {
+		return detail, err
+	}
+	for _, id := range orderOrder {
+		detail.Orders = append(detail.Orders, *orderMap[id])
 	}
 
 	invRows, err := r.q(ctx).Query(ctx, `
@@ -1094,26 +1098,41 @@ func (r *Repository) GetSessionDetail(ctx context.Context, restaurantID, session
 			inv.id,
 			inv.invoice_number,
 			inv.status,
-			inv.grand_total_vnd,
-			p.payment_method,
+			inv.total_amount_vnd,
+			paid.payment_method,
 			inv.paid_at
 		FROM invoices inv
-		LEFT JOIN payments p ON p.invoice_id = inv.id
+		LEFT JOIN LATERAL (
+			SELECT STRING_AGG(DISTINCT pm.name, ', ' ORDER BY pm.name) AS payment_method
+			FROM payments p
+			JOIN payment_methods pm ON pm.restaurant_id = p.restaurant_id
+			  AND pm.id = p.payment_method_id AND pm.deleted_at IS NULL
+			WHERE p.restaurant_id = inv.restaurant_id AND p.invoice_id = inv.id
+			  AND p.status = 'COMPLETED' AND p.deleted_at IS NULL
+		) paid ON TRUE
 		WHERE inv.restaurant_id = $1 AND inv.dining_session_id = $2 AND inv.deleted_at IS NULL
 		ORDER BY inv.created_at DESC
 	`, restaurantID, sessionID)
-	if err == nil {
-		defer invRows.Close()
-		for invRows.Next() {
-			var inv domain.SessionInvoiceDetailDTO
-			var paidAt *time.Time
-			var pMethod *string
-			if err := invRows.Scan(&inv.ID, &inv.InvoiceNumber, &inv.Status, &inv.GrandTotalVND, &pMethod, &paidAt); err == nil {
-				inv.PaidAt = paidAt
-				inv.PaymentMethod = pMethod
-				detail.Invoices = append(detail.Invoices, inv)
-			}
+	if err != nil {
+		return detail, err
+	}
+	defer invRows.Close()
+	for invRows.Next() {
+		var inv domain.SessionInvoiceDetailDTO
+		if err := invRows.Scan(
+			&inv.ID,
+			&inv.InvoiceNumber,
+			&inv.Status,
+			&inv.TotalAmountVND,
+			&inv.PaymentMethod,
+			&inv.PaidAt,
+		); err != nil {
+			return detail, err
 		}
+		detail.Invoices = append(detail.Invoices, inv)
+	}
+	if err := invRows.Err(); err != nil {
+		return detail, err
 	}
 
 	return detail, nil

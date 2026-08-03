@@ -9,7 +9,7 @@ export type { Lang } from '@/constants'
 export type Screen = 'qr' | 'menu' | 'order' | 'summary' | 'payment' | 'invoice'
 
 export interface Session {
-  token: string
+  accessToken: string
   table: string
   startedAt: Date
   sessionId?: string
@@ -53,7 +53,7 @@ export interface CartLine {
 
 export interface JoinSessionResult {
   status: string
-  session_token?: string
+  access_token?: string
   session_id?: string
   table_id?: string
   table_code?: string

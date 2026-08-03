@@ -3,6 +3,6 @@ import { requestBill } from '../api'
 
 export function useRequestBill() {
   return useMutation({
-    mutationFn: (sessionToken: string) => requestBill(sessionToken),
+    mutationFn: (deviceAccessToken: string) => requestBill(deviceAccessToken),
   })
 }

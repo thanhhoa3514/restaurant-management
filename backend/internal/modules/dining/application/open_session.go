@@ -17,11 +17,10 @@ type OpenSessionRequest struct {
 }
 
 type OpenSessionResponse struct {
-	SessionID    uuid.UUID `json:"session_id"`
-	SessionCode  string    `json:"session_code"`
-	TableID      uuid.UUID `json:"table_id"`
-	Status       string    `json:"status"`
-	SessionToken string    `json:"session_token"`
+	SessionID   uuid.UUID `json:"session_id"`
+	SessionCode string    `json:"session_code"`
+	TableID     uuid.UUID `json:"table_id"`
+	Status      string    `json:"status"`
 }
 
 type OpenSession struct {
@@ -54,16 +53,11 @@ func (s *OpenSession) Handle(ctx context.Context, req OpenSessionRequest) (OpenS
 		if err != nil {
 			return err
 		}
-		sessionToken, err := randomToken(32)
-		if err != nil {
-			return err
-		}
 		session := &domain.DiningSession{
 			RestaurantID: restaurantID,
 			TableID:      req.TableID,
 			QRCodeID:     qrID,
 			SessionCode:  sessionCode,
-			SessionToken: sessionToken,
 			Status:       domain.SessionActive,
 			OpenedVia:    domain.OpenedViaStaff,
 			OpenedBy:     &req.OpenedBy,
@@ -71,7 +65,7 @@ func (s *OpenSession) Handle(ctx context.Context, req OpenSessionRequest) (OpenS
 		if err := s.repo.CreateSession(ctx, session); err != nil {
 			return err
 		}
-		out = OpenSessionResponse{SessionID: session.ID, SessionCode: session.SessionCode, TableID: session.TableID, Status: string(session.Status), SessionToken: session.SessionToken}
+		out = OpenSessionResponse{SessionID: session.ID, SessionCode: session.SessionCode, TableID: session.TableID, Status: string(session.Status)}
 		_ = s.outbox
 		return nil
 	})

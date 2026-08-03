@@ -8,13 +8,13 @@ import { useOrdering } from '@/features/ordering/hooks/use-ordering'
 import { useGuestPayment } from '@/features/ordering/queries/useGuestPayment'
 import { formatVND } from '@/features/ordering/helpers'
 import { clearSession } from '@/features/ordering/session-store'
-import { setGuestRealtimeToken } from '@/lib/realtime-auth'
+import { setGuestDeviceAccessToken } from '@/lib/realtime-auth'
 
 export const GuestPaymentScreen: FC = () => {
   const { state, dispatch } = useOrdering()
-  const sessionToken = state.session?.token
+  const deviceAccessToken = state.session?.accessToken
   const isVietnamese = state.lang === 'vi'
-  const { data, isLoading, isError, refetch, isFetching } = useGuestPayment(sessionToken, true)
+  const { data, isLoading, isError, refetch, isFetching } = useGuestPayment(deviceAccessToken, true)
   const [failedQRURL, setFailedQRURL] = useState<string | null>(null)
 
   const invoices = data?.invoices ?? []
@@ -116,7 +116,7 @@ export const GuestPaymentScreen: FC = () => {
                 className="mt-5 h-12 w-full"
                 onClick={() => {
                   clearSession()
-                  setGuestRealtimeToken('')
+                  setGuestDeviceAccessToken('')
                   dispatch({ type: 'END_SESSION' })
                 }}
               >

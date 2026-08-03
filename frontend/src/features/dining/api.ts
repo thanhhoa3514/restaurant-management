@@ -49,7 +49,6 @@ export interface OpenSessionResult {
   session_code: string
   table_id: string
   status: string
-  session_token: string
 }
 
 export function openDiningSession(tableId: string): Promise<OpenSessionResult> {
@@ -126,7 +125,7 @@ export interface SessionInvoiceDetail {
   id: string
   invoice_number: string
   status: string
-  grand_total_vnd: number
+  total_amount_vnd: number
   payment_method: string | null
   paid_at: string | null
 }

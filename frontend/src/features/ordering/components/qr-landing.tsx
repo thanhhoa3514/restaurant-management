@@ -11,7 +11,7 @@ import { fetchDeviceStatus } from '@/features/ordering/api'
 import { buildQROrderURL } from '@/features/dining/api'
 import type { GuestTable } from '@/features/dining/types'
 import { cn } from '@/lib/utils'
-import { setGuestRealtimeToken } from '@/lib/realtime-auth'
+import { setGuestDeviceAccessToken } from '@/lib/realtime-auth'
 
 interface QRLandingProps {
   qrToken?: string
@@ -55,19 +55,19 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
   // is by polling the device-status endpoint with its (not-yet-usable) token.
   useEffect(() => {
     if (joinState !== 'pending_verification') return
-    const token = state.session?.token
-    if (!token) return
+    const deviceAccessToken = state.session?.accessToken
+    if (!deviceAccessToken) return
 
     let cancelled = false
     const interval = setInterval(() => {
-      void fetchDeviceStatus(token)
+      void fetchDeviceStatus(deviceAccessToken)
         .then(({ status }) => {
           if (cancelled) return
           if (status === 'APPROVED') {
             clearInterval(interval)
             // Token is now usable — arm the socket and flip the session ACTIVE so
             // order-page persists it (a PENDING session is deliberately not saved).
-            setGuestRealtimeToken(token)
+            setGuestDeviceAccessToken(deviceAccessToken)
             if (state.session) {
               dispatch({
                 type: 'SET_SESSION',
@@ -122,7 +122,7 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
               dispatch({
                 type: 'SET_SESSION',
                 payload: {
-                  token: joined.session_token || '',
+                  accessToken: joined.access_token || '',
                   table: joined.table_name || joined.table_code || '',
                   startedAt: new Date(),
                   sessionId: joined.session_id,
@@ -133,17 +133,17 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
               return
             }
 
-            if (!joined.session_token || !joined.session_id || !joined.table_id) {
+            if (!joined.access_token || !joined.session_id || !joined.table_id) {
               setJoinState('error')
               setMessage(t.qr_invalid)
               return
             }
 
-            setGuestRealtimeToken(joined.session_token)
+            setGuestDeviceAccessToken(joined.access_token)
             dispatch({
               type: 'SET_SESSION',
               payload: {
-                token: joined.session_token,
+                accessToken: joined.access_token,
                 table: joined.table_name || joined.table_code || '',
                 startedAt: new Date(),
                 sessionId: joined.session_id,

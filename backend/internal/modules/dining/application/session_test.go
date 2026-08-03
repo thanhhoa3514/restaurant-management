@@ -195,7 +195,7 @@ func (r *fakeRepo) FindSessionDeviceByID(_ context.Context, _, rowID uuid.UUID) 
 }
 func (r *fakeRepo) FindDeviceByToken(_ context.Context, token string) (*domain.SessionDevice, error) {
 	for _, d := range r.devices {
-		if d.SessionToken == token {
+		if d.AccessToken == token {
 			return d, nil
 		}
 	}
@@ -260,12 +260,10 @@ func TestOpenSession(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEqual(t, uuid.Nil, out.SessionID)
 		require.NotEmpty(t, out.SessionCode)
-		require.NotEmpty(t, out.SessionToken)
 		require.Equal(t, tableID, out.TableID)
 		require.Equal(t, string(domain.SessionActive), out.Status)
 		require.Equal(t, domain.OpenedViaStaff, repo.created.OpenedVia)
 		require.Equal(t, userID, *repo.created.OpenedBy)
-		require.NotEmpty(t, repo.created.SessionToken)
 	})
 
 	t.Run("missing table", func(t *testing.T) {
@@ -287,7 +285,7 @@ func TestJoinSession(t *testing.T) {
 	tableID := uuid.New()
 	qr := &domain.QRCode{ID: uuid.New(), RestaurantID: rid, TableID: tableID, Token: "qr", IsActive: true}
 	newActive := func() *domain.DiningSession {
-		return &domain.DiningSession{ID: uuid.New(), RestaurantID: rid, TableID: tableID, SessionToken: "shared-token", Status: domain.SessionActive}
+		return &domain.DiningSession{ID: uuid.New(), RestaurantID: rid, TableID: tableID, Status: domain.SessionActive}
 	}
 
 	t.Run("missing device_id is invalid", func(t *testing.T) {
@@ -304,8 +302,7 @@ func TestJoinSession(t *testing.T) {
 		require.NoError(t, err)
 		// A shared link never gets an instant seat: unknown device is PENDING.
 		require.Equal(t, "PENDING_VERIFICATION", out.Status)
-		require.NotEmpty(t, out.SessionToken)
-		require.NotEqual(t, "shared-token", out.SessionToken)
+		require.NotEmpty(t, out.AccessToken)
 		require.Len(t, repo.devices, 1)
 		require.Equal(t, domain.DevicePending, repo.devices[0].Status)
 		require.False(t, repo.devices[0].IsOwner)
@@ -320,14 +317,14 @@ func TestJoinSession(t *testing.T) {
 			activeSession: session,
 			devices: []*domain.SessionDevice{{
 				ID: uuid.New(), RestaurantID: rid, SessionID: session.ID,
-				DeviceID: "devA", Status: domain.DeviceApproved, SessionToken: "tok-A",
+				DeviceID: "devA", Status: domain.DeviceApproved, AccessToken: "tok-A",
 			}},
 		}
 		svc := NewJoinSession(fakeTx{}, repo, nil)
-		out, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "qr", DeviceID: "devA", ResumeToken: "tok-A"})
+		out, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "qr", DeviceID: "devA", ResumeAccessToken: "tok-A"})
 		require.NoError(t, err)
 		require.Equal(t, string(domain.SessionActive), out.Status)
-		require.Equal(t, "tok-A", out.SessionToken)
+		require.Equal(t, "tok-A", out.AccessToken)
 		require.Len(t, repo.devices, 1) // no new device row
 	})
 
@@ -336,9 +333,9 @@ func TestJoinSession(t *testing.T) {
 		svc := NewJoinSession(fakeTx{}, repo, nil)
 		first, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "qr", DeviceID: "devA"})
 		require.NoError(t, err)
-		second, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "qr", DeviceID: "devA", ResumeToken: first.SessionToken})
+		second, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "qr", DeviceID: "devA", ResumeAccessToken: first.AccessToken})
 		require.NoError(t, err)
-		require.Equal(t, first.SessionToken, second.SessionToken)
+		require.Equal(t, first.AccessToken, second.AccessToken)
 		require.Equal(t, "PENDING_VERIFICATION", second.Status)
 		require.Len(t, repo.devices, 1)
 	})
@@ -350,13 +347,13 @@ func TestJoinSession(t *testing.T) {
 			activeSession: session,
 			devices: []*domain.SessionDevice{{
 				ID: uuid.New(), RestaurantID: rid, SessionID: session.ID,
-				DeviceID: "devA", Status: domain.DeviceApproved, SessionToken: "tok-A",
+				DeviceID: "devA", Status: domain.DeviceApproved, AccessToken: "tok-A",
 			}},
 		}
 		svc := NewJoinSession(fakeTx{}, repo, nil)
 		out, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "qr", DeviceID: "devA"})
 		require.True(t, apperr.Is(err, apperr.CodeUnauthorized))
-		require.Empty(t, out.SessionToken)
+		require.Empty(t, out.AccessToken)
 	})
 
 	t.Run("rejected device cannot rejoin", func(t *testing.T) {
@@ -366,7 +363,7 @@ func TestJoinSession(t *testing.T) {
 			activeSession: session,
 			devices: []*domain.SessionDevice{{
 				ID: uuid.New(), RestaurantID: rid, SessionID: session.ID,
-				DeviceID: "devA", Status: domain.DeviceRejected, SessionToken: "tok-A",
+				DeviceID: "devA", Status: domain.DeviceRejected, AccessToken: "tok-A",
 			}},
 		}
 		svc := NewJoinSession(fakeTx{}, repo, nil)
@@ -385,7 +382,7 @@ func TestJoinSession(t *testing.T) {
 		out, err := svc.Handle(context.Background(), JoinSessionRequest{QRToken: "qr", DeviceID: "devA", GuestName: "Nguyen Van A", IPHash: "ip1"})
 		require.NoError(t, err)
 		require.Equal(t, "PENDING_VERIFICATION", out.Status)
-		require.NotEmpty(t, out.SessionToken)
+		require.NotEmpty(t, out.AccessToken)
 		require.Equal(t, "T01", out.TableCode)
 		require.Equal(t, "Bàn 1", out.TableName)
 		require.NotNil(t, repo.created)
@@ -497,15 +494,15 @@ func TestApproveDevice(t *testing.T) {
 
 func TestDeviceStatus(t *testing.T) {
 	rid := uuid.New()
-	dev := &domain.SessionDevice{ID: uuid.New(), RestaurantID: rid, SessionID: uuid.New(), DeviceID: "devA", Status: domain.DevicePending, SessionToken: "tok-A"}
+	dev := &domain.SessionDevice{ID: uuid.New(), RestaurantID: rid, SessionID: uuid.New(), DeviceID: "devA", Status: domain.DevicePending, AccessToken: "tok-A"}
 	repo := &fakeRepo{devices: []*domain.SessionDevice{dev}}
 	svc := NewDeviceStatus(repo)
 
-	out, err := svc.Handle(context.Background(), DeviceStatusRequest{Token: "tok-A"})
+	out, err := svc.Handle(context.Background(), DeviceStatusRequest{AccessToken: "tok-A"})
 	require.NoError(t, err)
 	require.Equal(t, "PENDING", out.Status)
 
-	_, err = svc.Handle(context.Background(), DeviceStatusRequest{Token: ""})
+	_, err = svc.Handle(context.Background(), DeviceStatusRequest{AccessToken: ""})
 	require.True(t, apperr.Is(err, apperr.CodeInvalid))
 }
 

@@ -11,7 +11,7 @@ Guests scan a QR at the table → join the table's dining session → browse the
 ## Roles (6)
 
 `Guest` (Khách) · `Server` (Phục vụ) · `Kitchen` (Bếp) · `Cashier` (Thu ngân) · `Manager/Admin` (Quản lý) · `Payment Gateway` (secondary actor).
-Guests are **not** authenticated — scanning a QR issues a short-lived session token. Staff authenticate with JWT + role-based access.
+Guests authenticate with a short-lived, per-device access token issued after scanning a QR. Staff authenticate with JWT + role-based access.
 
 ## Domain in one minute
 
@@ -109,4 +109,4 @@ make compose-up       # postgres → migrate → app
 | Giảm giá / Điều chỉnh | discount / adjustment | logged |
 | Thanh toán (tiền mặt/thẻ/ví) | payment (cash/card/e-wallet) | e-wallet = 2-phase + webhook |
 | Đóng phiên | close session | frees the table |
-| Quét QR | scan QR | issues guest session token |
+| Quét QR | scan QR | issues guest device access token |

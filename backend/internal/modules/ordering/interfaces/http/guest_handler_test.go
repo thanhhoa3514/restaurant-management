@@ -49,10 +49,10 @@ type guestRouteTx struct{}
 
 func (guestRouteTx) Run(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }
 
-type routeSessionValidator struct{}
+type routeDeviceAccessValidator struct{}
 
-func (routeSessionValidator) ValidateSessionToken(context.Context, string) (auth.SessionAuth, error) {
-	return auth.SessionAuth{RestaurantID: uuid.New(), SessionID: uuid.New(), TableID: uuid.New()}, nil
+func (routeDeviceAccessValidator) ValidateAccessToken(context.Context, string) (auth.DeviceAccessAuth, error) {
+	return auth.DeviceAccessAuth{RestaurantID: uuid.New(), SessionID: uuid.New(), TableID: uuid.New()}, nil
 }
 
 func guestOrderRouter() *gin.Engine {
@@ -60,12 +60,12 @@ func guestOrderRouter() *gin.Engine {
 	repo := guestRouteRepo{}
 	h := NewHandler(application.NewGuestPlaceOrder(guestRouteTx{}, repo, nil, uuid.New()), application.NewGuestViewOrders(repo, uuid.New()), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	r := gin.New()
-	g := r.Group("/api/v1/customer", auth.QRSessionToken(routeSessionValidator{}))
+	g := r.Group("/api/v1/customer", auth.DeviceAccessToken(routeDeviceAccessValidator{}))
 	h.RegisterGuestRoutes(g)
 	return r
 }
 
-func TestGuestOrderRoutesRequireSessionToken(t *testing.T) {
+func TestGuestOrderRoutesRequireDeviceAccessToken(t *testing.T) {
 	r := guestOrderRouter()
 	cases := []struct {
 		method string
@@ -87,7 +87,7 @@ func TestGuestOrderRoutesRequireSessionToken(t *testing.T) {
 func TestGuestOrderPostBindError400(t *testing.T) {
 	r := guestOrderRouter()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/customer/orders", strings.NewReader(`{"items":`))
-	req.Header.Set("X-Session-Token", "valid")
+	req.Header.Set("X-Device-Access-Token", "valid")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	require.Equal(t, http.StatusBadRequest, w.Code)

@@ -237,10 +237,10 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 	diningHandler.RegisterGuestRoutes(customer, joinRateLimiter.Middleware(ratelimit.IPKey))
 	catalogHandler.RegisterGuestRoutes(customer)
 
-	orders := api.Group("/customer", auth.QRSessionToken(diningRepo), orderRateLimiter.Middleware(ratelimit.GuestSessionKey))
+	orders := api.Group("/customer", auth.DeviceAccessToken(diningRepo), orderRateLimiter.Middleware(ratelimit.GuestSessionKey))
 	orderingHandler.RegisterGuestRoutes(orders)
 
-	guestPayments := api.Group("/customer", auth.QRSessionToken(diningRepo), paymentRateLimiter.Middleware(ratelimit.GuestSessionKey))
+	guestPayments := api.Group("/customer", auth.DeviceAccessToken(diningRepo), paymentRateLimiter.Middleware(ratelimit.GuestSessionKey))
 	billingHandler.RegisterGuestRoutes(guestPayments)
 
 	restaurant := api.Group("/restaurant")

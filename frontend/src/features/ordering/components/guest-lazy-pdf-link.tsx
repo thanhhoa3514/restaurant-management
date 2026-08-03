@@ -1,4 +1,3 @@
-/* eslint-disable react-doctor/prefer-dynamic-import */
 import { useMemo } from 'react'
 import { PDFDownloadLink, Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer'
 import { Button } from '@/components/ui/button'
@@ -113,12 +112,23 @@ interface GuestPDFProps {
   restaurantName: string
   tableName: string
   date: string
-  items: Array<{ name: string; qty: number; price: number }>
-  total: number
+  items: Array<{
+    id: string
+    name: string
+    isTakeaway: boolean
+    qty: number
+    unitPrice: number
+    lineTotal: number
+  }>
+  subtotal: number
+  discount: number
+  serviceCharge: number
   vat: number
+  vatBasisPoints: number
   grandTotal: number
+  paymentMethod: string
   lang: 'vi' | 'en'
-  invoiceNumber: number
+  invoiceNumber: string
 }
 
 const GuestInvoicePDF = ({
@@ -126,12 +136,20 @@ const GuestInvoicePDF = ({
   tableName,
   date,
   items,
-  total,
+  subtotal,
+  discount,
+  serviceCharge,
   vat,
+  vatBasisPoints,
   grandTotal,
+  paymentMethod,
   lang,
   invoiceNumber,
 }: GuestPDFProps) => {
+  const vatRate = new Intl.NumberFormat(lang === 'vi' ? 'vi-VN' : 'en-US', {
+    maximumFractionDigits: 2,
+  }).format(vatBasisPoints / 100)
+
   return (
     <Document>
       <Page size="A5" style={pdfStyles.page}>
@@ -153,7 +171,9 @@ const GuestInvoicePDF = ({
             <Text style={{ fontFamily: 'Roboto-Bold' }}>
               {lang === 'vi' ? 'Bàn ăn:' : 'Table:'} {tableName}
             </Text>
-            <Text>{lang === 'vi' ? 'Phương thức: Chuyển khoản' : 'Method: Bank Transfer'}</Text>
+            <Text>
+              {lang === 'vi' ? 'Phương thức:' : 'Method:'} {paymentMethod}
+            </Text>
           </View>
           <View style={[pdfStyles.metaCol, { alignItems: 'flex-end' }]}>
             <Text>
@@ -176,14 +196,15 @@ const GuestInvoicePDF = ({
           </View>
 
           {items.map((item) => (
-            <View key={item.name} style={pdfStyles.tableRow}>
+            <View key={item.id} style={pdfStyles.tableRow}>
               <Text style={[pdfStyles.colName, { paddingLeft: 4, fontFamily: 'Roboto-Bold' }]}>
                 {item.name}
+                {item.isTakeaway ? (lang === 'vi' ? ' (Mang về)' : ' (Takeaway)') : ''}
               </Text>
               <Text style={pdfStyles.colQty}>{item.qty}</Text>
-              <Text style={pdfStyles.colPrice}>{formatVND(item.price)}</Text>
+              <Text style={pdfStyles.colPrice}>{formatVND(item.unitPrice)}</Text>
               <Text style={[pdfStyles.colTotal, { paddingRight: 4, fontFamily: 'Roboto-Bold' }]}>
-                {formatVND(item.price * item.qty)}
+                {formatVND(item.lineTotal)}
               </Text>
             </View>
           ))}
@@ -192,12 +213,24 @@ const GuestInvoicePDF = ({
         <View style={pdfStyles.totalsSection}>
           <View style={pdfStyles.totalRow}>
             <Text style={{ color: '#4b5563' }}>{lang === 'vi' ? 'Tạm tính' : 'Subtotal'}:</Text>
-            <Text style={{ fontFamily: 'Roboto-Bold' }}>{formatVND(total)}</Text>
+            <Text style={{ fontFamily: 'Roboto-Bold' }}>{formatVND(subtotal)}</Text>
           </View>
+          {discount > 0 ? (
+            <View style={pdfStyles.totalRow}>
+              <Text style={{ color: '#4b5563' }}>{lang === 'vi' ? 'Giảm giá' : 'Discount'}:</Text>
+              <Text style={{ fontFamily: 'Roboto-Bold' }}>-{formatVND(discount)}</Text>
+            </View>
+          ) : null}
+          {serviceCharge > 0 ? (
+            <View style={pdfStyles.totalRow}>
+              <Text style={{ color: '#4b5563' }}>
+                {lang === 'vi' ? 'Phí phục vụ' : 'Service charge'}:
+              </Text>
+              <Text style={{ fontFamily: 'Roboto-Bold' }}>{formatVND(serviceCharge)}</Text>
+            </View>
+          ) : null}
           <View style={pdfStyles.totalRow}>
-            <Text style={{ color: '#4b5563' }}>
-              {lang === 'vi' ? 'Thuế VAT (10%)' : 'VAT (10%)'}:
-            </Text>
+            <Text style={{ color: '#4b5563' }}>VAT ({vatRate}%):</Text>
             <Text style={{ fontFamily: 'Roboto-Bold' }}>{formatVND(vat)}</Text>
           </View>
           <View
@@ -228,11 +261,9 @@ const GuestInvoicePDF = ({
 
 export default function GuestLazyPDFLink({ pdfProps }: { pdfProps: GuestPDFProps }) {
   const documentProps = useMemo(() => <GuestInvoicePDF {...pdfProps} />, [pdfProps])
+  const safeInvoiceNumber = pdfProps.invoiceNumber.replace(/[^a-zA-Z0-9_-]/g, '_')
   return (
-    <PDFDownloadLink
-      document={documentProps}
-      fileName={`Hoa_Don_Dien_Tu_Ban_${pdfProps.tableName}.pdf`}
-    >
+    <PDFDownloadLink document={documentProps} fileName={`Hoa_Don_${safeInvoiceNumber}.pdf`}>
       {({ loading }) => (
         <Button
           className="w-full h-14 rounded-xl font-bold flex items-center justify-center cursor-pointer shadow-lg"

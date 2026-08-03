@@ -12,8 +12,10 @@ import {
   X,
   RefreshCw,
   ShoppingBag,
+  CircleAlert,
 } from 'lucide-react'
 import { useShellConfig } from '@/components/admin-shell'
+import { errorMessage } from '@/lib/api'
 import {
   useDailySessionsQuery,
   useSessionDetailQuery,
@@ -51,7 +53,7 @@ export function SessionHistoryManagement() {
     subtitle: 'Theo dõi chi tiết tất cả các phiên ăn trong ngày',
   })
 
-  const { data, isLoading, refetch, isFetching } = useDailySessionsQuery({
+  const { data, isLoading, isError, error, refetch, isFetching } = useDailySessionsQuery({
     date: selectedDate,
     status: statusFilter,
     search: search.trim(),
@@ -264,6 +266,27 @@ export function SessionHistoryManagement() {
             <RefreshCw className="size-6 animate-spin text-[var(--system-blue)]" />
             Đang tải nhật ký phiên ăn...
           </div>
+        ) : isError ? (
+          <div className="p-10 text-center flex flex-col items-center justify-center">
+            <div className="size-12 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center">
+              <CircleAlert className="size-6" />
+            </div>
+            <p className="mt-3 text-sm font-bold text-[var(--text)]">
+              Không tải được nhật ký phiên ăn
+            </p>
+            <p className="mt-1 text-xs text-[var(--text-tertiary)] max-w-md">
+              {errorMessage(error, 'Máy chủ chưa trả về dữ liệu. Vui lòng thử lại.')}
+            </p>
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              disabled={isFetching}
+              className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--system-blue)] text-white text-xs font-bold disabled:opacity-60"
+            >
+              <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
+              Tải lại nhật ký
+            </button>
+          </div>
         ) : sessions.length === 0 ? (
           <div className="p-12 text-center flex flex-col items-center justify-center gap-2">
             <div className="size-16 rounded-full bg-[var(--surface-grouped)] flex items-center justify-center text-[var(--text-tertiary)]">
@@ -395,7 +418,14 @@ export function SessionHistoryManagement() {
 }
 
 function SessionDetailModal({ sessionId, onClose }: { sessionId: string; onClose: () => void }) {
-  const { data: detail, isLoading } = useSessionDetailQuery(sessionId)
+  const {
+    data: detail,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = useSessionDetailQuery(sessionId)
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -435,10 +465,31 @@ function SessionDetailModal({ sessionId, onClose }: { sessionId: string; onClose
 
         {/* Modal Body */}
         <div className="p-5 overflow-y-auto space-y-6 flex-1">
-          {isLoading || !detail ? (
+          {isLoading ? (
             <div className="p-12 text-center text-xs font-semibold text-[var(--text-tertiary)] flex items-center justify-center gap-2">
               <RefreshCw className="size-5 animate-spin text-[var(--system-blue)]" />
               Đang tải chi tiết phiên ăn...
+            </div>
+          ) : isError || !detail ? (
+            <div className="p-10 text-center flex flex-col items-center justify-center">
+              <div className="size-12 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center">
+                <CircleAlert className="size-6" />
+              </div>
+              <p className="mt-3 text-sm font-bold text-[var(--text)]">
+                Không tải được chi tiết phiên ăn
+              </p>
+              <p className="mt-1 text-xs text-[var(--text-tertiary)] max-w-sm">
+                {errorMessage(error, 'Máy chủ chưa trả về dữ liệu. Vui lòng thử lại.')}
+              </p>
+              <button
+                type="button"
+                onClick={() => void refetch()}
+                disabled={isFetching}
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--system-blue)] text-white text-xs font-bold disabled:opacity-60"
+              >
+                <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
+                Tải lại chi tiết
+              </button>
             </div>
           ) : (
             <>
@@ -556,14 +607,14 @@ function SessionDetailModal({ sessionId, onClose }: { sessionId: string; onClose
                               {inv.invoice_number}
                             </span>
                             <span className="text-[11px] text-[var(--text-tertiary)] block">
-                              Phương thức: {inv.payment_method || 'Tiền mặt'} |{' '}
+                              Phương thức: {inv.payment_method || 'Chưa ghi nhận'} |{' '}
                               {formatTime(inv.paid_at)}
                             </span>
                           </div>
                         </div>
 
                         <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">
-                          {formatVND(inv.grand_total_vnd)}
+                          {formatVND(inv.total_amount_vnd)}
                         </span>
                       </div>
                     ))}

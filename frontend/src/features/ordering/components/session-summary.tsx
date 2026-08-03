@@ -14,9 +14,9 @@ import { GuestPayConfirmDialog } from './guest-pay-confirm-dialog'
 export const SessionSummary: FC = () => {
   const { state, dispatch } = useOrdering()
   const t = DICT[state.lang]
-  const sessionToken = state.session?.token
+  const deviceAccessToken = state.session?.accessToken
 
-  const { data: ordersData, isLoading: isOrdersLoading } = useGuestOrders(sessionToken)
+  const { data: ordersData, isLoading: isOrdersLoading } = useGuestOrders(deviceAccessToken)
 
   const orders = ordersData?.orders ?? []
   const sessionTotal = ordersData?.session_total_vnd ?? 0
@@ -116,9 +116,9 @@ export const SessionSummary: FC = () => {
             variant="secondary"
             className="flex-1 rounded-xl h-14 text-sm font-medium"
             onClick={async () => {
-              if (!sessionToken) return
+              if (!deviceAccessToken) return
               try {
-                await callWaiter(sessionToken)
+                await callWaiter(deviceAccessToken)
                 toast.success(t.toast_waiter)
                 dispatch({ type: 'SET_SCREEN', payload: 'qr' })
               } catch {
@@ -151,8 +151,8 @@ export const SessionSummary: FC = () => {
         t={t}
         onOpenChange={setPayConfirmOpen}
         onConfirm={async (wantsDigitalInvoice) => {
-          if (!sessionToken) throw new Error('missing session token')
-          await requestBill(sessionToken)
+          if (!deviceAccessToken) throw new Error('missing device access token')
+          await requestBill(deviceAccessToken)
           toast.success(t.toast_bill)
           dispatch({ type: 'SET_DIGITAL_INVOICE', payload: wantsDigitalInvoice })
           dispatch({ type: 'SET_SCREEN', payload: 'payment' })

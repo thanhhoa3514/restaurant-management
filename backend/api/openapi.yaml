@@ -5,7 +5,7 @@ info:
   description: >
     HTTP API for QR-based restaurant ordering. Most staff endpoints require a JWT
     bearer token and a server-resolved permission. Protected guest endpoints under
-    /api/v1/customer require an X-Session-Token issued by
+    /api/v1/customer require an X-Device-Access-Token issued by
     /api/v1/customer/sessions/join. Public endpoints require
     neither.
   x-response-envelope:
@@ -258,11 +258,11 @@ paths:
       summary: Join a table from its QR token
       description: >
         Registers a new browser device as PENDING. A returning device must send
-        its previously issued token in X-Session-Token before the same token is
+        its previously issued token in X-Device-Access-Token before the same token is
         returned again; device_id alone is not a credential.
       security: []
       parameters:
-        - name: X-Session-Token
+        - name: X-Device-Access-Token
           in: header
           required: false
           description: Existing per-device token used only when resuming a known device.
@@ -293,7 +293,7 @@ paths:
       tags: [dining]
       summary: Poll the current device approval status
       security:
-        - sessionToken: []
+        - deviceAccessToken: []
       responses:
         '200':
           description: Device status
@@ -418,7 +418,7 @@ paths:
       tags: [catalog]
       summary: List menu categories (guest)
       security:
-        - sessionToken: []
+        - deviceAccessToken: []
       responses:
         '200':
           description: Category list
@@ -427,7 +427,7 @@ paths:
       tags: [catalog]
       summary: List menu items (guest)
       security:
-        - sessionToken: []
+        - deviceAccessToken: []
       parameters:
         - name: category_id
           in: query
@@ -441,7 +441,7 @@ paths:
       tags: [catalog]
       summary: Get menu item detail (guest)
       security:
-        - sessionToken: []
+        - deviceAccessToken: []
       parameters:
         - name: id
           in: path
@@ -456,7 +456,7 @@ paths:
       tags: [guest-ordering]
       summary: Place a guest order
       security:
-        - sessionToken: []
+        - deviceAccessToken: []
       requestBody:
         required: true
         content:
@@ -472,7 +472,7 @@ paths:
       tags: [guest-ordering]
       summary: View this session's orders
       security:
-        - sessionToken: []
+        - deviceAccessToken: []
       responses:
         '200':
           description: Order list
@@ -481,7 +481,7 @@ paths:
       tags: [guest-ordering]
       summary: Edit items on a guest order
       security:
-        - sessionToken: []
+        - deviceAccessToken: []
       parameters:
         - name: orderId
           in: path
@@ -505,7 +505,7 @@ paths:
       tags: [guest-ordering]
       summary: Cancel a guest order
       security:
-        - sessionToken: []
+        - deviceAccessToken: []
       parameters:
         - name: orderId
           in: path
@@ -519,7 +519,7 @@ paths:
       tags: [guest-ordering]
       summary: Request cancellation of a guest order
       security:
-        - sessionToken: []
+        - deviceAccessToken: []
       parameters:
         - name: orderId
           in: path
@@ -726,7 +726,7 @@ paths:
       tags: [billing]
       summary: Get invoices and current payment for the authenticated guest session
       security:
-        - sessionToken: []
+        - deviceAccessToken: []
       responses:
         '200':
           description: Session invoices, including the current QR payment when available
@@ -747,7 +747,7 @@ paths:
                         type: array
                         items: { type: object }
         '401':
-          description: Missing, invalid, or expired guest session token
+          description: Missing, invalid, or expired guest device access token
 
   /api/v1/restaurant/invoices/paid:
     get:
@@ -828,10 +828,10 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-    sessionToken:
+    deviceAccessToken:
       type: apiKey
       in: header
-      name: X-Session-Token
+      name: X-Device-Access-Token
   schemas:
     ScaffoldRequest:
       type: object
@@ -872,7 +872,7 @@ components:
       required: [status]
       properties:
         status: { type: string, example: PENDING_VERIFICATION }
-        session_token: { type: string }
+        access_token: { type: string }
         session_id: { type: string, format: uuid }
         table_id: { type: string, format: uuid }
         table_code: { type: string }

@@ -40,7 +40,7 @@
 | **Sự kiện phát ra** | Bản ghi ghi vào `event_outbox` trong **cùng transaction** → đẩy realtime |
 
 Đường dẫn endpoint viết rút gọn, bỏ tiền tố `/api/v1`. Nhóm `/customer/*` dùng
-**QR session token** (header `X-Session-Token`); nhóm `/restaurant/*` dùng **JWT + phân quyền**.
+**device access token** (header `X-Device-Access-Token`); nhóm `/restaurant/*` dùng **JWT + phân quyền**.
 
 ---
 

@@ -15,7 +15,7 @@ vòng, bếp nhận phiếu realtime, phục vụ theo dõi tín hiệu bàn, th
 
 | Tác nhân | Xác thực | Vai trò chính |
 |---|---|---|
-| Khách (Guest) | **Không đăng nhập** — QR cấp session token ngắn hạn | Xem món, đặt/gọi thêm, theo dõi trạng thái, gọi nhân viên, yêu cầu thanh toán |
+| Khách (Guest) | QR cấp device access token, nhân viên duyệt device | Xem món, đặt/gọi thêm, theo dõi trạng thái, gọi nhân viên, yêu cầu thanh toán |
 | Phục vụ (Server) | JWT + RBAC | Mở phiên cho khách vãng lai, theo dõi bàn, đánh dấu đã phục vụ, yêu cầu bill hộ |
 | Bếp (Kitchen) | JWT + RBAC | Xem hàng đợi, cập nhật trạng thái món, duyệt yêu cầu hủy |
 | Thu ngân (Cashier) | JWT + RBAC | Dựng hóa đơn snapshot, điều chỉnh/giảm giá, thu tiền, đóng phiên |
@@ -170,12 +170,12 @@ sequenceDiagram
 
 ## 5. Cross-cutting (platform)
 
-- **Multi-tenant**: `restaurant_id` trích từ JWT (nhân viên) hoặc QR session token (khách), truyền qua
+- **Multi-tenant**: `restaurant_id` trích từ JWT (nhân viên) hoặc device access token (khách), truyền qua
   `context.Context`. **Mọi truy vấn repository scope theo `restaurant_id`** — không rò dữ liệu giữa nhà
   hàng.
 - **Auth/RBAC**: nhân viên đăng nhập JWT; middleware `RequirePermission` tra permission code thực tế của
-  user trong tenant. Khách không đăng nhập — QR cấp session token gắn phiên/bàn, middleware
-  `QRSessionToken` xác thực.
+  user trong tenant. QR chỉ xác định bàn; mỗi thiết bị khách được cấp access token riêng và phải được
+  duyệt. Middleware `DeviceAccessToken` xác thực device, phiên và tenant.
 - **Envelope API**: `{ "data", "meta", "error": null }`; lỗi `{ "data": null, "error": { code, message } }`.
   JSON **snake_case**; tiền **VND int64**; thời gian **ISO 8601 / TIMESTAMPTZ**; ID **UUID**.
 - **Dữ liệu**: **soft delete** (`deleted_at`); **optimistic locking** (`version`); **snapshot** tên/giá

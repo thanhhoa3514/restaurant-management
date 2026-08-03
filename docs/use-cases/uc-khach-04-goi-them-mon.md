@@ -23,7 +23,7 @@ Tác nhân **Khách** giao tiếp với use-case «Gọi thêm món»; use-case 
 | **Tên Use-Case** | Gọi thêm món |
 | **Tác nhân** | Khách (Guest) — phụ: Hệ thống, Bếp (nhận ticket) |
 | **Mô tả** | Trong phiên đang mở, khách mở lại thực đơn và chọn thêm món rồi xác nhận gửi. Hệ thống kiểm phiên còn ACTIVE và món còn hàng; nếu hợp lệ thì thêm `order_item` mới (PENDING, snapshot tên/giá) vào phiên, đẩy ticket realtime cho Bếp và cập nhật danh sách món đã gọi. Món cũ không bị ảnh hưởng. |
-| **Điều kiện** | Khách đang trong phiên với `session_token`, phiên ở trạng thái ACTIVE (chưa `AWAITING_PAYMENT`). Đã có ít nhất một lượt đặt trước đó (hoặc đang trong cùng phiên). |
+| **Điều kiện** | Khách đang trong phiên với `access_token`, phiên ở trạng thái ACTIVE (chưa `AWAITING_PAYMENT`). Đã có ít nhất một lượt đặt trước đó (hoặc đang trong cùng phiên). |
 
 **Luồng sự kiện chính (Thành công — thêm món hợp lệ)**
 

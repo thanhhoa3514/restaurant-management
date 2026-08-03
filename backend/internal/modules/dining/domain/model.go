@@ -24,7 +24,7 @@ const (
 )
 
 // DeviceStatus gates a single physical phone that joined a session. Only an
-// APPROVED device holds a usable session token; a PENDING device waits for a
+// APPROVED device holds a usable access token; a PENDING device waits for a
 // waiter, so a shared QR link can never bypass the confirmation gate.
 type DeviceStatus string
 
@@ -45,7 +45,7 @@ type SessionDevice struct {
 	DeviceID     string
 	GuestName    string
 	Status       DeviceStatus
-	SessionToken string
+	AccessToken  string
 	IsOwner      bool
 	ApprovedBy   *uuid.UUID
 	ApprovedAt   *time.Time
@@ -129,7 +129,6 @@ type DiningSession struct {
 	TableID      uuid.UUID
 	QRCodeID     *uuid.UUID
 	SessionCode  string
-	SessionToken string
 	Status       SessionStatus
 	OpenedVia    OpenedVia
 	OpenedBy     *uuid.UUID
@@ -268,10 +267,10 @@ type SessionOrderItemDetailDTO struct {
 }
 
 type SessionInvoiceDetailDTO struct {
-	ID            uuid.UUID  `json:"id"`
-	InvoiceNumber string     `json:"invoice_number"`
-	Status        string     `json:"status"`
-	GrandTotalVND int64      `json:"grand_total_vnd"`
-	PaymentMethod *string    `json:"payment_method"`
-	PaidAt        *time.Time `json:"paid_at"`
+	ID             uuid.UUID  `json:"id"`
+	InvoiceNumber  string     `json:"invoice_number"`
+	Status         string     `json:"status"`
+	TotalAmountVND int64      `json:"total_amount_vnd"`
+	PaymentMethod  *string    `json:"payment_method"`
+	PaidAt         *time.Time `json:"paid_at"`
 }

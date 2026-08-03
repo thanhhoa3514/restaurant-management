@@ -23,7 +23,7 @@ Tác nhân **Khách** giao tiếp với use-case «Sửa món đã gọi»; use-
 | **Tên Use-Case** | Sửa món đã gọi |
 | **Tác nhân** | Khách (Guest) — phụ: Hệ thống |
 | **Mô tả** | Khách sửa số lượng / ghi chú / tùy chọn của các món trong một đơn khi món còn `PENDING`. Hệ thống đọc đơn theo `version` (optimistic lock), kiểm từng dòng còn `PENDING` rồi áp thay đổi, tăng version và đẩy realtime cập nhật. Món đã được Bếp tiếp nhận (`ACKNOWLEDGED`+) không sửa được trực tiếp. |
-| **Điều kiện** | Khách trong phiên ACTIVE với `session_token`. Đơn tồn tại, có ít nhất một dòng món còn `PENDING`. Client giữ `version` hiện tại của đơn. |
+| **Điều kiện** | Khách trong phiên ACTIVE với `access_token`. Đơn tồn tại, có ít nhất một dòng món còn `PENDING`. Client giữ `version` hiện tại của đơn. |
 
 **Luồng sự kiện chính (Thành công — sửa món PENDING)**
 

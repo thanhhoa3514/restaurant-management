@@ -27,7 +27,7 @@ restaurant-backend/
 │   │   ├── outbox/                  # dispatcher: SELECT ... FOR UPDATE SKIP LOCKED, retry, dead-letter; LISTEN/NOTIFY
 │   │   ├── realtime/                # WebSocket hub (gorilla): đăng ký theo restaurant/role/table, broadcast
 │   │   ├── httpx/                   # envelope response, error mapping, middleware (request id, recover, CORS)
-│   │   ├── auth/                    # JWT cho nhân viên; session token (QR) cho khách; RBAC middleware
+│   │   ├── auth/                    # JWT cho nhân viên; device access token cho khách; RBAC middleware
 │   │   ├── tenant/                  # trích & truyền restaurant_id qua context
 │   │   ├── storage/                 # S3-compatible: presigned URL, delete object
 │   │   └── logger/                  # slog/zap
@@ -107,10 +107,10 @@ Trong **một** DB transaction: ghi thay đổi domain **và** chèn một dòng
 Quản lý kết nối theo `restaurant_id` + vai trò + bàn. Nhận sự kiện từ dispatcher và broadcast tới đúng nhóm subscriber. Không chứa nghiệp vụ.
 
 ### 5.3 Multi-tenant
-`restaurant_id` trích từ JWT (nhân viên) hoặc QR session token (khách), truyền qua `context.Context`. **Mọi truy vấn ở repository đều scope theo `restaurant_id`** (bắt buộc, tránh rò dữ liệu giữa nhà hàng).
+`restaurant_id` trích từ JWT (nhân viên) hoặc device access token đã duyệt (khách), truyền qua `context.Context`. **Mọi truy vấn ở repository đều scope theo `restaurant_id`** (bắt buộc, tránh rò dữ liệu giữa nhà hàng).
 
 ### 5.4 Auth/RBAC
-Nhân viên: JWT (Phục vụ/Bếp/Thu ngân/Quản lý). Khách: **không đăng nhập** — quét QR cấp session token ngắn hạn gắn với phiên/bàn. Middleware RBAC chặn theo vai trò.
+Nhân viên: JWT (Phục vụ/Bếp/Thu ngân/Quản lý). Khách: quét QR, nhận access token riêng cho device và chờ nhân viên duyệt. Middleware RBAC chặn theo vai trò; `DeviceAccessToken` bảo vệ API khách.
 
 ### 5.5 Quy ước API (envelope)
 - Response bọc envelope: `{ "data": ..., "meta": ..., "error": null }`; lỗi: `{ "data": null, "error": { "code", "message" } }`.

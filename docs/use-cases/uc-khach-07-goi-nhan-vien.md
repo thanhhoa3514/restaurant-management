@@ -23,7 +23,7 @@ Tác nhân **Khách** giao tiếp với use-case «Gọi nhân viên»; phát t�
 | **Tên Use-Case** | Gọi nhân viên                                                                                                                                                                                                  |
 | **Tác nhân**     | Khách (Guest) — phụ: Hệ thống, Phục vụ (nhận tín hiệu)                                                                                                                                                         |
 | **Mô tả**        | Khách bấm "Gọi nhân viên"; hệ thống ghi tín hiệu gọi gắn với phiên/bàn và đẩy realtime cho Phục vụ. Giao diện báo "đã gọi nhân viên". Không thay đổi trạng thái phiên (vẫn ACTIVE/AWAITING_PAYMENT như trước). |
-| **Điều kiện**    | Khách trong phiên với `session_token`.                                                                                                                                                                         |
+| **Điều kiện**    | Khách trong phiên với `access_token`.                                                                                                                                                                         |
 
 **Luồng sự kiện chính (Thành công)**
 
@@ -37,7 +37,7 @@ Tác nhân **Khách** giao tiếp với use-case «Gọi nhân viên»; phát t�
 
 | STT | Thực hiện bởi | Mô tả hành động                             | Kết quả hệ thống                                        |
 | --- | ------------- | ------------------------------------------- | ------------------------------------------------------- |
-| 1a  | Hệ thống      | Thiếu `session_token` / phiên không hợp lệ. | Trả `401 "missing guest session"`; không phát tín hiệu. |
+| 1a  | Hệ thống      | Thiếu `access_token` / phiên không hợp lệ. | Trả `401 "missing device access token"`; không phát tín hiệu. |
 
 **Hậu điều kiện**
 

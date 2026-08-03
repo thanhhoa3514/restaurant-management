@@ -21,14 +21,14 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
   const { state, dispatch } = useOrdering()
   const t = DICT[lang]
   const [error, setError] = useState('')
-  const sessionToken = state.session?.token
-  const placeOrderMutation = usePlaceGuestOrder(sessionToken)
+  const deviceAccessToken = state.session?.accessToken
+  const placeOrderMutation = usePlaceGuestOrder(deviceAccessToken)
 
   const subtotal = cartTotal(state.cart)
   const cartCount = totalItems(state.cart)
 
   const handlePlaceOrder = useCallback(async () => {
-    if (state.cart.length === 0 || !sessionToken) return
+    if (state.cart.length === 0 || !deviceAccessToken) return
     setError('')
     dispatch({ type: 'PLACE_ORDER' })
 
@@ -66,7 +66,7 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
       }
       setError(msg)
     }
-  }, [state.cart, sessionToken, dispatch, placeOrderMutation, t, lang])
+  }, [state.cart, deviceAccessToken, dispatch, placeOrderMutation, t, lang])
 
   const handleRemove = (index: number) => {
     dispatch({ type: 'REMOVE_CART_LINE', payload: index })
@@ -86,7 +86,7 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
     })
   }
 
-  const { data: ordersData } = useGuestOrders(sessionToken)
+  const { data: ordersData } = useGuestOrders(deviceAccessToken)
   const placedOrders = ordersData?.orders ?? []
   const placedItemCount = placedOrders.reduce((sum, o) => sum + (o.items?.length ?? 0), 0)
 

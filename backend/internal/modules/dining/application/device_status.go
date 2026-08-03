@@ -11,10 +11,10 @@ import (
 // DeviceStatus lets a PENDING device learn it was approved without holding a
 // usable session credential. The device polls this with its own token (the
 // token is the secret; no other auth is possible because a pending device
-// cannot pass session-token middleware) until status flips to APPROVED, then
+// cannot pass device-access middleware) until status flips to APPROVED, then
 // proceeds to the menu with the same token — which is now valid to order.
 type DeviceStatusRequest struct {
-	Token string
+	AccessToken string
 }
 
 type DeviceStatusResponse struct {
@@ -30,9 +30,9 @@ func NewDeviceStatus(repo domain.DiningRepository) *DeviceStatus {
 }
 
 func (s *DeviceStatus) Handle(ctx context.Context, req DeviceStatusRequest) (DeviceStatusResponse, error) {
-	token := strings.TrimSpace(req.Token)
+	token := strings.TrimSpace(req.AccessToken)
 	if token == "" {
-		return DeviceStatusResponse{}, apperr.New(apperr.CodeInvalid, "token is required")
+		return DeviceStatusResponse{}, apperr.New(apperr.CodeInvalid, "access token is required")
 	}
 	dev, err := s.repo.FindDeviceByToken(ctx, token)
 	if err != nil {

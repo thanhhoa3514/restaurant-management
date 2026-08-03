@@ -12,7 +12,7 @@ Chọn environment **Restaurant Management - Local**, sau đó chạy theo thứ
 3. `01. Public / Join dining session by QR`
 4. Các request trong `02. Guest - Menu & Ordering`
 
-Các test script tự lưu JWT, refresh token, QR token, session token và những UUID thường dùng vào collection variables.
+Các test script tự lưu JWT, refresh token, QR token, device access token và những UUID thường dùng vào collection variables.
 
 Để gọi UAT, đổi:
 

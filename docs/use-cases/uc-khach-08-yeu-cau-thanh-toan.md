@@ -23,7 +23,7 @@ Tác nhân **Khách** giao tiếp với use-case «Yêu cầu thanh toán»; use
 | **Tên Use-Case** | Yêu cầu thanh toán |
 | **Tác nhân** | Khách (Guest) — phụ: Hệ thống, Thu ngân / Phục vụ (nhận tín hiệu) |
 | **Mô tả** | Khách bấm "Yêu cầu thanh toán"; hệ thống chuyển phiên sang `AWAITING_PAYMENT` (khóa đặt/sửa món tiếp), ghi tín hiệu và đẩy realtime cho Thu ngân/Phục vụ. Giao diện báo "đã gửi yêu cầu thanh toán". |
-| **Điều kiện** | Khách trong phiên ACTIVE với `session_token`. |
+| **Điều kiện** | Khách trong phiên ACTIVE với `access_token`. |
 
 **Luồng sự kiện chính (Thành công)**
 
@@ -37,7 +37,7 @@ Tác nhân **Khách** giao tiếp với use-case «Yêu cầu thanh toán»; use
 
 | STT | Thực hiện bởi | Mô tả hành động | Kết quả hệ thống |
 |---|---|---|---|
-| 1a | Hệ thống | Thiếu `session_token` / phiên không hợp lệ. | Trả `401 "missing guest session"`; không đổi trạng thái. |
+| 1a | Hệ thống | Thiếu `access_token` / phiên không hợp lệ. | Trả `401 "missing device access token"`; không đổi trạng thái. |
 | 2a | Hệ thống | Phiên đã ở `AWAITING_PAYMENT` (bấm lại). | Idempotent — giữ trạng thái `AWAITING_PAYMENT`, không tạo lỗi; xác nhận lại cho khách. |
 
 **Hậu điều kiện**

@@ -18,7 +18,7 @@
 _Hình: ĐẶC TẢ USE-CASE PHỤC VỤ — MỞ PHIÊN WALK-IN_
 Tác nhân **Phục vụ** giao tiếp với use-case «Mở phiên cho khách vãng lai»; use-case «include» «Kiểm bàn có phiên ACTIVE chưa» (bất biến: **một phiên ACTIVE mỗi bàn**).
 
-- Bàn trống (không có ACTIVE) → tạo phiên mới và cấp `session_token`.
+- Bàn trống (không có ACTIVE) → tạo phiên mới; không tạo credential khách.
 - Bàn đã có phiên ACTIVE → báo lỗi "bàn đang có khách", không cho mở thêm. Phục vụ có thể **đóng phiên cũ** (nếu khách đã về, quên close) qua thao tác riêng, rồi thực hiện lại việc mở phiên.
   Dẫn sang «Gọi món hộ» hoặc khách tự quét QR vào phiên (UC-G01).
 
@@ -28,7 +28,7 @@ Tác nhân **Phục vụ** giao tiếp với use-case «Mở phiên cho khách v
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Tên Use-Case** | Mở phiên cho khách vãng lai                                                                                                                                                                                                                                       |
 | **Tác nhân**     | Phục vụ (Server) — phụ: Hệ thống                                                                                                                                                                                                                       |
-| **Mô tả**        | Phục vụ chọn bàn trống và mở phiên. Hệ thống kiểm bàn đã có phiên ACTIVE chưa; nếu có thì báo lỗi "bàn đang có khách" — không tự động dùng lại phiên cũ, giữ bất biến một phiên ACTIVE/bàn); nếu chưa thì tạo phiên `ACTIVE` mới, cấp `session_token`. |
+| **Mô tả**        | Phục vụ chọn bàn trống và mở phiên. Hệ thống kiểm bàn đã có phiên ACTIVE chưa; nếu có thì báo lỗi "bàn đang có khách" — không tự động dùng lại phiên cũ, giữ bất biến một phiên ACTIVE/bàn); nếu chưa thì tạo phiên `ACTIVE` mới. Device khách chỉ được tạo và cấp access token khi join bằng QR. |
 | **Điều kiện**    | Phục vụ đã đăng nhập (JWT, quyền `dining:serve`). Bàn tồn tại và có mã QR còn hiệu lực.                                                                                                                                                                |
 
 **Luồng sự kiện chính (Thành công — bàn trống, tạo phiên mới)**
@@ -36,7 +36,7 @@ Tác nhân **Phục vụ** giao tiếp với use-case «Mở phiên cho khách v
 | STT | Thực hiện bởi | Mô tả hành động                 | Kết quả hệ thống                                            |
 | --- | ------------- | ------------------------------- | ----------------------------------------------------------- |
 | 1   | Phục vụ       | Chọn bàn trống, bấm "Mở phiên". | Giao diện gọi `POST /restaurant/sessions` (`{ table_id }`). |
-| 2   | Hệ thống      | Kiểm bàn có phiên ACTIVE chưa.  | Bàn trống → tạo phiên `ACTIVE`, cấp `session_token`.        |
+| 2   | Hệ thống      | Kiểm bàn có phiên ACTIVE chưa.  | Bàn trống → tạo phiên `ACTIVE`.                             |
 | 3   | Phục vụ       | Nhận xác nhận.                  | Có thể gọi món hộ hoặc đưa QR cho khách tự quét.            |
 
 **Luồng sự kiện thay thế**
@@ -50,7 +50,7 @@ Tác nhân **Phục vụ** giao tiếp với use-case «Mở phiên cho khách v
 
 |                |                                                                                        |
 | -------------- | -------------------------------------------------------------------------------------- |
-| **Thành công** | Bàn có đúng một phiên `ACTIVE` mới tạo; `session_token` sẵn sàng cho khách/gọi món hộ. |
+| **Thành công** | Bàn có đúng một phiên `ACTIVE` mới tạo; chưa có credential khách cho tới khi một device join QR. |
 | **Thất bại**   | Bàn không hợp lệ → không mở phiên. Không tạo phiên trùng cho bàn đã ACTIVE.            |
 
 ### 3) Sơ đồ tuần tự (Sequence)
@@ -87,7 +87,7 @@ alt Bàn đã có phiên active
  UI --> A : Hiển thị lỗi
  note right of A : Phục vụ chọn bàn khác\nhoặc đóng phiên cũ → thử lại
 else Bàn trống
- BE ->> DB : Tạo phiên active mới + session_token
+ BE ->> DB : Tạo phiên active mới
  DB --> BE : Trả về Phiên mới
  BE --> UI : Trả về Xác nhận đã mở
  UI --> A : Gọi món hộ / đưa QR cho khách
@@ -126,7 +126,7 @@ BE -->> UI : Báo lỗi "Bàn đang có khách"
 UI -->> A : Hiển thị lỗi
 
 else Bàn trống
-BE ->> DB : Tạo phiên active mới và session token
+BE ->> DB : Tạo phiên active mới
 DB -->> BE : Trả về Phiên mới
 BE -->> UI : Trả về Xác nhận đã mở
 UI -->> A : Tiến hành vào phần menu để chọn món

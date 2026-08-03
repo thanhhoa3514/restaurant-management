@@ -57,14 +57,14 @@ async function doFetch<T>(
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { body, sessionToken } = options
+  const { body, deviceAccessToken } = options
 
   const headers: Record<string, string> = { Accept: 'application/json' }
   if (body !== undefined) headers['Content-Type'] = 'application/json'
 
   let isStaffRequest = false
-  if (sessionToken) {
-    headers['X-Session-Token'] = sessionToken
+  if (deviceAccessToken) {
+    headers['X-Device-Access-Token'] = deviceAccessToken
   } else {
     isStaffRequest = true
     const session = getStaffSession()

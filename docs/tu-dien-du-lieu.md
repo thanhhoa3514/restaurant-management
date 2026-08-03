@@ -304,7 +304,6 @@ Phiên ăn của khách.
 | `table_id` | `UUID` |  | x | x | Mã bàn |
 | `qr_code_id` | `UUID` |  |  |  | Mã mã QR |
 | `session_code` | `VARCHAR(80)` |  | x | x | Mã phiên ăn |
-| `session_token` | `VARCHAR(255)` |  | x |  | Token truy cập phiên ăn |
 | `merge_group_id` | `UUID` |  |  |  | Mã nhóm gộp |
 | `status` | `VARCHAR(40)` |  |  | x | Trạng thái |
 | `customer_count` | `INT` |  |  |  | Số lượng khách |
@@ -318,6 +317,25 @@ Phiên ăn của khách.
 | `opened_via` | `VARCHAR(30)` |  |  | x | Kênh mở phiên |
 | `waiter_called_at` | `TIMESTAMPTZ` |  |  |  | Thời điểm khách gọi nhân viên |
 | `deleted_at` | `TIMESTAMPTZ` |  |  |  | Thời điểm xóa mềm |
+| `created_at` | `TIMESTAMPTZ` |  |  | x | Thời điểm tạo |
+| `updated_at` | `TIMESTAMPTZ` |  |  | x | Thời điểm cập nhật gần nhất |
+
+## `session_devices`
+
+Thiết bị khách tham gia một phiên ăn. `access_token` là credential; `device_id` chỉ là định danh client.
+
+| Thuộc tính | Kiểu | K | U | M | Diễn giải |
+|---|---|:---:|:---:|:---:|---|
+| `id` | `UUID` | x |  | x | Mã device row |
+| `restaurant_id` | `UUID` |  | x | x | Tenant của phiên |
+| `session_id` | `UUID` |  | x | x | Phiên ăn liên kết |
+| `device_id` | `TEXT` |  | x | x | Định danh trình duyệt, không phải credential |
+| `guest_name` | `VARCHAR(150)` |  |  |  | Tên khách hiển thị cho nhân viên |
+| `status` | `VARCHAR(20)` |  |  | x | `PENDING`, `APPROVED` hoặc `REJECTED` |
+| `access_token` | `TEXT` |  | x | x | Bearer credential riêng của thiết bị |
+| `is_owner` | `BOOLEAN` |  | x | x | Thiết bị owner có quyền kích hoạt phiên sau khi được duyệt |
+| `approved_by` | `UUID` |  |  |  | Nhân viên duyệt hoặc từ chối |
+| `approved_at` | `TIMESTAMPTZ` |  |  |  | Thời điểm xử lý yêu cầu |
 | `created_at` | `TIMESTAMPTZ` |  |  | x | Thời điểm tạo |
 | `updated_at` | `TIMESTAMPTZ` |  |  | x | Thời điểm cập nhật gần nhất |
 

@@ -23,7 +23,7 @@ Tác nhân **Khách** giao tiếp với use-case «Theo dõi trạng thái món�
 | **Tên Use-Case** | Theo dõi trạng thái món (realtime) |
 | **Tác nhân** | Khách (Guest) — phụ: Hệ thống, Bếp/Phục vụ (nguồn đổi trạng thái) |
 | **Mô tả** | Khách mở màn "Món của tôi" xem danh sách món đã gọi kèm trạng thái từng món (**không hiển thị giá/tổng tiền**). Khi Bếp/Phục vụ đổi trạng thái, hệ thống phát sự kiện realtime qua WebSocket; giao diện làm mới danh sách để cập nhật trạng thái. Mất kết nối realtime thì kết nối lại và đồng bộ trạng thái mới nhất. |
-| **Điều kiện** | Khách trong phiên với `session_token`. Đã có ít nhất một món được gọi trong phiên. |
+| **Điều kiện** | Khách trong phiên với `access_token`. Đã có ít nhất một món được gọi trong phiên. |
 
 **Luồng sự kiện chính (Thành công — xem + cập nhật realtime)**
 

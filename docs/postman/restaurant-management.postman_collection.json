@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "7ba27186-c66c-4b28-a4a4-d73a5d645b2c",
     "name": "Restaurant Management API",
-    "description": "Collection được sinh trực tiếp từ các Gin route hiện tại của dự án.\n\nLuồng khuyến nghị:\n1. Chạy Public > Staff login để tự lưu access_token/refresh_token.\n2. Chạy Staff > Dining > List table QR để tự lưu table_id/qr_token.\n3. Chạy Public > Join dining session để tự lưu session_token/session_id.\n4. Chạy Guest > Menu và Guest > Ordering theo thứ tự để tự lưu các UUID.\n\nTài khoản seed mặc định: manager/demo1234. Thay staff_username để kiểm tra phân quyền cashier, server hoặc kitchen.\nCác request tạo/sửa/xóa làm thay đổi dữ liệu thật; không dùng Run collection toàn bộ trên production.",
+    "description": "Collection được sinh trực tiếp từ các Gin route hiện tại của dự án.\n\nLuồng khuyến nghị:\n1. Chạy Public > Staff login để tự lưu access_token/refresh_token.\n2. Chạy Staff > Dining > List table QR để tự lưu table_id/qr_token.\n3. Chạy Public > Join dining session để tự lưu device_access_token/session_id.\n4. Chạy Guest > Menu và Guest > Ordering theo thứ tự để tự lưu các UUID.\n\nTài khoản seed mặc định: manager/demo1234. Thay staff_username để kiểm tra phân quyền cashier, server hoặc kitchen.\nCác request tạo/sửa/xóa làm thay đổi dữ liệu thật; không dùng Run collection toàn bộ trên production.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -53,8 +53,12 @@
       "value": ""
     },
     {
-      "key": "session_token",
+      "key": "device_access_token",
       "value": ""
+    },
+    {
+      "key": "device_id",
+      "value": "postman-device-01"
     },
     {
       "key": "provider",
@@ -215,7 +219,7 @@
               "type": "noauth"
             },
             "url": "{{ws_url}}/ws",
-            "description": "Postman HTTP collection không lưu native WebSocket request theo schema v2.1.\nTạo WebSocket request tới {{ws_url}}/ws, sau khi Connected gửi một trong hai message:\nStaff: {\"type\":\"_auth\",\"access_token\":\"{{access_token}}\"}\nGuest: {\"type\":\"_auth\",\"session_token\":\"{{session_token}}\"}\nServer phản hồi event _auth_ok nếu xác thực thành công."
+            "description": "Postman HTTP collection không lưu native WebSocket request theo schema v2.1.\nTạo WebSocket request tới {{ws_url}}/ws, sau khi Connected gửi một trong hai message:\nStaff: {\"type\":\"_auth\",\"access_token\":\"{{access_token}}\"}\nGuest: {\"type\":\"_auth\",\"device_access_token\":\"{{device_access_token}}\"}\nServer phản hồi event _auth_ok nếu xác thực thành công."
           },
           "response": []
         }
@@ -223,7 +227,7 @@
     },
     {
       "name": "01. Public",
-      "description": "Không yêu cầu JWT hoặc QR session token.",
+      "description": "Không yêu cầu staff JWT. Join dùng QR token và có thể gửi device access token để resume.",
       "item": [
         {
           "name": "Staff login",
@@ -376,16 +380,21 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
+              },
+              {
+                "key": "X-Device-Access-Token",
+                "value": "{{device_access_token}}",
+                "type": "text"
               }
             ],
             "auth": {
               "type": "noauth"
             },
             "url": "{{base_url}}/api/v1/customer/sessions/join",
-            "description": "Tự lưu session_token, session_id và table_id. Phiên QR mới có thể cần nhân viên verify trước khi gọi món.",
+            "description": "Tự lưu device_access_token, session_id và table_id. Phiên QR mới có thể cần nhân viên verify trước khi gọi món.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"qr_token\": \"{{qr_token}}\",\n  \"guest_name\": \"Khách Postman\"\n}",
+              "raw": "{\n  \"qr_token\": \"{{qr_token}}\",\n  \"device_id\": \"{{device_id}}\",\n  \"guest_name\": \"Khách Postman\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -403,7 +412,7 @@
                   "let body = {};",
                   "try { body = pm.response.json(); } catch (_) {}",
                   "const data = body && body.data ? body.data : {};",
-                  "if (data.session_token) pm.collectionVariables.set(\"session_token\", data.session_token);",
+                  "if (data.access_token) pm.collectionVariables.set(\"device_access_token\", data.access_token);",
                   "if (data.session_id) pm.collectionVariables.set(\"session_id\", data.session_id);",
                   "if (data.table_id) pm.collectionVariables.set(\"table_id\", data.table_id);"
                 ]
@@ -502,7 +511,7 @@
     },
     {
       "name": "02. Guest - Menu & Ordering",
-      "description": "Menu là public; các API ordering dùng X-Session-Token: {{session_token}}.",
+      "description": "Menu là public; các API ordering dùng X-Device-Access-Token: {{device_access_token}}.",
       "item": [
         {
           "name": "List menu categories",
@@ -645,12 +654,12 @@
               "apikey": [
                 {
                   "key": "key",
-                  "value": "X-Session-Token",
+                  "value": "X-Device-Access-Token",
                   "type": "string"
                 },
                 {
                   "key": "value",
-                  "value": "{{session_token}}",
+                  "value": "{{device_access_token}}",
                   "type": "string"
                 },
                 {
@@ -712,12 +721,12 @@
               "apikey": [
                 {
                   "key": "key",
-                  "value": "X-Session-Token",
+                  "value": "X-Device-Access-Token",
                   "type": "string"
                 },
                 {
                   "key": "value",
-                  "value": "{{session_token}}",
+                  "value": "{{device_access_token}}",
                   "type": "string"
                 },
                 {
@@ -771,12 +780,12 @@
               "apikey": [
                 {
                   "key": "key",
-                  "value": "X-Session-Token",
+                  "value": "X-Device-Access-Token",
                   "type": "string"
                 },
                 {
                   "key": "value",
-                  "value": "{{session_token}}",
+                  "value": "{{device_access_token}}",
                   "type": "string"
                 },
                 {
@@ -838,12 +847,12 @@
               "apikey": [
                 {
                   "key": "key",
-                  "value": "X-Session-Token",
+                  "value": "X-Device-Access-Token",
                   "type": "string"
                 },
                 {
                   "key": "value",
-                  "value": "{{session_token}}",
+                  "value": "{{device_access_token}}",
                   "type": "string"
                 },
                 {
@@ -879,12 +888,12 @@
               "apikey": [
                 {
                   "key": "key",
-                  "value": "X-Session-Token",
+                  "value": "X-Device-Access-Token",
                   "type": "string"
                 },
                 {
                   "key": "value",
-                  "value": "{{session_token}}",
+                  "value": "{{device_access_token}}",
                   "type": "string"
                 },
                 {
@@ -943,12 +952,12 @@
               "apikey": [
                 {
                   "key": "key",
-                  "value": "X-Session-Token",
+                  "value": "X-Device-Access-Token",
                   "type": "string"
                 },
                 {
                   "key": "value",
-                  "value": "{{session_token}}",
+                  "value": "{{device_access_token}}",
                   "type": "string"
                 },
                 {
@@ -984,12 +993,12 @@
               "apikey": [
                 {
                   "key": "key",
-                  "value": "X-Session-Token",
+                  "value": "X-Device-Access-Token",
                   "type": "string"
                 },
                 {
                   "key": "value",
-                  "value": "{{session_token}}",
+                  "value": "{{device_access_token}}",
                   "type": "string"
                 },
                 {
@@ -1914,7 +1923,6 @@
                   "let body = {};",
                   "try { body = pm.response.json(); } catch (_) {}",
                   "const data = body && body.data ? body.data : {};",
-                  "if (data.session_token) pm.collectionVariables.set(\"session_token\", data.session_token);",
                   "if (data.session_id) pm.collectionVariables.set(\"session_id\", data.session_id);",
                   "if (data.table_id) pm.collectionVariables.set(\"table_id\", data.table_id);"
                 ]

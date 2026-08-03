@@ -27,11 +27,11 @@ func (checkoutRouteRepo) GuestSessionStatus(context.Context, uuid.UUID, uuid.UUI
 	return "AWAITING_PAYMENT", nil
 }
 
-type checkoutSessionValidator struct {
-	session auth.SessionAuth
+type checkoutDeviceAccessValidator struct {
+	session auth.DeviceAccessAuth
 }
 
-func (v checkoutSessionValidator) ValidateSessionToken(context.Context, string) (auth.SessionAuth, error) {
+func (v checkoutDeviceAccessValidator) ValidateAccessToken(context.Context, string) (auth.DeviceAccessAuth, error) {
 	return v.session, nil
 }
 
@@ -54,8 +54,8 @@ func TestGuestCheckoutRouteRequiresSessionAndReturnsQR(t *testing.T) {
 		},
 	}, restaurantID)}
 	router := gin.New()
-	group := router.Group("/api/v1/customer", auth.QRSessionToken(checkoutSessionValidator{
-		session: auth.SessionAuth{
+	group := router.Group("/api/v1/customer", auth.DeviceAccessToken(checkoutDeviceAccessValidator{
+		session: auth.DeviceAccessAuth{
 			RestaurantID: restaurantID,
 			SessionID:    sessionID,
 			TableID:      uuid.New(),
@@ -70,7 +70,7 @@ func TestGuestCheckoutRouteRequiresSessionAndReturnsQR(t *testing.T) {
 	}
 
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/customer/payment", nil)
-	request.Header.Set("X-Session-Token", "guest-token")
+	request.Header.Set("X-Device-Access-Token", "guest-token")
 	response := httptest.NewRecorder()
 	router.ServeHTTP(response, request)
 	if response.Code != http.StatusOK {

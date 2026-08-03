@@ -49,11 +49,11 @@ func (f fakeSessionChecker) IsSessionValid(context.Context, uuid.UUID) (bool, er
 	return f.valid, nil
 }
 
-type fakeSessionValidator struct {
-	session auth.SessionAuth
+type fakeDeviceAccessValidator struct {
+	session auth.DeviceAccessAuth
 }
 
-func (f fakeSessionValidator) ValidateSessionToken(context.Context, string) (auth.SessionAuth, error) {
+func (f fakeDeviceAccessValidator) ValidateAccessToken(context.Context, string) (auth.DeviceAccessAuth, error) {
 	return f.session, nil
 }
 
@@ -66,7 +66,7 @@ func TestAuthenticateStaffAndGuest(t *testing.T) {
 		"test-secret",
 		restaurantID,
 		fakeSessionChecker{valid: true},
-		fakeSessionValidator{session: auth.SessionAuth{
+		fakeDeviceAccessValidator{session: auth.DeviceAccessAuth{
 			RestaurantID: restaurantID,
 			SessionID:    sessionID,
 			TableID:      tableID,
@@ -85,7 +85,7 @@ func TestAuthenticateStaffAndGuest(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, Topic{RestaurantID: restaurantID, Role: "SERVER"}, staffTopic)
 
-	guestMessage, err := json.Marshal(authMessage{Type: "_auth", SessionToken: "guest-token"})
+	guestMessage, err := json.Marshal(authMessage{Type: "_auth", DeviceAccessToken: "guest-token"})
 	require.NoError(t, err)
 	guestTopic, err := h.authenticate(guestMessage)
 	require.NoError(t, err)

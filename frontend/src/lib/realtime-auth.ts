@@ -1,21 +1,21 @@
-const GUEST_REALTIME_TOKEN_KEY = 'guest_realtime_token:v1'
-const GUEST_REALTIME_TOKEN_EVENT = 'guest-realtime-token-changed'
+const GUEST_DEVICE_ACCESS_KEY = 'guest_device_access:v1'
+const GUEST_DEVICE_ACCESS_EVENT = 'guest-device-access-changed'
 
-export function getGuestRealtimeToken(): string | null {
-  return sessionStorage.getItem(GUEST_REALTIME_TOKEN_KEY)
+export function getGuestDeviceAccessToken(): string | null {
+  return sessionStorage.getItem(GUEST_DEVICE_ACCESS_KEY)
 }
 
-export function setGuestRealtimeToken(token: string): void {
+export function setGuestDeviceAccessToken(token: string): void {
   const normalized = token.trim()
   if (normalized) {
-    sessionStorage.setItem(GUEST_REALTIME_TOKEN_KEY, normalized)
+    sessionStorage.setItem(GUEST_DEVICE_ACCESS_KEY, normalized)
   } else {
-    sessionStorage.removeItem(GUEST_REALTIME_TOKEN_KEY)
+    sessionStorage.removeItem(GUEST_DEVICE_ACCESS_KEY)
   }
-  window.dispatchEvent(new Event(GUEST_REALTIME_TOKEN_EVENT))
+  window.dispatchEvent(new Event(GUEST_DEVICE_ACCESS_EVENT))
 }
 
-export function subscribeGuestRealtimeToken(listener: () => void): () => void {
-  window.addEventListener(GUEST_REALTIME_TOKEN_EVENT, listener)
-  return () => window.removeEventListener(GUEST_REALTIME_TOKEN_EVENT, listener)
+export function subscribeGuestDeviceAccessToken(listener: () => void): () => void {
+  window.addEventListener(GUEST_DEVICE_ACCESS_EVENT, listener)
+  return () => window.removeEventListener(GUEST_DEVICE_ACCESS_EVENT, listener)
 }

@@ -33,9 +33,9 @@ export const OrderItemEditSheet: FC<OrderItemEditSheetProps> = ({
 }) => {
   const { state } = useOrdering()
   const t = DICT[lang]
-  const sessionToken = state.session?.token
-  const editMutation = useEditGuestOrder(sessionToken)
-  const cancelMutation = useCancelGuestOrder(sessionToken)
+  const deviceAccessToken = state.session?.accessToken
+  const editMutation = useEditGuestOrder(deviceAccessToken)
+  const cancelMutation = useCancelGuestOrder(deviceAccessToken)
   const [qty, setQty] = useState(item.quantity)
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
@@ -69,7 +69,7 @@ export const OrderItemEditSheet: FC<OrderItemEditSheetProps> = ({
   }
 
   const handleSave = async () => {
-    if (!sessionToken) return
+    if (!deviceAccessToken) return
     if (qty === 0) {
       handleDelete()
       return
@@ -106,7 +106,7 @@ export const OrderItemEditSheet: FC<OrderItemEditSheetProps> = ({
   }
 
   const handleDelete = async () => {
-    if (!sessionToken) return
+    if (!deviceAccessToken) return
     if (isLastEditable) {
       setDeleteDialogError(undefined)
       setDeleteDialogStatus('idle')

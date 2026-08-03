@@ -33,29 +33,29 @@ func (fakeMenuReadRepo) GetItemAdmin(context.Context, uuid.UUID, uuid.UUID) (*do
 	return nil, nil
 }
 
-type fakeSessionValidator struct {
+type fakeDeviceAccessValidator struct {
 	err error
 }
 
-func (v fakeSessionValidator) ValidateSessionToken(context.Context, string) (auth.SessionAuth, error) {
+func (v fakeDeviceAccessValidator) ValidateAccessToken(context.Context, string) (auth.DeviceAccessAuth, error) {
 	if v.err != nil {
-		return auth.SessionAuth{}, v.err
+		return auth.DeviceAccessAuth{}, v.err
 	}
-	return auth.SessionAuth{RestaurantID: uuid.New(), SessionID: uuid.New(), TableID: uuid.New()}, nil
+	return auth.DeviceAccessAuth{RestaurantID: uuid.New(), SessionID: uuid.New(), TableID: uuid.New()}, nil
 }
 
-func guestRouter(v auth.SessionValidator) *gin.Engine {
+func guestRouter(v auth.DeviceAccessValidator) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	repo := fakeMenuReadRepo{}
 	h := NewHandler(nil, nil, nil, nil, application.NewListCategories(repo, uuid.Nil), application.NewListMenuItems(repo, uuid.Nil), application.NewGetMenuItem(repo, uuid.Nil), application.NewListAdminMenuItems(repo, uuid.Nil), application.NewGetAdminMenuItem(repo, uuid.Nil), nil)
 	r := gin.New()
-	guestGroup := r.Group("/api/v1/customer", auth.QRSessionToken(v))
+	guestGroup := r.Group("/api/v1/customer", auth.DeviceAccessToken(v))
 	h.RegisterGuestRoutes(guestGroup)
 	return r
 }
 
-func TestGuestMenuRoutesRequireSessionToken(t *testing.T) {
-	r := guestRouter(fakeSessionValidator{})
+func TestGuestMenuRoutesRequireDeviceAccessToken(t *testing.T) {
+	r := guestRouter(fakeDeviceAccessValidator{})
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/customer/menu/categories", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -63,18 +63,18 @@ func TestGuestMenuRoutesRequireSessionToken(t *testing.T) {
 }
 
 func TestGuestMenuItemsBadCategoryIDReturns400(t *testing.T) {
-	r := guestRouter(fakeSessionValidator{})
+	r := guestRouter(fakeDeviceAccessValidator{})
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/customer/menu/items?category_id=bad", nil)
-	req.Header.Set("X-Session-Token", "valid")
+	req.Header.Set("X-Device-Access-Token", "valid")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	require.Equal(t, http.StatusBadRequest, w.Code)
 }
 
 func TestGuestMenuItemBadPathIDReturns400(t *testing.T) {
-	r := guestRouter(fakeSessionValidator{})
+	r := guestRouter(fakeDeviceAccessValidator{})
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/customer/menu/items/bad", nil)
-	req.Header.Set("X-Session-Token", "valid")
+	req.Header.Set("X-Device-Access-Token", "valid")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	require.Equal(t, http.StatusBadRequest, w.Code)

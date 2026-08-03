@@ -1,6 +1,6 @@
 import { apiRequest } from '@/lib/api'
 import { getDeviceId } from '@/lib/device'
-import { loadDeviceResumeToken, saveDeviceResumeToken } from '@/features/ordering/session-store'
+import { loadDeviceAccessToken, saveDeviceAccessToken } from '@/features/ordering/session-store'
 import type {
   JoinSessionResult,
   ApiCategory,
@@ -19,94 +19,96 @@ export async function joinDiningSession(
   qrToken: string,
   guestName?: string,
 ): Promise<JoinSessionResult> {
-  const resumeToken = loadDeviceResumeToken(qrToken)
+  const resumeAccessToken = loadDeviceAccessToken(qrToken)
   const result = await apiRequest<JoinSessionResult>('/api/v1/customer/sessions/join', {
     method: 'POST',
     body: { qr_token: qrToken, guest_name: guestName, device_id: getDeviceId() },
-    sessionToken: resumeToken,
+    deviceAccessToken: resumeAccessToken,
   })
-  if (result.session_token) {
-    saveDeviceResumeToken(qrToken, result.session_token)
+  if (result.access_token) {
+    saveDeviceAccessToken(qrToken, result.access_token)
   }
   return result
 }
 
 // Poll with the device token in a header so it never enters browser history,
 // proxy URLs, or ordinary access logs.
-export function fetchDeviceStatus(token: string): Promise<{ status: string }> {
+export function fetchDeviceStatus(deviceAccessToken: string): Promise<{ status: string }> {
   return apiRequest<{ status: string }>('/api/v1/customer/sessions/device-status', {
-    sessionToken: token,
+    deviceAccessToken,
   })
 }
 
-export function fetchCategories(sessionToken: string): Promise<ApiCategory[]> {
-  return apiRequest<ApiCategory[]>('/api/v1/customer/menu/categories', { sessionToken })
+export function fetchCategories(deviceAccessToken: string): Promise<ApiCategory[]> {
+  return apiRequest<ApiCategory[]>('/api/v1/customer/menu/categories', { deviceAccessToken })
 }
 
 export function fetchMenuItems(
-  sessionToken: string,
+  deviceAccessToken: string,
   categoryId?: string,
 ): Promise<ApiMenuItemSummary[]> {
   const query = categoryId ? `?category_id=${encodeURIComponent(categoryId)}` : ''
-  return apiRequest<ApiMenuItemSummary[]>(`/api/v1/customer/menu/items${query}`, { sessionToken })
+  return apiRequest<ApiMenuItemSummary[]>(`/api/v1/customer/menu/items${query}`, {
+    deviceAccessToken,
+  })
 }
 
-export function fetchMenuItem(sessionToken: string, id: string): Promise<ApiMenuItemDetail> {
-  return apiRequest<ApiMenuItemDetail>(`/api/v1/customer/menu/items/${id}`, { sessionToken })
+export function fetchMenuItem(deviceAccessToken: string, id: string): Promise<ApiMenuItemDetail> {
+  return apiRequest<ApiMenuItemDetail>(`/api/v1/customer/menu/items/${id}`, { deviceAccessToken })
 }
 
 export function placeGuestOrder(
-  sessionToken: string,
+  deviceAccessToken: string,
   input: PlaceOrderInput,
 ): Promise<PlaceOrderResult> {
   return apiRequest<PlaceOrderResult>('/api/v1/customer/orders', {
     method: 'POST',
     body: input,
-    sessionToken,
+    deviceAccessToken,
   })
 }
 
-export function fetchGuestOrders(sessionToken: string): Promise<GuestOrdersResponse> {
-  return apiRequest<GuestOrdersResponse>('/api/v1/customer/orders', { sessionToken })
+export function fetchGuestOrders(deviceAccessToken: string): Promise<GuestOrdersResponse> {
+  return apiRequest<GuestOrdersResponse>('/api/v1/customer/orders', { deviceAccessToken })
 }
 
 export function editGuestOrder(
-  sessionToken: string,
+  deviceAccessToken: string,
   orderId: string,
   input: EditOrderInput,
 ): Promise<EditOrderResult> {
   return apiRequest<EditOrderResult>(`/api/v1/customer/orders/${orderId}/items`, {
     method: 'PUT',
     body: input,
-    sessionToken,
+    deviceAccessToken,
   })
 }
 
-export function cancelGuestOrder(sessionToken: string, orderId: string): Promise<void> {
+export function cancelGuestOrder(deviceAccessToken: string, orderId: string): Promise<void> {
   return apiRequest<void>(`/api/v1/customer/orders/${orderId}`, {
     method: 'DELETE',
-    sessionToken,
+    deviceAccessToken,
   })
 }
 
-export function requestBill(sessionToken: string): Promise<RequestBillResponse> {
+export function requestBill(deviceAccessToken: string): Promise<RequestBillResponse> {
   return apiRequest<RequestBillResponse>('/api/v1/customer/request-bill', {
     method: 'POST',
-    sessionToken,
+    deviceAccessToken,
   })
 }
 
-export function fetchGuestPayment(sessionToken: string): Promise<GuestCheckoutResponse> {
-  return apiRequest<GuestCheckoutResponse>('/api/v1/customer/payment', { sessionToken })
+export function fetchGuestPayment(deviceAccessToken: string): Promise<GuestCheckoutResponse> {
+  return apiRequest<GuestCheckoutResponse>('/api/v1/customer/payment', { deviceAccessToken })
 }
 
 export function callWaiter(
-  sessionToken: string,
+  deviceAccessToken: string,
   reason?: string,
 ): Promise<{ session_id: string; status: string }> {
   return apiRequest('/api/v1/customer/call-waiter', {
     method: 'POST',
-    sessionToken,
+    deviceAccessToken,
     body: { reason: reason ?? '' },
   })
 }

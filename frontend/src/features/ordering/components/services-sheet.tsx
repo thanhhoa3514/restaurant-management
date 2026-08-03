@@ -10,7 +10,7 @@ interface ServicesSheetProps {
   lang: Lang
   dispatch: any
   setChangingLang: (lang: Lang | null) => void
-  sessionToken?: string
+  deviceAccessToken?: string
 }
 
 export const ServicesSheet: FC<ServicesSheetProps> = ({
@@ -19,7 +19,7 @@ export const ServicesSheet: FC<ServicesSheetProps> = ({
   lang,
   dispatch,
   setChangingLang,
-  sessionToken,
+  deviceAccessToken,
 }) => {
   const callWaiter = useCallWaiter()
 
@@ -27,9 +27,9 @@ export const ServicesSheet: FC<ServicesSheetProps> = ({
 
   // reason gửi lên luôn là tiếng Việt vì màn hình nhân viên là tiếng Việt; label chỉ để hiện toast cho khách.
   const handleCallStaff = (reason: string, label: string) => {
-    if (!sessionToken) return
+    if (!deviceAccessToken) return
     callWaiter.mutate(
-      { sessionToken, reason },
+      { deviceAccessToken, reason },
       {
         onSuccess: () => {
           toast.success(lang === 'vi' ? `Đã gửi yêu cầu: ${label}` : `Request sent: ${label}`, {

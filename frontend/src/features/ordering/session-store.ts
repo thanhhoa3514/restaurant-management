@@ -15,7 +15,7 @@ const DEVICE_RESUME_KEY = 'rm_guest_device_resume'
 const MAX_AGE_MS = 12 * 60 * 60 * 1000
 
 interface StoredSession {
-  token: string
+  accessToken: string
   table: string
   sessionId?: string
   tableId?: string
@@ -25,15 +25,21 @@ interface StoredSession {
 
 interface StoredDeviceResume {
   qrToken: string
-  sessionToken: string
+  deviceAccessToken: string
   savedAt: string
 }
+
+// One-release localStorage compatibility only. The HTTP/API contract no longer
+// accepts the legacy name; this prevents browsers already waiting for approval
+// from losing the secret needed to resume their existing device row.
+type LegacyStoredSession = Partial<StoredSession> & { token?: string }
+type LegacyStoredDeviceResume = Partial<StoredDeviceResume> & { sessionToken?: string }
 
 export function saveSession(s: Session): void {
   try {
     const startedAt = s.startedAt instanceof Date ? s.startedAt.toISOString() : String(s.startedAt)
     const payload: StoredSession = {
-      token: s.token,
+      accessToken: s.accessToken,
       table: s.table,
       sessionId: s.sessionId,
       tableId: s.tableId,
@@ -50,15 +56,16 @@ export function loadSession(): Session | null {
   try {
     const raw = localStorage.getItem(KEY)
     if (!raw) return null
-    const p = JSON.parse(raw) as StoredSession
-    if (!p?.token) return null
+    const p = JSON.parse(raw) as LegacyStoredSession
+    const accessToken = p.accessToken ?? p.token
+    if (!accessToken || !p.table || !p.startedAt) return null
     const started = new Date(p.startedAt)
     if (Number.isNaN(started.getTime()) || Date.now() - started.getTime() > MAX_AGE_MS) {
       clearSession()
       return null
     }
     return {
-      token: p.token,
+      accessToken,
       table: p.table,
       sessionId: p.sessionId,
       tableId: p.tableId,
@@ -82,11 +89,11 @@ export function clearSession(): void {
 // Keep the server-issued device token separately so a refresh can prove it is
 // resuming the same pending/approved device without the backend reissuing a
 // bearer token to anyone who merely knows device_id.
-export function saveDeviceResumeToken(qrToken: string, sessionToken: string): void {
+export function saveDeviceAccessToken(qrToken: string, deviceAccessToken: string): void {
   try {
     const payload: StoredDeviceResume = {
       qrToken,
-      sessionToken,
+      deviceAccessToken,
       savedAt: new Date().toISOString(),
     }
     localStorage.setItem(DEVICE_RESUME_KEY, JSON.stringify(payload))
@@ -95,21 +102,23 @@ export function saveDeviceResumeToken(qrToken: string, sessionToken: string): vo
   }
 }
 
-export function loadDeviceResumeToken(qrToken: string): string | undefined {
+export function loadDeviceAccessToken(qrToken: string): string | undefined {
   try {
     const raw = localStorage.getItem(DEVICE_RESUME_KEY)
     if (!raw) return undefined
-    const payload = JSON.parse(raw) as StoredDeviceResume
+    const payload = JSON.parse(raw) as LegacyStoredDeviceResume
+    const deviceAccessToken = payload.deviceAccessToken ?? payload.sessionToken
+    if (!payload.savedAt) return undefined
     const savedAt = new Date(payload.savedAt)
     if (
       payload.qrToken !== qrToken ||
-      !payload.sessionToken ||
+      !deviceAccessToken ||
       Number.isNaN(savedAt.getTime()) ||
       Date.now() - savedAt.getTime() > MAX_AGE_MS
     ) {
       return undefined
     }
-    return payload.sessionToken
+    return deviceAccessToken
   } catch {
     return undefined
   }

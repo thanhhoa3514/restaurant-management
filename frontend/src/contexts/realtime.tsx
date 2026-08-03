@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { playNewOrderSound, playKitchenReadySound, playCallWaiterSound } from '@/lib/sound'
 import { getStaffSession, subscribeStaffSession } from '@/lib/auth'
-import { getGuestRealtimeToken, subscribeGuestRealtimeToken } from '@/lib/realtime-auth'
+import { getGuestDeviceAccessToken, subscribeGuestDeviceAccessToken } from '@/lib/realtime-auth'
 import { RT_EVENT, RT_PREFIX } from '@/constants/realtime-events'
 
 const PING_INTERVAL = 25_000
@@ -34,7 +34,7 @@ function realtimeURL(): string {
 
 function realtimeAuthMessage():
   | { type: '_auth'; access_token: string }
-  | { type: '_auth'; session_token: string }
+  | { type: '_auth'; device_access_token: string }
   | null {
   const staffToken = getStaffSession()?.token
   if (staffToken)
@@ -43,8 +43,8 @@ function realtimeAuthMessage():
       access_token: staffToken,
     }
 
-  const guestToken = getGuestRealtimeToken() ?? new URLSearchParams(window.location.search).get('s')
-  if (guestToken) return { type: '_auth', session_token: guestToken }
+  const deviceAccessToken = getGuestDeviceAccessToken()
+  if (deviceAccessToken) return { type: '_auth', device_access_token: deviceAccessToken }
   return null
 }
 
@@ -317,7 +317,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       }
     }
     const unsubscribeStaff = subscribeStaffSession(restartForAuthChange)
-    const unsubscribeGuest = subscribeGuestRealtimeToken(restartForAuthChange)
+    const unsubscribeGuest = subscribeGuestDeviceAccessToken(restartForAuthChange)
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {

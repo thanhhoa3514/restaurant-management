@@ -51,9 +51,9 @@ interface FormState {
 export const ItemDetail: FC<ItemDetailProps> = ({ itemId, lang, onClose }) => {
   const { state, dispatch } = useOrdering()
   const t = DICT[lang]
-  const sessionToken = state.session?.token
+  const deviceAccessToken = state.session?.accessToken
 
-  const { data: item, isLoading: isItemLoading } = useGuestItemDetail(sessionToken, itemId)
+  const { data: item, isLoading: isItemLoading } = useGuestItemDetail(deviceAccessToken, itemId)
 
   const [form, setForm] = useState<FormState>({
     variantId: '',

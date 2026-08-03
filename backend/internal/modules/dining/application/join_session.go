@@ -18,21 +18,21 @@ type JoinSessionRequest struct {
 	QRToken   string `json:"qr_token"`
 	GuestName string `json:"guest_name"`
 	DeviceID  string `json:"device_id"`
-	// ResumeToken proves that a returning client already owns this device's
+	// ResumeAccessToken proves that a returning client already owns this device's
 	// credential. DeviceID identifies a row; it is not a secret by itself.
-	ResumeToken string `json:"-"`
-	IPHash      string `json:"-"`
-	UserAgent   string `json:"-"`
-	TraceID     string `json:"-"`
+	ResumeAccessToken string `json:"-"`
+	IPHash            string `json:"-"`
+	UserAgent         string `json:"-"`
+	TraceID           string `json:"-"`
 }
 
 type JoinSessionResponse struct {
-	Status       string     `json:"status"`
-	SessionToken string     `json:"session_token,omitempty"`
-	SessionID    *uuid.UUID `json:"session_id,omitempty"`
-	TableID      *uuid.UUID `json:"table_id,omitempty"`
-	TableCode    string     `json:"table_code,omitempty"`
-	TableName    string     `json:"table_name,omitempty"`
+	Status      string     `json:"status"`
+	AccessToken string     `json:"access_token,omitempty"`
+	SessionID   *uuid.UUID `json:"session_id,omitempty"`
+	TableID     *uuid.UUID `json:"table_id,omitempty"`
+	TableCode   string     `json:"table_code,omitempty"`
+	TableName   string     `json:"table_name,omitempty"`
 }
 
 type JoinSession struct {
@@ -82,16 +82,11 @@ func (s *JoinSession) Handle(ctx context.Context, req JoinSessionRequest) (JoinS
 			if codeErr != nil {
 				return codeErr
 			}
-			sessionToken, tokenErr := randomToken(32)
-			if tokenErr != nil {
-				return tokenErr
-			}
 			session = &domain.DiningSession{
 				RestaurantID: qr.RestaurantID,
 				TableID:      qr.TableID,
 				QRCodeID:     &qr.ID,
 				SessionCode:  sessionCode,
-				SessionToken: sessionToken,
 				Status:       domain.SessionPendingVerification,
 				OpenedVia:    domain.OpenedViaQRScan,
 				CustomerName: guestName,
@@ -117,7 +112,7 @@ func (s *JoinSession) Handle(ctx context.Context, req JoinSessionRequest) (JoinS
 			if dev.Status == domain.DeviceRejected {
 				return apperr.New(apperr.CodeForbidden, "join request was declined by staff")
 			}
-			if !sameToken(req.ResumeToken, dev.SessionToken) {
+			if !sameToken(req.ResumeAccessToken, dev.AccessToken) {
 				return apperr.New(apperr.CodeUnauthorized, "device resume token is required")
 			}
 			out = s.deviceResponse(ctx, qr, session, dev)
@@ -155,7 +150,7 @@ func (s *JoinSession) registerDevice(ctx context.Context, session *domain.Dining
 		DeviceID:     deviceID,
 		GuestName:    guestName,
 		Status:       domain.DevicePending,
-		SessionToken: token,
+		AccessToken:  token,
 		IsOwner:      isOwner,
 	}
 	if err := s.repo.CreateSessionDevice(ctx, dev); err != nil {
@@ -174,10 +169,10 @@ func (s *JoinSession) deviceResponse(ctx context.Context, qr *domain.QRCode, ses
 		status = string(session.Status)
 	}
 	out := JoinSessionResponse{
-		Status:       status,
-		SessionToken: dev.SessionToken,
-		SessionID:    &session.ID,
-		TableID:      &session.TableID,
+		Status:      status,
+		AccessToken: dev.AccessToken,
+		SessionID:   &session.ID,
+		TableID:     &session.TableID,
 	}
 	if table, err := s.repo.FindTable(ctx, qr.RestaurantID, qr.TableID); err == nil && table != nil {
 		out.TableCode = table.Code

@@ -36,14 +36,11 @@ export const waiterService = {
     return ackWaiterCall(sessionId)
   },
 
-  openSession(
-    tableId: string,
-  ): Promise<{
+  openSession(tableId: string): Promise<{
     session_id: string
     session_code: string
     table_id: string
     status: string
-    session_token: string
   }> {
     return openDiningSession(tableId)
   },

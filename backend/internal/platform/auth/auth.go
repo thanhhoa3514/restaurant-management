@@ -56,14 +56,14 @@ func HashRefreshToken(raw string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-type SessionAuth struct {
+type DeviceAccessAuth struct {
 	RestaurantID uuid.UUID
 	SessionID    uuid.UUID
 	TableID      uuid.UUID
 }
 
-type SessionValidator interface {
-	ValidateSessionToken(ctx context.Context, token string) (SessionAuth, error)
+type DeviceAccessValidator interface {
+	ValidateAccessToken(ctx context.Context, token string) (DeviceAccessAuth, error)
 }
 
 func Issue(secret string, claims Claims, ttl time.Duration) (string, error) {
@@ -154,17 +154,17 @@ func JWTSession(secret string, checker SessionChecker) gin.HandlerFunc {
 		c.Next()
 	}
 }
-func QRSessionToken(v SessionValidator) gin.HandlerFunc {
+func DeviceAccessToken(v DeviceAccessValidator) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		token := strings.TrimSpace(c.GetHeader("X-Session-Token"))
+		token := strings.TrimSpace(c.GetHeader("X-Device-Access-Token"))
 		if token == "" {
-			httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "missing session token"))
+			httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "missing device access token"))
 			c.Abort()
 			return
 		}
-		session, err := v.ValidateSessionToken(c.Request.Context(), token)
+		session, err := v.ValidateAccessToken(c.Request.Context(), token)
 		if err != nil {
-			httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "invalid session token"))
+			httpx.RespondError(c, apperr.New(apperr.CodeUnauthorized, "invalid device access token"))
 			c.Abort()
 			return
 		}

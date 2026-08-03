@@ -37,13 +37,13 @@ const STATUS_COLORS: Record<string, string> = {
 export const OrderStatusScreen: FC = () => {
   const { state, dispatch } = useOrdering()
   const t = DICT[state.lang]
-  const sessionToken = state.session?.token
+  const deviceAccessToken = state.session?.accessToken
 
   const requestBill = useRequestBill()
 
-  const { data: ordersData, isLoading: isOrdersLoading } = useGuestOrders(sessionToken)
+  const { data: ordersData, isLoading: isOrdersLoading } = useGuestOrders(deviceAccessToken)
 
-  const { data: menuItems } = useGuestItems(sessionToken)
+  const { data: menuItems } = useGuestItems(deviceAccessToken)
 
   const imageByItemId = useMemo(() => {
     const map: Record<string, string> = {}
@@ -174,8 +174,8 @@ export const OrderStatusScreen: FC = () => {
         t={t}
         onOpenChange={setPayConfirmOpen}
         onConfirm={async (wantsDigitalInvoice) => {
-          if (!sessionToken) throw new Error('missing session token')
-          await requestBill.mutateAsync(sessionToken)
+          if (!deviceAccessToken) throw new Error('missing device access token')
+          await requestBill.mutateAsync(deviceAccessToken)
           dispatch({ type: 'SET_DIGITAL_INVOICE', payload: wantsDigitalInvoice })
           toast.success(t.toast_bill)
           dispatch({ type: 'SET_SCREEN', payload: 'payment' })

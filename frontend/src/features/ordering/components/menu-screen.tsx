@@ -21,7 +21,7 @@ const SEARCH_DEBOUNCE_MS = 200
 export const MenuScreen: FC = () => {
   const { state, dispatch } = useOrdering()
   const t = DICT[state.lang]
-  const sessionToken = state.session?.token
+  const deviceAccessToken = state.session?.accessToken
   const [activeCategory, setActiveCategory] = useState('all')
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -35,14 +35,14 @@ export const MenuScreen: FC = () => {
     return () => clearTimeout(id)
   }, [search])
 
-  const { data: categoriesData, isError: isCategoriesError } = useGuestCategories(sessionToken)
+  const { data: categoriesData, isError: isCategoriesError } = useGuestCategories(deviceAccessToken)
 
   const {
     data: itemsData,
     isLoading: isItemsLoading,
     isError: isItemsError,
     refetch: refetchItems,
-  } = useGuestItems(sessionToken)
+  } = useGuestItems(deviceAccessToken)
 
   const filtered = useMemo(() => {
     const items = itemsData ?? []
@@ -265,7 +265,7 @@ export const MenuScreen: FC = () => {
         lang={state.lang}
         dispatch={dispatch}
         setChangingLang={setChangingLang}
-        sessionToken={sessionToken}
+        deviceAccessToken={deviceAccessToken}
       />
 
       <LanguageLoader open={changingLang !== null} targetLang={changingLang || state.lang} />

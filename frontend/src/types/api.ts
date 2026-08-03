@@ -20,5 +20,5 @@ export interface RequestOptions {
   method?: string
   body?: unknown
   signal?: AbortSignal
-  sessionToken?: string
+  deviceAccessToken?: string
 }

@@ -45,16 +45,16 @@ type subscription struct {
 }
 
 type Hub struct {
-	mu                  sync.RWMutex
-	clients             map[*subscription]struct{}
-	upgrader            websocket.Upgrader
-	staffSecret         string
-	defaultRestaurantID uuid.UUID
-	sessionChecker      auth.SessionChecker
-	sessionValidator    auth.SessionValidator
+	mu                    sync.RWMutex
+	clients               map[*subscription]struct{}
+	upgrader              websocket.Upgrader
+	staffSecret           string
+	defaultRestaurantID   uuid.UUID
+	sessionChecker        auth.SessionChecker
+	deviceAccessValidator auth.DeviceAccessValidator
 }
 
-func NewHub(allowedOrigins []string, staffSecret string, defaultRestaurantID uuid.UUID, sessionChecker auth.SessionChecker, sessionValidator auth.SessionValidator) *Hub {
+func NewHub(allowedOrigins []string, staffSecret string, defaultRestaurantID uuid.UUID, sessionChecker auth.SessionChecker, deviceAccessValidator auth.DeviceAccessValidator) *Hub {
 	allowed := make(map[string]struct{}, len(allowedOrigins))
 	for _, o := range allowedOrigins {
 		allowed[o] = struct{}{}
@@ -67,12 +67,12 @@ func NewHub(allowedOrigins []string, staffSecret string, defaultRestaurantID uui
 		return ok
 	}
 	return &Hub{
-		clients:             map[*subscription]struct{}{},
-		upgrader:            websocket.Upgrader{CheckOrigin: checkOrigin},
-		staffSecret:         staffSecret,
-		defaultRestaurantID: defaultRestaurantID,
-		sessionChecker:      sessionChecker,
-		sessionValidator:    sessionValidator,
+		clients:               map[*subscription]struct{}{},
+		upgrader:              websocket.Upgrader{CheckOrigin: checkOrigin},
+		staffSecret:           staffSecret,
+		defaultRestaurantID:   defaultRestaurantID,
+		sessionChecker:        sessionChecker,
+		deviceAccessValidator: deviceAccessValidator,
 	}
 }
 func (h *Hub) Run(ctx context.Context) {
@@ -233,9 +233,9 @@ func (h *Hub) readPump(s *subscription) {
 }
 
 type authMessage struct {
-	Type         string `json:"type"`
-	AccessToken  string `json:"access_token"`
-	SessionToken string `json:"session_token"`
+	Type              string `json:"type"`
+	AccessToken       string `json:"access_token"`
+	DeviceAccessToken string `json:"device_access_token"`
 }
 
 func (h *Hub) authenticate(raw []byte) (Topic, error) {
@@ -264,11 +264,11 @@ func (h *Hub) authenticate(raw []byte) (Topic, error) {
 		}
 		return Topic{RestaurantID: h.defaultRestaurantID, Role: strings.ToUpper(claims.Role)}, nil
 	}
-	if token := strings.TrimSpace(message.SessionToken); token != "" {
-		if h.sessionValidator == nil {
+	if token := strings.TrimSpace(message.DeviceAccessToken); token != "" {
+		if h.deviceAccessValidator == nil {
 			return Topic{}, errors.New("guest authentication unavailable")
 		}
-		session, err := h.sessionValidator.ValidateSessionToken(ctx, token)
+		session, err := h.deviceAccessValidator.ValidateAccessToken(ctx, token)
 		if err != nil {
 			return Topic{}, errors.New("invalid guest session")
 		}

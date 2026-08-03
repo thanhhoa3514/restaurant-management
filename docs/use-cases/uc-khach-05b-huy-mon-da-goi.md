@@ -23,7 +23,7 @@ Tác nhân **Khách** giao tiếp với use-case «Hủy món đã gọi»; use-
 | **Tên Use-Case** | Hủy món đã gọi                                                                                                                                                                                                                                    |
 | **Tác nhân**     | Khách (Guest) — phụ: Hệ thống, Bếp (duyệt yêu cầu hủy)                                                                                                                                                                                            |
 | **Mô tả**        | Khách yêu cầu hủy món đã gọi. Nếu món còn `PENDING`, hệ thống hủy trực tiếp (bỏ dòng khỏi đơn hoặc hủy cả đơn) và cập nhật. Nếu món đã được Bếp tiếp nhận (`ACKNOWLEDGED`+), hệ thống tạo **yêu cầu hủy** gửi Bếp và khách chờ Bếp duyệt/từ chối. |
-| **Điều kiện**    | Khách trong phiên ACTIVE với `session_token`. Đơn/món tồn tại. Client giữ `version` hiện tại của đơn.                                                                                                                                             |
+| **Điều kiện**    | Khách trong phiên ACTIVE với `access_token`. Đơn/món tồn tại. Client giữ `version` hiện tại của đơn.                                                                                                                                             |
 
 **Luồng sự kiện chính (Thành công — hủy món PENDING trực tiếp)**
 

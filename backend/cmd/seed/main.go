@@ -67,8 +67,8 @@ var demoSessions = map[string]bool{
 	"V01": true,
 }
 
-func sessionTokenFor(tableCode string) string { return "DEMO-SESSION-" + tableCode }
-func sessionCodeFor(tableCode string) string  { return "DEMO-SESS-" + tableCode }
+func deviceAccessTokenFor(tableCode string) string { return "DEMO-DEVICE-" + tableCode }
+func sessionCodeFor(tableCode string) string       { return "DEMO-SESS-" + tableCode }
 
 func main() {
 	ctx := context.Background()
@@ -172,17 +172,27 @@ func main() {
 	}
 
 	// ── Demo Dining Sessions ───────────────────────────────────
-	// Open ACTIVE sessions bound to deterministic guest session tokens so
+	// Open ACTIVE sessions bound to deterministic approved device tokens so
 	// demo guests can jump straight into the menu without real staff auth.
 	for _, t := range demoTables {
 		if !demoSessions[t.Code] {
 			continue
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO dining_sessions (restaurant_id, table_id, session_code, status, opened_via, session_token)
-			VALUES ($1, (SELECT id FROM tables WHERE restaurant_id = $1 AND code = $2 LIMIT 1),
-			        $3, 'ACTIVE', 'QR_SCAN', $4)
-		`, rid, t.Code, sessionCodeFor(t.Code), sessionTokenFor(t.Code)); err != nil {
+			WITH created_session AS (
+				INSERT INTO dining_sessions (restaurant_id, table_id, session_code, status, opened_via)
+				VALUES ($1, (SELECT id FROM tables WHERE restaurant_id = $1 AND code = $2 LIMIT 1),
+				        $3, 'ACTIVE', 'QR_SCAN')
+				RETURNING id, restaurant_id
+			)
+			INSERT INTO session_devices (
+				restaurant_id, session_id, device_id, guest_name, status,
+				access_token, is_owner, approved_at
+			)
+			SELECT restaurant_id, id, 'seed:' || $2, 'Demo guest', 'APPROVED',
+			       $4, TRUE, NOW()
+			FROM created_session
+		`, rid, t.Code, sessionCodeFor(t.Code), deviceAccessTokenFor(t.Code)); err != nil {
 			log.Error("seed dining session failed",
 				slog.String("table", t.Code),
 				slog.Any("error", err),
@@ -212,7 +222,7 @@ func main() {
 	for _, t := range demoTables {
 		line := fmt.Sprintf("    %-4s  %-16s  token=%s", t.Code, t.Name, qrTokens[t.Code])
 		if demoSessions[t.Code] {
-			line += fmt.Sprintf("  [ACTIVE session, X-Session-Token=%s]", sessionTokenFor(t.Code))
+			line += fmt.Sprintf("  [ACTIVE session, X-Device-Access-Token=%s]", deviceAccessTokenFor(t.Code))
 		}
 		fmt.Println(line)
 	}

@@ -101,7 +101,7 @@ func (h *Handler) joinSession(c *gin.Context) {
 		return
 	}
 	req.IPHash = hashClientIP(c.ClientIP())
-	req.ResumeToken = c.GetHeader("X-Session-Token")
+	req.ResumeAccessToken = c.GetHeader("X-Device-Access-Token")
 	req.UserAgent = c.Request.UserAgent()
 	req.TraceID = c.GetHeader("X-Request-ID")
 	if req.TraceID == "" {
@@ -253,7 +253,7 @@ func (h *Handler) staffVerifyDevice(c *gin.Context) {
 func (h *Handler) deviceStatus(c *gin.Context) {
 	c.Header("Cache-Control", "no-store")
 	out, err := h.DeviceStatus.Handle(c.Request.Context(), application.DeviceStatusRequest{
-		Token: c.GetHeader("X-Session-Token"),
+		AccessToken: c.GetHeader("X-Device-Access-Token"),
 	})
 	if err != nil {
 		httpx.RespondError(c, err)
