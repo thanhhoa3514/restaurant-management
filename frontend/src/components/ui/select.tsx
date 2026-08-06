@@ -41,7 +41,7 @@ function SelectTrigger({
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        'flex h-10 w-full items-center justify-between gap-2 rounded-xl border border-[var(--separator)] bg-[var(--surface-grouped)] px-3 py-2 text-sm font-medium text-[var(--text)] shadow-xs transition-all duration-200 outline-none select-none hover:bg-[var(--surface-grouped)]/80 focus:border-[var(--system-blue)]/50 focus:ring-3 focus:ring-[var(--system-blue)]/15 disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:border-[var(--system-blue)] data-[state=open]:ring-3 data-[state=open]:ring-[var(--system-blue)]/15 cursor-pointer',
+        'flex h-10 w-full cursor-pointer select-none items-center justify-between gap-2 rounded-xl border border-[var(--separator)] bg-[var(--surface-grouped)] px-3 py-2 text-sm font-medium text-[var(--text)] shadow-xs outline-none transition-[background-color,border-color,opacity] duration-[var(--dur-short)] ease-[var(--ease-out)] hover:bg-[var(--surface-grouped)]/80 focus-visible:border-[var(--system-blue)]/50 focus-visible:ring-3 focus-visible:ring-[var(--system-blue)]/15 disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:border-[var(--system-blue)] data-[state=open]:ring-3 data-[state=open]:ring-[var(--system-blue)]/15',
         size === 'sm' && 'h-8 rounded-lg px-2.5 text-xs',
         className,
       )}

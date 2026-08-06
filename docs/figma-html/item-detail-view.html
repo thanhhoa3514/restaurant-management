@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Zenith — Chi tiết món (khách)</title>
+    <style>
+      /* Hallmark · genre: modern-minimal · macrostructure: mobile guest item-detail — image header + variant/option pickers + sticky add bar · tone: warm Apple Glass, light-only · anchor hue: system blue on near-black · extraction: production OrderingProvider ItemDetail */
+      :root {
+        color-scheme: light;
+        --font-body:
+          "SF Pro Text", "SF Pro Display", "Helvetica Neue", ui-sans-serif,
+          sans-serif;
+        --bg: #ffffff;
+        --surface-grouped: #f2f2f7;
+        --material-thin: rgba(255, 255, 255, 0.78);
+        --separator: rgba(60, 60, 67, 0.16);
+        --text: #1d1d1f;
+        --text-secondary: rgba(29, 29, 31, 0.72);
+        --text-tertiary: rgba(29, 29, 31, 0.5);
+        --system-blue: #007aff;
+        --system-red: #ff3b30;
+        --z-modal: 400;
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        background: var(--surface-grouped);
+        color: var(--text);
+        font-family: var(--font-body);
+        font-size: 16px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+      button {
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+      }
+      button:active {
+        transform: scale(0.97);
+      }
+      textarea {
+        color: inherit;
+        font: inherit;
+      }
+      img {
+        display: block;
+        max-width: 100%;
+      }
+      svg {
+        display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2.3;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .no-scrollbar {
+        scrollbar-width: none;
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+
+      /* Full-screen modal — mirrors production sm:max-w-md sm:mx-auto sm:border-x */
+      .modal {
+        position: relative;
+        display: flex;
+        min-height: 100dvh;
+        flex-direction: column;
+        overflow: hidden;
+        background: var(--bg);
+      }
+      @media (min-width: 30rem) {
+        body {
+          padding: 24px 0;
+        }
+        .modal {
+          margin-inline: auto;
+          width: 100%;
+          max-width: 28rem;
+          min-height: calc(100dvh - 48px);
+          border: 1px solid var(--separator);
+          border-radius: 28px;
+          box-shadow: 0 30px 80px rgba(29, 29, 31, 0.22);
+        }
+      }
+
+      /* Floating top controls */
+      .top-controls {
+        position: absolute;
+        inset-inline: 0;
+        inset-block-start: 0;
+        z-index: 30;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: calc(env(safe-area-inset-top) + 12px) 16px 0;
+        pointer-events: none;
+      }
+      .glass-btn {
+        display: inline-flex;
+        height: 44px;
+        align-items: center;
+        gap: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.35);
+        color: #fff;
+        backdrop-filter: blur(16px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+        pointer-events: auto;
+      }
+      .glass-btn.back {
+        padding: 0 16px 0 8px;
+      }
+      .glass-btn.back span {
+        font-size: 14px;
+        font-weight: 800;
+      }
+      .glass-btn.icon {
+        width: 44px;
+        justify-content: center;
+      }
+      .glass-btn svg {
+        width: 22px;
+        height: 22px;
+      }
+
+      /* Scroll body */
+      .scroll {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        overflow-y: auto;
+        padding-block-end: 16px;
+      }
+
+      /* Image header */
+      .hero {
+        position: relative;
+        flex-shrink: 0;
+        aspect-ratio: 1;
+        background: linear-gradient(135deg, #f2f2f7, rgba(60, 60, 67, 0.12));
+      }
+      .hero .ph {
+        display: grid;
+        width: 100%;
+        height: 100%;
+        place-items: center;
+        color: var(--text-tertiary);
+      }
+      .hero .ph svg {
+        width: 72px;
+        height: 72px;
+      }
+      .hero::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          to top,
+          var(--bg),
+          transparent 45%,
+          transparent
+        );
+      }
+      .thumbs {
+        position: relative;
+        z-index: 10;
+        display: flex;
+        gap: 12px;
+        overflow-x: auto;
+        flex-shrink: 0;
+        margin-block-start: -48px;
+        padding: 8px 20px;
+      }
+      .thumb {
+        position: relative;
+        display: grid;
+        width: 64px;
+        height: 64px;
+        flex-shrink: 0;
+        place-items: center;
+        overflow: hidden;
+        border: 2px solid transparent;
+        border-radius: 18px;
+        background: var(--surface-grouped);
+        color: var(--text-tertiary);
+        box-shadow: 0 2px 8px rgba(29, 29, 31, 0.12);
+        opacity: 0.8;
+      }
+      .thumb svg {
+        width: 24px;
+        height: 24px;
+      }
+      .thumb.active {
+        border-color: var(--system-blue);
+        transform: scale(1.05);
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.18);
+        opacity: 1;
+      }
+
+      /* Info sections */
+      .sections {
+        position: relative;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        padding-inline: 20px;
+      }
+      .info-card {
+        margin-block-start: 8px;
+        border: 1px solid var(--separator);
+        border-radius: 24px;
+        background: var(--material-thin);
+        padding: 20px;
+        backdrop-filter: blur(16px);
+        box-shadow: 0 1px 2px rgba(29, 29, 31, 0.05);
+      }
+      .info-card h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 850;
+        letter-spacing: -0.02em;
+        line-height: 1.15;
+      }
+      .info-card p {
+        margin: 8px 0 0;
+        color: var(--text-secondary);
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 1.6;
+      }
+      .unit-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-block-start: 16px;
+      }
+      .unit-row .lbl {
+        color: var(--text-tertiary);
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .unit-row .val {
+        color: var(--system-blue);
+        font-size: 20px;
+        font-weight: 900;
+      }
+
+      .group-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-block-end: 12px;
+      }
+      .group-title {
+        font-size: 15px;
+        font-weight: 800;
+        letter-spacing: 0.01em;
+      }
+      .req {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        background: rgba(255, 59, 48, 0.1);
+        padding: 2px 8px;
+        color: var(--system-red);
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      /* Variant grid */
+      .variant-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .variant {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        border: 2px solid transparent;
+        border-radius: 20px;
+        background: var(--surface-grouped);
+        padding: 16px;
+        color: var(--text-secondary);
+        text-align: start;
+      }
+      .variant .v-name {
+        font-size: 15px;
+        font-weight: 800;
+      }
+      .variant .v-price {
+        font-size: 12px;
+        font-weight: 700;
+        opacity: 0.8;
+      }
+      .variant.active {
+        border-color: var(--system-blue);
+        background: rgba(0, 122, 255, 0.05);
+        color: var(--system-blue);
+      }
+
+      /* Option pills */
+      .opts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .opt {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 2px solid var(--separator);
+        border-radius: 999px;
+        background: transparent;
+        padding: 9px 20px;
+        color: var(--text-secondary);
+        font-size: 14px;
+        font-weight: 800;
+      }
+      .opt.active {
+        border-color: var(--text);
+        background: var(--text);
+        color: var(--bg);
+        box-shadow: 0 4px 12px rgba(29, 29, 31, 0.18);
+      }
+      .opt .delta {
+        border-radius: 6px;
+        background: var(--surface-grouped);
+        padding: 2px 6px;
+        font-size: 11px;
+        color: var(--text-secondary);
+      }
+      .opt.active .delta {
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+      }
+
+      /* Qty + notes */
+      .panel {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        border: 1px solid rgba(60, 60, 67, 0.08);
+        border-radius: 24px;
+        background: rgba(242, 242, 247, 0.5);
+        padding: 20px;
+      }
+      .qty-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .qty-row .lbl {
+        font-size: 15px;
+        font-weight: 800;
+      }
+      .stepper {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        border: 1px solid rgba(60, 60, 67, 0.1);
+        border-radius: 999px;
+        background: var(--bg);
+        padding: 4px;
+        box-shadow: 0 1px 2px rgba(29, 29, 31, 0.05);
+      }
+      .step {
+        display: grid;
+        width: 40px;
+        height: 40px;
+        place-items: center;
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+        color: var(--text);
+      }
+      .step:disabled {
+        opacity: 0.3;
+      }
+      .step svg {
+        width: 18px;
+        height: 18px;
+      }
+      .qty-num {
+        min-width: 28px;
+        text-align: center;
+        font-size: 18px;
+        font-weight: 900;
+        font-variant-numeric: tabular-nums;
+      }
+      .notes-lbl {
+        display: block;
+        margin-block-end: 8px;
+        color: var(--text-tertiary);
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .panel textarea {
+        width: 100%;
+        height: 96px;
+        resize: none;
+        border: 1px solid rgba(60, 60, 67, 0.1);
+        border-radius: 16px;
+        background: var(--bg);
+        padding: 12px;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .panel textarea::placeholder {
+        color: var(--text-tertiary);
+        font-weight: 400;
+      }
+
+      /* Sticky add bar */
+      .add-bar {
+        flex-shrink: 0;
+        z-index: 20;
+        border-block-start: 1px solid var(--separator);
+        background: var(--material-thin);
+        padding: 16px 16px calc(env(safe-area-inset-bottom) + 16px);
+        backdrop-filter: blur(24px);
+        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.08);
+      }
+      .add-cta {
+        display: flex;
+        width: 100%;
+        height: 56px;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border: 0;
+        border-radius: 20px;
+        background: var(--text);
+        color: var(--bg);
+        box-shadow: 0 12px 32px rgba(29, 29, 31, 0.28);
+      }
+      .add-cta .label {
+        font-size: 16px;
+        font-weight: 800;
+      }
+      .add-cta .mid {
+        opacity: 0.55;
+      }
+      .add-cta .total {
+        font-size: 16px;
+        font-weight: 900;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="modal" role="dialog" aria-label="Lẩu Thái hải sản">
+      <div class="top-controls">
+        <button class="glass-btn back" aria-label="Quay lại">
+          <svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6" /></svg>
+          <span>Quay lại</span>
+        </button>
+        <button class="glass-btn icon" aria-label="Đóng">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </div>
+
+      <div class="scroll no-scrollbar">
+        <div class="hero">
+          <div class="ph">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M4 3v7a4 4 0 0 0 8 0V3M8 3v18M17 3c-1.2 1.6-1.2 5 0 6.5V21"
+              />
+            </svg>
+          </div>
+        </div>
+
+        <div class="thumbs no-scrollbar">
+          <div class="thumb active">
+            <svg viewBox="0 0 24 24">
+              <path d="M4 3v7a4 4 0 0 0 8 0V3M8 3v18M17 3c-1.2 1.6-1.2 5 0 6.5V21" />
+            </svg>
+          </div>
+          <div class="thumb">
+            <svg viewBox="0 0 24 24">
+              <path d="M6 3h12l-1 5H7zM7 8c0 6 2 8 5 8s5-2 5-8" />
+            </svg>
+          </div>
+          <div class="thumb">
+            <svg viewBox="0 0 24 24">
+              <path d="M4 9h16M6 9v11M18 9v11M8 4h8l2 5H6z" />
+            </svg>
+          </div>
+        </div>
+
+        <div class="sections">
+          <div class="info-card">
+            <h1>Lẩu Thái hải sản</h1>
+            <p>
+              Nước lẩu chua cay đậm vị Thái, nấu cùng tôm, mực, nghêu tươi. Dùng kèm
+              rau nhúng và bún tươi cho 2–3 người.
+            </p>
+            <div class="unit-row">
+              <span class="lbl">Đơn giá</span>
+              <span class="val">329.000 ₫</span>
+            </div>
+          </div>
+
+          <!-- Variant -->
+          <section>
+            <div class="group-head">
+              <span class="group-title">Lựa chọn kích cỡ / loại</span>
+              <span class="req">Bắt buộc</span>
+            </div>
+            <div class="variant-grid">
+              <button class="variant">
+                <span class="v-name">Nồi nhỏ (2 người)</span>
+                <span class="v-price">259.000 ₫</span>
+              </button>
+              <button class="variant active">
+                <span class="v-name">Nồi lớn (3–4 người)</span>
+                <span class="v-price">329.000 ₫</span>
+              </button>
+            </div>
+          </section>
+
+          <!-- Option group: required -->
+          <section>
+            <div class="group-head">
+              <span class="group-title">Độ cay</span>
+              <span class="req">Bắt buộc</span>
+            </div>
+            <div class="opts">
+              <button class="opt"><span>Không cay</span></button>
+              <button class="opt active"><span>Cay vừa</span></button>
+              <button class="opt"><span>Cay nhiều</span></button>
+            </div>
+          </section>
+
+          <!-- Option group: add-ons with price delta -->
+          <section>
+            <div class="group-head">
+              <span class="group-title">Thêm topping</span>
+            </div>
+            <div class="opts">
+              <button class="opt">
+                <span>Nấm kim châm</span>
+                <span class="delta">+45.000 ₫</span>
+              </button>
+              <button class="opt">
+                <span>Váng đậu</span>
+                <span class="delta">+25.000 ₫</span>
+              </button>
+              <button class="opt">
+                <span>Mì tươi</span>
+                <span class="delta">+20.000 ₫</span>
+              </button>
+            </div>
+          </section>
+
+          <!-- Qty + notes -->
+          <div class="panel">
+            <div class="qty-row">
+              <span class="lbl">Số lượng</span>
+              <div class="stepper">
+                <button class="step" disabled aria-label="Giảm">
+                  <svg viewBox="0 0 24 24"><path d="M5 12h14" /></svg>
+                </button>
+                <span class="qty-num">1</span>
+                <button class="step" aria-label="Tăng">
+                  <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
+                </button>
+              </div>
+            </div>
+            <div>
+              <span class="notes-lbl">Ghi chú cho nhà bếp</span>
+              <textarea placeholder="Ví dụ: ít muối, không hành..."></textarea>
+            </div>
+          </div>
+
+          <div style="height: 4px"></div>
+        </div>
+      </div>
+
+      <div class="add-bar">
+        <button class="add-cta">
+          <span class="label">Thêm vào giỏ</span>
+          <span class="mid">·</span>
+          <span class="total">329.000 ₫</span>
+        </button>
+      </div>
+    </div>
+  </body>
+</html>

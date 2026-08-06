@@ -1,16 +1,28 @@
-{
-  "skill": "hallmark",
-  "artifact": "paid invoice management workbench",
-  "genre": "modern-minimal",
-  "macrostructure": "Workbench",
-  "theme": "Quiet",
-  "enrichment": "none",
-  "shell_navigation": "existing admin sidebar",
-  "footer": "none",
-  "decisions": [
-    "Use operational filters and real database summaries as the page control surface.",
-    "Use a restrained tabular ledger on desktop and compact invoice cards on mobile.",
-    "Open invoice detail in a side sheet so staff keep their current search context.",
-    "Use only semantic aliases of the repository's existing color and typography tokens."
-  ]
-}
+[
+  {
+    "date": "2026-08-05",
+    "macrostructure": "Catalogue",
+    "theme": "Quiet",
+    "enrichment": "none",
+    "brief": "Area-first table management for admin, waiter, and QR landing",
+    "genre": "modern-minimal",
+    "shell_navigation": "existing admin sidebar",
+    "footer": "none"
+  },
+  {
+    "skill": "hallmark",
+    "artifact": "paid invoice management workbench",
+    "genre": "modern-minimal",
+    "macrostructure": "Workbench",
+    "theme": "Quiet",
+    "enrichment": "none",
+    "shell_navigation": "existing admin sidebar",
+    "footer": "none",
+    "decisions": [
+      "Use operational filters and real database summaries as the page control surface.",
+      "Use a restrained tabular ledger on desktop and compact invoice cards on mobile.",
+      "Open invoice detail in a side sheet so staff keep their current search context.",
+      "Use only semantic aliases of the repository's existing color and typography tokens."
+    ]
+  }
+]

@@ -1,0 +1,1518 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Zenith — Nhật ký phiên ăn</title>
+    <style>
+      /* Hallmark · genre: modern-minimal · macrostructure: workbench data-table + center modal · tone: utilitarian Apple Glass · anchor hue: system purple · extraction: production AdminShell + SessionHistoryManagement */
+      :root {
+        color-scheme: light;
+        --font-display:
+          "SF Pro Display", "Helvetica Neue", ui-sans-serif, sans-serif;
+        --font-body: "SF Pro Text", "Helvetica Neue", ui-sans-serif, sans-serif;
+        --font-mono: "SF Mono", ui-monospace, monospace;
+        --bg: #ffffff;
+        --surface: #ffffff;
+        --surface-grouped: #f2f2f7;
+        --surface-soft: #f8f8fa;
+        --material: rgba(255, 255, 255, 0.82);
+        --material-thick: rgba(255, 255, 255, 0.96);
+        --separator: rgba(60, 60, 67, 0.18);
+        --separator-soft: rgba(60, 60, 67, 0.1);
+        --text: #1d1d1f;
+        --text-secondary: rgba(29, 29, 31, 0.78);
+        --text-tertiary: rgba(29, 29, 31, 0.55);
+        --purple: #af52de;
+        --purple-soft: rgba(175, 82, 222, 0.12);
+        --orange: #ff9500;
+        --orange-deep: #b25000;
+        --orange-soft: rgba(255, 149, 0, 0.12);
+        --amber: #b25e00;
+        --amber-soft: rgba(255, 159, 10, 0.14);
+        --green: #248a3d;
+        --green-soft: rgba(52, 199, 89, 0.12);
+        --red: #d70015;
+        --red-soft: rgba(255, 59, 48, 0.1);
+        --blue: #007aff;
+        --blue-soft: rgba(0, 122, 255, 0.1);
+        --focus: #005ac8;
+        --overlay: rgba(29, 29, 31, 0.5);
+        --shadow-card: 0 1px 2px rgba(29, 29, 31, 0.06);
+        --shadow-modal: 0 24px 80px rgba(29, 29, 31, 0.28);
+        --radius-sm: 10px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-xl: 20px;
+        --radius-2xl: 24px;
+        --space-2xs: 4px;
+        --space-xs: 8px;
+        --space-sm: 12px;
+        --space-md: 16px;
+        --space-lg: 24px;
+        --space-xl: 32px;
+        --dur-short: 220ms;
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+        --z-sticky: 200;
+        --z-modal: 400;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        overflow-x: clip;
+        background: var(--surface-grouped);
+        color: var(--text);
+        font-family: var(--font-body);
+        font-size: 16px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      button,
+      input {
+        color: inherit;
+        font: inherit;
+      }
+      button {
+        white-space: nowrap;
+      }
+      button:active {
+        transform: translateY(1px);
+      }
+      button:focus-visible,
+      input:focus-visible {
+        outline: 3px solid var(--focus);
+        outline-offset: 2px;
+      }
+      h1,
+      h2,
+      h3 {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+      svg {
+        display: block;
+        width: 20px;
+        height: 20px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.8;
+      }
+
+      .shell {
+        display: flex;
+        min-height: 100dvh;
+      }
+
+      /* Sidebar */
+      .sidebar {
+        display: none;
+        width: 264px;
+        flex: 0 0 264px;
+        border-inline-end: 1px solid var(--separator);
+        background: var(--material);
+        backdrop-filter: blur(24px);
+      }
+      .sidebar-inner {
+        position: sticky;
+        top: 0;
+        min-height: 100dvh;
+        padding: var(--space-md);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+        margin-block-end: var(--space-lg);
+        padding: var(--space-xs) var(--space-xs) 0;
+      }
+      .brand-mark {
+        display: grid;
+        width: 44px;
+        height: 44px;
+        flex: 0 0 44px;
+        place-items: center;
+        border-radius: var(--radius-lg);
+        background: var(--text);
+        color: var(--bg);
+        font-family: var(--font-display);
+        font-size: 13px;
+        font-weight: 800;
+      }
+      .brand-name {
+        overflow: hidden;
+        font-family: var(--font-display);
+        font-size: 17px;
+        font-weight: 650;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .brand-meta {
+        color: var(--purple);
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      .nav-group + .nav-group {
+        margin-block-start: var(--space-lg);
+      }
+      .nav-title {
+        padding: 0 var(--space-sm) var(--space-2xs);
+        color: var(--text-tertiary);
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+      .nav-item {
+        display: flex;
+        min-height: 48px;
+        width: 100%;
+        align-items: center;
+        gap: var(--space-sm);
+        border: 0;
+        border-radius: var(--radius-lg);
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 0 var(--space-sm);
+        text-align: start;
+        font-size: 15px;
+        font-weight: 650;
+        transition:
+          background-color var(--dur-short) var(--ease-out),
+          color var(--dur-short) var(--ease-out);
+      }
+      .nav-item.active {
+        background: var(--purple-soft);
+        color: var(--purple);
+      }
+
+      /* Workspace + topbar */
+      .workspace {
+        display: flex;
+        min-width: 0;
+        flex: 1;
+        flex-direction: column;
+      }
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: var(--z-sticky);
+        border-block-end: 1px solid var(--separator);
+        background: var(--material);
+        backdrop-filter: blur(24px);
+      }
+      .topbar-inner {
+        display: grid;
+        min-height: 68px;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: var(--space-sm);
+        padding: max(var(--space-xs), env(safe-area-inset-top))
+          max(var(--space-sm), env(safe-area-inset-right)) var(--space-xs)
+          max(var(--space-sm), env(safe-area-inset-left));
+      }
+      .round-button,
+      .avatar {
+        display: grid;
+        width: 44px;
+        height: 44px;
+        flex: 0 0 44px;
+        place-items: center;
+        border-radius: 999px;
+        cursor: pointer;
+      }
+      .round-button {
+        border: 1px solid var(--separator);
+        background: var(--surface-grouped);
+        color: var(--text-secondary);
+      }
+      .avatar {
+        border: 0;
+        background: var(--purple);
+        color: #fff;
+        font-weight: 750;
+      }
+      .page-title {
+        min-width: 0;
+      }
+      .page-title .eyebrow {
+        color: var(--text-tertiary);
+        font-size: 10px;
+        font-weight: 750;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+      .page-title h1 {
+        overflow: hidden;
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 17px;
+        font-weight: 750;
+        line-height: 1.2;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .page-title p {
+        display: none;
+        overflow: hidden;
+        margin: 2px 0 0;
+        color: var(--text-tertiary);
+        font-size: 12px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .header-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: var(--space-xs);
+      }
+      .lang {
+        display: none;
+        min-height: 36px;
+        align-items: center;
+        border: 1px solid var(--separator);
+        border-radius: 999px;
+        background: var(--surface);
+        padding-inline: 12px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      /* Content */
+      .content {
+        flex: 1;
+        padding: var(--space-md);
+      }
+      .content-inner {
+        margin-inline: auto;
+        max-width: 1200px;
+        display: grid;
+        gap: var(--space-lg);
+      }
+
+      .card {
+        border: 1px solid var(--separator-soft);
+        border-radius: var(--radius-2xl);
+        background: var(--surface);
+        box-shadow: var(--shadow-card);
+      }
+
+      /* Filter bar */
+      .filter-bar {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-md);
+        justify-content: space-between;
+        padding: var(--space-md);
+      }
+      .filter-lead {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+      }
+      .filter-icon {
+        display: grid;
+        width: 40px;
+        height: 40px;
+        flex: 0 0 40px;
+        place-items: center;
+        border-radius: 14px;
+        background: var(--blue-soft);
+        color: var(--blue);
+      }
+      .filter-lead h2 {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+      .filter-lead p {
+        margin: 0;
+        color: var(--text-tertiary);
+        font-size: 12px;
+      }
+      .filter-tools {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--space-xs);
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid var(--separator);
+        border-radius: 12px;
+        background: var(--surface-grouped);
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 8px 12px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .chip.active {
+        border-color: transparent;
+        background: var(--blue);
+        color: #fff;
+      }
+      .date-field {
+        position: relative;
+        display: flex;
+        align-items: center;
+      }
+      .date-field svg {
+        position: absolute;
+        inset-inline-start: 10px;
+        color: var(--text-tertiary);
+        pointer-events: none;
+      }
+      .date-field input {
+        border: 1px solid var(--separator);
+        border-radius: 12px;
+        background: var(--surface-grouped);
+        padding: 8px 12px 8px 34px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      /* KPI */
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-md);
+      }
+      .kpi {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: var(--space-md);
+        border: 1px solid var(--separator-soft);
+        border-radius: var(--radius-xl);
+        background: var(--surface);
+        padding: var(--space-md);
+        box-shadow: var(--shadow-card);
+      }
+      .kpi-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--text-tertiary);
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .kpi-label svg {
+        width: 14px;
+        height: 14px;
+      }
+      .kpi-value {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: var(--space-xs);
+      }
+      .kpi-value strong {
+        font-family: var(--font-display);
+        font-size: 26px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+      .kpi-value span {
+        font-size: 12px;
+        font-weight: 650;
+        color: var(--text-tertiary);
+      }
+      .kpi.green strong,
+      .kpi.green .kpi-value span {
+        color: var(--green);
+      }
+      .kpi.blue strong,
+      .kpi.blue .kpi-value span {
+        color: var(--blue);
+      }
+      .kpi.purple strong {
+        color: var(--purple);
+      }
+      .dot-pulse {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--green);
+      }
+
+      /* Filter tabs + search */
+      .list-controls {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-sm);
+        justify-content: space-between;
+      }
+      .tabs {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+      }
+      .tab {
+        flex: 0 0 auto;
+        border: 1px solid var(--separator);
+        border-radius: 999px;
+        background: var(--surface);
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 6px 14px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .tab.active {
+        border-color: transparent;
+        background: var(--text);
+        color: var(--bg);
+      }
+      .search {
+        position: relative;
+      }
+      .search svg {
+        position: absolute;
+        inset-block-start: 50%;
+        inset-inline-start: 12px;
+        color: var(--text-tertiary);
+        transform: translateY(-50%);
+        width: 16px;
+        height: 16px;
+      }
+      .search input {
+        width: 100%;
+        border: 1px solid var(--separator);
+        border-radius: 12px;
+        background: var(--surface);
+        padding: 9px 12px 9px 36px;
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      /* Table */
+      .table-wrap {
+        overflow: hidden;
+      }
+      .table-scroll {
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        min-width: 900px;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+      thead th {
+        background: var(--surface-grouped);
+        border-block-end: 1px solid var(--separator);
+        padding: 12px 16px;
+        color: var(--text-tertiary);
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: 0.06em;
+        text-align: start;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+      thead th.end {
+        text-align: end;
+      }
+      thead th.center {
+        text-align: center;
+      }
+      tbody tr {
+        border-block-start: 1px solid var(--separator-soft);
+        cursor: pointer;
+        transition: background-color var(--dur-short) var(--ease-out);
+      }
+      tbody tr:hover {
+        background: var(--surface-grouped);
+      }
+      tbody td {
+        padding: 14px 16px;
+        vertical-align: middle;
+      }
+      .cell-stack {
+        display: flex;
+        flex-direction: column;
+      }
+      .t-strong {
+        font-size: 14px;
+        font-weight: 750;
+      }
+      .t-mono {
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+        font-size: 11px;
+      }
+      .t-sub {
+        color: var(--text-tertiary);
+        font-size: 10px;
+      }
+      .with-icon {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        color: var(--text-secondary);
+        font-weight: 550;
+      }
+      .with-icon svg {
+        width: 13px;
+        height: 13px;
+        color: var(--text-tertiary);
+      }
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid transparent;
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+      .status .d {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+      }
+      .status.active {
+        background: var(--green-soft);
+        border-color: rgba(52, 199, 89, 0.2);
+        color: var(--green);
+      }
+      .status.active .d {
+        background: var(--green);
+      }
+      .status.await {
+        background: var(--amber-soft);
+        border-color: rgba(255, 159, 10, 0.25);
+        color: var(--amber);
+      }
+      .status.await .d {
+        background: var(--amber);
+      }
+      .status.closed {
+        background: var(--surface-grouped);
+        border-color: var(--separator);
+        color: var(--text-secondary);
+      }
+      .status.pending {
+        background: var(--purple-soft);
+        border-color: rgba(175, 82, 222, 0.2);
+        color: var(--purple);
+      }
+      .status svg {
+        width: 12px;
+        height: 12px;
+      }
+      td.end {
+        text-align: end;
+      }
+      td.center {
+        text-align: center;
+      }
+      .qty {
+        display: inline-block;
+        border-radius: 8px;
+        background: var(--surface-grouped);
+        padding: 2px 8px;
+        color: var(--text-secondary);
+        font-weight: 750;
+      }
+      .money {
+        font-size: 13px;
+        font-weight: 800;
+      }
+      .eye {
+        display: inline-grid;
+        place-items: center;
+        width: 30px;
+        height: 30px;
+        border: 0;
+        border-radius: 10px;
+        background: var(--blue-soft);
+        color: var(--blue);
+        cursor: pointer;
+      }
+
+      /* Detail modal */
+      .scrim {
+        position: fixed;
+        inset: 0;
+        z-index: var(--z-modal);
+        display: grid;
+        place-items: center;
+        padding: var(--space-md);
+        background: var(--overlay);
+        backdrop-filter: blur(6px);
+      }
+      .modal {
+        display: flex;
+        width: 100%;
+        max-width: 680px;
+        max-height: 90dvh;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid var(--separator);
+        border-radius: var(--radius-2xl);
+        background: var(--surface);
+        box-shadow: var(--shadow-modal);
+      }
+      .modal-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-sm);
+        border-block-end: 1px solid var(--separator);
+        background: var(--surface-grouped);
+        padding: var(--space-md) var(--space-lg);
+      }
+      .modal-head .lead {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+      }
+      .modal-head .mk {
+        display: grid;
+        width: 40px;
+        height: 40px;
+        flex: 0 0 40px;
+        place-items: center;
+        border-radius: 14px;
+        background: var(--blue-soft);
+        color: var(--blue);
+      }
+      .modal-title {
+        display: flex;
+        align-items: center;
+        gap: var(--space-xs);
+      }
+      .modal-title h3 {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 18px;
+        font-weight: 800;
+      }
+      .modal-title .code {
+        border: 1px solid var(--separator);
+        border-radius: 8px;
+        background: var(--surface);
+        padding: 2px 8px;
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+        font-size: 11px;
+      }
+      .modal-head .sub {
+        margin: 2px 0 0;
+        color: var(--text-tertiary);
+        font-size: 12px;
+      }
+      .modal-body {
+        display: grid;
+        gap: var(--space-lg);
+        overflow-y: auto;
+        padding: var(--space-lg);
+      }
+      .overview {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: var(--space-sm);
+        border: 1px solid var(--separator-soft);
+        border-radius: var(--radius-lg);
+        background: var(--surface-grouped);
+        padding: var(--space-sm) var(--space-md);
+      }
+      .overview .k {
+        display: block;
+        color: var(--text-tertiary);
+        font-size: 11px;
+      }
+      .overview .v {
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .section-title {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 750;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .section-title svg {
+        width: 14px;
+        height: 14px;
+      }
+      .order-card {
+        display: grid;
+        gap: var(--space-xs);
+        border: 1px solid var(--separator-soft);
+        border-radius: var(--radius-lg);
+        background: var(--surface-grouped);
+        padding: var(--space-sm) var(--space-md);
+        margin-block-start: var(--space-xs);
+      }
+      .order-card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-block-end: 1px solid var(--separator);
+        padding-block-end: 8px;
+        font-size: 12px;
+      }
+      .order-card-head strong {
+        font-weight: 750;
+      }
+      .order-card-head span {
+        color: var(--text-tertiary);
+        font-size: 11px;
+      }
+      .oi {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-block: 4px;
+        font-size: 12px;
+      }
+      .oi-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .oi-qty {
+        display: grid;
+        place-items: center;
+        min-width: 22px;
+        height: 20px;
+        border-radius: 6px;
+        background: var(--blue-soft);
+        color: var(--blue);
+        font-size: 11px;
+        font-weight: 800;
+      }
+      .oi-name {
+        font-weight: 650;
+      }
+      .oi-variant {
+        color: var(--text-tertiary);
+        font-size: 11px;
+      }
+      .invoice {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border: 1px solid rgba(52, 199, 89, 0.2);
+        border-radius: var(--radius-lg);
+        background: var(--green-soft);
+        padding: var(--space-sm) var(--space-md);
+        margin-block-start: var(--space-xs);
+        font-size: 12px;
+      }
+      .invoice .lead {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .invoice svg {
+        color: var(--green);
+      }
+      .invoice .num {
+        font-weight: 750;
+      }
+      .invoice .meta {
+        display: block;
+        color: var(--text-tertiary);
+        font-size: 11px;
+      }
+      .invoice .amt {
+        color: var(--green);
+        font-size: 13px;
+        font-weight: 800;
+      }
+      .modal-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-block-start: 1px solid var(--separator);
+        background: var(--surface-grouped);
+        padding: var(--space-md) var(--space-lg);
+      }
+      .modal-foot .lbl {
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .modal-foot .tot {
+        font-family: var(--font-display);
+        font-size: 20px;
+        font-weight: 800;
+      }
+
+      @media (hover: hover) and (pointer: fine) {
+        .nav-item:hover {
+          background: var(--surface-grouped);
+          color: var(--text);
+        }
+      }
+      @media (min-width: 40rem) {
+        .page-title p,
+        .lang {
+          display: flex;
+        }
+        .topbar-inner,
+        .content {
+          padding-inline: 20px;
+        }
+        .filter-bar {
+          flex-direction: row;
+          align-items: center;
+        }
+        .list-controls {
+          flex-direction: row;
+          align-items: center;
+        }
+        .search {
+          width: 260px;
+        }
+      }
+      @media (min-width: 52rem) {
+        .topbar-inner {
+          grid-template-columns: minmax(190px, 1fr) auto minmax(190px, 1fr);
+        }
+        .kpi-grid {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+      }
+      @media (min-width: 64rem) {
+        .sidebar {
+          display: block;
+        }
+        .menu-button {
+          display: none;
+        }
+        .content {
+          padding: var(--space-lg);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar" aria-label="Điều hướng quản trị">
+        <div class="sidebar-inner">
+          <div class="brand">
+            <div class="brand-mark">ZH</div>
+            <div>
+              <div class="brand-name">Zenith Lẩu Nướng</div>
+              <div class="brand-meta">Staff OS</div>
+            </div>
+          </div>
+
+          <div class="nav-group">
+            <div class="nav-title">Quản lý</div>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+              </svg>
+              Tổng quan
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+                <path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1" />
+              </svg>
+              Quản lý bàn
+            </button>
+            <button class="nav-item active" aria-current="page">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7v5l3 2" />
+              </svg>
+              Nhật ký phiên ăn
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path
+                  d="M5 3h11l3 3v15l-2.5-1.5L14 21l-2.5-1.5L9 21l-2.5-1.5L4 21V4z"
+                />
+                <path d="M8 8h8M8 12h8M8 16h5" />
+              </svg>
+              Hóa đơn đã thu
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M9 2h6v4H9z" />
+                <rect x="5" y="4" width="14" height="18" rx="2" />
+                <path d="M8 10h8M8 14h8M8 18h5" />
+              </svg>
+              Danh mục món
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M22 20v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              Nhân sự
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M4 19V9M10 19V5M16 19v-7M22 19H2" />
+              </svg>
+              Báo cáo
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="3" />
+                <path
+                  d="M19 12h3M2 12h3M12 2v3M12 19v3M17 7l2-2M5 19l2-2M17 17l2 2M5 5l2 2"
+                />
+              </svg>
+              Cài đặt
+            </button>
+          </div>
+
+          <div class="nav-group">
+            <div class="nav-title">Vận hành</div>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <rect x="2" y="5" width="20" height="14" rx="2" />
+                <path d="M2 10h20M6 15h2" />
+              </svg>
+              Thanh toán
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M4 9h16M6 9v11M18 9v11M8 4h8l2 5H6zM9 14h6" />
+              </svg>
+              Sơ đồ bàn
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path
+                  d="M6 13a6 6 0 0 1 12 0v7H6zM9 13v-2M15 13v-2M4 20h16M12 4V2"
+                />
+              </svg>
+              Bếp KDS
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div class="topbar-inner">
+            <div
+              style="display: flex; align-items: center; gap: 12px; min-width: 0"
+            >
+              <button class="round-button menu-button" aria-label="Mở điều hướng">
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="M4 7h16M4 12h16M4 17h16" />
+                </svg>
+              </button>
+              <div class="page-title">
+                <div class="eyebrow">Quản trị</div>
+                <h1>Nhật ký phiên ăn</h1>
+                <p>Theo dõi chi tiết tất cả các phiên ăn trong ngày</p>
+              </div>
+            </div>
+
+            <div></div>
+
+            <div class="header-actions">
+              <button class="round-button" aria-label="Đổi giao diện sáng/tối">
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="4" />
+                  <path
+                    d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"
+                  />
+                </svg>
+              </button>
+              <button class="lang" aria-label="Đổi ngôn ngữ">VI</button>
+              <button class="avatar" aria-label="Mở hồ sơ">Q</button>
+            </div>
+          </div>
+        </header>
+
+        <main class="content">
+          <div class="content-inner">
+            <!-- Filter bar -->
+            <div class="card filter-bar">
+              <div class="filter-lead">
+                <span class="filter-icon">
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 7v5l3 2" />
+                  </svg>
+                </span>
+                <div>
+                  <h2>Tra cứu phiên ăn theo ngày</h2>
+                  <p>Quản lý lịch sử bàn ăn, món gọi & doanh thu thời gian thực</p>
+                </div>
+              </div>
+              <div class="filter-tools">
+                <button class="chip active">Hôm nay</button>
+                <label class="date-field">
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                    <path d="M16 2v4M8 2v4M3 10h18" />
+                  </svg>
+                  <input type="date" value="2026-08-04" aria-label="Chọn ngày" />
+                </label>
+                <button class="round-button" aria-label="Làm mới" style="width: 38px; height: 38px; flex-basis: 38px; border-radius: 12px">
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- KPI -->
+            <div class="kpi-grid">
+              <div class="kpi">
+                <span class="kpi-label">
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="M4 3v7a4 4 0 0 0 8 0V3M8 3v18M17 3c-1.2 1.6-1.2 5 0 6.5V21" />
+                  </svg>
+                  Tổng phiên trong ngày
+                </span>
+                <div class="kpi-value">
+                  <strong>38</strong>
+                  <span>bàn ăn</span>
+                </div>
+              </div>
+              <div class="kpi green">
+                <span class="kpi-label">
+                  <span class="dot-pulse"></span>
+                  Đang phục vụ / Chờ
+                </span>
+                <div class="kpi-value">
+                  <strong>14</strong>
+                  <span>phiên active</span>
+                </div>
+              </div>
+              <div class="kpi blue">
+                <span class="kpi-label">
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="m8 12 3 3 5-6" />
+                  </svg>
+                  Đã thanh toán (Đóng)
+                </span>
+                <div class="kpi-value">
+                  <strong>24</strong>
+                  <span>đã hoàn thành</span>
+                </div>
+              </div>
+              <div class="kpi purple">
+                <span class="kpi-label">
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="M5 3h11l3 3v15l-2.5-1.5L14 21l-2.5-1.5L9 21l-2.5-1.5L4 21V4z" />
+                    <path d="M8 8h8M8 12h8" />
+                  </svg>
+                  Doanh thu phiên
+                </span>
+                <div class="kpi-value">
+                  <strong style="font-size: 20px">18.940.000₫</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- Filter tabs + search -->
+            <div class="list-controls">
+              <div class="tabs" role="tablist" aria-label="Lọc trạng thái">
+                <button class="tab active" role="tab" aria-selected="true">Tất cả</button>
+                <button class="tab" role="tab" aria-selected="false">Đang ăn</button>
+                <button class="tab" role="tab" aria-selected="false">Chờ tính tiền</button>
+                <button class="tab" role="tab" aria-selected="false">Đã hoàn thành</button>
+                <button class="tab" role="tab" aria-selected="false">Chờ duyệt</button>
+              </div>
+              <label class="search">
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m20 20-4-4" />
+                </svg>
+                <input
+                  type="search"
+                  aria-label="Tìm phiên"
+                  placeholder="Tìm theo số bàn, mã phiên..."
+                />
+              </label>
+            </div>
+
+            <!-- Data table -->
+            <div class="card table-wrap">
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Mã phiên / Bàn</th>
+                      <th>Khu vực</th>
+                      <th>Khách / Hình thức</th>
+                      <th>Trạng thái</th>
+                      <th>Thời gian</th>
+                      <th>Người mở / Đóng</th>
+                      <th class="end">Số món</th>
+                      <th class="end">Tổng tiền</th>
+                      <th class="center">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>
+                        <div class="cell-stack">
+                          <span class="t-strong">Bàn 12</span>
+                          <span class="t-mono">S-260804-012</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="with-icon">
+                          <svg aria-hidden="true" viewBox="0 0 24 24">
+                            <path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z" />
+                            <circle cx="12" cy="10" r="2.5" />
+                          </svg>
+                          Sảnh chính
+                        </span>
+                      </td>
+                      <td>
+                        <div class="cell-stack">
+                          <span style="font-weight: 550">Khách tại bàn</span>
+                          <span class="t-sub">📱 Khách quét QR</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="status await"><span class="d"></span>Chờ thanh toán</span>
+                      </td>
+                      <td>
+                        <div class="cell-stack">
+                          <span style="font-weight: 650; color: var(--text-secondary)">17:56 → 18:42</span>
+                          <span class="t-sub">46 phút</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="cell-stack">
+                          <span style="font-weight: 550">Lê Văn Cường</span>
+                        </div>
+                      </td>
+                      <td class="end"><span class="qty">5 món</span></td>
+                      <td class="end"><span class="money">783.200₫</span></td>
+                      <td class="center">
+                        <button class="eye" aria-label="Xem chi tiết">
+                          <svg aria-hidden="true" viewBox="0 0 24 24">
+                            <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td>
+                        <div class="cell-stack">
+                          <span class="t-strong">Bàn 07</span>
+                          <span class="t-mono">S-260804-007</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="with-icon">
+                          <svg aria-hidden="true" viewBox="0 0 24 24">
+                            <path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z" />
+                            <circle cx="12" cy="10" r="2.5" />
+                          </svg>
+                          Sảnh chính
+                        </span>
+                      </td>
+                      <td>
+                        <div class="cell-stack">
+                          <span style="font-weight: 550">Anh Minh</span>
+                          <span class="t-sub">👤 Nhân viên mở</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="status active"><span class="d"></span>Đang phục vụ</span>
+                      </td>
+                      <td>
+                        <div class="cell-stack">
+                          <span style="font-weight: 650; color: var(--text-secondary)">18:10</span>
+                          <span class="t-sub">32 phút</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="cell-stack">
+                          <span style="font-weight: 550">Trần Thị Bình</span>
+                        </div>
+                      </td>
+                      <td class="end"><span class="qty">8 món</span></td>
+                      <td class="end"><span class="money">1.245.000₫</span></td>
+                      <td class="center">
+                        <button class="eye" aria-label="Xem chi tiết">
+                          <svg aria-hidden="true" viewBox="0 0 24 24">
+                            <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td>
+                        <div class="cell-stack">
+                          <span class="t-strong">Bàn V1</span>
+                          <span class="t-mono">S-260804-101</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="with-icon">
+                          <svg aria-hidden="true" viewBox="0 0 24 24">
+                            <path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z" />
+                            <circle cx="12" cy="10" r="2.5" />
+                          </svg>
+                          Sân vườn
+                        </span>
+                      </td>
+                      <td>
+                        <div class="cell-stack">
+                          <span style="font-weight: 550">Chị Lan</span>
+                          <span class="t-sub">📱 Khách quét QR</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="status closed">
+                          <svg aria-hidden="true" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="9" />
+                            <path d="m8 12 3 3 5-6" />
+                          </svg>
+                          Đã hoàn thành
+                        </span>
+                      </td>
+                      <td>
+                        <div class="cell-stack">
+                          <span style="font-weight: 650; color: var(--text-secondary)">16:20 → 17:48</span>
+                          <span class="t-sub">88 phút</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="cell-stack">
+                          <span style="font-weight: 550">Trần Thị Bình</span>
+                          <span class="t-sub">Thu: Nguyễn Văn Quản</span>
+                        </div>
+                      </td>
+                      <td class="end"><span class="qty">12 món</span></td>
+                      <td class="end"><span class="money">2.480.000₫</span></td>
+                      <td class="center">
+                        <button class="eye" aria-label="Xem chi tiết">
+                          <svg aria-hidden="true" viewBox="0 0 24 24">
+                            <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td>
+                        <div class="cell-stack">
+                          <span class="t-strong">Bàn 03</span>
+                          <span class="t-mono">S-260804-003</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="with-icon">
+                          <svg aria-hidden="true" viewBox="0 0 24 24">
+                            <path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z" />
+                            <circle cx="12" cy="10" r="2.5" />
+                          </svg>
+                          Sảnh chính
+                        </span>
+                      </td>
+                      <td>
+                        <div class="cell-stack">
+                          <span style="font-weight: 550">Khách tại bàn</span>
+                          <span class="t-sub">📱 Khách quét QR</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="status pending">
+                          <svg aria-hidden="true" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="9" />
+                            <path d="M12 7v5l3 2" />
+                          </svg>
+                          Chờ duyệt bàn
+                        </span>
+                      </td>
+                      <td>
+                        <div class="cell-stack">
+                          <span style="font-weight: 650; color: var(--text-secondary)">18:38</span>
+                          <span class="t-sub">4 phút</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="cell-stack">
+                          <span style="font-weight: 550">—</span>
+                        </div>
+                      </td>
+                      <td class="end"><span class="qty">0 món</span></td>
+                      <td class="end"><span class="money">0₫</span></td>
+                      <td class="center">
+                        <button class="eye" aria-label="Xem chi tiết">
+                          <svg aria-hidden="true" viewBox="0 0 24 24">
+                            <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </main>
+      </section>
+    </div>
+
+    <!-- Detail modal: Bàn 12 -->
+    <div class="scrim">
+      <div class="modal" role="dialog" aria-label="Chi tiết phiên ăn Bàn 12">
+        <div class="modal-head">
+          <div class="lead">
+            <span class="mk">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M4 3v7a4 4 0 0 0 8 0V3M8 3v18M17 3c-1.2 1.6-1.2 5 0 6.5V21" />
+              </svg>
+            </span>
+            <div>
+              <div class="modal-title">
+                <h3>Bàn 12</h3>
+                <span class="code">S-260804-012</span>
+              </div>
+              <p class="sub">Khu vực: Sảnh chính | Mở lúc: 17:56</p>
+            </div>
+          </div>
+          <button class="round-button" aria-label="Đóng">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="overview">
+            <div>
+              <span class="k">Thời gian phục vụ</span>
+              <span class="v">46 phút (17:56 → 18:42)</span>
+            </div>
+            <div>
+              <span class="k">Người mở bàn</span>
+              <span class="v">Lê Văn Cường</span>
+            </div>
+            <div>
+              <span class="k">Thu ngân chốt đơn</span>
+              <span class="v">Chưa đóng</span>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="section-title">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0" />
+              </svg>
+              Món ăn đã gọi (5 món)
+            </h4>
+
+            <div class="order-card">
+              <div class="order-card-head">
+                <strong>Đợt #1 (OD-1042)</strong>
+                <span>Gửi lúc: 17:58</span>
+              </div>
+              <div class="oi">
+                <div class="oi-left">
+                  <span class="oi-qty">x1</span>
+                  <div>
+                    <span class="oi-name">Lẩu Thái hải sản</span>
+                    <span class="oi-variant">(Nồi lớn)</span>
+                  </div>
+                </div>
+                <span style="font-weight: 700">329.000₫</span>
+              </div>
+              <div class="oi">
+                <div class="oi-left">
+                  <span class="oi-qty">x2</span>
+                  <div><span class="oi-name">Ba chỉ bò Mỹ</span></div>
+                </div>
+                <span style="font-weight: 700">238.000₫</span>
+              </div>
+              <div class="oi">
+                <div class="oi-left">
+                  <span class="oi-qty">x1</span>
+                  <div><span class="oi-name">Nấm kim châm</span></div>
+                </div>
+                <span style="font-weight: 700">45.000₫</span>
+              </div>
+            </div>
+
+            <div class="order-card">
+              <div class="order-card-head">
+                <strong>Đợt #2 (OD-1051)</strong>
+                <span>Gửi lúc: 18:20</span>
+              </div>
+              <div class="oi">
+                <div class="oi-left">
+                  <span class="oi-qty">x2</span>
+                  <div><span class="oi-name">Coca-Cola</span></div>
+                </div>
+                <span style="font-weight: 700">40.000₫</span>
+              </div>
+              <div class="oi">
+                <div class="oi-left">
+                  <span class="oi-qty">x1</span>
+                  <div><span class="oi-name">Rau nhúng thập cẩm</span></div>
+                </div>
+                <span style="font-weight: 700">89.000₫</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-foot">
+          <span class="lbl">Tổng doanh thu phiên này:</span>
+          <span class="tot">783.200₫</span>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

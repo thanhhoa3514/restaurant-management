@@ -4,6 +4,7 @@ export interface GuestTable {
   table_code: string
   table_name: string
   area_name: string
+  area_order: number
   capacity: number
   has_active_qr: boolean
   has_active_session?: boolean

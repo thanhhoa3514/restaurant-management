@@ -276,7 +276,13 @@ func (h *Handler) listAreas(c *gin.Context) {
 		httpx.RespondError(c, err)
 		return
 	}
-	httpx.Respond(c, http.StatusOK, gin.H{"areas": out}, nil)
+	httpx.Respond(c, http.StatusOK, gin.H{
+		"areas": out,
+		"limits": gin.H{
+			"max_areas":           application.MaxAreasPerRestaurant,
+			"max_tables_per_area": application.MaxTablesPerArea,
+		},
+	}, nil)
 }
 
 func (h *Handler) createArea(c *gin.Context) {

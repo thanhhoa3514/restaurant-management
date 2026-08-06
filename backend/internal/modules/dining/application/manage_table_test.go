@@ -17,7 +17,8 @@ func TestSaveTable(t *testing.T) {
 	t.Run("create normalises code and defaults name/status", func(t *testing.T) {
 		repo := &fakeRepo{}
 		svc := NewSaveTable(fakeTx{}, repo, rid)
-		out, err := svc.Handle(ctx, SaveTableRequest{Code: " v03 ", Capacity: 4})
+		areaID := uuid.New()
+		out, err := svc.Handle(ctx, SaveTableRequest{AreaID: &areaID, Code: " v03 ", Capacity: 4})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -30,26 +31,44 @@ func TestSaveTable(t *testing.T) {
 		if repo.createdTable.Status != "AVAILABLE" {
 			t.Fatalf("unexpected status: %q", repo.createdTable.Status)
 		}
+		if repo.createdTable.AreaID != areaID {
+			t.Fatalf("unexpected area: %s", repo.createdTable.AreaID)
+		}
 	})
 
 	t.Run("rejects bad capacity and status", func(t *testing.T) {
 		svc := NewSaveTable(fakeTx{}, &fakeRepo{}, rid)
-		if _, err := svc.Handle(ctx, SaveTableRequest{Code: "V03", Capacity: 0}); !apperr.Is(err, apperr.CodeInvalid) {
+		areaID := uuid.New()
+		if _, err := svc.Handle(ctx, SaveTableRequest{AreaID: &areaID, Code: "V03", Capacity: 0}); !apperr.Is(err, apperr.CodeInvalid) {
 			t.Fatalf("expected invalid for capacity, got %v", err)
 		}
-		if _, err := svc.Handle(ctx, SaveTableRequest{Code: "V03", Capacity: 4, Status: "PARTY"}); !apperr.Is(err, apperr.CodeInvalid) {
+		if _, err := svc.Handle(ctx, SaveTableRequest{AreaID: &areaID, Code: "V03", Capacity: 4, Status: "PARTY"}); !apperr.Is(err, apperr.CodeInvalid) {
 			t.Fatalf("expected invalid for status, got %v", err)
 		}
-		if _, err := svc.Handle(ctx, SaveTableRequest{Code: "  ", Capacity: 4}); !apperr.Is(err, apperr.CodeInvalid) {
+		if _, err := svc.Handle(ctx, SaveTableRequest{AreaID: &areaID, Code: "  ", Capacity: 4}); !apperr.Is(err, apperr.CodeInvalid) {
 			t.Fatalf("expected invalid for empty code, got %v", err)
+		}
+		if _, err := svc.Handle(ctx, SaveTableRequest{Code: "V03", Capacity: 4}); !apperr.Is(err, apperr.CodeInvalid) {
+			t.Fatalf("expected invalid for missing area, got %v", err)
+		}
+	})
+
+	t.Run("rejects a twenty-fifth table in one area", func(t *testing.T) {
+		areaID := uuid.New()
+		repo := &fakeRepo{areaTableCount: MaxTablesPerArea}
+		svc := NewSaveTable(fakeTx{}, repo, rid)
+		_, err := svc.Handle(ctx, SaveTableRequest{AreaID: &areaID, Code: "T25", Capacity: 4})
+		if !apperr.Is(err, apperr.CodeConflict) {
+			t.Fatalf("expected conflict, got %v", err)
 		}
 	})
 
 	t.Run("update targets the existing table", func(t *testing.T) {
 		tableID := uuid.New()
-		repo := &fakeRepo{table: &domain.Table{ID: tableID, RestaurantID: rid}}
+		areaID := uuid.New()
+		repo := &fakeRepo{table: &domain.Table{ID: tableID, RestaurantID: rid, AreaID: areaID}}
 		svc := NewSaveTable(fakeTx{}, repo, rid)
-		out, err := svc.Handle(ctx, SaveTableRequest{TableID: &tableID, Code: "T01", Name: "Bàn 1", Capacity: 6})
+		out, err := svc.Handle(ctx, SaveTableRequest{TableID: &tableID, AreaID: &areaID, Code: "T01", Name: "Bàn 1", Capacity: 6})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

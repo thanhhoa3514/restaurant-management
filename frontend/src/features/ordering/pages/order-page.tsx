@@ -12,6 +12,16 @@ import { useGuestPayment } from '@/features/ordering/queries/useGuestPayment'
 import { setGuestDeviceAccessToken } from '@/lib/realtime-auth'
 
 export function OrderPage() {
+  // Guest UI is light-only: ignore system/staff dark mode while on this route.
+  useEffect(() => {
+    const root = document.documentElement
+    const wasDark = root.classList.contains('dark')
+    root.classList.remove('dark')
+    return () => {
+      if (wasDark) root.classList.add('dark')
+    }
+  }, [])
+
   return (
     <OrderingProvider>
       <OrderFlow />

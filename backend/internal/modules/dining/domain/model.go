@@ -118,6 +118,7 @@ type TableWithQR struct {
 	AreaID           *uuid.UUID
 	AreaName         string
 	AreaOrder        int
+	AreaActive       bool
 	PositionX        *int
 	PositionY        *int
 	QRCodeID         *uuid.UUID
@@ -164,6 +165,8 @@ type DiningRepository interface {
 	FindActiveSessionByTable(ctx context.Context, restaurantID, tableID uuid.UUID) (*DiningSession, error)
 	ListTablesWithActiveQR(ctx context.Context, restaurantID uuid.UUID) ([]TableWithQR, error)
 	ListAreas(ctx context.Context, restaurantID uuid.UUID) ([]Area, error)
+	CountAreas(ctx context.Context, restaurantID uuid.UUID) (int, error)
+	CountTablesInArea(ctx context.Context, restaurantID, areaID uuid.UUID) (int, error)
 	CreateTable(ctx context.Context, t *Table) error
 	UpdateTable(ctx context.Context, t *Table) error
 	UpdateTablePositions(ctx context.Context, restaurantID uuid.UUID, positions []TablePosition) error

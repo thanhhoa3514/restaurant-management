@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Zenith — Chờ duyệt vào phiên (khách)</title>
+    <style>
+      /* Hallmark · genre: modern-minimal · macrostructure: mobile guest join-flow — centered brand + status card w/ waiting animation + disabled action · tone: warm Apple Glass, light-only, patient · anchor hue: system orange (pending) on near-black · extraction: production OrderingProvider QRLanding JoinFlow (joinState='pending_verification') */
+      :root {
+        color-scheme: light;
+        --font-body:
+          "SF Pro Text", "SF Pro Display", "Helvetica Neue", ui-sans-serif,
+          sans-serif;
+        --bg: #ffffff;
+        --surface-grouped: #f2f2f7;
+        --material-thin: rgba(255, 255, 255, 0.72);
+        --separator: rgba(60, 60, 67, 0.16);
+        --text: #1d1d1f;
+        --text-secondary: rgba(29, 29, 31, 0.72);
+        --text-tertiary: rgba(29, 29, 31, 0.5);
+        --system-orange: #ff9500;
+        --system-purple: #af52de;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        background: var(--surface-grouped);
+        color: var(--text);
+        font-family: var(--font-body);
+        font-size: 16px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+      button {
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+      }
+      svg {
+        display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2.3;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      /* Phone frame — mirrors production sm:max-w-md sm:mx-auto sm:border-x */
+      .device {
+        display: flex;
+        min-height: 100dvh;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 40px;
+        background: var(--bg);
+        padding: 40px 24px;
+      }
+      @media (min-width: 30rem) {
+        body {
+          padding: 24px 0;
+        }
+        .device {
+          margin-inline: auto;
+          width: 100%;
+          max-width: 28rem;
+          min-height: calc(100dvh - 48px);
+          border: 1px solid var(--separator);
+          border-radius: 28px;
+          overflow: hidden;
+          box-shadow: 0 30px 80px rgba(29, 29, 31, 0.22);
+        }
+      }
+
+      .stack {
+        display: flex;
+        width: 100%;
+        max-width: 22rem;
+        flex-direction: column;
+        align-items: center;
+        gap: 40px;
+      }
+
+      /* Brand */
+      .brand {
+        text-align: center;
+      }
+      .brand .logo-tile {
+        display: grid;
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 12px;
+        place-items: center;
+        border-radius: 22px;
+        background: linear-gradient(135deg, #c56bff, var(--system-purple));
+        color: #fff;
+        font-size: 34px;
+        font-weight: 900;
+        letter-spacing: -0.03em;
+        box-shadow: 0 12px 28px rgba(175, 82, 222, 0.4);
+      }
+      .brand h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 850;
+        letter-spacing: -0.02em;
+      }
+
+      /* Status card */
+      .card {
+        width: 100%;
+        border: 1px solid var(--separator);
+        border-radius: 22px;
+        background: var(--material-thin);
+        padding: 32px;
+        text-align: center;
+        box-shadow: 0 1px 2px rgba(29, 29, 31, 0.05);
+      }
+      .status-badge {
+        display: inline-block;
+        margin-bottom: 20px;
+        border-radius: 999px;
+        background: rgba(255, 149, 0, 0.16);
+        padding: 5px 13px;
+        color: #b45309;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      /* Waiting icon box */
+      .icon-box {
+        display: grid;
+        width: 144px;
+        height: 144px;
+        margin: 0 auto 16px;
+        place-items: center;
+        border: 1px solid var(--separator);
+        border-radius: 16px;
+        background: #fff;
+      }
+      .waiting {
+        position: relative;
+        display: grid;
+        width: 96px;
+        height: 96px;
+        place-items: center;
+      }
+      .waiting .ring {
+        position: absolute;
+        border-radius: 999px;
+      }
+      .waiting .ring-1 {
+        width: 64px;
+        height: 64px;
+        background: rgba(255, 149, 0, 0.25);
+        animation: ping 2s var(--ease-out, cubic-bezier(0, 0, 0.2, 1)) infinite;
+      }
+      .waiting .ring-2 {
+        width: 96px;
+        height: 96px;
+        background: rgba(255, 149, 0, 0.15);
+        animation: ping 2s cubic-bezier(0, 0, 0.2, 1) 0.6s infinite;
+      }
+      .waiting .arc {
+        position: absolute;
+        width: 80px;
+        height: 80px;
+        border-radius: 999px;
+        border: 2px solid #ffe0b2;
+        border-top-color: var(--system-orange);
+        animation: spin 1.6s linear infinite;
+      }
+      .waiting .mark {
+        position: relative;
+        display: grid;
+        width: 40px;
+        height: 40px;
+        place-items: center;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #c56bff, var(--system-purple));
+        color: #fff;
+        font-size: 18px;
+        font-weight: 900;
+        box-shadow: 0 4px 10px rgba(175, 82, 222, 0.35);
+      }
+      @keyframes ping {
+        75%,
+        100% {
+          transform: scale(1.8);
+          opacity: 0;
+        }
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .msg {
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+      .hint {
+        margin: 8px 0 0;
+        color: var(--text-tertiary);
+        font-size: 12px;
+      }
+
+      /* Bouncing dots */
+      .dots {
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+        margin-top: 12px;
+      }
+      .dots span {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: var(--system-orange);
+        animation: bounce 1s infinite;
+      }
+      .dots span:nth-child(2) {
+        animation-delay: 0.15s;
+      }
+      .dots span:nth-child(3) {
+        animation-delay: 0.3s;
+      }
+      @keyframes bounce {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-5px);
+        }
+      }
+
+      /* Disabled action */
+      .action {
+        display: flex;
+        width: 100%;
+        height: 56px;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-radius: 16px;
+        background: var(--text);
+        color: var(--bg);
+        font-size: 16px;
+        font-weight: 800;
+        box-shadow: 0 8px 20px rgba(29, 29, 31, 0.18);
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="device">
+      <div class="stack">
+        <!-- Brand -->
+        <div class="brand">
+          <div class="logo-tile">Z</div>
+          <h1>Zenith Lẩu Nướng</h1>
+        </div>
+
+        <!-- Status card -->
+        <div class="card">
+          <span class="status-badge">Đang chờ duyệt</span>
+
+          <div class="icon-box">
+            <div class="waiting">
+              <span class="ring ring-1"></span>
+              <span class="ring ring-2"></span>
+              <span class="arc"></span>
+              <span class="mark">Z</span>
+            </div>
+          </div>
+
+          <p class="msg">Đang chờ phục vụ xác nhận...</p>
+          <p class="hint">
+            Nhân viên phục vụ sẽ duyệt phiên của bạn trong giây lát.
+          </p>
+          <div class="dots"><span></span><span></span><span></span></div>
+        </div>
+
+        <!-- Action (disabled while pending) -->
+        <button class="action" type="button" disabled>Vui lòng chờ...</button>
+      </div>
+    </div>
+  </body>
+</html>

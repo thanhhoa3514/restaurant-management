@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { errorMessage } from '@/lib/api'
-import { deleteArea, listAreas, saveArea, type Area } from '@/features/dining/api'
+import { deleteArea, listAreas, listTableQRs, saveArea, type Area } from '@/features/dining/api'
 import { AREAS_KEY, TABLE_QRS_KEY } from '@/features/dining/keys'
 import type { AdminT } from '@/i18n'
 import { cn } from '@/lib/utils'
@@ -48,6 +48,9 @@ function AreaManagerBody({ t }: { t: AdminT }) {
   const queryClient = useQueryClient()
   const { data, isLoading, isError } = useQuery({ queryKey: AREAS_KEY, queryFn: listAreas })
   const areas = data?.areas ?? []
+  const maxAreas = data?.limits.max_areas ?? 0
+  const maxTablesPerArea = data?.limits.max_tables_per_area ?? 0
+  const { data: tables = [] } = useQuery({ queryKey: TABLE_QRS_KEY, queryFn: listTableQRs })
   const [editing, setEditing] = useState<Editing>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
@@ -93,6 +96,10 @@ function AreaManagerBody({ t }: { t: AdminT }) {
 
   return (
     <div className="space-y-3">
+      <div className="flex items-center justify-between rounded-[12px] bg-[var(--surface-grouped)] px-3 py-2 text-xs text-[var(--text-secondary)]">
+        <span>{t('area_limit_summary', areas.length, maxAreas)}</span>
+        <span>{t('area_table_limit_short', maxTablesPerArea)}</span>
+      </div>
       {isLoading && <p className="text-sm text-[var(--text-secondary)]">…</p>}
       {isError && <p className="text-sm text-[var(--system-red)]">{t('qr_load_error')}</p>}
       {!isLoading && areas.length === 0 && (
@@ -100,76 +107,89 @@ function AreaManagerBody({ t }: { t: AdminT }) {
       )}
 
       <ul className="space-y-2">
-        {areas.map((area) => (
-          <li
-            key={area.id}
-            className="flex items-center gap-2 rounded-[14px] border border-[var(--separator)] bg-[var(--material-regular)] px-3 py-2.5"
-          >
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <span className="truncate text-sm font-semibold text-[var(--text)]">
-                  {area.name}
-                </span>
-                {!area.is_active && (
-                  <span className="rounded-full bg-[var(--surface-grouped)] px-2 py-0.5 text-[10px] font-medium text-[var(--text-tertiary)]">
-                    {t('area_inactive')}
+        {areas.map((area) => {
+          const tableCount = tables.filter((table) => table.area_id === area.id).length
+          return (
+            <li
+              key={area.id}
+              className="flex items-center gap-2 rounded-[14px] border border-[var(--separator)] bg-[var(--material-regular)] px-3 py-2.5"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="truncate text-sm font-semibold text-[var(--text)]">
+                    {area.name}
                   </span>
+                  {!area.is_active && (
+                    <span className="rounded-full bg-[var(--surface-grouped)] px-2 py-0.5 text-[10px] font-medium text-[var(--text-secondary)]">
+                      {t('area_inactive')}
+                    </span>
+                  )}
+                </div>
+                {area.description && (
+                  <p className="truncate text-xs text-[var(--text-secondary)]">
+                    {area.description}
+                  </p>
+                )}
+                <p className="text-xs tabular-nums text-[var(--text-secondary)]">
+                  {t('area_table_count', tableCount, maxTablesPerArea)}
+                </p>
+                {tableCount > 0 && (
+                  <p className="text-xs text-[var(--text-secondary)]">{t('area_delete_blocked')}</p>
                 )}
               </div>
-              {area.description && (
-                <p className="truncate text-xs text-[var(--text-tertiary)]">{area.description}</p>
-              )}
-            </div>
 
-            {confirmDelete === area.id ? (
-              <div className="flex items-center gap-1.5">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="text-[var(--system-red)]"
-                  disabled={remove.isPending}
-                  onClick={() => remove.mutate(area.id)}
-                >
-                  {t('area_delete')}
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => {
-                    remove.reset()
-                    setConfirmDelete(null)
-                  }}
-                >
-                  <X className="size-4" />
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => {
-                    save.reset()
-                    setEditing(area)
-                  }}
-                >
-                  <Pencil className="size-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="text-[var(--system-red)]"
-                  onClick={() => {
-                    remove.reset()
-                    setConfirmDelete(area.id)
-                  }}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
-              </div>
-            )}
-          </li>
-        ))}
+              {confirmDelete === area.id ? (
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="text-[var(--system-red)]"
+                    disabled={remove.isPending}
+                    onClick={() => remove.mutate(area.id)}
+                  >
+                    {t('area_delete')}
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => {
+                      remove.reset()
+                      setConfirmDelete(null)
+                    }}
+                  >
+                    <X className="size-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => {
+                      save.reset()
+                      setEditing(area)
+                    }}
+                  >
+                    <Pencil className="size-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="text-[var(--system-red)]"
+                    disabled={tableCount > 0}
+                    title={tableCount > 0 ? t('area_delete_blocked') : t('area_delete')}
+                    onClick={() => {
+                      remove.reset()
+                      setConfirmDelete(area.id)
+                    }}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              )}
+            </li>
+          )
+        })}
       </ul>
 
       {remove.isError && (
@@ -179,7 +199,8 @@ function AreaManagerBody({ t }: { t: AdminT }) {
       )}
 
       <Button
-        className="w-full rounded-[var(--radius-lg)]"
+        className="w-full rounded-[var(--radius-lg)] bg-[var(--text)] text-[var(--bg)] hover:bg-[var(--text)]/90"
+        disabled={maxAreas > 0 && areas.length >= maxAreas}
         onClick={() => {
           save.reset()
           setEditing('new')
@@ -188,6 +209,11 @@ function AreaManagerBody({ t }: { t: AdminT }) {
         <Plus className="size-4" />
         {t('area_add')}
       </Button>
+      {maxAreas > 0 && areas.length >= maxAreas && (
+        <p className="text-center text-xs text-[var(--text-secondary)]">
+          {t('area_limit_reached', maxAreas)}
+        </p>
+      )}
     </div>
   )
 }
@@ -257,6 +283,7 @@ function AreaForm({
           {t('area_cancel')}
         </Button>
         <Button
+          className="bg-[var(--text)] text-[var(--bg)] hover:bg-[var(--text)]/90"
           disabled={!canSubmit || isSaving}
           onClick={() =>
             onSubmit({

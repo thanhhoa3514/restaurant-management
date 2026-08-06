@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import { WF_DICT } from '@/features/waiter/data/i18n'
-import type { Lang, WFCounts, WaiterView, UseWaiterValue } from '@/features/waiter/types'
+import type { Lang, WFCounts, UseWaiterValue } from '@/features/waiter/types'
 import { useStaffTables } from '@/features/waiter/queries/useStaffTables'
 import { useUpdateItemStatus } from '@/features/waiter/mutations/useUpdateItemStatus'
 import { useReviewOrderItem } from '@/features/waiter/mutations/useReviewOrderItem'
@@ -21,9 +21,6 @@ export function useWaiter(): UseWaiterValue {
     () => (localStorage.getItem('rest_lang_waiter') as Lang) || 'vi',
   )
   const [soundOn, setSoundOn] = useState(true)
-  const [view, setView] = useState<WaiterView>(() =>
-    typeof window !== 'undefined' && window.innerWidth < 640 ? 'grid' : 'plan',
-  )
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null)
   const [justChangedIds, setJustChangedIds] = useState<Set<string>>(() => new Set())
   const [demoOpen, setDemoOpen] = useState(false)
@@ -89,7 +86,8 @@ export function useWaiter(): UseWaiterValue {
   )
 
   const notifyCashier = useCallback(
-    (_tableId: string) => {
+    (tableId: string) => {
+      void tableId
       toast(t('toast_bill_sent'))
     },
     [t],
@@ -235,7 +233,8 @@ export function useWaiter(): UseWaiterValue {
   )
 
   const counts = useMemo<WFCounts>(() => {
-    return tables.reduce(
+    const diningTables = tables.filter((table) => table.area_name.length > 0)
+    return diningTables.reduce(
       (acc, table) => {
         if (table.status === 'occupied' && table.session) {
           acc.occupied += 1
@@ -252,7 +251,7 @@ export function useWaiter(): UseWaiterValue {
         }
         return acc
       },
-      { calls: 0, ready: 0, bills: 0, occupied: 0, total: tables.length, pending: 0 },
+      { calls: 0, ready: 0, bills: 0, occupied: 0, total: diningTables.length, pending: 0 },
     )
   }, [tables])
 
@@ -269,7 +268,6 @@ export function useWaiter(): UseWaiterValue {
       autoOn,
       lang,
       soundOn,
-      view,
       selectedTableId,
       justChangedIds,
       demoOpen,
@@ -294,7 +292,6 @@ export function useWaiter(): UseWaiterValue {
       setTimeMultiplier,
       setLang,
       setSoundOn,
-      setView,
       setDemoOpen,
       toggleMergeMode,
       toggleMergeSelection,

@@ -1,5 +1,5 @@
 import { useMemo, type FC } from 'react'
-import { Bell, Check, Receipt, Users, Clock } from 'lucide-react'
+import { Bell, Check, Receipt, Users, Clock, Link2 } from 'lucide-react'
 
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -20,6 +20,9 @@ interface GridViewProps {
   t: (key: string, ...args: Array<string | number>) => string
   onSelectTable: (tableId: string) => void
   justChangedIds: Set<string>
+  mergeMode: boolean
+  mergeSelectedIds: string[]
+  onToggleMergeSelection: (tableId: string) => void
 }
 
 export const GridView: FC<GridViewProps> = ({
@@ -28,6 +31,9 @@ export const GridView: FC<GridViewProps> = ({
   lang,
   onSelectTable,
   justChangedIds,
+  mergeMode,
+  mergeSelectedIds,
+  onToggleMergeSelection,
 }) => {
   const sortedTables = useMemo(() => {
     return tables
@@ -52,6 +58,7 @@ export const GridView: FC<GridViewProps> = ({
         const visual = tableVisuals(priority)
         const secondaries = secondarySignals(table, priority)
         const changed = justChangedIds.has(table.id)
+        const mergeSelected = mergeSelectedIds.includes(table.id)
 
         const icons = {
           empty: null,
@@ -68,21 +75,32 @@ export const GridView: FC<GridViewProps> = ({
           <button
             key={table.id}
             type="button"
-            onClick={() => onSelectTable(table.id)}
-            className="w-full text-left outline-none cursor-pointer"
+            disabled={mergeMode && !table.session}
+            onClick={() => (mergeMode ? onToggleMergeSelection(table.id) : onSelectTable(table.id))}
+            aria-pressed={mergeMode ? mergeSelected : undefined}
+            className="w-full cursor-pointer rounded-[20px] text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--system-blue)] disabled:cursor-not-allowed"
           >
             <Card
               className={cn(
-                'relative flex min-h-[148px] flex-col overflow-hidden rounded-[24px] border-2 p-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg active:scale-[0.99]',
+                'relative flex min-h-[148px] flex-col overflow-hidden rounded-[20px] border-2 p-4 transition-colors duration-[220ms] hover:bg-[var(--surface-grouped)] focus-within:border-[var(--system-blue)] active:bg-[var(--surface-grouped)]',
                 priority === 'call' || priority === 'ready' ? 'ring-2' : '',
-                changed ? 'scale-[1.04]' : '',
+                changed ? 'ring-2 ring-[var(--system-blue)]' : '',
+                mergeSelected
+                  ? 'border-[var(--system-purple)] ring-2 ring-[var(--system-purple)]/25'
+                  : '',
+                mergeMode && !table.session ? 'cursor-not-allowed opacity-50' : '',
                 visual.shell,
               )}
             >
+              {(mergeSelected || table.session?.merge_group_id) && (
+                <span className="absolute right-3 top-3 flex size-7 items-center justify-center rounded-full bg-[var(--system-purple)] text-white">
+                  <Link2 className="size-3.5" />
+                </span>
+              )}
               {/* Header: Table Number & Status Icon */}
-              <div className="flex items-start justify-between w-full">
+              <div className="flex w-full items-start justify-between">
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
                     {lang === 'vi' ? 'BÀN' : 'TABLE'}
                   </span>
                   <div
@@ -96,7 +114,7 @@ export const GridView: FC<GridViewProps> = ({
                 </div>
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-xs border border-zinc-100 dark:bg-zinc-950 dark:border-zinc-800">
                   {icons[priority] || (
-                    <span className="text-xs text-zinc-400 dark:text-zinc-600">—</span>
+                    <span className="text-xs text-[var(--text-secondary)]">—</span>
                   )}
                 </div>
               </div>
@@ -123,8 +141,8 @@ export const GridView: FC<GridViewProps> = ({
 
               {/* Footer: Capacity and Waiting Time */}
               <div className="mt-auto pt-3 flex items-end justify-between w-full border-t border-zinc-100/50 dark:border-zinc-800/40">
-                <div className="flex items-center gap-1 text-[11px] font-bold text-zinc-500 dark:text-zinc-400">
-                  <Users className="size-3 text-zinc-400" />
+                <div className="flex items-center gap-1 text-[11px] font-bold text-[var(--text-secondary)]">
+                  <Users className="size-3 text-[var(--text-secondary)]" />
                   <span>
                     {priority === 'empty'
                       ? `${table.capacity} ${lang === 'vi' ? 'chỗ' : 'seats'}`
@@ -139,7 +157,7 @@ export const GridView: FC<GridViewProps> = ({
                       visual.sub,
                     )}
                   >
-                    <Clock className="size-2.5 text-zinc-400" />
+                    <Clock className="size-2.5 text-[var(--text-secondary)]" />
                     <span>{wfFmtHMS(waitSeconds)}</span>
                   </span>
                 )}

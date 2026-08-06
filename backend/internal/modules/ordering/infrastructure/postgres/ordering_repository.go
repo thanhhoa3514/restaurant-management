@@ -693,10 +693,10 @@ func (r *Repository) ReviewCancelRequest(ctx context.Context, restaurantID, canc
 
 func (r *Repository) ListStaffTables(ctx context.Context, restaurantID uuid.UUID) ([]orderingapp.StaffTableDTO, error) {
 	rows, err := r.q(ctx).Query(ctx, `
-		SELECT t.id, t.code, t.name, t.capacity, t.status, COALESCE(a.name, ''), t.position_x, t.position_y,
+		SELECT t.id, t.code, t.name, t.capacity, t.status, COALESCE(a.name, ''), COALESCE(a.display_order, 2147483647), t.position_x, t.position_y,
 		       ds.id, ds.session_code, ds.status, COALESCE(ds.customer_count, 0), COALESCE(ds.customer_name, ''), ds.opened_at, ds.updated_at, ds.waiter_called_at, COALESCE(ds.waiter_call_reason, ''), ds.merge_group_id
 		FROM tables t
-		LEFT JOIN areas a ON a.id = t.area_id AND a.restaurant_id = t.restaurant_id AND a.deleted_at IS NULL
+		JOIN areas a ON a.id = t.area_id AND a.restaurant_id = t.restaurant_id AND a.is_active = TRUE AND a.deleted_at IS NULL
 		LEFT JOIN dining_sessions ds
 		  ON ds.restaurant_id = t.restaurant_id
 		 AND ds.table_id = t.id
@@ -706,12 +706,12 @@ func (r *Repository) ListStaffTables(ctx context.Context, restaurantID uuid.UUID
 
 		UNION ALL
 
-		SELECT '00000000-0000-0000-0000-000000000001'::uuid, 'Mang về', 'Mang về', 0, 'AVAILABLE', '', NULL::int, NULL::int,
+		SELECT '00000000-0000-0000-0000-000000000001'::uuid, 'Mang về', 'Mang về', 0, 'AVAILABLE', '', 2147483647, NULL::int, NULL::int,
 		       o.id, o.order_number, o.status, 1, COALESCE(o.customer_name, ''), o.submitted_at, o.updated_at, NULL::timestamptz, '', NULL::uuid
 		FROM orders o
 		WHERE o.restaurant_id = $1 AND o.order_type = 'TAKEAWAY' AND o.status NOT IN ('PAID', 'CANCELLED') AND o.deleted_at IS NULL
 		
-		ORDER BY 2
+		ORDER BY 7, 2
 	`, restaurantID)
 	if err != nil {
 		return nil, err
@@ -727,7 +727,7 @@ func (r *Repository) ListStaffTables(ctx context.Context, restaurantID uuid.UUID
 		var customerName, waiterCallReason pgtype.Text
 		var posX, posY pgtype.Int4
 		var openedAt, updatedAt, waiterCalledAt pgtype.Timestamptz
-		if err := rows.Scan(&table.ID, &table.Code, &table.Name, &table.Capacity, &table.Status, &table.AreaName, &posX, &posY, &sessionID, &sessionCode, &sessionStatus, &customerCount, &customerName, &openedAt, &updatedAt, &waiterCalledAt, &waiterCallReason, &mergeGroupID); err != nil {
+		if err := rows.Scan(&table.ID, &table.Code, &table.Name, &table.Capacity, &table.Status, &table.AreaName, &table.AreaOrder, &posX, &posY, &sessionID, &sessionCode, &sessionStatus, &customerCount, &customerName, &openedAt, &updatedAt, &waiterCalledAt, &waiterCallReason, &mergeGroupID); err != nil {
 			return nil, err
 		}
 		if posX.Valid && posY.Valid {

@@ -1,4 +1,31 @@
 :root {
+  --dining-paper: var(--bg);
+  --dining-surface: var(--bg-elevated);
+  --dining-surface-muted: var(--surface-grouped);
+  --dining-ink: var(--text);
+  --dining-ink-muted: var(--text-secondary);
+  --dining-ink-faint: var(--text-tertiary);
+  --dining-rule: var(--separator);
+  --dining-focus: var(--system-blue);
+  --dining-danger: var(--system-red);
+  --dining-success: var(--system-green);
+  --dining-font-display: 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+  --dining-font-body: 'SF Pro Text', system-ui, sans-serif;
+  --dining-font-mono: 'SF Mono', Menlo, monospace;
+  --dining-space-1: 0.25rem;
+  --dining-space-2: 0.5rem;
+  --dining-space-3: 0.75rem;
+  --dining-space-4: 1rem;
+  --dining-space-6: 1.5rem;
+  --dining-space-8: 2rem;
+  --dining-space-10: 2.5rem;
+  --dining-radius-sm: 0.75rem;
+  --dining-radius-md: 1rem;
+  --dining-radius-lg: 1.25rem;
+  --dining-duration-micro: var(--dur-micro);
+  --dining-duration-short: var(--dur-short);
+  --dining-ease-out: var(--ease-out);
+
   --invoice-paper: var(--bg);
   --invoice-surface: var(--bg-elevated);
   --invoice-surface-muted: var(--surface-grouped);
