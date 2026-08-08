@@ -187,6 +187,7 @@ export const vi: LocaleDict = {
     qr_generating: 'Đang tạo mã…',
     qr_copy: 'Chép link',
     qr_copied: 'Đã chép',
+    qr_open: 'Mở trang khách',
     qr_download: 'Tải PNG',
     qr_rotate: 'Xoay mã QR mới',
     qr_create_hint: 'Bàn này chưa có mã QR. Tạo mã để khách quét và gọi món.',

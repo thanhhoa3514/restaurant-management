@@ -187,6 +187,7 @@ export const en: LocaleDict = {
     qr_generating: 'Generating…',
     qr_copy: 'Copy link',
     qr_copied: 'Copied',
+    qr_open: 'Open guest page',
     qr_download: 'Download PNG',
     qr_rotate: 'Rotate QR code',
     qr_create_hint: 'This table has no QR code yet. Create one for guests to scan and order.',

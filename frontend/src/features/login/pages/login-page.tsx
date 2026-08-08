@@ -35,8 +35,11 @@ export function LoginPage() {
       {
         onSuccess: (session) => {
           toast.success(`Xin chào, ${session.name}!`)
-          if (redirect) {
-            window.location.href = redirect
+          // Only honour same-origin relative paths; `//host` and `https://…`
+          // would be an open-redirect vector since `redirect` comes from the URL.
+          const safe = redirect && /^\/(?!\/)/.test(redirect) ? redirect : null
+          if (safe) {
+            window.location.href = safe
           } else {
             navigate({ to: '/admin' })
           }

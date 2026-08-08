@@ -4,6 +4,7 @@ import {
   Check,
   Copy,
   Download,
+  ExternalLink,
   Building2,
   Pencil,
   Plus,
@@ -436,6 +437,18 @@ function QRDetailSheet({
                           {orderUrl}
                         </div>
                       </div>
+                    )}
+
+                    {orderUrl && (
+                      <Button
+                        className="w-full rounded-[var(--radius-lg)] bg-[var(--text)] text-[var(--bg)] hover:bg-[var(--text)]/90"
+                        asChild
+                      >
+                        <a href={orderUrl} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="size-4" />
+                          {t('qr_open')}
+                        </a>
+                      </Button>
                     )}
 
                     <div className="grid grid-cols-2 gap-2">
