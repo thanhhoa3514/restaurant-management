@@ -59,6 +59,18 @@ docker compose run --rm --no-deps --entrypoint /bin/restaurant-setup api
 Existing installations that already have restaurant and staff data do not run
 this command again.
 
+To add a release's new bundled menu items without deleting existing menu,
+orders, invoices, payments, or sessions, run the additive seed explicitly:
+
+```bash
+cd ~/containers/apps/backend
+docker compose run --rm --no-deps -e MENU_SEED_ONLY=true \
+  --entrypoint /bin/restaurant-seed api
+```
+
+Do not omit `MENU_SEED_ONLY=true`: the default demo seed is a destructive
+reset for the `DEMO` dataset and is intended only for disposable demo data.
+
 After deploying a release that contains bundled menu images, verify that the
 web container has the files and serves the correct content type:
 

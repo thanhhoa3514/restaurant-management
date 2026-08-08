@@ -13,6 +13,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -30,6 +31,7 @@ const (
 	demoRestaurantCode     = "DEMO"
 	defaultDemoPassword    = "demo1234"
 	demoPasswordEnvVarName = "DEMO_SEED_PASSWORD"
+	menuSeedOnlyEnvVarName = "MENU_SEED_ONLY"
 )
 
 var demoUsers = []setup.UserConfig{
@@ -111,6 +113,19 @@ func main() {
 	if err != nil {
 		log.Error("seed restaurant failed", slog.Any("error", err))
 		os.Exit(1)
+	}
+
+	if os.Getenv(menuSeedOnlyEnvVarName) == "true" {
+		if err := seedMenuAdditive(ctx, tx, rid); err != nil {
+			log.Error("additive menu seed failed", slog.Any("error", err))
+			os.Exit(1)
+		}
+		if err := tx.Commit(ctx); err != nil {
+			log.Error("commit additive menu seed failed", slog.Any("error", err))
+			os.Exit(1)
+		}
+		fmt.Println("Additive menu seed complete: existing menu and transactions were preserved")
+		return
 	}
 
 	// ── Users ──────────────────────────────────────────────────
@@ -232,6 +247,199 @@ func main() {
 // ──────────────────────────────────────────────
 // Demo menu seeding (unchanged from original)
 // ──────────────────────────────────────────────
+
+// seedMenuAdditive adds the newly introduced catalog records without touching
+// existing menu, order, invoice, payment, or session data. It is intentionally
+// separate from seedMenu because the latter resets the complete demo dataset.
+func seedMenuAdditive(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
+	type category struct {
+		name, slug, description, icon, image string
+	}
+	categories := []category{
+		{"Lẩu", "lau", "Nước lẩu và set lẩu", "🍲", "/images/menu/lau-thai-tomyum.webp?v=20260723"},
+		{"Món nướng", "mon-nuong", "Thịt nướng tại bàn", "🔥", "/images/menu/ba-chi-bo-my-nuong.webp?v=20260723"},
+		{"Hải sản", "hai-san", "Hải sản tươi nhúng lẩu hoặc nướng", "🦐", "/images/menu/tom-su-tuoi.webp?v=20260723b"},
+		{"Rau & Nấm", "rau-nam", "Rau, nấm, đậu và đồ nhúng", "🥬", "/images/menu/rau-thap-cam.webp?v=20260723b"},
+		{"Khai vị", "khai-vi", "Món ăn chơi khai vị", "🥟", "/images/menu/khoai-tay-chien.webp?v=20260723b"},
+		{"Đồ uống", "do-uong", "Thức uống giải khát", "🥤", "/images/menu/tra-dao-cam-sa.webp?v=20260723b"},
+		{"Tráng miệng", "trang-mieng", "Món ngọt tráng miệng", "🍨", "/images/menu/kem-vani.webp?v=20260723b"},
+	}
+	catIDs := map[string]uuid.UUID{}
+	for _, c := range categories {
+		var id uuid.UUID
+		if err := tx.QueryRow(ctx, `
+			INSERT INTO categories (id, restaurant_id, name, slug, description, icon, image_url, display_order, is_active)
+			VALUES ($1, $2, $3, $4, $5, $6, $7,
+				COALESCE((SELECT MAX(display_order) + 1 FROM categories WHERE restaurant_id = $2), 1), TRUE)
+			ON CONFLICT (restaurant_id, slug) DO UPDATE SET slug = EXCLUDED.slug
+			RETURNING id
+		`, uuid.New(), restaurantID, c.name, c.slug, c.description, c.icon, c.image).Scan(&id); err != nil {
+			return fmt.Errorf("ensure category %s: %w", c.name, err)
+		}
+		catIDs[c.name] = id
+	}
+
+	type item struct {
+		category, code, name, slug, description, image string
+		priceVND                                       int64
+		station                                        string
+		isFeatured                                     bool
+	}
+	items := []item{
+		{"Lẩu", "LAU-RIEU-CUA", "Lẩu riêu cua bắp bò", "lau-rieu-cua-bap-bo", "Riêu cua đồng, bắp bò, sườn sụn, cà chua, giấm bỗng", "/images/menu/lau-rieu-cua-bap-bo.webp?v=20260808", 359000, "HOTPOT", false},
+		{"Lẩu", "LAU-TU-XUYEN", "Lẩu Tứ Xuyên cay tê", "lau-tu-xuyen-cay-te", "Nước lẩu mala cay tê, hạt tê, ớt khô Tứ Xuyên", "/images/menu/lau-tu-xuyen-cay-te.webp?v=20260808", 319000, "HOTPOT", false},
+		{"Lẩu", "LAU-NAM-CHAY", "Lẩu nấm chay dưỡng sinh", "lau-nam-chay-duong-sinh", "Nước hầm nấm và rau củ, các loại nấm tươi, đậu hũ", "/images/menu/lau-nam-chay-duong-sinh.webp?v=20260808", 239000, "HOTPOT", false},
+		{"Lẩu", "LAU-CA-KEO", "Lẩu cá kèo lá giang", "lau-ca-keo-la-giang", "Cá kèo tươi, lá giang chua thanh, rau đắng", "/images/menu/lau-ca-keo-la-giang.webp?v=20260808", 299000, "HOTPOT", false},
+		{"Món nướng", "NAC-VAI-HEO", "Nạc vai heo nướng riềng mẻ", "nac-vai-heo-nuong-rieng-me", "Nạc vai heo ướp riềng mẻ nướng than hoa", "/images/menu/nac-vai-heo-nuong-rieng-me.webp?v=20260808", 139000, "GRILL", false},
+		{"Món nướng", "NAM-BO-NUONG", "Nầm bò nướng", "nam-bo-nuong", "Nầm bò tươi ướp sa tế, nướng giòn", "/images/menu/nam-bo-nuong.webp?v=20260808", 149000, "GRILL", false},
+		{"Món nướng", "SUN-GA-NUONG", "Sụn gà nướng muối ớt", "sun-ga-nuong-muoi-ot", "Sụn gà giòn ướp muối ớt xanh", "/images/menu/sun-ga-nuong-muoi-ot.webp?v=20260808", 109000, "GRILL", false},
+		{"Món nướng", "XUC-XICH-NUONG", "Xúc xích Đức nướng", "xuc-xich-duc-nuong", "Xúc xích Đức nướng, sốt mù tạt mật ong", "/images/menu/xuc-xich-duc-nuong.webp?v=20260808", 89000, "GRILL", false},
+		{"Hải sản", "NGHEU-NHUNG", "Nghêu tươi (nhúng lẩu)", "ngheu-tuoi-nhung-lau", "Nghêu sống 500g, nhúng lẩu ngọt nước", "/images/menu/ngheu-tuoi-nhung-lau.webp?v=20260808", 89000, "HOTPOT", false},
+		{"Hải sản", "SO-DIEP-NUONG", "Sò điệp nướng mỡ hành", "so-diep-nuong-mo-hanh", "Sò điệp nướng mỡ hành, đậu phộng rang", "/images/menu/so-diep-nuong-mo-hanh.webp?v=20260808", 159000, "GRILL", false},
+		{"Hải sản", "BACH-TUOC-NUONG", "Bạch tuộc nướng sa tế", "bach-tuoc-nuong-sa-te", "Bạch tuộc baby nướng sa tế cay", "/images/menu/bach-tuoc-nuong-sa-te.webp?v=20260808", 169000, "GRILL", false},
+		{"Hải sản", "CA-VIEN-THA", "Cá viên thả lẩu", "ca-vien-tha-lau", "Đĩa cá viên, bò viên, tôm viên thả lẩu", "/images/menu/ca-vien-tha-lau.webp?v=20260808", 79000, "HOTPOT", false},
+		{"Rau & Nấm", "RAU-MUONG", "Rau muống bào", "rau-muong-bao", "Rau muống bào giòn nhúng lẩu", "/images/menu/rau-muong-bao.webp?v=20260808", 45000, "HOTPOT", false},
+		{"Rau & Nấm", "CAI-THAO", "Cải thảo", "cai-thao", "Cải thảo tươi cắt khúc nhúng lẩu", "/images/menu/cai-thao.webp?v=20260808", 39000, "HOTPOT", false},
+		{"Rau & Nấm", "NGO-NGOT", "Ngô ngọt Mỹ", "ngo-ngot-my", "Ngô ngọt cắt khúc, ngọt nước lẩu", "/images/menu/ngo-ngot-my.webp?v=20260808", 35000, "HOTPOT", false},
+		{"Rau & Nấm", "VANG-DAU", "Váng đậu tươi", "vang-dau-tuoi", "Váng đậu non thả lẩu", "/images/menu/vang-dau-tuoi.webp?v=20260808", 49000, "HOTPOT", false},
+		{"Rau & Nấm", "KHOAI-MON", "Khoai môn", "khoai-mon-thai-lat", "Khoai môn thái lát, bùi ngọt", "/images/menu/khoai-mon-thai-lat.webp?v=20260808", 39000, "HOTPOT", false},
+		{"Khai vị", "CHA-GIO-HS", "Chả giò hải sản", "cha-gio-hai-san", "Chả giò cuộn tôm mực, chiên giòn", "/images/menu/cha-gio-hai-san.webp?v=20260808", 79000, "GENERAL", false},
+		{"Khai vị", "CANH-GA-MAM", "Cánh gà chiên nước mắm", "canh-ga-chien-nuoc-mam", "Cánh gà chiên giòn rưới nước mắm tỏi", "/images/menu/canh-ga-chien-nuoc-mam.webp?v=20260808", 89000, "GENERAL", false},
+		{"Khai vị", "DAU-BAP-NUONG", "Đậu bắp nướng mỡ hành", "dau-bap-nuong-mo-hanh", "Đậu bắp nướng than, mỡ hành", "/images/menu/dau-bap-nuong-mo-hanh.webp?v=20260808", 45000, "GRILL", false},
+		{"Đồ uống", "BIA-TIGER", "Bia Tiger", "bia-tiger", "Bia Tiger lon 330ml", "/images/menu/bia-tiger.webp?v=20260808", 28000, "DRINK", false},
+		{"Đồ uống", "NUOC-SUOI", "Nước suối", "nuoc-suoi", "Nước khoáng đóng chai 500ml", "/images/menu/nuoc-suoi.webp?v=20260808", 15000, "DRINK", false},
+		{"Đồ uống", "7UP", "7 Up", "7up", "7 Up lon 330ml", "/images/menu/7up.webp?v=20260808", 25000, "DRINK", false},
+		{"Đồ uống", "TRA-TAC", "Trà tắc", "tra-tac", "Trà tắc mật ong đá", "/images/menu/tra-tac.webp?v=20260808", 35000, "DRINK", false},
+		{"Đồ uống", "CAM-EP", "Nước cam ép", "nuoc-cam-ep", "Cam vắt nguyên chất, không đường", "/images/menu/nuoc-cam-ep.webp?v=20260808", 49000, "DRINK", false},
+		{"Tráng miệng", "CHE-KHUC-BACH", "Chè khúc bạch", "che-khuc-bach", "Khúc bạch phô mai, hạnh nhân, nhãn", "/images/menu/che-khuc-bach.webp?v=20260808", 39000, "DESSERT", false},
+		{"Tráng miệng", "RAU-CAU-DUA", "Rau câu dừa", "rau-cau-dua", "Rau câu nước cốt dừa mát lạnh", "/images/menu/rau-cau-dua.webp?v=20260808", 29000, "DESSERT", false},
+	}
+
+	displayOrders := map[string]int{}
+	for name, categoryID := range catIDs {
+		var maxDisplayOrder int
+		if err := tx.QueryRow(ctx, `SELECT COALESCE(MAX(display_order), 0) FROM menu_items WHERE restaurant_id = $1 AND category_id = $2`, restaurantID, categoryID).Scan(&maxDisplayOrder); err != nil {
+			return fmt.Errorf("read display order for %s: %w", name, err)
+		}
+		displayOrders[name] = maxDisplayOrder
+	}
+	itemIDs := map[string]uuid.UUID{}
+	for _, it := range items {
+		displayOrders[it.category]++
+		gallery, err := json.Marshal([]string{it.image})
+		if err != nil {
+			return fmt.Errorf("marshal image for %s: %w", it.code, err)
+		}
+		var id uuid.UUID
+		if err := tx.QueryRow(ctx, `
+			INSERT INTO menu_items (id, restaurant_id, category_id, code, name, slug, short_description, base_price_vnd, image_url, images, is_available, availability_status, station, status, display_order, is_featured)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, 'AVAILABLE', $11, 'PUBLISHED', $12, $13)
+			ON CONFLICT (restaurant_id, code) DO UPDATE SET image_url = EXCLUDED.image_url, images = EXCLUDED.images, updated_at = NOW()
+			RETURNING id
+		`, uuid.New(), restaurantID, catIDs[it.category], it.code, it.name, it.slug, it.description, it.priceVND, it.image, gallery, it.station, displayOrders[it.category], it.isFeatured).Scan(&id); err != nil {
+			return fmt.Errorf("upsert menu item %s: %w", it.code, err)
+		}
+		itemIDs[it.code] = id
+	}
+
+	type variant struct {
+		itemCode, name, sku, unit string
+		priceVND                  int64
+		isDefault                 bool
+		displayOrder              int
+	}
+	variants := []variant{
+		{"LAU-RIEU-CUA", "Nhỏ (2 người)", "LAU-RIEU-CUA-S", "nồi", 359000, true, 1},
+		{"LAU-RIEU-CUA", "Lớn (4 người)", "LAU-RIEU-CUA-L", "nồi", 499000, false, 2},
+		{"LAU-TU-XUYEN", "Nhỏ (2 người)", "LAU-TU-XUYEN-S", "nồi", 319000, true, 1},
+		{"LAU-TU-XUYEN", "Lớn (4 người)", "LAU-TU-XUYEN-L", "nồi", 449000, false, 2},
+		{"LAU-NAM-CHAY", "Nhỏ (2 người)", "LAU-NAM-CHAY-S", "nồi", 239000, true, 1},
+		{"LAU-NAM-CHAY", "Lớn (4 người)", "LAU-NAM-CHAY-L", "nồi", 349000, false, 2},
+		{"LAU-CA-KEO", "Nhỏ (2 người)", "LAU-CA-KEO-S", "nồi", 299000, true, 1},
+		{"LAU-CA-KEO", "Lớn (4 người)", "LAU-CA-KEO-L", "nồi", 419000, false, 2},
+	}
+	for _, v := range variants {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO menu_item_variants (restaurant_id, menu_item_id, name, sku, unit, price_vnd, is_default, is_available, display_order)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, $8)
+			ON CONFLICT (restaurant_id, sku) DO NOTHING
+		`, restaurantID, itemIDs[v.itemCode], v.name, v.sku, v.unit, v.priceVND, v.isDefault, v.displayOrder); err != nil {
+			return fmt.Errorf("upsert variant %s: %w", v.sku, err)
+		}
+	}
+
+	// Reuse the existing option groups when present. No option or link is
+	// deleted, and repeated additive runs remain idempotent.
+	for _, group := range []struct {
+		name, itemCode string
+		displayOrder   int
+	}{
+		{"Độ cay", "LAU-RIEU-CUA", 1},
+		{"Độ cay", "LAU-TU-XUYEN", 1},
+		{"Độ cay", "LAU-NAM-CHAY", 1},
+		{"Độ cay", "LAU-CA-KEO", 1},
+		{"Topping thêm", "LAU-RIEU-CUA", 2},
+		{"Topping thêm", "LAU-TU-XUYEN", 2},
+		{"Topping thêm", "LAU-NAM-CHAY", 2},
+		{"Topping thêm", "LAU-CA-KEO", 2},
+	} {
+		var groupID uuid.UUID
+		err := tx.QueryRow(ctx, `SELECT id FROM option_groups WHERE restaurant_id = $1 AND name = $2 AND deleted_at IS NULL ORDER BY created_at LIMIT 1`, restaurantID, group.name).Scan(&groupID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("find option group %s: %w", group.name, err)
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO menu_item_option_groups (restaurant_id, menu_item_id, option_group_id, display_order)
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT (restaurant_id, menu_item_id, option_group_id) DO NOTHING
+		`, restaurantID, itemIDs[group.itemCode], groupID, group.displayOrder); err != nil {
+			return fmt.Errorf("link option group %s: %w", group.name, err)
+		}
+	}
+
+	type comboComponent struct {
+		code     string
+		quantity int
+	}
+	combos := []struct {
+		code, name, slug, description, image string
+		priceVND                             int64
+		isFeatured                           bool
+		components                           []comboComponent
+	}{
+		{"COMBO-NUONG-4", "Set Nướng nhóm 4", "set-nuong-nhom-4", "Combo nướng cho nhóm 4 người: ba chỉ bò Mỹ, hàu nướng phô mai, lẩu Thái và trà đào cam sả.", "/images/menu/combo-set-nuong-nhom-4.webp?v=20260808", 990000, true, []comboComponent{{"BA-CHI-BO", 2}, {"HAU-NUONG", 4}, {"LAU-THAI", 1}, {"TRA-DAO", 4}}},
+		{"COMBO-LAU-2", "Set Lẩu nhóm 2", "set-lau-nhom-2", "Combo lẩu cho 2 người: lẩu bò Mỹ nấm, tôm sú, rau thập cẩm, nấm tổng hợp, mì trứng và trà đào.", "/images/menu/combo-set-lau-nhom-2.webp?v=20260808", 690000, true, []comboComponent{{"LAU-BO-MY", 1}, {"TOM-SU", 1}, {"RAU-THAP-CAM", 1}, {"NAM-TONG-HOP", 1}, {"MI-TRUNG", 2}, {"TRA-DAO", 2}}},
+	}
+	for i, combo := range combos {
+		var comboID uuid.UUID
+		if err := tx.QueryRow(ctx, `
+			INSERT INTO combos (id, restaurant_id, code, name, slug, description, image_url, combo_price_vnd, status, availability_status, is_featured, display_order, version)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'PUBLISHED', 'AVAILABLE', $9, $10, 1)
+			ON CONFLICT (restaurant_id, code) DO UPDATE SET image_url = EXCLUDED.image_url, updated_at = NOW()
+			RETURNING id
+		`, uuid.New(), restaurantID, combo.code, combo.name, combo.slug, combo.description, combo.image, combo.priceVND, combo.isFeatured, i+1).Scan(&comboID); err != nil {
+			return fmt.Errorf("upsert combo %s: %w", combo.code, err)
+		}
+		for i, component := range combo.components {
+			var itemID uuid.UUID
+			if err := tx.QueryRow(ctx, `SELECT id FROM menu_items WHERE restaurant_id = $1 AND code = $2`, restaurantID, component.code).Scan(&itemID); err != nil {
+				return fmt.Errorf("find combo component %s: %w", component.code, err)
+			}
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO combo_items (id, restaurant_id, combo_id, menu_item_id, quantity, display_order)
+				SELECT $1, $2, $3, $4, $5, $6
+				WHERE NOT EXISTS (SELECT 1 FROM combo_items WHERE restaurant_id = $2 AND combo_id = $3 AND menu_item_id = $4)
+			`, uuid.New(), restaurantID, comboID, itemID, component.quantity, i+1); err != nil {
+				return fmt.Errorf("link combo component %s: %w", component.code, err)
+			}
+		}
+	}
+
+	return nil
+}
 
 func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 	if err := setup.ClearMenuData(ctx, tx, restaurantID); err != nil {
