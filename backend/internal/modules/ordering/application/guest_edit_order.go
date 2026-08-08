@@ -86,6 +86,11 @@ func (s *GuestEditOrder) Handle(ctx context.Context, req GuestEditOrderRequest) 
 		if err != nil {
 			return err
 		}
+		for _, line := range lines {
+			if line.ComboID != nil || line.ParentOrderItemID != nil {
+				return apperr.New(apperr.CodeConflict, "combo_not_editable: cancel the combo and add it again")
+			}
+		}
 		lineIDs := make([]uuid.UUID, 0, len(lines))
 		byID := map[uuid.UUID]domain.OrderLineForEdit{}
 
@@ -293,7 +298,7 @@ func mutationResponseFromOrder(order domain.OrderRead, version int, status strin
 		for _, opt := range item.Options {
 			options = append(options, GuestOrderOptionDTO{OptionID: opt.OptionID, OptionGroupID: opt.OptionGroupID, NameSnapshot: opt.NameSnapshot, PriceDeltaSnapshotVND: opt.PriceDeltaSnapshotVND, Quantity: opt.Quantity})
 		}
-		items = append(items, GuestOrderItemDTO{OrderItemID: item.ID, MenuItemID: item.MenuItemID, NameSnapshot: item.NameSnapshot, VariantNameSnapshot: item.VariantNameSnapshot, Quantity: item.Quantity, UnitPriceVND: item.UnitPriceVND, OptionsTotalVND: item.OptionsTotalVND, SubtotalVND: item.SubtotalVND, TotalAmountVND: item.TotalAmountVND, Status: item.Status, Station: item.Station, Options: options, UnavailableReason: item.UnavailableReason})
+		items = append(items, GuestOrderItemDTO{OrderItemID: item.ID, MenuItemID: item.MenuItemID, NameSnapshot: item.NameSnapshot, VariantNameSnapshot: item.VariantNameSnapshot, Quantity: item.Quantity, UnitPriceVND: item.UnitPriceVND, OptionsTotalVND: item.OptionsTotalVND, SubtotalVND: item.SubtotalVND, TotalAmountVND: item.TotalAmountVND, Status: item.Status, Station: item.Station, Options: options, UnavailableReason: item.UnavailableReason, ComboID: item.ComboID, ParentOrderItemID: item.ParentOrderItemID, IsComboParent: item.IsComboParent})
 	}
 	if version == 0 {
 		version = order.Version

@@ -65,6 +65,20 @@ export interface AdminMenuItemSummaryDTO {
   version: number
 }
 
+export interface MenuPaginationDTO {
+  page: number
+  page_size: number
+  total_items: number
+  total_pages: number
+  visible: number
+  unavailable: number
+}
+
+export interface AdminMenuItemListResponse {
+  items: AdminMenuItemSummaryDTO[]
+  pagination: MenuPaginationDTO
+}
+
 export interface AdminMenuItemDetailDTO extends Omit<
   AdminMenuItemSummaryDTO,
   'has_variants' | 'price_from_vnd'
@@ -111,4 +125,66 @@ export interface PresignResult {
   public_url: string
   upload_url?: string
   fields?: Record<string, string>
+}
+
+export interface AdminComboComponentDTO {
+  menu_item_id: string
+  variant_id?: string
+  name: string
+  variant_name?: string
+  image_url?: string
+  station: string
+  quantity: number
+  unit_price_vnd: number
+  display_order: number
+}
+
+export interface AdminComboSummaryDTO {
+  id: string
+  code: string
+  name: string
+  slug: string
+  image_url?: string
+  combo_price_vnd: number
+  reference_price_vnd: number
+  savings_vnd: number
+  status: MenuItemStatus
+  availability_status: MenuItemAvailabilityStatus
+  is_available: boolean
+  is_featured: boolean
+  valid_from?: string
+  valid_to?: string
+  display_order: number
+  component_count: number
+  version: number
+}
+
+export interface AdminComboDetailDTO extends AdminComboSummaryDTO {
+  description?: string
+  components: AdminComboComponentDTO[]
+}
+
+export interface AdminComboListResponse {
+  items: AdminComboSummaryDTO[]
+  pagination: MenuPaginationDTO
+}
+
+export interface ComboComponentInput {
+  menu_item_id: string
+  variant_id?: string
+  quantity: number
+  display_order: number
+}
+
+export interface ComboWriteInput {
+  name: string
+  description: string
+  image_url: string
+  combo_price_vnd: number
+  status: MenuItemStatus
+  availability_status: MenuItemAvailabilityStatus
+  is_featured: boolean
+  display_order: number
+  version?: number
+  components: ComboComponentInput[]
 }

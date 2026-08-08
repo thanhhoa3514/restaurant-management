@@ -15,24 +15,24 @@ import (
 )
 
 type Handler struct {
-	GuestPlaceOrder        *application.GuestPlaceOrder
-	GuestViewOrders        *application.GuestViewOrders
-	GuestEditOrder         *application.GuestEditOrder
-	GuestCancelOrder       *application.GuestCancelOrder
-	GuestRequestCancel     *application.GuestRequestCancel
-	StaffTables            *application.StaffTables
-	StaffRequestBill       *application.StaffRequestBill
-	StaffReopenSession     *application.StaffReopenSession
-	GuestCallWaiter        *application.GuestCallWaiter
-	StaffAckWaiterCall     *application.StaffAckWaiterCall
-	StaffUpdateStatus      *application.StaffUpdateItemStatus
-	ServerReviewItem       *application.ServerReviewOrderItem
-	StaffMarkUnavailable   *application.StaffMarkUnavailable
-	StaffTakeawayOrder     *application.StaffTakeawayOrder
-	StaffAddTakeawayItems  *application.StaffAddTakeawayItems
-	KitchenQueue           *application.KitchenQueue
-	KitchenListCancels     *application.KitchenListCancelRequests
-	KitchenReviewCancel    *application.KitchenReviewCancelRequest
+	GuestPlaceOrder       *application.GuestPlaceOrder
+	GuestViewOrders       *application.GuestViewOrders
+	GuestEditOrder        *application.GuestEditOrder
+	GuestCancelOrder      *application.GuestCancelOrder
+	GuestRequestCancel    *application.GuestRequestCancel
+	StaffTables           *application.StaffTables
+	StaffRequestBill      *application.StaffRequestBill
+	StaffReopenSession    *application.StaffReopenSession
+	GuestCallWaiter       *application.GuestCallWaiter
+	StaffAckWaiterCall    *application.StaffAckWaiterCall
+	StaffUpdateStatus     *application.StaffUpdateItemStatus
+	ServerReviewItem      *application.ServerReviewOrderItem
+	StaffMarkUnavailable  *application.StaffMarkUnavailable
+	StaffTakeawayOrder    *application.StaffTakeawayOrder
+	StaffAddTakeawayItems *application.StaffAddTakeawayItems
+	KitchenQueue          *application.KitchenQueue
+	KitchenListCancels    *application.KitchenListCancelRequests
+	KitchenReviewCancel   *application.KitchenReviewCancelRequest
 }
 
 func NewHandler(guestPlaceOrder *application.GuestPlaceOrder,
@@ -51,24 +51,24 @@ func NewHandler(guestPlaceOrder *application.GuestPlaceOrder,
 	kitchenListCancels *application.KitchenListCancelRequests,
 	kitchenReviewCancel *application.KitchenReviewCancelRequest) *Handler {
 	return &Handler{
-		GuestPlaceOrder:        guestPlaceOrder,
-		GuestViewOrders:        guestViewOrders,
-		GuestEditOrder:         guestEditOrder,
-		GuestCancelOrder:       guestCancelOrder,
-		GuestRequestCancel:     guestRequestCancel,
-		StaffTables:            staffTables,
-		StaffRequestBill:       staffRequestBill,
-		StaffReopenSession:     staffReopenSession,
-		GuestCallWaiter:        guestCallWaiter,
-		StaffAckWaiterCall:     staffAckWaiterCall,
-		StaffUpdateStatus:      staffUpdateStatus,
-		ServerReviewItem:       serverReviewItem,
-		StaffMarkUnavailable:   staffMarkUnavailable,
-		StaffTakeawayOrder:     staffTakeawayOrder,
-		StaffAddTakeawayItems:  staffAddTakeawayItems,
-		KitchenQueue:           kitchenQueue,
-		KitchenListCancels:     kitchenListCancels,
-		KitchenReviewCancel:    kitchenReviewCancel,
+		GuestPlaceOrder:       guestPlaceOrder,
+		GuestViewOrders:       guestViewOrders,
+		GuestEditOrder:        guestEditOrder,
+		GuestCancelOrder:      guestCancelOrder,
+		GuestRequestCancel:    guestRequestCancel,
+		StaffTables:           staffTables,
+		StaffRequestBill:      staffRequestBill,
+		StaffReopenSession:    staffReopenSession,
+		GuestCallWaiter:       guestCallWaiter,
+		StaffAckWaiterCall:    staffAckWaiterCall,
+		StaffUpdateStatus:     staffUpdateStatus,
+		ServerReviewItem:      serverReviewItem,
+		StaffMarkUnavailable:  staffMarkUnavailable,
+		StaffTakeawayOrder:    staffTakeawayOrder,
+		StaffAddTakeawayItems: staffAddTakeawayItems,
+		KitchenQueue:          kitchenQueue,
+		KitchenListCancels:    kitchenListCancels,
+		KitchenReviewCancel:   kitchenReviewCancel,
 	}
 }
 

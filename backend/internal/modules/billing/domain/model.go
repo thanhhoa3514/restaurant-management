@@ -57,16 +57,19 @@ type Invoice struct {
 }
 
 type InvoiceItem struct {
-	ID                uuid.UUID
-	InvoiceID         uuid.UUID
-	OrderItemID       *uuid.UUID
-	NameSnapshot      string
-	IsTakeaway        bool
-	UnitPriceVND      int64
-	Quantity          int
-	SubtotalVND       int64
-	DiscountAmountVND int64
-	TotalAmountVND    int64
+	ID                  uuid.UUID
+	InvoiceID           uuid.UUID
+	OrderItemID         *uuid.UUID
+	NameSnapshot        string
+	IsTakeaway          bool
+	UnitPriceVND        int64
+	Quantity            int
+	SubtotalVND         int64
+	DiscountAmountVND   int64
+	TotalAmountVND      int64
+	ComboID             *uuid.UUID
+	ParentInvoiceItemID *uuid.UUID
+	ReferencePriceVND   *int64
 }
 
 type Payment struct {

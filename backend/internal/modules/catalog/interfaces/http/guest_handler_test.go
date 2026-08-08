@@ -26,8 +26,8 @@ func (fakeMenuReadRepo) ListItems(context.Context, uuid.UUID, *uuid.UUID) ([]dom
 func (fakeMenuReadRepo) GetItem(context.Context, uuid.UUID, uuid.UUID) (*domain.MenuItemDetail, error) {
 	return nil, nil
 }
-func (fakeMenuReadRepo) ListItemsAdmin(context.Context, uuid.UUID, *uuid.UUID) ([]domain.AdminMenuItemSummary, error) {
-	return []domain.AdminMenuItemSummary{}, nil
+func (fakeMenuReadRepo) ListItemsAdmin(context.Context, uuid.UUID, *uuid.UUID, int, int) ([]domain.AdminMenuItemSummary, domain.AdminMenuStats, error) {
+	return []domain.AdminMenuItemSummary{}, domain.AdminMenuStats{}, nil
 }
 func (fakeMenuReadRepo) GetItemAdmin(context.Context, uuid.UUID, uuid.UUID) (*domain.AdminMenuItemDetail, error) {
 	return nil, nil

@@ -10,6 +10,9 @@ export interface BillingInvoiceItemDTO {
   subtotal_vnd: number
   discount_amount_vnd: number
   total_amount_vnd: number
+  combo_id?: string
+  parent_invoice_item_id?: string
+  reference_price_vnd?: number
 }
 
 export interface BillingPaymentDTO {

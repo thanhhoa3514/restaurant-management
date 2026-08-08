@@ -241,30 +241,57 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 	// Item-specific generated photos live in the frontend public directory and
 	// are served from the same origin as the application.
 	generatedItemImages := map[string]string{
-		"LAU-THAI":     "/images/menu/lau-thai-tomyum.webp?v=20260723",
-		"LAU-BO-MY":    "/images/menu/lau-bo-my-nam.webp?v=20260723",
-		"LAU-GA-LA-E":  "/images/menu/lau-ga-la-e.webp?v=20260723",
-		"LAU-HAI-SAN":  "/images/menu/lau-hai-san.webp?v=20260723",
-		"BA-CHI-BO":    "/images/menu/ba-chi-bo-my-nuong.webp?v=20260723",
-		"SUON-NUONG":   "/images/menu/suon-heo-nuong-mat-ong.webp?v=20260723",
-		"BO-CUON-NAM":  "/images/menu/bo-cuon-nam-kim-cham.webp?v=20260723",
-		"GA-NUONG":     "/images/menu/canh-ga-nuong-sa-te.webp?v=20260723",
-		"TOM-SU":       "/images/menu/tom-su-tuoi.webp?v=20260723b",
-		"MUC-NUONG":    "/images/menu/muc-nuong-sa-te.webp?v=20260723b",
-		"HAU-NUONG":    "/images/menu/hau-nuong-pho-mai.webp?v=20260723b",
-		"RAU-THAP-CAM": "/images/menu/rau-thap-cam.webp?v=20260723b",
-		"NAM-TONG-HOP": "/images/menu/nam-tong-hop.webp?v=20260723b",
-		"DAU-HU":       "/images/menu/dau-hu-trung.webp?v=20260723b",
-		"MI-TRUNG":     "/images/menu/mi-trung-tuoi.webp?v=20260723b",
-		"KHOAI-CHIEN":  "/images/menu/khoai-tay-chien.webp?v=20260723b",
-		"NEM-RAN":      "/images/menu/nem-chua-ran.webp?v=20260723b",
-		"SALAD-BO":     "/images/menu/salad-tron-bo-my.webp?v=20260723b",
-		"TRA-DA":       "/images/menu/tra-da.webp?v=20260723b",
-		"TRA-DAO":      "/images/menu/tra-dao-cam-sa.webp?v=20260723b",
-		"COCA":         "/images/menu/coca-cola.webp?v=20260723b",
-		"BIA-SG":       "/images/menu/bia-sai-gon.webp?v=20260723b",
-		"KEM-VANI":     "/images/menu/kem-vani.webp?v=20260723b",
-		"TRAI-CAY":     "/images/menu/dia-trai-cay.webp?v=20260723b",
+		"LAU-THAI":        "/images/menu/lau-thai-tomyum.webp?v=20260723",
+		"LAU-BO-MY":       "/images/menu/lau-bo-my-nam.webp?v=20260723",
+		"LAU-GA-LA-E":     "/images/menu/lau-ga-la-e.webp?v=20260723",
+		"LAU-HAI-SAN":     "/images/menu/lau-hai-san.webp?v=20260723",
+		"BA-CHI-BO":       "/images/menu/ba-chi-bo-my-nuong.webp?v=20260723",
+		"SUON-NUONG":      "/images/menu/suon-heo-nuong-mat-ong.webp?v=20260723",
+		"BO-CUON-NAM":     "/images/menu/bo-cuon-nam-kim-cham.webp?v=20260723",
+		"GA-NUONG":        "/images/menu/canh-ga-nuong-sa-te.webp?v=20260723",
+		"TOM-SU":          "/images/menu/tom-su-tuoi.webp?v=20260723b",
+		"MUC-NUONG":       "/images/menu/muc-nuong-sa-te.webp?v=20260723b",
+		"HAU-NUONG":       "/images/menu/hau-nuong-pho-mai.webp?v=20260723b",
+		"RAU-THAP-CAM":    "/images/menu/rau-thap-cam.webp?v=20260723b",
+		"NAM-TONG-HOP":    "/images/menu/nam-tong-hop.webp?v=20260723b",
+		"DAU-HU":          "/images/menu/dau-hu-trung.webp?v=20260723b",
+		"MI-TRUNG":        "/images/menu/mi-trung-tuoi.webp?v=20260723b",
+		"KHOAI-CHIEN":     "/images/menu/khoai-tay-chien.webp?v=20260723b",
+		"NEM-RAN":         "/images/menu/nem-chua-ran.webp?v=20260723b",
+		"SALAD-BO":        "/images/menu/salad-tron-bo-my.webp?v=20260723b",
+		"TRA-DA":          "/images/menu/tra-da.webp?v=20260723b",
+		"TRA-DAO":         "/images/menu/tra-dao-cam-sa.webp?v=20260723b",
+		"COCA":            "/images/menu/coca-cola.webp?v=20260723b",
+		"BIA-SG":          "/images/menu/bia-sai-gon.webp?v=20260723b",
+		"KEM-VANI":        "/images/menu/kem-vani.webp?v=20260723b",
+		"TRAI-CAY":        "/images/menu/dia-trai-cay.webp?v=20260723b",
+		"LAU-RIEU-CUA":    "/images/menu/lau-rieu-cua-bap-bo.webp?v=20260808",
+		"LAU-TU-XUYEN":    "/images/menu/lau-tu-xuyen-cay-te.webp?v=20260808",
+		"LAU-NAM-CHAY":    "/images/menu/lau-nam-chay-duong-sinh.webp?v=20260808",
+		"LAU-CA-KEO":      "/images/menu/lau-ca-keo-la-giang.webp?v=20260808",
+		"NAC-VAI-HEO":     "/images/menu/nac-vai-heo-nuong-rieng-me.webp?v=20260808",
+		"NAM-BO-NUONG":    "/images/menu/nam-bo-nuong.webp?v=20260808",
+		"SUN-GA-NUONG":    "/images/menu/sun-ga-nuong-muoi-ot.webp?v=20260808",
+		"XUC-XICH-NUONG":  "/images/menu/xuc-xich-duc-nuong.webp?v=20260808",
+		"NGHEU-NHUNG":     "/images/menu/ngheu-tuoi-nhung-lau.webp?v=20260808",
+		"SO-DIEP-NUONG":   "/images/menu/so-diep-nuong-mo-hanh.webp?v=20260808",
+		"BACH-TUOC-NUONG": "/images/menu/bach-tuoc-nuong-sa-te.webp?v=20260808",
+		"CA-VIEN-THA":     "/images/menu/ca-vien-tha-lau.webp?v=20260808",
+		"RAU-MUONG":       "/images/menu/rau-muong-bao.webp?v=20260808",
+		"CAI-THAO":        "/images/menu/cai-thao.webp?v=20260808",
+		"NGO-NGOT":        "/images/menu/ngo-ngot-my.webp?v=20260808",
+		"VANG-DAU":        "/images/menu/vang-dau-tuoi.webp?v=20260808",
+		"KHOAI-MON":       "/images/menu/khoai-mon-thai-lat.webp?v=20260808",
+		"CHA-GIO-HS":      "/images/menu/cha-gio-hai-san.webp?v=20260808",
+		"CANH-GA-MAM":     "/images/menu/canh-ga-chien-nuoc-mam.webp?v=20260808",
+		"DAU-BAP-NUONG":   "/images/menu/dau-bap-nuong-mo-hanh.webp?v=20260808",
+		"BIA-TIGER":       "/images/menu/bia-tiger.webp?v=20260808",
+		"NUOC-SUOI":       "/images/menu/nuoc-suoi.webp?v=20260808",
+		"7UP":             "/images/menu/7up.webp?v=20260808",
+		"TRA-TAC":         "/images/menu/tra-tac.webp?v=20260808",
+		"CAM-EP":          "/images/menu/nuoc-cam-ep.webp?v=20260808",
+		"CHE-KHUC-BACH":   "/images/menu/che-khuc-bach.webp?v=20260808",
+		"RAU-CAU-DUA":     "/images/menu/rau-cau-dua.webp?v=20260808",
 	}
 	generatedCategoryImages := map[string]string{
 		"Lẩu":         generatedItemImages["LAU-THAI"],
@@ -274,6 +301,10 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 		"Khai vị":     generatedItemImages["KHOAI-CHIEN"],
 		"Đồ uống":     generatedItemImages["TRA-DAO"],
 		"Tráng miệng": generatedItemImages["KEM-VANI"],
+	}
+	generatedComboImages := map[string]string{
+		"COMBO-NUONG-4": "/images/menu/combo-set-nuong-nhom-4.webp?v=20260808",
+		"COMBO-LAU-2":   "/images/menu/combo-set-lau-nhom-2.webp?v=20260808",
 	}
 
 	type category struct {
@@ -308,38 +339,75 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 		category, code, name, slug, description string
 		priceVND                                int64
 		station                                 string
+		isFeatured                              bool
 	}
 	items := []item{
-		{"Lẩu", "LAU-THAI", "Lẩu Thái tomyum chua cay", "lau-thai-tomyum", "Nước lẩu Thái chua cay, sả, lá chanh, kèm rau nhúng", 269000, "HOTPOT"},
-		{"Lẩu", "LAU-BO-MY", "Lẩu bò Mỹ nấm", "lau-bo-my-nam", "Nước dùng xương hầm, ba chỉ bò Mỹ, nấm tổng hợp", 329000, "HOTPOT"},
-		{"Lẩu", "LAU-GA-LA-E", "Lẩu gà lá é", "lau-ga-la-e", "Gà ta, lá é Phú Yên, măng chua", 289000, "HOTPOT"},
-		{"Lẩu", "LAU-HAI-SAN", "Lẩu hải sản chua cay", "lau-hai-san", "Tôm, mực, nghêu, cá viên, nước lẩu chua cay", 349000, "HOTPOT"},
-		{"Món nướng", "BA-CHI-BO", "Ba chỉ bò Mỹ nướng", "ba-chi-bo-my-nuong", "Ba chỉ bò Mỹ thái lát, sốt mè rang", 149000, "GRILL"},
-		{"Món nướng", "SUON-NUONG", "Sườn heo nướng mật ong", "suon-heo-nuong-mat-ong", "Sườn non ướp mật ong nướng than hoa", 159000, "GRILL"},
-		{"Món nướng", "BO-CUON-NAM", "Bò cuộn nấm kim châm", "bo-cuon-nam-kim-cham", "Bò Mỹ cuộn nấm kim châm nướng sa tế", 129000, "GRILL"},
-		{"Món nướng", "GA-NUONG", "Cánh gà nướng sa tế", "canh-ga-nuong-sa-te", "Cánh gà ướp sa tế nướng than", 119000, "GRILL"},
-		{"Hải sản", "TOM-SU", "Tôm sú tươi (nhúng lẩu)", "tom-su-tuoi", "Tôm sú sống 300g, nhúng lẩu", 189000, "HOTPOT"},
-		{"Hải sản", "MUC-NUONG", "Mực nướng sa tế", "muc-nuong-sa-te", "Mực ống tươi nướng sa tế cay", 179000, "GRILL"},
-		{"Hải sản", "HAU-NUONG", "Hàu nướng phô mai", "hau-nuong-pho-mai", "Hàu sữa nướng phô mai mozzarella", 99000, "GRILL"},
-		{"Rau & Nấm", "RAU-THAP-CAM", "Rau thập cẩm", "rau-thap-cam", "Đĩa rau nhúng lẩu theo mùa", 59000, "HOTPOT"},
-		{"Rau & Nấm", "NAM-TONG-HOP", "Nấm tổng hợp", "nam-tong-hop", "Kim châm, đùi gà, bào ngư, linh chi nâu", 79000, "HOTPOT"},
-		{"Rau & Nấm", "DAU-HU", "Đậu hũ trứng", "dau-hu-trung", "Đậu hũ trứng nhúng lẩu", 39000, "HOTPOT"},
-		{"Rau & Nấm", "MI-TRUNG", "Mì trứng tươi", "mi-trung-tuoi", "Mì trứng tươi ăn kèm lẩu", 19000, "NOODLE"},
-		{"Khai vị", "KHOAI-CHIEN", "Khoai tây chiên", "khoai-tay-chien", "Khoai tây chiên giòn, sốt tương cà", 49000, "GENERAL"},
-		{"Khai vị", "NEM-RAN", "Nem chua rán", "nem-chua-ran", "Nem chua rán, tương ớt", 69000, "GENERAL"},
-		{"Khai vị", "SALAD-BO", "Salad trộn bò Mỹ", "salad-tron-bo-my", "Xà lách, cà chua bi, bò Mỹ áp chảo", 89000, "GENERAL"},
-		{"Đồ uống", "TRA-DA", "Trà đá", "tra-da", "Trà đá mát lạnh", 5000, "DRINK"},
-		{"Đồ uống", "TRA-DAO", "Trà đào cam sả", "tra-dao-cam-sa", "Trà đào, cam vàng, sả tươi", 45000, "DRINK"},
-		{"Đồ uống", "COCA", "Coca-Cola", "coca-cola", "Coca-Cola lon 330ml", 25000, "DRINK"},
-		{"Đồ uống", "BIA-SG", "Bia Sài Gòn", "bia-sai-gon", "Bia Sài Gòn Special lon", 25000, "DRINK"},
-		{"Tráng miệng", "KEM-VANI", "Kem vani", "kem-vani", "Kem vani 2 viên", 29000, "DESSERT"},
-		{"Tráng miệng", "TRAI-CAY", "Đĩa trái cây", "dia-trai-cay", "Trái cây theo mùa", 59000, "DESSERT"},
+		// ── Lẩu ──
+		{"Lẩu", "LAU-THAI", "Lẩu Thái tomyum chua cay", "lau-thai-tomyum", "Nước lẩu Thái chua cay, sả, lá chanh, kèm rau nhúng", 269000, "HOTPOT", true},
+		{"Lẩu", "LAU-BO-MY", "Lẩu bò Mỹ nấm", "lau-bo-my-nam", "Nước dùng xương hầm, ba chỉ bò Mỹ, nấm tổng hợp", 329000, "HOTPOT", true},
+		{"Lẩu", "LAU-GA-LA-E", "Lẩu gà lá é", "lau-ga-la-e", "Gà ta, lá é Phú Yên, măng chua", 289000, "HOTPOT", false},
+		{"Lẩu", "LAU-HAI-SAN", "Lẩu hải sản chua cay", "lau-hai-san", "Tôm, mực, nghêu, cá viên, nước lẩu chua cay", 349000, "HOTPOT", false},
+		{"Lẩu", "LAU-RIEU-CUA", "Lẩu riêu cua bắp bò", "lau-rieu-cua-bap-bo", "Riêu cua đồng, bắp bò, sườn sụn, cà chua, giấm bỗng", 359000, "HOTPOT", false},
+		{"Lẩu", "LAU-TU-XUYEN", "Lẩu Tứ Xuyên cay tê", "lau-tu-xuyen-cay-te", "Nước lẩu mala cay tê, hạt tê, ớt khô Tứ Xuyên", 319000, "HOTPOT", false},
+		{"Lẩu", "LAU-NAM-CHAY", "Lẩu nấm chay dưỡng sinh", "lau-nam-chay-duong-sinh", "Nước hầm nấm và rau củ, các loại nấm tươi, đậu hũ", 239000, "HOTPOT", false},
+		{"Lẩu", "LAU-CA-KEO", "Lẩu cá kèo lá giang", "lau-ca-keo-la-giang", "Cá kèo tươi, lá giang chua thanh, rau đắng", 299000, "HOTPOT", false},
+		// ── Món nướng ──
+		{"Món nướng", "BA-CHI-BO", "Ba chỉ bò Mỹ nướng", "ba-chi-bo-my-nuong", "Ba chỉ bò Mỹ thái lát, sốt mè rang", 149000, "GRILL", false},
+		{"Món nướng", "SUON-NUONG", "Sườn heo nướng mật ong", "suon-heo-nuong-mat-ong", "Sườn non ướp mật ong nướng than hoa", 159000, "GRILL", true},
+		{"Món nướng", "BO-CUON-NAM", "Bò cuộn nấm kim châm", "bo-cuon-nam-kim-cham", "Bò Mỹ cuộn nấm kim châm nướng sa tế", 129000, "GRILL", false},
+		{"Món nướng", "GA-NUONG", "Cánh gà nướng sa tế", "canh-ga-nuong-sa-te", "Cánh gà ướp sa tế nướng than", 119000, "GRILL", false},
+		{"Món nướng", "NAC-VAI-HEO", "Nạc vai heo nướng riềng mẻ", "nac-vai-heo-nuong-rieng-me", "Nạc vai heo ướp riềng mẻ nướng than hoa", 139000, "GRILL", false},
+		{"Món nướng", "NAM-BO-NUONG", "Nầm bò nướng", "nam-bo-nuong", "Nầm bò tươi ướp sa tế, nướng giòn", 149000, "GRILL", false},
+		{"Món nướng", "SUN-GA-NUONG", "Sụn gà nướng muối ớt", "sun-ga-nuong-muoi-ot", "Sụn gà giòn ướp muối ớt xanh", 109000, "GRILL", false},
+		{"Món nướng", "XUC-XICH-NUONG", "Xúc xích Đức nướng", "xuc-xich-duc-nuong", "Xúc xích Đức nướng, sốt mù tạt mật ong", 89000, "GRILL", false},
+		// ── Hải sản ──
+		{"Hải sản", "TOM-SU", "Tôm sú tươi (nhúng lẩu)", "tom-su-tuoi", "Tôm sú sống 300g, nhúng lẩu", 189000, "HOTPOT", false},
+		{"Hải sản", "MUC-NUONG", "Mực nướng sa tế", "muc-nuong-sa-te", "Mực ống tươi nướng sa tế cay", 179000, "GRILL", false},
+		{"Hải sản", "HAU-NUONG", "Hàu nướng phô mai", "hau-nuong-pho-mai", "Hàu sữa nướng phô mai mozzarella", 99000, "GRILL", true},
+		{"Hải sản", "NGHEU-NHUNG", "Nghêu tươi (nhúng lẩu)", "ngheu-tuoi-nhung-lau", "Nghêu sống 500g, nhúng lẩu ngọt nước", 89000, "HOTPOT", false},
+		{"Hải sản", "SO-DIEP-NUONG", "Sò điệp nướng mỡ hành", "so-diep-nuong-mo-hanh", "Sò điệp nướng mỡ hành, đậu phộng rang", 159000, "GRILL", false},
+		{"Hải sản", "BACH-TUOC-NUONG", "Bạch tuộc nướng sa tế", "bach-tuoc-nuong-sa-te", "Bạch tuộc baby nướng sa tế cay", 169000, "GRILL", false},
+		{"Hải sản", "CA-VIEN-THA", "Cá viên thả lẩu", "ca-vien-tha-lau", "Đĩa cá viên, bò viên, tôm viên thả lẩu", 79000, "HOTPOT", false},
+		// ── Rau & Nấm ──
+		{"Rau & Nấm", "RAU-THAP-CAM", "Rau thập cẩm", "rau-thap-cam", "Đĩa rau nhúng lẩu theo mùa", 59000, "HOTPOT", false},
+		{"Rau & Nấm", "NAM-TONG-HOP", "Nấm tổng hợp", "nam-tong-hop", "Kim châm, đùi gà, bào ngư, linh chi nâu", 79000, "HOTPOT", false},
+		{"Rau & Nấm", "DAU-HU", "Đậu hũ trứng", "dau-hu-trung", "Đậu hũ trứng nhúng lẩu", 39000, "HOTPOT", false},
+		{"Rau & Nấm", "MI-TRUNG", "Mì trứng tươi", "mi-trung-tuoi", "Mì trứng tươi ăn kèm lẩu", 19000, "NOODLE", false},
+		{"Rau & Nấm", "RAU-MUONG", "Rau muống bào", "rau-muong-bao", "Rau muống bào giòn nhúng lẩu", 45000, "HOTPOT", false},
+		{"Rau & Nấm", "CAI-THAO", "Cải thảo", "cai-thao", "Cải thảo tươi cắt khúc nhúng lẩu", 39000, "HOTPOT", false},
+		{"Rau & Nấm", "NGO-NGOT", "Ngô ngọt Mỹ", "ngo-ngot-my", "Ngô ngọt cắt khúc, ngọt nước lẩu", 35000, "HOTPOT", false},
+		{"Rau & Nấm", "VANG-DAU", "Váng đậu tươi", "vang-dau-tuoi", "Váng đậu non thả lẩu", 49000, "HOTPOT", false},
+		{"Rau & Nấm", "KHOAI-MON", "Khoai môn", "khoai-mon-thai-lat", "Khoai môn thái lát, bùi ngọt", 39000, "HOTPOT", false},
+		// ── Khai vị ──
+		{"Khai vị", "KHOAI-CHIEN", "Khoai tây chiên", "khoai-tay-chien", "Khoai tây chiên giòn, sốt tương cà", 49000, "GENERAL", false},
+		{"Khai vị", "NEM-RAN", "Nem chua rán", "nem-chua-ran", "Nem chua rán, tương ớt", 69000, "GENERAL", false},
+		{"Khai vị", "SALAD-BO", "Salad trộn bò Mỹ", "salad-tron-bo-my", "Xà lách, cà chua bi, bò Mỹ áp chảo", 89000, "GENERAL", false},
+		{"Khai vị", "CHA-GIO-HS", "Chả giò hải sản", "cha-gio-hai-san", "Chả giò cuộn tôm mực, chiên giòn", 79000, "GENERAL", false},
+		{"Khai vị", "CANH-GA-MAM", "Cánh gà chiên nước mắm", "canh-ga-chien-nuoc-mam", "Cánh gà chiên giòn rưới nước mắm tỏi", 89000, "GENERAL", false},
+		{"Khai vị", "DAU-BAP-NUONG", "Đậu bắp nướng mỡ hành", "dau-bap-nuong-mo-hanh", "Đậu bắp nướng than, mỡ hành", 45000, "GRILL", false},
+		// ── Đồ uống ──
+		{"Đồ uống", "TRA-DA", "Trà đá", "tra-da", "Trà đá mát lạnh", 5000, "DRINK", false},
+		{"Đồ uống", "TRA-DAO", "Trà đào cam sả", "tra-dao-cam-sa", "Trà đào, cam vàng, sả tươi", 45000, "DRINK", false},
+		{"Đồ uống", "COCA", "Coca-Cola", "coca-cola", "Coca-Cola lon 330ml", 25000, "DRINK", false},
+		{"Đồ uống", "BIA-SG", "Bia Sài Gòn", "bia-sai-gon", "Bia Sài Gòn Special lon", 25000, "DRINK", false},
+		{"Đồ uống", "BIA-TIGER", "Bia Tiger", "bia-tiger", "Bia Tiger lon 330ml", 28000, "DRINK", false},
+		{"Đồ uống", "NUOC-SUOI", "Nước suối", "nuoc-suoi", "Nước khoáng đóng chai 500ml", 15000, "DRINK", false},
+		{"Đồ uống", "7UP", "7 Up", "7up", "7 Up lon 330ml", 25000, "DRINK", false},
+		{"Đồ uống", "TRA-TAC", "Trà tắc", "tra-tac", "Trà tắc mật ong đá", 35000, "DRINK", false},
+		{"Đồ uống", "CAM-EP", "Nước cam ép", "nuoc-cam-ep", "Cam vắt nguyên chất, không đường", 49000, "DRINK", false},
+		// ── Tráng miệng ──
+		{"Tráng miệng", "KEM-VANI", "Kem vani", "kem-vani", "Kem vani 2 viên", 29000, "DESSERT", false},
+		{"Tráng miệng", "TRAI-CAY", "Đĩa trái cây", "dia-trai-cay", "Trái cây theo mùa", 59000, "DESSERT", false},
+		{"Tráng miệng", "CHE-KHUC-BACH", "Chè khúc bạch", "che-khuc-bach", "Khúc bạch phô mai, hạnh nhân, nhãn", 39000, "DESSERT", false},
+		{"Tráng miệng", "RAU-CAU-DUA", "Rau câu dừa", "rau-cau-dua", "Rau câu nước cốt dừa mát lạnh", 29000, "DESSERT", false},
 	}
 	itemIDs := map[string]uuid.UUID{}
 	displayOrders := map[string]int{}
 	for _, it := range items {
 		id := uuid.New()
 		displayOrders[it.category]++
+		// Every seeded item must have a dedicated generated photo so the deployed
+		// catalog never silently presents the category placeholder image.
 		mainImage, ok := generatedItemImages[it.code]
 		if !ok {
 			return fmt.Errorf("missing generated image for menu item %q", it.code)
@@ -349,9 +417,9 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 			gallery = string(b)
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO menu_items (id, restaurant_id, category_id, code, name, slug, short_description, base_price_vnd, image_url, images, is_available, availability_status, station, status, display_order)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, 'AVAILABLE', $11, 'PUBLISHED', $12)
-		`, id, restaurantID, catIDs[it.category], it.code, it.name, it.slug, it.description, it.priceVND, mainImage, gallery, it.station, displayOrders[it.category]); err != nil {
+			INSERT INTO menu_items (id, restaurant_id, category_id, code, name, slug, short_description, base_price_vnd, image_url, images, is_available, availability_status, station, status, display_order, is_featured)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, 'AVAILABLE', $11, 'PUBLISHED', $12, $13)
+		`, id, restaurantID, catIDs[it.category], it.code, it.name, it.slug, it.description, it.priceVND, mainImage, gallery, it.station, displayOrders[it.category], it.isFeatured); err != nil {
 			return err
 		}
 		itemIDs[it.code] = id
@@ -371,6 +439,14 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 		{"LAU-BO-MY", "Lớn (4 người)", "LAU-BO-MY-L", "nồi", 459000, false, 2},
 		{"LAU-HAI-SAN", "Nhỏ (2 người)", "LAU-HAI-SAN-S", "nồi", 349000, true, 1},
 		{"LAU-HAI-SAN", "Lớn (4 người)", "LAU-HAI-SAN-L", "nồi", 489000, false, 2},
+		{"LAU-RIEU-CUA", "Nhỏ (2 người)", "LAU-RIEU-CUA-S", "nồi", 359000, true, 1},
+		{"LAU-RIEU-CUA", "Lớn (4 người)", "LAU-RIEU-CUA-L", "nồi", 499000, false, 2},
+		{"LAU-TU-XUYEN", "Nhỏ (2 người)", "LAU-TU-XUYEN-S", "nồi", 319000, true, 1},
+		{"LAU-TU-XUYEN", "Lớn (4 người)", "LAU-TU-XUYEN-L", "nồi", 449000, false, 2},
+		{"LAU-NAM-CHAY", "Nhỏ (2 người)", "LAU-NAM-CHAY-S", "nồi", 239000, true, 1},
+		{"LAU-NAM-CHAY", "Lớn (4 người)", "LAU-NAM-CHAY-L", "nồi", 349000, false, 2},
+		{"LAU-CA-KEO", "Nhỏ (2 người)", "LAU-CA-KEO-S", "nồi", 299000, true, 1},
+		{"LAU-CA-KEO", "Lớn (4 người)", "LAU-CA-KEO-L", "nồi", 419000, false, 2},
 		{"HAU-NUONG", "6 con", "HAU-NUONG-6", "phần", 99000, true, 1},
 		{"HAU-NUONG", "12 con", "HAU-NUONG-12", "phần", 185000, false, 2},
 	}
@@ -399,7 +475,7 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 	`, restaurantID, spiceGroup); err != nil {
 		return err
 	}
-	for _, code := range []string{"LAU-THAI", "LAU-BO-MY", "LAU-GA-LA-E", "LAU-HAI-SAN"} {
+	for _, code := range []string{"LAU-THAI", "LAU-BO-MY", "LAU-GA-LA-E", "LAU-HAI-SAN", "LAU-RIEU-CUA", "LAU-TU-XUYEN", "LAU-NAM-CHAY", "LAU-CA-KEO"} {
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO menu_item_option_groups (restaurant_id, menu_item_id, option_group_id, display_order)
 			VALUES ($1, $2, $3, 1)
@@ -450,7 +526,7 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 	`, restaurantID, toppingGroup); err != nil {
 		return err
 	}
-	for _, code := range []string{"LAU-THAI", "LAU-BO-MY", "LAU-GA-LA-E", "LAU-HAI-SAN"} {
+	for _, code := range []string{"LAU-THAI", "LAU-BO-MY", "LAU-GA-LA-E", "LAU-HAI-SAN", "LAU-RIEU-CUA", "LAU-TU-XUYEN", "LAU-CA-KEO"} {
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO menu_item_option_groups (restaurant_id, menu_item_id, option_group_id, display_order)
 			VALUES ($1, $2, $3, 2)
@@ -506,6 +582,66 @@ func seedMenu(ctx context.Context, tx pgx.Tx, restaurantID uuid.UUID) error {
 			VALUES ($1, $2, $3, 3)
 		`, restaurantID, itemIDs[code], iceGroup); err != nil {
 			return err
+		}
+	}
+
+	// ── Combo meals (set menus) ──
+	// Fixed-price bundles that fan out across kitchen stations at order time.
+	// Component quantities are per combo unit; à-la-carte reference/savings are
+	// computed live at read time from the referenced items' current prices.
+	type comboComp struct {
+		code     string
+		quantity int
+	}
+	type combo struct {
+		code, name, slug, description string
+		priceVND                      int64
+		isFeatured                    bool
+		components                    []comboComp
+	}
+	combos := []combo{
+		{
+			code:        "COMBO-NUONG-4",
+			name:        "Set Nướng nhóm 4",
+			slug:        "set-nuong-nhom-4",
+			description: "Combo nướng cho nhóm 4 người: ba chỉ bò Mỹ, hàu nướng phô mai, lẩu Thái và trà đào cam sả.",
+			priceVND:    990000,
+			isFeatured:  true,
+			components:  []comboComp{{"BA-CHI-BO", 2}, {"HAU-NUONG", 4}, {"LAU-THAI", 1}, {"TRA-DAO", 4}},
+		},
+		{
+			code:        "COMBO-LAU-2",
+			name:        "Set Lẩu nhóm 2",
+			slug:        "set-lau-nhom-2",
+			description: "Combo lẩu cho 2 người: lẩu bò Mỹ nấm, tôm sú, rau thập cẩm, nấm tổng hợp, mì trứng và trà đào.",
+			priceVND:    690000,
+			isFeatured:  true,
+			components:  []comboComp{{"LAU-BO-MY", 1}, {"TOM-SU", 1}, {"RAU-THAP-CAM", 1}, {"NAM-TONG-HOP", 1}, {"MI-TRUNG", 2}, {"TRA-DAO", 2}},
+		},
+	}
+	for ci, cb := range combos {
+		comboID := uuid.New()
+		comboImage, ok := generatedComboImages[cb.code]
+		if !ok {
+			return fmt.Errorf("missing generated image for combo %q", cb.code)
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO combos (id, restaurant_id, code, name, slug, description, image_url, combo_price_vnd, status, availability_status, is_featured, display_order, version)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'PUBLISHED', 'AVAILABLE', $9, $10, 1)
+		`, comboID, restaurantID, cb.code, cb.name, cb.slug, cb.description, comboImage, cb.priceVND, cb.isFeatured, ci+1); err != nil {
+			return err
+		}
+		for i, comp := range cb.components {
+			itemID, ok := itemIDs[comp.code]
+			if !ok {
+				return fmt.Errorf("combo %s references unknown item %s", cb.code, comp.code)
+			}
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO combo_items (restaurant_id, combo_id, menu_item_id, quantity, display_order)
+				VALUES ($1, $2, $3, $4, $5)
+			`, restaurantID, comboID, itemID, comp.quantity, i+1); err != nil {
+				return err
+			}
 		}
 	}
 

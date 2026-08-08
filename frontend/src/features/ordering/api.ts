@@ -6,6 +6,8 @@ import type {
   ApiCategory,
   ApiMenuItemSummary,
   ApiMenuItemDetail,
+  ApiComboSummary,
+  ApiComboDetail,
   PlaceOrderInput,
   PlaceOrderResult,
   GuestOrdersResponse,
@@ -55,6 +57,14 @@ export function fetchMenuItems(
 
 export function fetchMenuItem(deviceAccessToken: string, id: string): Promise<ApiMenuItemDetail> {
   return apiRequest<ApiMenuItemDetail>(`/api/v1/customer/menu/items/${id}`, { deviceAccessToken })
+}
+
+export function fetchCombos(deviceAccessToken: string): Promise<ApiComboSummary[]> {
+  return apiRequest<ApiComboSummary[]>('/api/v1/customer/menu/combos', { deviceAccessToken })
+}
+
+export function fetchCombo(deviceAccessToken: string, id: string): Promise<ApiComboDetail> {
+  return apiRequest<ApiComboDetail>(`/api/v1/customer/menu/combos/${id}`, { deviceAccessToken })
 }
 
 export function placeGuestOrder(

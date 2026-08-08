@@ -36,6 +36,7 @@ export const CartSheet: FC<CartSheetProps> = ({ open, lang, onClose }) => {
       note: '',
       items: state.cart.map((line) => ({
         menu_item_id: line.menuItemId,
+        combo_id: line.comboId,
         variant_id: line.variantId,
         quantity: line.quantity,
         note: line.note,

@@ -91,6 +91,10 @@ export const vi: LocaleDict = {
     catalog_subtitle: 'Tạo món, đổi giá, ẩn/hiện món theo danh mục',
     catalog_summary: (total: number, visible: number, unavailable: number) =>
       `${total} món · ${visible} đang hiển thị · ${unavailable} tạm ngưng/ẩn`,
+    catalog_pagination_label: 'Phân trang thực đơn',
+    catalog_page_prev: 'Trang trước',
+    catalog_page_next: 'Trang sau',
+    catalog_page_of: (page: number, totalPages: number) => `Trang ${page} / ${totalPages}`,
     catalog_new_item: 'Thêm món',
     catalog_categories: 'Danh mục',
     catalog_all: 'Tất cả món',

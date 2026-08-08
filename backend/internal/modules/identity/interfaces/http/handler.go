@@ -20,6 +20,9 @@ type Handler struct {
 	ListRoles      *application.ListRoles
 	RefreshSession *application.RefreshSession
 	Logout         *application.Logout
+	// DashboardStats is wired directly in main.go (not via NewHandler) since only
+	// the /dashboard route uses it; leave nil to fall back to mock revenue/tables.
+	DashboardStats *application.GetDashboardStats
 	defaultRID     uuid.UUID
 }
 

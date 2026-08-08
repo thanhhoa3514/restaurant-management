@@ -1,32 +1,50 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"restaurant-management/internal/platform/httpx"
+	"restaurant-management/internal/shared/money"
 )
 
 func (h *Handler) dashboard(c *gin.Context) {
-	// MOCK DATA for AdminDashboard
+	// revenue + tables are real (read-model); kitchen/payments/staffs are MOCK.
+	revenue := map[string]string{
+		"value": "12.450.000 ₫",
+		"sub":   "24 · +15%",
+	}
+	tables := map[string]string{
+		"value": "18 / 24",
+		"sub":   "T1: 8 · T2: 6 · Garden: 4",
+	}
+
+	if h.DashboardStats != nil {
+		if stats, err := h.DashboardStats.Handle(c.Request.Context()); err == nil {
+			revenue = map[string]string{
+				"value": money.VND(stats.RevenueTodayVND).String(),
+				"sub":   fmt.Sprintf("%d hóa đơn", stats.PaidInvoiceCount),
+			}
+			tables = map[string]string{
+				"value": fmt.Sprintf("%d / %d", stats.ActiveTables, stats.TotalTables),
+				"sub":   fmt.Sprintf("%d bàn trống", stats.TotalTables-stats.ActiveTables),
+			}
+		}
+	}
+
 	data := map[string]interface{}{
-		"revenue": map[string]string{
-			"value": "12.450.000 ₫",
-			"sub":   "24 · +15%",
-		},
-		"tables": map[string]string{
-			"value": "18 / 24",
-			"sub":   "T1: 8 · T2: 6 · Garden: 4",
-		},
-		"kitchen": map[string]string{
+		"revenue": revenue,
+		"tables":  tables,
+		"kitchen": map[string]string{ // MOCK
 			"value": "8",
 			"sub":   "~14'",
 		},
-		"payments": map[string]string{
+		"payments": map[string]string{ // MOCK
 			"value": "3",
 			"sub":   "POS",
 		},
-		"staffs": []map[string]interface{}{
+		"staffs": []map[string]interface{}{ // MOCK
 			{
 				"name": "Nguyễn Quản Trị",
 				"code": "ADMIN001",

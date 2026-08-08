@@ -133,10 +133,8 @@ func (r *Repository) BuildInvoice(ctx context.Context, restaurantID, diningSessi
 		return nil, false, err
 	}
 
-	for i, item := range items {
-		if err := r.insertInvoiceItem(ctx, restaurantID, invoiceID, item, i+1); err != nil {
-			return nil, false, err
-		}
+	if err := r.insertBillableItems(ctx, restaurantID, invoiceID, items); err != nil {
+		return nil, false, err
 	}
 
 	if !isTakeaway {
@@ -435,10 +433,8 @@ func (r *Repository) SplitInvoice(ctx context.Context, restaurantID uuid.UUID, i
 		if err != nil {
 			return nil, err
 		}
-		for i, item := range groupItems {
-			if err := r.insertInvoiceItem(ctx, restaurantID, invoiceID, item, i+1); err != nil {
-				return nil, err
-			}
+		if err := r.insertBillableItems(ctx, restaurantID, invoiceID, groupItems); err != nil {
+			return nil, err
 		}
 		invoice, err := r.LoadInvoice(ctx, restaurantID, invoiceID)
 		if err != nil {
@@ -850,7 +846,8 @@ func validateSplitGroups(billable map[uuid.UUID]billableItem, groups []domain.Sp
 		return apperr.New(apperr.CodeInvalid, "split requires at least 2 groups")
 	}
 	seen := make(map[uuid.UUID]bool, len(billable))
-	for _, g := range groups {
+	comboGroups := make(map[uuid.UUID]int)
+	for groupIndex, g := range groups {
 		if len(g.OrderItemIDs) == 0 {
 			return apperr.New(apperr.CodeInvalid, "split group must not be empty")
 		}
@@ -862,6 +859,14 @@ func validateSplitGroups(billable map[uuid.UUID]billableItem, groups []domain.Sp
 				return apperr.New(apperr.CodeInvalid, "order_item_id assigned to multiple groups: "+id.String())
 			}
 			seen[id] = true
+			root := id
+			if billable[id].ParentOrderItemID != nil {
+				root = *billable[id].ParentOrderItemID
+			}
+			if previous, ok := comboGroups[root]; ok && previous != groupIndex {
+				return apperr.New(apperr.CodeInvalid, "combo items must stay together in one split bill")
+			}
+			comboGroups[root] = groupIndex
 		}
 	}
 	if len(seen) != len(billable) {
@@ -1894,12 +1899,16 @@ type billableItem struct {
 	SubtotalVND       int64
 	DiscountAmountVND int64
 	TotalAmountVND    int64
+	ComboID           *uuid.UUID
+	ParentOrderItemID *uuid.UUID
+	ReferencePriceVND *int64
 }
 
 func (r *Repository) billableItems(ctx context.Context, restaurantID uuid.UUID, diningSessionIDs []uuid.UUID) ([]billableItem, int64, error) {
 	rows, err := r.q(ctx).Query(ctx, `
 		SELECT oi.id, oi.item_name_snapshot, oi.is_takeaway, oi.unit_price_vnd, oi.quantity,
-		       oi.subtotal_vnd, oi.discount_amount_vnd, oi.total_amount_vnd
+		       oi.subtotal_vnd, oi.discount_amount_vnd, oi.total_amount_vnd,
+		       oi.combo_id, oi.parent_order_item_id, oi.reference_price_vnd
 		FROM order_items oi
 		JOIN orders o ON o.restaurant_id = oi.restaurant_id AND o.id = oi.order_id
 		WHERE oi.restaurant_id = $1
@@ -1918,8 +1927,22 @@ func (r *Repository) billableItems(ctx context.Context, restaurantID uuid.UUID, 
 	var subtotal int64
 	for rows.Next() {
 		var item billableItem
-		if err := rows.Scan(&item.OrderItemID, &item.NameSnapshot, &item.IsTakeaway, &item.UnitPriceVND, &item.Quantity, &item.SubtotalVND, &item.DiscountAmountVND, &item.TotalAmountVND); err != nil {
+		var comboID, parentID pgtype.UUID
+		var reference pgtype.Int8
+		if err := rows.Scan(&item.OrderItemID, &item.NameSnapshot, &item.IsTakeaway, &item.UnitPriceVND, &item.Quantity, &item.SubtotalVND, &item.DiscountAmountVND, &item.TotalAmountVND, &comboID, &parentID, &reference); err != nil {
 			return nil, 0, err
+		}
+		if comboID.Valid {
+			id := uuid.UUID(comboID.Bytes)
+			item.ComboID = &id
+		}
+		if parentID.Valid {
+			id := uuid.UUID(parentID.Bytes)
+			item.ParentOrderItemID = &id
+		}
+		if reference.Valid {
+			value := reference.Int64
+			item.ReferencePriceVND = &value
 		}
 		subtotal += item.TotalAmountVND
 		items = append(items, item)
@@ -1927,21 +1950,65 @@ func (r *Repository) billableItems(ctx context.Context, restaurantID uuid.UUID, 
 	return items, subtotal, rows.Err()
 }
 
-func (r *Repository) insertInvoiceItem(ctx context.Context, restaurantID, invoiceID uuid.UUID, item billableItem, displayOrder int) error {
-	_, err := r.q(ctx).Exec(ctx, `
+func (r *Repository) insertInvoiceItem(ctx context.Context, restaurantID, invoiceID uuid.UUID, item billableItem, displayOrder int, parentInvoiceItemID *uuid.UUID) (uuid.UUID, error) {
+	itemType := "MENU_ITEM"
+	if item.ComboID != nil {
+		itemType = "COMBO"
+	}
+	if item.ParentOrderItemID != nil {
+		itemType = "COMBO_COMPONENT"
+	}
+	var id uuid.UUID
+	err := r.q(ctx).QueryRow(ctx, `
 		INSERT INTO invoice_items (
 			restaurant_id, invoice_id, order_item_id, item_type, name_snapshot, is_takeaway,
-			unit_price_vnd, quantity, subtotal_vnd, discount_amount_vnd, total_amount_vnd, display_order
+			unit_price_vnd, quantity, subtotal_vnd, discount_amount_vnd, total_amount_vnd, display_order,
+			combo_id, parent_invoice_item_id, reference_price_vnd
 		)
-		VALUES ($1, $2, $3, 'MENU_ITEM', $4, $5, $6, $7, $8, $9, $10, $11)
-	`, restaurantID, invoiceID, item.OrderItemID, item.NameSnapshot, item.IsTakeaway, item.UnitPriceVND, item.Quantity, item.SubtotalVND, item.DiscountAmountVND, item.TotalAmountVND, displayOrder)
-	return err
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+		RETURNING id
+	`, restaurantID, invoiceID, item.OrderItemID, itemType, item.NameSnapshot, item.IsTakeaway, item.UnitPriceVND, item.Quantity, item.SubtotalVND, item.DiscountAmountVND, item.TotalAmountVND, displayOrder, item.ComboID, parentInvoiceItemID, item.ReferencePriceVND).Scan(&id)
+	return id, err
+}
+
+func (r *Repository) insertBillableItems(ctx context.Context, restaurantID, invoiceID uuid.UUID, items []billableItem) error {
+	// created_at is transaction-scoped in PostgreSQL, so it is not a safe
+	// parent-before-child ordering key. Explicitly emit roots first so the
+	// parent invoice id always exists before a component is inserted.
+	ordered := make([]billableItem, 0, len(items))
+	for _, item := range items {
+		if item.ParentOrderItemID == nil {
+			ordered = append(ordered, item)
+		}
+	}
+	for _, item := range items {
+		if item.ParentOrderItemID != nil {
+			ordered = append(ordered, item)
+		}
+	}
+	invoiceIDs := make(map[uuid.UUID]uuid.UUID, len(ordered))
+	for i, item := range ordered {
+		var parentInvoiceID *uuid.UUID
+		if item.ParentOrderItemID != nil {
+			id, ok := invoiceIDs[*item.ParentOrderItemID]
+			if !ok {
+				return apperr.New(apperr.CodeInvalid, "combo component is missing its invoice parent")
+			}
+			parentInvoiceID = &id
+		}
+		id, err := r.insertInvoiceItem(ctx, restaurantID, invoiceID, item, i+1, parentInvoiceID)
+		if err != nil {
+			return err
+		}
+		invoiceIDs[item.OrderItemID] = id
+	}
+	return nil
 }
 
 func (r *Repository) loadInvoiceItems(ctx context.Context, restaurantID, invoiceID uuid.UUID) ([]domain.InvoiceItem, error) {
 	rows, err := r.q(ctx).Query(ctx, `
 		SELECT id, invoice_id, order_item_id, name_snapshot, is_takeaway, unit_price_vnd, quantity,
-		       subtotal_vnd, discount_amount_vnd, total_amount_vnd
+		       subtotal_vnd, discount_amount_vnd, total_amount_vnd, combo_id, parent_invoice_item_id, reference_price_vnd
 		FROM invoice_items
 		WHERE restaurant_id = $1 AND invoice_id = $2
 		ORDER BY display_order, created_at, id
@@ -1954,12 +2021,26 @@ func (r *Repository) loadInvoiceItems(ctx context.Context, restaurantID, invoice
 	for rows.Next() {
 		var item domain.InvoiceItem
 		var orderItemID pgtype.UUID
-		if err := rows.Scan(&item.ID, &item.InvoiceID, &orderItemID, &item.NameSnapshot, &item.IsTakeaway, &item.UnitPriceVND, &item.Quantity, &item.SubtotalVND, &item.DiscountAmountVND, &item.TotalAmountVND); err != nil {
+		var comboID, parentID pgtype.UUID
+		var reference pgtype.Int8
+		if err := rows.Scan(&item.ID, &item.InvoiceID, &orderItemID, &item.NameSnapshot, &item.IsTakeaway, &item.UnitPriceVND, &item.Quantity, &item.SubtotalVND, &item.DiscountAmountVND, &item.TotalAmountVND, &comboID, &parentID, &reference); err != nil {
 			return nil, err
 		}
 		if orderItemID.Valid {
 			id := uuid.UUID(orderItemID.Bytes)
 			item.OrderItemID = &id
+		}
+		if comboID.Valid {
+			id := uuid.UUID(comboID.Bytes)
+			item.ComboID = &id
+		}
+		if parentID.Valid {
+			id := uuid.UUID(parentID.Bytes)
+			item.ParentInvoiceItemID = &id
+		}
+		if reference.Valid {
+			value := reference.Int64
+			item.ReferencePriceVND = &value
 		}
 		items = append(items, item)
 	}

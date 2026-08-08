@@ -191,7 +191,10 @@ function InvoiceCard({
 
       <div className="mt-4 space-y-3">
         {invoice.items.map((item) => (
-          <div key={item.id} className="flex items-start justify-between gap-4 text-sm">
+          <div
+            key={item.id}
+            className={`flex items-start justify-between gap-4 text-sm ${item.parent_invoice_item_id ? 'pl-4 text-secondary' : ''}`}
+          >
             <div className="min-w-0">
               <span className="font-semibold text-primary">
                 {item.quantity} × {item.name_snapshot}

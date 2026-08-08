@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { useCategoriesQuery, useMenuItemsQuery } from '@/features/catalog/queries'
+import { useAllMenuItemsQuery, useCategoriesQuery } from '@/features/catalog/queries'
 import type { AdminMenuItemSummaryDTO, AdminCategoryDTO } from '@/features/catalog/types'
 import type { StaffTakeawayInput } from '@/features/cashier/api'
 import { useAddSessionTakeawayItems } from '@/features/cashier/mutations/useAddSessionTakeawayItems'
@@ -75,7 +75,7 @@ export const TakeawayPanel: FC<TakeawayPanelProps> = ({
     data: items = [],
     isLoading: itemsLoading,
     error: itemsError,
-  } = useMenuItemsQuery(categoryId, { enabled: open })
+  } = useAllMenuItemsQuery(categoryId, { enabled: open })
 
   useEffect(() => {
     const loadError = categoriesError ?? itemsError

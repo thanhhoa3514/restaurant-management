@@ -34,9 +34,9 @@ func (r *fakeReadRepo) GetItem(context.Context, uuid.UUID, uuid.UUID) (*domain.M
 	}
 	return r.item, nil
 }
-func (r *fakeReadRepo) ListItemsAdmin(_ context.Context, _ uuid.UUID, categoryID *uuid.UUID) ([]domain.AdminMenuItemSummary, error) {
+func (r *fakeReadRepo) ListItemsAdmin(_ context.Context, _ uuid.UUID, categoryID *uuid.UUID, _, _ int) ([]domain.AdminMenuItemSummary, domain.AdminMenuStats, error) {
 	r.gotCatID = categoryID
-	return r.adminItems, r.err
+	return r.adminItems, domain.AdminMenuStats{Total: len(r.adminItems), Visible: len(r.adminItems)}, r.err
 }
 func (r *fakeReadRepo) GetItemAdmin(context.Context, uuid.UUID, uuid.UUID) (*domain.AdminMenuItemDetail, error) {
 	if r.err != nil {
@@ -116,13 +116,16 @@ func TestListAdminMenuItemsIncludesAdminFieldsAndHiddenRows(t *testing.T) {
 	out, err := NewListAdminMenuItems(repo, uuid.Nil).Handle(catalogTenantCtx(), ListMenuItemsRequest{CategoryID: &catID})
 	require.NoError(t, err)
 	require.Equal(t, catID, *repo.gotCatID)
-	require.Len(t, out, 1)
-	require.Equal(t, "DRAFT", out[0].Status)
-	require.Equal(t, "HIDDEN", out[0].AvailabilityStatus)
-	require.True(t, out[0].IsFeatured)
-	require.Equal(t, "HOTPOT", out[0].Station)
-	require.Equal(t, 7, out[0].DisplayOrder)
-	require.Equal(t, 3, out[0].Version)
+	require.Len(t, out.Items, 1)
+	require.Equal(t, "DRAFT", out.Items[0].Status)
+	require.Equal(t, "HIDDEN", out.Items[0].AvailabilityStatus)
+	require.True(t, out.Items[0].IsFeatured)
+	require.Equal(t, "HOTPOT", out.Items[0].Station)
+	require.Equal(t, 7, out.Items[0].DisplayOrder)
+	require.Equal(t, 3, out.Items[0].Version)
+	require.Equal(t, 1, out.Pagination.Page)
+	require.Equal(t, 1, out.Pagination.TotalItems)
+	require.Equal(t, 1, out.Pagination.TotalPages)
 }
 
 func TestGetAdminMenuItemIncludesEditableFields(t *testing.T) {

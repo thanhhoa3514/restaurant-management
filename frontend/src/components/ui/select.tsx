@@ -3,7 +3,47 @@ import { Select as SelectPrimitive } from '@base-ui/react/select'
 import { cn } from '@/lib/utils'
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from 'lucide-react'
 
-const Select = SelectPrimitive.Root
+/**
+ * Walks the JSX subtree of a <Select> and builds base-ui's `items` record
+ * ({ value: label }) from every <SelectItem>. base-ui's <Select.Value> renders
+ * the raw stored value (e.g. a UUID) unless it can resolve a label from `items`
+ * — and the popup (where the items live) is unmounted while closed, so the label
+ * MUST come from this static tree walk, not from the mounted items.
+ *
+ * Note: the walk cannot see through intermediate custom components that don't
+ * render their children synchronously. If a value ever renders raw again, pass
+ * `items` explicitly on <Select>.
+ */
+function collectItemLabels(children: React.ReactNode): Record<string, React.ReactNode> {
+  const map: Record<string, React.ReactNode> = {}
+  const visit = (nodes: React.ReactNode) => {
+    React.Children.toArray(nodes).forEach((node) => {
+      if (!React.isValidElement(node)) return
+      const props = node.props as { value?: unknown; children?: React.ReactNode }
+      if (node.type === SelectItem && typeof props.value === 'string') {
+        map[props.value] = props.children
+      } else if (props.children != null) {
+        visit(props.children)
+      }
+    })
+  }
+  visit(children)
+  return map
+}
+
+function Select<Value, Multiple extends boolean | undefined = false>(
+  props: SelectPrimitive.Root.Props<Value, Multiple>,
+) {
+  const { items, children } = props
+  // Explicit `items` always wins; derive from <SelectItem>s otherwise.
+  const derived = React.useMemo(() => collectItemLabels(children), [children])
+  const mergedItems = items ?? (Object.keys(derived).length > 0 ? derived : undefined)
+  return (
+    <SelectPrimitive.Root {...props} items={mergedItems}>
+      {children}
+    </SelectPrimitive.Root>
+  )
+}
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (

@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -22,6 +23,7 @@ type GuestPlaceOrderRequest struct {
 
 type GuestOrderLineRequest struct {
 	MenuItemID uuid.UUID                 `json:"menu_item_id"`
+	ComboID    *uuid.UUID                `json:"combo_id"`
 	VariantID  *uuid.UUID                `json:"variant_id"`
 	Quantity   int                       `json:"quantity"`
 	Note       string                    `json:"note"`
@@ -56,6 +58,9 @@ type GuestOrderItemDTO struct {
 	IsTakeaway          bool                  `json:"is_takeaway"`
 	Options             []GuestOrderOptionDTO `json:"options"`
 	UnavailableReason   *string               `json:"unavailable_reason"`
+	ComboID             *uuid.UUID            `json:"combo_id,omitempty"`
+	ParentOrderItemID   *uuid.UUID            `json:"parent_order_item_id,omitempty"`
+	IsComboParent       bool                  `json:"is_combo_parent,omitempty"`
 }
 
 type GuestOrderOptionDTO struct {
@@ -159,6 +164,76 @@ func (s *GuestPlaceOrder) validateLines(ctx context.Context, restaurantID uuid.U
 	lines := make([]domain.OrderLineCreate, 0, len(reqs))
 	lineErrors := []LineError{}
 	for i, req := range reqs {
+		if req.ComboID != nil {
+			if req.MenuItemID != uuid.Nil || req.VariantID != nil || len(req.Options) > 0 {
+				lineErrors = append(lineErrors, LineError{Index: i, Reason: "invalid_combo_line"})
+				continue
+			}
+			if req.Quantity <= 0 {
+				lineErrors = append(lineErrors, LineError{Index: i, Reason: "invalid_quantity"})
+				continue
+			}
+			comboRepo, ok := s.repo.(interface {
+				FindComboForOrder(context.Context, uuid.UUID, uuid.UUID) (*domain.ComboForOrder, error)
+			})
+			if !ok {
+				return nil, nil, apperr.New(apperr.CodeInternal, "combo ordering is not configured")
+			}
+			combo, err := comboRepo.FindComboForOrder(ctx, restaurantID, *req.ComboID)
+			if err != nil {
+				if apperr.Is(err, apperr.CodeNotFound) {
+					lineErrors = append(lineErrors, LineError{Index: i, Reason: "combo_not_found"})
+					continue
+				}
+				return nil, nil, err
+			}
+			now := time.Now()
+			if combo.Status != "PUBLISHED" || combo.AvailabilityStatus != "AVAILABLE" ||
+				(combo.ValidFrom != nil && now.Before(*combo.ValidFrom)) ||
+				(combo.ValidTo != nil && now.After(*combo.ValidTo)) || len(combo.Components) == 0 {
+				lineErrors = append(lineErrors, LineError{Index: i, Reason: "combo_unavailable"})
+				continue
+			}
+			componentUnavailable := false
+			for _, component := range combo.Components {
+				if !component.Orderable {
+					componentUnavailable = true
+					break
+				}
+			}
+			if componentUnavailable {
+				lineErrors = append(lineErrors, LineError{Index: i, Reason: "combo_component_unavailable"})
+				continue
+			}
+			parentID := uuid.New()
+			comboID := *req.ComboID
+			referenceTotal := combo.ReferencePriceVND * int64(req.Quantity)
+			comboTotal := combo.ComboPriceVND * int64(req.Quantity)
+			lines = append(lines, domain.OrderLineCreate{
+				ID: parentID, ComboID: &comboID, ReferencePriceVND: &referenceTotal, IsComboParent: true,
+				ItemNameSnapshot: combo.Name, ItemCodeSnapshot: combo.Code, UnitPriceVND: combo.ComboPriceVND,
+				Quantity: req.Quantity, SubtotalVND: comboTotal, TotalAmountVND: comboTotal,
+				Status: "PENDING", Note: req.Note,
+			})
+			for _, component := range combo.Components {
+				parentRef := parentID
+				station := component.Station
+				if station == "" {
+					station = "GENERAL"
+				}
+				lines = append(lines, domain.OrderLineCreate{
+					ID: uuid.New(), ParentOrderItemID: &parentRef, MenuItemID: component.MenuItemID,
+					VariantID: component.VariantID, ItemNameSnapshot: component.Name, ItemCodeSnapshot: component.Code,
+					VariantNameSnapshot: component.VariantName, Quantity: component.Quantity * req.Quantity,
+					Status: "PENDING", Station: station,
+				})
+			}
+			continue
+		}
+		if req.MenuItemID == uuid.Nil {
+			lineErrors = append(lineErrors, LineError{Index: i, Reason: "menu_item_required"})
+			continue
+		}
 		item, err := s.repo.FindMenuItemForOrder(ctx, restaurantID, req.MenuItemID)
 		if err != nil {
 			if apperr.Is(err, apperr.CodeNotFound) {
@@ -260,12 +335,15 @@ func validateOptionsAndBuildLine(index int, req GuestOrderLineRequest, item *dom
 		station = "GENERAL"
 	}
 	subtotal := (unitPrice + optionsTotal) * int64(req.Quantity)
-	return domain.OrderLineCreate{MenuItemID: req.MenuItemID, VariantID: req.VariantID, ItemNameSnapshot: item.Name, ItemCodeSnapshot: item.Code, VariantNameSnapshot: variantName, UnitPriceVND: unitPrice, Quantity: req.Quantity, OptionsTotalVND: optionsTotal, SubtotalVND: subtotal, DiscountAmountVND: 0, TotalAmountVND: subtotal, Status: "PENDING", Station: station, Note: req.Note, Options: lineOptions}, errs
+	return domain.OrderLineCreate{ID: uuid.New(), MenuItemID: req.MenuItemID, VariantID: req.VariantID, ItemNameSnapshot: item.Name, ItemCodeSnapshot: item.Code, VariantNameSnapshot: variantName, UnitPriceVND: unitPrice, Quantity: req.Quantity, OptionsTotalVND: optionsTotal, SubtotalVND: subtotal, DiscountAmountVND: 0, TotalAmountVND: subtotal, Status: "PENDING", Station: station, Note: req.Note, Options: lineOptions}, errs
 }
 
 func buildKitchenTickets(lines []domain.OrderLineCreate) ([]domain.KitchenTicketCreate, error) {
 	byStation := map[string][]int{}
 	for i, line := range lines {
+		if line.IsComboParent {
+			continue
+		}
 		station := line.Station
 		if station == "" {
 			station = "GENERAL"
@@ -303,7 +381,7 @@ func toPlaceResponse(order *domain.OrderCreate) GuestPlaceOrderResponse {
 		for _, opt := range line.Options {
 			options = append(options, GuestOrderOptionDTO{OptionID: opt.OptionID, OptionGroupID: opt.OptionGroupID, NameSnapshot: opt.OptionNameSnapshot, PriceDeltaSnapshotVND: opt.PriceDeltaSnapshotVND, Quantity: opt.Quantity})
 		}
-		items = append(items, GuestOrderItemDTO{OrderItemID: line.ID, MenuItemID: line.MenuItemID, NameSnapshot: line.ItemNameSnapshot, VariantNameSnapshot: line.VariantNameSnapshot, Quantity: line.Quantity, UnitPriceVND: line.UnitPriceVND, OptionsTotalVND: line.OptionsTotalVND, SubtotalVND: line.SubtotalVND, TotalAmountVND: line.TotalAmountVND, Status: line.Status, Station: line.Station, IsTakeaway: line.IsTakeaway, Options: options})
+		items = append(items, GuestOrderItemDTO{OrderItemID: line.ID, MenuItemID: line.MenuItemID, NameSnapshot: line.ItemNameSnapshot, VariantNameSnapshot: line.VariantNameSnapshot, Quantity: line.Quantity, UnitPriceVND: line.UnitPriceVND, OptionsTotalVND: line.OptionsTotalVND, SubtotalVND: line.SubtotalVND, TotalAmountVND: line.TotalAmountVND, Status: line.Status, Station: line.Station, IsTakeaway: line.IsTakeaway, Options: options, ComboID: line.ComboID, ParentOrderItemID: line.ParentOrderItemID, IsComboParent: line.IsComboParent})
 	}
 	return GuestPlaceOrderResponse{OrderID: order.ID, OrderNumber: order.OrderNumber, OrderType: order.OrderType, Items: items, SessionTotalVND: order.SessionTotalVND}
 }

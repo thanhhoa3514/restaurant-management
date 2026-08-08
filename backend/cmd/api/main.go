@@ -161,9 +161,14 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 		identityapp.NewLogout(sessionRepo, defaultRID),
 		defaultRID,
 	)
+	dashboardRepo := identityrepo.NewDashboardRepository(pool, defaultRID)
+	identityHandler.DashboardStats = identityapp.NewGetDashboardStats(dashboardRepo, defaultRID)
 
 	catalogRepo := catalogrepo.NewRepository(pool, defaultRID)
 	catalogHandler := cataloghttp.NewHandler(catalogapp.NewCreateMenuItem(tx, catalogRepo, outboxWriter, defaultRID), catalogapp.NewUpdateMenuItem(tx, catalogRepo, outboxWriter, defaultRID), catalogapp.NewDeleteMenuItem(tx, catalogRepo, outboxWriter, defaultRID), catalogapp.NewToggleAvailability(tx, catalogRepo, outboxWriter, defaultRID), catalogapp.NewListCategories(catalogRepo, defaultRID), catalogapp.NewListMenuItems(catalogRepo, defaultRID), catalogapp.NewGetMenuItem(catalogRepo, defaultRID), catalogapp.NewListAdminMenuItems(catalogRepo, defaultRID), catalogapp.NewGetAdminMenuItem(catalogRepo, defaultRID), s3Client)
+
+	comboRepo := catalogrepo.NewComboRepository(pool, defaultRID)
+	comboHandler := cataloghttp.NewComboHandler(catalogapp.NewCreateCombo(tx, comboRepo, outboxWriter, defaultRID), catalogapp.NewUpdateCombo(tx, comboRepo, outboxWriter, defaultRID), catalogapp.NewDeleteCombo(tx, comboRepo, outboxWriter, defaultRID), catalogapp.NewToggleComboAvailability(tx, comboRepo, outboxWriter, defaultRID), catalogapp.NewListCombos(comboRepo, defaultRID), catalogapp.NewGetCombo(comboRepo, defaultRID), catalogapp.NewListCombosAdmin(comboRepo, defaultRID), catalogapp.NewGetComboAdmin(comboRepo, defaultRID))
 
 	diningRepo := diningrepo.NewRepository(pool, defaultRID)
 	diningHandler := &dininghttp.Handler{
@@ -236,6 +241,7 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 	customer := api.Group("/customer")
 	diningHandler.RegisterGuestRoutes(customer, joinRateLimiter.Middleware(ratelimit.IPKey))
 	catalogHandler.RegisterGuestRoutes(customer)
+	comboHandler.RegisterGuestRoutes(customer)
 
 	orders := api.Group("/customer", auth.DeviceAccessToken(diningRepo), orderRateLimiter.Middleware(ratelimit.GuestSessionKey))
 	orderingHandler.RegisterGuestRoutes(orders)
@@ -246,6 +252,7 @@ func wireRoutes(api *gin.RouterGroup, tx *postgres.TxManager, outboxWriter *outb
 	restaurant := api.Group("/restaurant")
 	identityHandler.RegisterRoutes(restaurant, secret, identityRepo, sessionRepo, defaultRID)
 	catalogHandler.RegisterStaffRoutes(restaurant, secret, identityRepo, defaultRID)
+	comboHandler.RegisterStaffRoutes(restaurant, secret, identityRepo, defaultRID)
 	diningHandler.RegisterStaffRoutes(restaurant, secret, identityRepo, defaultRID)
 	orderingHandler.RegisterStaffRoutes(restaurant, secret, identityRepo, defaultRID)
 	orderingHandler.RegisterKitchenRoutes(restaurant, secret, identityRepo, defaultRID)

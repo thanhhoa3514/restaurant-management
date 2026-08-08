@@ -17,6 +17,12 @@ Các tệp trong thư mục này là bản dựng HTML độc lập, bám theo g
 - `sessions-view.html`: màn Nhật ký phiên ăn — thanh lọc theo ngày, 4 thẻ KPI,
   tab trạng thái + tìm kiếm, bảng dữ liệu phiên, và modal chi tiết phiên (món đã
   gọi theo đợt, hóa đơn, tổng tiền) mở sẵn.
+- `invoices-view.html`: màn Hóa đơn đã thu — bộ lọc đối soát (tìm kiếm, từ/đến
+  ngày, phương thức), dải 4 chỉ số (Hóa đơn/Doanh thu/Giảm giá/Trung bình), sổ hóa
+  đơn (bảng: mã hóa đơn + số món, bàn/phiên, khách hàng, phương thức, tổng tiền,
+  thời điểm thanh toán) + phân trang, và sheet chi tiết bên phải (mã + badge "Đã
+  thanh toán", thông tin phiên/khách, món đã tính tiền, thanh toán, tổng cộng)
+  mở sẵn.
 - `catalog-view.html`: màn Quản lý thực đơn — rail danh mục bên trái, lưới thẻ món
   (ảnh/nổi bật, giá, badge trạng thái xuất bản/bán, nút Sửa/Tạm ngưng/Xóa).
 - `staff-view.html`: màn Nhân viên — bảng tài khoản (vai trò, badge trạng thái
@@ -69,6 +75,7 @@ Màn khách là **light-only** (guest UI luôn sáng), bố cục mobile-first, 
    - `http://localhost:4173/admin-view.html`
    - `http://localhost:4173/table-qrs-view.html`
    - `http://localhost:4173/sessions-view.html`
+   - `http://localhost:4173/invoices-view.html`
    - `http://localhost:4173/catalog-view.html`
    - `http://localhost:4173/staff-view.html`
    - `http://localhost:4173/menu-view.html`

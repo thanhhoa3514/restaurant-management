@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -87,6 +88,16 @@ func (h *Handler) listAdminMenuItems(c *gin.Context) {
 			return
 		}
 		req.CategoryID = &id
+	}
+	if raw := c.Query("page"); raw != "" {
+		if v, err := strconv.Atoi(raw); err == nil {
+			req.Page = v
+		}
+	}
+	if raw := c.Query("page_size"); raw != "" {
+		if v, err := strconv.Atoi(raw); err == nil {
+			req.PageSize = v
+		}
 	}
 	out, err := h.ListAdminMenuItems.Handle(c.Request.Context(), req)
 	if err != nil {

@@ -91,6 +91,10 @@ export const en: LocaleDict = {
     catalog_subtitle: 'Create items, edit prices, and show/hide dishes by category',
     catalog_summary: (total: number, visible: number, unavailable: number) =>
       `${total} items · ${visible} visible · ${unavailable} unavailable/hidden`,
+    catalog_pagination_label: 'Menu pagination',
+    catalog_page_prev: 'Previous page',
+    catalog_page_next: 'Next page',
+    catalog_page_of: (page: number, totalPages: number) => `Page ${page} / ${totalPages}`,
     catalog_new_item: 'New item',
     catalog_categories: 'Categories',
     catalog_all: 'All items',
