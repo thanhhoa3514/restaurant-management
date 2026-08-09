@@ -598,6 +598,7 @@ export const en: LocaleDict = {
     notes_label: 'Notes',
     notes_placeholder: 'e.g. regular customer, seafood allergy...',
     btn_open_session: 'Open session',
+    open_guest_screen: 'Open guest menu',
     status_placed: 'Awaiting review',
     status_pending: 'Pending',
     status_acknowledged: 'Acknowledged',

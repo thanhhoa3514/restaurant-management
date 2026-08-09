@@ -1,4 +1,4 @@
-import { type FC, useMemo, useState } from 'react'
+import { type FC, useCallback, useMemo, useState } from 'react'
 import { Building2, Link2, X } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
@@ -10,6 +10,8 @@ import { LanguageSwitcher } from '@/components/ui/language-switcher'
 import { wfFmtClock } from '@/features/waiter/helpers'
 import { useWaiter } from '@/features/waiter/hooks/use-waiter'
 import type { WFTable } from '@/features/waiter/types'
+import { buildQROrderURL } from '@/features/dining/api'
+import { useGuestTables } from '@/features/ordering/queries/useGuestTables'
 import { cn } from '@/lib/utils'
 import { GridView } from '../components/grid-view'
 import { TableSheet } from '../components/table-sheet'
@@ -20,6 +22,24 @@ import '@/features/dining/table-catalogue.css'
 export const WaiterLayout: FC = () => {
   const { state, actions, counts, selectedTable, t } = useWaiter()
   const [changingLang, setChangingLang] = useState<'vi' | 'en' | null>(null)
+  const { data: guestTables = [] } = useGuestTables(true)
+  const guestOrderUrls = useMemo(
+    () =>
+      new Map(
+        guestTables
+          .filter((table) => table.has_active_qr && table.qr_token)
+          .map((table) => [table.table_id, buildQROrderURL(table.qr_token!)]),
+      ),
+    [guestTables],
+  )
+  const openGuestSession = useCallback(
+    (tableId: string) => {
+      const url = guestOrderUrls.get(tableId)
+      if (!url) return
+      window.open(url, '_blank', 'noopener,noreferrer')
+    },
+    [guestOrderUrls],
+  )
 
   const groupId = selectedTable?.session?.merge_group_id
   const mergeSiblings = groupId
@@ -182,6 +202,8 @@ export const WaiterLayout: FC = () => {
               lang={state.lang}
               t={t}
               onSelectTable={actions.selectTable}
+              onOpenGuestSession={openGuestSession}
+              guestOrderUrls={guestOrderUrls}
               justChangedIds={state.justChangedIds}
               mergeMode={state.mergeMode}
               mergeSelectedIds={state.mergeSelectedIds}

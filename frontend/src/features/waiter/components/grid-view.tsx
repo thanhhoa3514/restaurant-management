@@ -1,8 +1,9 @@
 import { useMemo, type FC } from 'react'
-import { Bell, Check, Receipt, Users, Clock, Link2 } from 'lucide-react'
+import { Bell, Check, Clock, ExternalLink, Link2, Receipt, Users } from 'lucide-react'
 
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   wfFmtHMS,
   wfPriorityOf,
@@ -19,6 +20,8 @@ interface GridViewProps {
   lang: Lang
   t: (key: string, ...args: Array<string | number>) => string
   onSelectTable: (tableId: string) => void
+  onOpenGuestSession: (tableId: string) => void
+  guestOrderUrls: Map<string, string>
   justChangedIds: Set<string>
   mergeMode: boolean
   mergeSelectedIds: string[]
@@ -29,7 +32,10 @@ export const GridView: FC<GridViewProps> = ({
   tables,
   now,
   lang,
+  t,
   onSelectTable,
+  onOpenGuestSession,
+  guestOrderUrls,
   justChangedIds,
   mergeMode,
   mergeSelectedIds,
@@ -71,14 +77,34 @@ export const GridView: FC<GridViewProps> = ({
           idle: <Clock className="size-3.5 text-amber-500" />,
         }
 
+        const isMergeDisabled = mergeMode && !table.session
+
         return (
-          <button
+          <div
             key={table.id}
-            type="button"
-            disabled={mergeMode && !table.session}
-            onClick={() => (mergeMode ? onToggleMergeSelection(table.id) : onSelectTable(table.id))}
+            role={mergeMode ? 'checkbox' : 'button'}
+            tabIndex={isMergeDisabled ? -1 : 0}
             aria-pressed={mergeMode ? mergeSelected : undefined}
-            className="w-full cursor-pointer rounded-[20px] text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--system-blue)] disabled:cursor-not-allowed"
+            aria-disabled={isMergeDisabled || undefined}
+            onClick={() => {
+              if (isMergeDisabled) return
+              if (mergeMode) {
+                onToggleMergeSelection(table.id)
+              } else {
+                onSelectTable(table.id)
+              }
+            }}
+            onKeyDown={(event) => {
+              if (event.target !== event.currentTarget || isMergeDisabled) return
+              if (event.key !== 'Enter' && event.key !== ' ') return
+              event.preventDefault()
+              if (mergeMode) {
+                onToggleMergeSelection(table.id)
+              } else {
+                onSelectTable(table.id)
+              }
+            }}
+            className="w-full cursor-pointer rounded-[20px] text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--system-blue)] aria-disabled:cursor-not-allowed"
           >
             <Card
               className={cn(
@@ -150,7 +176,21 @@ export const GridView: FC<GridViewProps> = ({
                   </span>
                 </div>
 
-                {priority !== 'empty' && (
+                {guestOrderUrls.has(table.id) && !mergeMode ? (
+                  <Button
+                    type="button"
+                    size="icon"
+                    aria-label={t('open_guest_screen')}
+                    title={t('open_guest_screen')}
+                    className="size-9 shrink-0 rounded-xl shadow-sm"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onOpenGuestSession(table.id)
+                    }}
+                  >
+                    <ExternalLink className="size-3.5" />
+                  </Button>
+                ) : priority !== 'empty' ? (
                   <span
                     className={cn(
                       'flex items-center gap-1 font-mono text-[10px] font-bold bg-white/80 px-2 py-0.5 rounded-full border border-zinc-100 shadow-3xs dark:bg-zinc-950 dark:border-zinc-800',
@@ -160,10 +200,10 @@ export const GridView: FC<GridViewProps> = ({
                     <Clock className="size-2.5 text-[var(--text-secondary)]" />
                     <span>{wfFmtHMS(waitSeconds)}</span>
                   </span>
-                )}
+                ) : null}
               </div>
             </Card>
-          </button>
+          </div>
         )
       })}
     </div>

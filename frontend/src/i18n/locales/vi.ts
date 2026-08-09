@@ -598,6 +598,7 @@ export const vi: LocaleDict = {
     notes_label: 'Ghi chú',
     notes_placeholder: 'Ví dụ: khách quen, dị ứng hải sản...',
     btn_open_session: 'Mở phiên',
+    open_guest_screen: 'Mở màn hình gọi món',
     status_placed: 'Chờ duyệt',
     status_pending: 'Chờ',
     status_acknowledged: 'Đã nhận',

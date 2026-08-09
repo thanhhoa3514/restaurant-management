@@ -171,10 +171,13 @@ export function useWaiter(): UseWaiterValue {
   const openSession = useCallback(
     (tableId: string) => {
       const table = tables.find((t) => t.id === tableId)
-      openSessionMutation.mutateAsync(tableId).then(() => {
-        markJustChanged(tableId)
-        if (table) toast(t('toast_session_opened', table.code))
-      })
+      openSessionMutation
+        .mutateAsync(tableId)
+        .then(() => {
+          markJustChanged(tableId)
+          if (table) toast(t('toast_session_opened', table.code))
+        })
+        .catch((error: Error) => toast.error(error.message))
     },
     [markJustChanged, openSessionMutation, tables, t],
   )
