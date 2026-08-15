@@ -58,6 +58,7 @@ export interface AdminMenuItemSummaryDTO {
   is_available: boolean
   has_variants: boolean
   price_from_vnd: number | null
+  has_required_options: boolean
   status: MenuItemStatus
   is_featured: boolean
   station?: string | null

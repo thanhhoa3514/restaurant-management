@@ -749,6 +749,7 @@ export const en: LocaleDict = {
     qr_loading: 'Loading tables...',
     qr_no_data: 'No tables have QR codes yet. Please contact management.',
     qr_tables_word: 'tables',
+    qr_seats_word: 'seats',
     qr_action_required: 'Action Required',
     qr_failed_load: 'Failed to load tables',
     qr_name_label: 'Your name',

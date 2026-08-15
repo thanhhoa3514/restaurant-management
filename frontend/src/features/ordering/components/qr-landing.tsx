@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FC, type ReactNode } from 'react'
-import { AlertCircle, Building2, Loader2, QrCode, ScanLine, Users } from 'lucide-react'
+import { AlertCircle, Armchair, Building2, Loader2, QrCode, ScanLine } from 'lucide-react'
 import { toast } from 'sonner'
 import QRCodeLib from 'qrcode'
 import { ApiError, errorMessage } from '@/lib/api'
@@ -755,8 +755,10 @@ function TableCard({ table, onClick, t }: { table: GuestTable; onClick: () => vo
         <div className={cn('text-center', !isOpened && 'opacity-60')}>
           <div className="text-sm font-semibold text-[var(--text)]">{table.table_name}</div>
           <div className="mt-0.5 flex items-center justify-center gap-1 text-[11px] text-[var(--text-secondary)]">
-            <Users size={11} />
-            <span>{table.capacity}</span>
+            <Armchair size={11} />
+            <span>
+              {table.capacity} {t.qr_seats_word}
+            </span>
             <span className="ml-1 font-mono opacity-50">{table.table_code}</span>
           </div>
         </div>

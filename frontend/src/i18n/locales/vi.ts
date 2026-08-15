@@ -750,6 +750,7 @@ export const vi: LocaleDict = {
     qr_loading: 'Đang tải danh sách bàn...',
     qr_no_data: 'Chưa có bàn nào có mã QR. Vui lòng liên hệ quản lý.',
     qr_tables_word: 'bàn',
+    qr_seats_word: 'chỗ',
     qr_action_required: 'Cần thao tác',
     qr_failed_load: 'Không tải được danh sách bàn',
     qr_name_label: 'Tên của bạn',
