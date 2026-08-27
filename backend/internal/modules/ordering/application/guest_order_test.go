@@ -141,6 +141,33 @@ func TestGuestPlaceOrderAdditionalAndTickets(t *testing.T) {
 	require.Contains(t, stations, "GENERAL")
 }
 
+func TestBuildKitchenTicketsSkipsComboParentWithoutReindexing(t *testing.T) {
+	parent := uuid.New()
+	lines := []domain.OrderLineCreate{
+		{ID: parent, IsComboParent: true, ItemNameSnapshot: "Set Nướng"},
+		{ID: uuid.New(), ParentOrderItemID: &parent, Station: "GRILL", ItemNameSnapshot: "Ba chỉ bò"},
+		{ID: uuid.New(), ParentOrderItemID: &parent, Station: "DRINK", ItemNameSnapshot: "Trà đào"},
+	}
+
+	tickets, err := buildKitchenTickets(lines)
+	require.NoError(t, err)
+	require.Len(t, tickets, 2)
+	for _, ticket := range tickets {
+		require.NotContains(t, ticket.ItemIndexes, 0)
+	}
+	var grill, drink []int
+	for _, ticket := range tickets {
+		switch ticket.Station {
+		case "GRILL":
+			grill = ticket.ItemIndexes
+		case "DRINK":
+			drink = ticket.ItemIndexes
+		}
+	}
+	require.Equal(t, []int{1}, grill)
+	require.Equal(t, []int{2}, drink)
+}
+
 func TestGuestPlaceOrderValidationErrors(t *testing.T) {
 	repo, rid, sid, itemID := baseRepo()
 	repo.items[itemID].Orderable = false

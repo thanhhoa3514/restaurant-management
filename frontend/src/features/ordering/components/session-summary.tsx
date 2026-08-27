@@ -1,5 +1,5 @@
 import { type FC, useState } from 'react'
-import { ChevronLeft, Phone, ShoppingBag } from 'lucide-react'
+import { ChevronLeft, Phone, Plus, ShoppingBag } from 'lucide-react'
 import { toast } from 'sonner'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '@/i18n'
@@ -138,10 +138,10 @@ export const SessionSummary: FC = () => {
           </Button>
         </div>
         <Button
-          variant="ghost"
-          className="w-full rounded-xl h-12 text-sm font-medium text-system-blue"
+          className="w-full rounded-xl h-12 text-sm font-bold bg-[var(--system-orange)]/12 text-[var(--system-orange)] border border-[var(--system-orange)]/25 shadow-none hover:bg-[var(--system-orange)]/20 active:scale-[0.98]"
           onClick={() => dispatch({ type: 'SET_SCREEN', payload: 'menu' })}
         >
+          <Plus size={18} className="mr-1.5" strokeWidth={2.5} />
           {t.order_more}
         </Button>
       </div>

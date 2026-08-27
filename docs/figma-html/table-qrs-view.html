@@ -1,0 +1,1080 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Zenith — Quản lý bàn</title>
+    <style>
+      /* Hallmark · genre: modern-minimal · macrostructure: workbench + right detail sheet · tone: utilitarian Apple Glass · anchor hue: system purple · extraction: production AdminShell + TableQRManager */
+      :root {
+        color-scheme: light;
+        --font-display:
+          "SF Pro Display", "Helvetica Neue", ui-sans-serif, sans-serif;
+        --font-body: "SF Pro Text", "Helvetica Neue", ui-sans-serif, sans-serif;
+        --font-mono: "SF Mono", ui-monospace, monospace;
+        --bg: #ffffff;
+        --surface: #ffffff;
+        --surface-grouped: #f2f2f7;
+        --surface-soft: #f8f8fa;
+        --material: rgba(255, 255, 255, 0.82);
+        --material-thick: rgba(255, 255, 255, 0.96);
+        --separator: rgba(60, 60, 67, 0.18);
+        --separator-soft: rgba(60, 60, 67, 0.1);
+        --text: #1d1d1f;
+        --text-secondary: rgba(29, 29, 31, 0.78);
+        --text-tertiary: rgba(29, 29, 31, 0.55);
+        --purple: #af52de;
+        --purple-soft: rgba(175, 82, 222, 0.12);
+        --orange: #ff9500;
+        --orange-deep: #b25000;
+        --orange-soft: rgba(255, 149, 0, 0.12);
+        --green: #248a3d;
+        --green-soft: rgba(52, 199, 89, 0.12);
+        --red: #d70015;
+        --red-soft: rgba(255, 59, 48, 0.1);
+        --blue: #007aff;
+        --blue-soft: rgba(0, 122, 255, 0.1);
+        --focus: #005ac8;
+        --overlay: rgba(29, 29, 31, 0.42);
+        --shadow-card: 0 1px 2px rgba(29, 29, 31, 0.06);
+        --shadow-modal: 0 24px 80px rgba(29, 29, 31, 0.24);
+        --radius-sm: 10px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-xl: 20px;
+        --radius-2xl: 24px;
+        --space-2xs: 4px;
+        --space-xs: 8px;
+        --space-sm: 12px;
+        --space-md: 16px;
+        --space-lg: 24px;
+        --space-xl: 32px;
+        --dur-short: 220ms;
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+        --z-sticky: 200;
+        --z-modal: 400;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        overflow-x: clip;
+        background: var(--surface-grouped);
+        color: var(--text);
+        font-family: var(--font-body);
+        font-size: 16px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      button,
+      input {
+        color: inherit;
+        font: inherit;
+      }
+
+      button {
+        white-space: nowrap;
+      }
+
+      button:active {
+        transform: translateY(1px);
+      }
+
+      button:focus-visible,
+      input:focus-visible {
+        outline: 3px solid var(--focus);
+        outline-offset: 2px;
+      }
+
+      h1,
+      h2,
+      h3 {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+
+      svg {
+        display: block;
+        width: 20px;
+        height: 20px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.8;
+      }
+
+      .shell {
+        display: flex;
+        min-height: 100dvh;
+      }
+
+      /* Sidebar */
+      .sidebar {
+        display: none;
+        width: 264px;
+        flex: 0 0 264px;
+        border-inline-end: 1px solid var(--separator);
+        background: var(--material);
+        backdrop-filter: blur(24px);
+      }
+      .sidebar-inner {
+        position: sticky;
+        top: 0;
+        min-height: 100dvh;
+        padding: var(--space-md);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+        margin-block-end: var(--space-lg);
+        padding: var(--space-xs) var(--space-xs) 0;
+      }
+      .brand-mark {
+        display: grid;
+        width: 44px;
+        height: 44px;
+        flex: 0 0 44px;
+        place-items: center;
+        border-radius: var(--radius-lg);
+        background: var(--text);
+        color: var(--bg);
+        font-family: var(--font-display);
+        font-size: 13px;
+        font-weight: 800;
+      }
+      .brand-name {
+        overflow: hidden;
+        font-family: var(--font-display);
+        font-size: 17px;
+        font-weight: 650;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .brand-meta {
+        color: var(--purple);
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      .nav-group + .nav-group {
+        margin-block-start: var(--space-lg);
+      }
+      .nav-title {
+        padding: 0 var(--space-sm) var(--space-2xs);
+        color: var(--text-tertiary);
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+      .nav-item {
+        display: flex;
+        min-height: 48px;
+        width: 100%;
+        align-items: center;
+        gap: var(--space-sm);
+        border: 0;
+        border-radius: var(--radius-lg);
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 0 var(--space-sm);
+        text-align: start;
+        font-size: 15px;
+        font-weight: 650;
+        transition:
+          background-color var(--dur-short) var(--ease-out),
+          color var(--dur-short) var(--ease-out);
+      }
+      .nav-item.active {
+        background: var(--purple-soft);
+        color: var(--purple);
+      }
+
+      /* Workspace + topbar */
+      .workspace {
+        display: flex;
+        min-width: 0;
+        flex: 1;
+        flex-direction: column;
+      }
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: var(--z-sticky);
+        border-block-end: 1px solid var(--separator);
+        background: var(--material);
+        backdrop-filter: blur(24px);
+      }
+      .topbar-inner {
+        display: grid;
+        min-height: 68px;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: var(--space-sm);
+        padding: max(var(--space-xs), env(safe-area-inset-top))
+          max(var(--space-sm), env(safe-area-inset-right)) var(--space-xs)
+          max(var(--space-sm), env(safe-area-inset-left));
+      }
+      .round-button,
+      .avatar {
+        display: grid;
+        width: 44px;
+        height: 44px;
+        flex: 0 0 44px;
+        place-items: center;
+        border-radius: 999px;
+        cursor: pointer;
+      }
+      .round-button {
+        border: 1px solid var(--separator);
+        background: var(--surface-grouped);
+        color: var(--text-secondary);
+      }
+      .avatar {
+        border: 0;
+        background: var(--purple);
+        color: #fff;
+        font-weight: 750;
+      }
+      .page-title {
+        min-width: 0;
+      }
+      .page-title .eyebrow {
+        color: var(--text-tertiary);
+        font-size: 10px;
+        font-weight: 750;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+      .page-title h1 {
+        overflow: hidden;
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 17px;
+        font-weight: 750;
+        line-height: 1.2;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .page-title p {
+        display: none;
+        overflow: hidden;
+        margin: 2px 0 0;
+        color: var(--text-tertiary);
+        font-size: 12px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .header-center {
+        display: none;
+        justify-content: center;
+      }
+      .summary-pill {
+        border-radius: 999px;
+        background: var(--surface-grouped);
+        padding: 8px 16px;
+        color: var(--text-secondary);
+        font-size: 14px;
+        font-weight: 650;
+      }
+      .header-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: var(--space-xs);
+      }
+      .lang {
+        display: none;
+        min-height: 36px;
+        align-items: center;
+        border: 1px solid var(--separator);
+        border-radius: 999px;
+        background: var(--surface);
+        padding-inline: 12px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      /* Content */
+      .content {
+        flex: 1;
+        padding: var(--space-md);
+      }
+      .content-inner {
+        margin-inline: auto;
+        max-width: 1200px;
+        display: grid;
+        gap: var(--space-lg);
+      }
+
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-sm);
+      }
+      .segmented {
+        display: flex;
+        gap: 4px;
+        border-radius: 14px;
+        background: var(--surface-grouped);
+        padding: 4px;
+      }
+      .seg {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border: 0;
+        border-radius: 10px;
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 6px 12px;
+        font-size: 14px;
+        font-weight: 650;
+      }
+      .seg.active {
+        background: var(--material-thick);
+        color: var(--text);
+        box-shadow: var(--shadow-card);
+      }
+      .toolbar-actions {
+        display: flex;
+        gap: var(--space-xs);
+      }
+      .button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 40px;
+        border-radius: var(--radius-lg);
+        padding-inline: 14px;
+        font-size: 14px;
+        font-weight: 650;
+        cursor: pointer;
+      }
+      .button.secondary {
+        border: 1px solid var(--separator);
+        background: var(--surface);
+        color: var(--text);
+      }
+      .button.primary {
+        border: 0;
+        background: var(--text);
+        color: var(--bg);
+      }
+
+      .area-group {
+        display: grid;
+        gap: var(--space-sm);
+      }
+      .area-head {
+        display: flex;
+        align-items: baseline;
+        gap: var(--space-xs);
+      }
+      .area-head h2 {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 17px;
+        font-weight: 650;
+      }
+      .area-head span {
+        color: var(--text-tertiary);
+        font-size: 14px;
+      }
+      .table-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: var(--space-md);
+      }
+      .table-card {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-sm);
+        border: 1px solid var(--separator);
+        border-radius: 20px;
+        background: var(--material-thick);
+        cursor: pointer;
+        padding: var(--space-lg);
+        text-align: start;
+        transition:
+          border-color var(--dur-short) var(--ease-out),
+          background-color var(--dur-short) var(--ease-out);
+      }
+      .table-card.selected,
+      .table-card:hover {
+        border-color: rgba(175, 82, 222, 0.4);
+        background: var(--purple-soft);
+      }
+      .table-card.muted {
+        opacity: 0.6;
+      }
+      .table-card-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--space-sm);
+      }
+      .table-name {
+        font-size: 17px;
+        font-weight: 650;
+      }
+      .table-code {
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+        font-size: 12px;
+      }
+      .qr-chip {
+        display: grid;
+        width: 40px;
+        height: 40px;
+        flex: 0 0 40px;
+        place-items: center;
+        border-radius: 14px;
+      }
+      .qr-chip.on {
+        background: var(--green-soft);
+        color: var(--green);
+      }
+      .qr-chip.off {
+        background: var(--surface-grouped);
+        color: var(--text-tertiary);
+      }
+      .badge {
+        display: inline-flex;
+        width: fit-content;
+        align-items: center;
+        border-radius: 999px;
+        padding: 4px 12px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .badge.on {
+        background: var(--green-soft);
+        color: var(--green);
+      }
+      .badge.off {
+        background: var(--surface-grouped);
+        color: var(--text-secondary);
+      }
+
+      /* Right detail sheet */
+      .scrim {
+        position: fixed;
+        inset: 0;
+        z-index: var(--z-modal);
+        background: var(--overlay);
+      }
+      .sheet {
+        position: fixed;
+        inset-block: 0;
+        inset-inline-end: 0;
+        z-index: calc(var(--z-modal) + 1);
+        display: flex;
+        width: min(100%, 420px);
+        flex-direction: column;
+        border-inline-start: 1px solid var(--separator);
+        background: var(--material-thick);
+        backdrop-filter: blur(24px);
+        box-shadow: var(--shadow-modal);
+      }
+      .sheet-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-sm);
+        border-block-end: 1px solid var(--separator);
+        padding: var(--space-lg);
+      }
+      .sheet-head h2 {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 20px;
+        font-weight: 700;
+      }
+      .sheet-head p {
+        margin: 2px 0 0;
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+        font-size: 12px;
+      }
+      .sheet-body {
+        display: grid;
+        gap: var(--space-md);
+        overflow-y: auto;
+        padding: var(--space-lg);
+      }
+      .row-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-xs);
+      }
+      .qr-frame {
+        display: grid;
+        place-items: center;
+        border-radius: 20px;
+        background: #fff;
+        padding: var(--space-lg);
+      }
+      .qr-art {
+        width: 216px;
+        height: 216px;
+      }
+      .qr-art rect {
+        fill: #1d1d1f;
+        stroke: none;
+      }
+      .link-box {
+        border-radius: 16px;
+        background: var(--surface-grouped);
+        padding: var(--space-sm);
+      }
+      .link-box .cap {
+        margin-block-end: 4px;
+        color: var(--text-tertiary);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .link-box .url {
+        color: var(--text-secondary);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        word-break: break-all;
+      }
+      .button.block {
+        width: 100%;
+        justify-content: center;
+      }
+      .button.warn {
+        color: var(--orange-deep);
+      }
+
+      @media (hover: hover) and (pointer: fine) {
+        .nav-item:hover {
+          background: var(--surface-grouped);
+          color: var(--text);
+        }
+      }
+      @media (min-width: 40rem) {
+        .page-title p,
+        .lang {
+          display: flex;
+        }
+        .topbar-inner,
+        .content {
+          padding-inline: 20px;
+        }
+        .table-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      @media (min-width: 52rem) {
+        .header-center {
+          display: flex;
+        }
+        .topbar-inner {
+          grid-template-columns: minmax(190px, 1fr) auto minmax(190px, 1fr);
+        }
+        .table-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+      @media (min-width: 64rem) {
+        .sidebar {
+          display: block;
+        }
+        .menu-button {
+          display: none;
+        }
+        .content {
+          padding: var(--space-lg);
+        }
+      }
+      @media (min-width: 80rem) {
+        .table-grid {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar" aria-label="Điều hướng quản trị">
+        <div class="sidebar-inner">
+          <div class="brand">
+            <div class="brand-mark">ZH</div>
+            <div>
+              <div class="brand-name">Zenith Lẩu Nướng</div>
+              <div class="brand-meta">Staff OS</div>
+            </div>
+          </div>
+
+          <div class="nav-group">
+            <div class="nav-title">Quản lý</div>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+              </svg>
+              Tổng quan
+            </button>
+            <button class="nav-item active" aria-current="page">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+                <path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1" />
+              </svg>
+              Quản lý bàn
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7v5l3 2" />
+              </svg>
+              Nhật ký phiên ăn
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path
+                  d="M5 3h11l3 3v15l-2.5-1.5L14 21l-2.5-1.5L9 21l-2.5-1.5L4 21V4z"
+                />
+                <path d="M8 8h8M8 12h8M8 16h5" />
+              </svg>
+              Hóa đơn đã thu
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M9 2h6v4H9z" />
+                <rect x="5" y="4" width="14" height="18" rx="2" />
+                <path d="M8 10h8M8 14h8M8 18h5" />
+              </svg>
+              Danh mục món
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M22 20v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              Nhân sự
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M4 19V9M10 19V5M16 19v-7M22 19H2" />
+              </svg>
+              Báo cáo
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="3" />
+                <path
+                  d="M19 12h3M2 12h3M12 2v3M12 19v3M17 7l2-2M5 19l2-2M17 17l2 2M5 5l2 2"
+                />
+              </svg>
+              Cài đặt
+            </button>
+          </div>
+
+          <div class="nav-group">
+            <div class="nav-title">Vận hành</div>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <rect x="2" y="5" width="20" height="14" rx="2" />
+                <path d="M2 10h20M6 15h2" />
+              </svg>
+              Thanh toán
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M4 9h16M6 9v11M18 9v11M8 4h8l2 5H6zM9 14h6" />
+              </svg>
+              Sơ đồ bàn
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path
+                  d="M6 13a6 6 0 0 1 12 0v7H6zM9 13v-2M15 13v-2M4 20h16M12 4V2"
+                />
+              </svg>
+              Bếp KDS
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div class="topbar-inner">
+            <div
+              style="display: flex; align-items: center; gap: 12px; min-width: 0"
+            >
+              <button class="round-button menu-button" aria-label="Mở điều hướng">
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="M4 7h16M4 12h16M4 17h16" />
+                </svg>
+              </button>
+              <div class="page-title">
+                <div class="eyebrow">Quản trị</div>
+                <h1>Quản lý bàn</h1>
+                <p>Bàn, sơ đồ và mã QR gọi món</p>
+              </div>
+            </div>
+
+            <div class="header-center">
+              <span class="summary-pill">10/14 bàn có mã QR</span>
+            </div>
+
+            <div class="header-actions">
+              <button class="round-button" aria-label="Đổi giao diện sáng/tối">
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="4" />
+                  <path
+                    d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"
+                  />
+                </svg>
+              </button>
+              <button class="lang" aria-label="Đổi ngôn ngữ">VI</button>
+              <button class="avatar" aria-label="Mở hồ sơ">Q</button>
+            </div>
+          </div>
+        </header>
+
+        <main class="content">
+          <div class="content-inner">
+            <div class="toolbar">
+              <div class="segmented" role="tablist" aria-label="Chế độ xem">
+                <button class="seg active" role="tab" aria-selected="true">
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                    <rect x="14" y="14" width="7" height="7" rx="1" />
+                  </svg>
+                  Lưới
+                </button>
+                <button class="seg" role="tab" aria-selected="false">
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14" />
+                  </svg>
+                  Sơ đồ
+                </button>
+              </div>
+              <div class="toolbar-actions">
+                <button class="button secondary">
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <path d="M3 9h18M9 21V9" />
+                  </svg>
+                  Quản lý khu vực
+                </button>
+                <button class="button primary">
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                  Thêm bàn
+                </button>
+              </div>
+            </div>
+
+            <section class="area-group">
+              <div class="area-head">
+                <h2>Sảnh chính</h2>
+                <span>6/8 bàn có mã QR</span>
+              </div>
+              <div class="table-grid">
+                <button class="table-card selected">
+                  <div class="table-card-top">
+                    <div>
+                      <div class="table-name">Bàn 12</div>
+                      <div class="table-code">T-12 · 4 chỗ</div>
+                    </div>
+                    <span class="qr-chip on">
+                      <svg aria-hidden="true" viewBox="0 0 24 24">
+                        <rect x="3" y="3" width="7" height="7" rx="1" />
+                        <rect x="14" y="3" width="7" height="7" rx="1" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" />
+                        <path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1" />
+                      </svg>
+                    </span>
+                  </div>
+                  <span class="badge on">Đã có mã QR</span>
+                </button>
+
+                <button class="table-card">
+                  <div class="table-card-top">
+                    <div>
+                      <div class="table-name">Bàn 11</div>
+                      <div class="table-code">T-11 · 4 chỗ</div>
+                    </div>
+                    <span class="qr-chip on">
+                      <svg aria-hidden="true" viewBox="0 0 24 24">
+                        <rect x="3" y="3" width="7" height="7" rx="1" />
+                        <rect x="14" y="3" width="7" height="7" rx="1" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" />
+                        <path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1" />
+                      </svg>
+                    </span>
+                  </div>
+                  <span class="badge on">Đã có mã QR</span>
+                </button>
+
+                <button class="table-card">
+                  <div class="table-card-top">
+                    <div>
+                      <div class="table-name">Bàn 10</div>
+                      <div class="table-code">T-10 · 6 chỗ</div>
+                    </div>
+                    <span class="qr-chip on">
+                      <svg aria-hidden="true" viewBox="0 0 24 24">
+                        <rect x="3" y="3" width="7" height="7" rx="1" />
+                        <rect x="14" y="3" width="7" height="7" rx="1" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" />
+                        <path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1" />
+                      </svg>
+                    </span>
+                  </div>
+                  <span class="badge on">Đã có mã QR</span>
+                </button>
+
+                <button class="table-card muted">
+                  <div class="table-card-top">
+                    <div>
+                      <div class="table-name">Bàn 09</div>
+                      <div class="table-code">T-09 · 2 chỗ</div>
+                    </div>
+                    <span class="qr-chip off">
+                      <svg aria-hidden="true" viewBox="0 0 24 24">
+                        <rect x="3" y="3" width="7" height="7" rx="1" />
+                        <rect x="14" y="3" width="7" height="7" rx="1" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" />
+                        <path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1" />
+                      </svg>
+                    </span>
+                  </div>
+                  <span class="badge off">Chưa tạo mã</span>
+                </button>
+              </div>
+            </section>
+
+            <section class="area-group">
+              <div class="area-head">
+                <h2>Sân vườn</h2>
+                <span>4/6 bàn có mã QR</span>
+              </div>
+              <div class="table-grid">
+                <button class="table-card">
+                  <div class="table-card-top">
+                    <div>
+                      <div class="table-name">Bàn V1</div>
+                      <div class="table-code">G-01 · 8 chỗ</div>
+                    </div>
+                    <span class="qr-chip on">
+                      <svg aria-hidden="true" viewBox="0 0 24 24">
+                        <rect x="3" y="3" width="7" height="7" rx="1" />
+                        <rect x="14" y="3" width="7" height="7" rx="1" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" />
+                        <path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1" />
+                      </svg>
+                    </span>
+                  </div>
+                  <span class="badge on">Đã có mã QR</span>
+                </button>
+
+                <button class="table-card">
+                  <div class="table-card-top">
+                    <div>
+                      <div class="table-name">Bàn V2</div>
+                      <div class="table-code">G-02 · 8 chỗ</div>
+                    </div>
+                    <span class="qr-chip on">
+                      <svg aria-hidden="true" viewBox="0 0 24 24">
+                        <rect x="3" y="3" width="7" height="7" rx="1" />
+                        <rect x="14" y="3" width="7" height="7" rx="1" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" />
+                        <path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1" />
+                      </svg>
+                    </span>
+                  </div>
+                  <span class="badge on">Đã có mã QR</span>
+                </button>
+
+                <button class="table-card muted">
+                  <div class="table-card-top">
+                    <div>
+                      <div class="table-name">Bàn V3</div>
+                      <div class="table-code">G-03 · 4 chỗ</div>
+                    </div>
+                    <span class="qr-chip off">
+                      <svg aria-hidden="true" viewBox="0 0 24 24">
+                        <rect x="3" y="3" width="7" height="7" rx="1" />
+                        <rect x="14" y="3" width="7" height="7" rx="1" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" />
+                        <path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1" />
+                      </svg>
+                    </span>
+                  </div>
+                  <span class="badge off">Chưa tạo mã</span>
+                </button>
+              </div>
+            </section>
+          </div>
+        </main>
+      </section>
+    </div>
+
+    <!-- Right detail sheet: Bàn 12 QR -->
+    <div class="scrim"></div>
+    <aside class="sheet" aria-label="Chi tiết mã QR Bàn 12">
+      <div class="sheet-head">
+        <div>
+          <h2>Bàn 12</h2>
+          <p>T-12</p>
+        </div>
+        <button class="round-button" aria-label="Đóng">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M6 6l12 12M18 6 6 18" />
+          </svg>
+        </button>
+      </div>
+      <div class="sheet-body">
+        <div class="row-2">
+          <button class="button secondary block">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+            </svg>
+            Sửa bàn
+          </button>
+          <button class="button secondary block" style="color: var(--red)">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" />
+            </svg>
+            Xoá bàn
+          </button>
+        </div>
+
+        <div class="qr-frame">
+          <svg class="qr-art" viewBox="0 0 29 29" aria-label="Mã QR minh họa">
+            <!-- finder patterns -->
+            <rect x="0" y="0" width="7" height="1" />
+            <rect x="0" y="6" width="7" height="1" />
+            <rect x="0" y="0" width="1" height="7" />
+            <rect x="6" y="0" width="1" height="7" />
+            <rect x="2" y="2" width="3" height="3" />
+            <rect x="22" y="0" width="7" height="1" />
+            <rect x="22" y="6" width="7" height="1" />
+            <rect x="22" y="0" width="1" height="7" />
+            <rect x="28" y="0" width="1" height="7" />
+            <rect x="24" y="2" width="3" height="3" />
+            <rect x="0" y="22" width="7" height="1" />
+            <rect x="0" y="28" width="7" height="1" />
+            <rect x="0" y="22" width="1" height="7" />
+            <rect x="6" y="22" width="1" height="7" />
+            <rect x="2" y="24" width="3" height="3" />
+            <!-- timing + scattered modules -->
+            <rect x="9" y="2" width="1" height="1" />
+            <rect x="11" y="1" width="1" height="1" />
+            <rect x="13" y="3" width="1" height="1" />
+            <rect x="15" y="1" width="1" height="1" />
+            <rect x="18" y="2" width="1" height="1" />
+            <rect x="9" y="4" width="1" height="1" />
+            <rect x="12" y="5" width="1" height="1" />
+            <rect x="16" y="4" width="1" height="1" />
+            <rect x="19" y="5" width="1" height="1" />
+            <rect x="2" y="9" width="1" height="1" />
+            <rect x="4" y="11" width="1" height="1" />
+            <rect x="1" y="13" width="1" height="1" />
+            <rect x="3" y="15" width="1" height="1" />
+            <rect x="5" y="18" width="1" height="1" />
+            <rect x="9" y="9" width="3" height="3" />
+            <rect x="14" y="10" width="1" height="1" />
+            <rect x="16" y="12" width="1" height="1" />
+            <rect x="18" y="9" width="1" height="1" />
+            <rect x="20" y="11" width="1" height="1" />
+            <rect x="22" y="9" width="1" height="1" />
+            <rect x="24" y="11" width="1" height="1" />
+            <rect x="26" y="13" width="1" height="1" />
+            <rect x="10" y="14" width="1" height="1" />
+            <rect x="12" y="16" width="1" height="1" />
+            <rect x="9" y="18" width="1" height="1" />
+            <rect x="14" y="18" width="3" height="3" />
+            <rect x="19" y="15" width="1" height="1" />
+            <rect x="21" y="17" width="1" height="1" />
+            <rect x="23" y="19" width="1" height="1" />
+            <rect x="25" y="16" width="1" height="1" />
+            <rect x="27" y="18" width="1" height="1" />
+            <rect x="9" y="22" width="1" height="1" />
+            <rect x="11" y="24" width="1" height="1" />
+            <rect x="13" y="26" width="1" height="1" />
+            <rect x="15" y="23" width="1" height="1" />
+            <rect x="17" y="25" width="1" height="1" />
+            <rect x="19" y="27" width="1" height="1" />
+            <rect x="21" y="23" width="1" height="1" />
+            <rect x="23" y="25" width="1" height="1" />
+            <rect x="25" y="22" width="1" height="1" />
+            <rect x="27" y="24" width="1" height="1" />
+            <rect x="22" y="14" width="1" height="1" />
+            <rect x="24" y="16" width="1" height="1" />
+            <rect x="26" y="9" width="1" height="1" />
+          </svg>
+        </div>
+
+        <div class="link-box">
+          <div class="cap">Liên kết gọi món</div>
+          <div class="url">https://order.zenith.vn/order?t=q7f3a2b9c1d8e4f6</div>
+        </div>
+
+        <div class="row-2">
+          <button class="button secondary block">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <rect x="9" y="9" width="11" height="11" rx="2" />
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            </svg>
+            Chép link
+          </button>
+          <button class="button secondary block">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />
+            </svg>
+            Tải PNG
+          </button>
+        </div>
+
+        <button class="button secondary block warn">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5" />
+          </svg>
+          Xoay mã QR mới
+        </button>
+      </div>
+    </aside>
+  </body>
+</html>

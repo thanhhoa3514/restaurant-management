@@ -91,6 +91,13 @@ func (s *SaveArea) Handle(ctx context.Context, in SaveAreaRequest) (AreaDTO, err
 
 	err := s.tx.Run(ctx, func(ctx context.Context) error {
 		if in.AreaID == nil {
+			count, err := s.repo.CountAreas(ctx, restaurantID)
+			if err != nil {
+				return err
+			}
+			if count >= MaxAreasPerRestaurant {
+				return apperr.New(apperr.CodeConflict, "restaurant has reached the 6-area limit")
+			}
 			return s.repo.CreateArea(ctx, area)
 		}
 		area.ID = *in.AreaID
@@ -125,6 +132,13 @@ func NewDeleteArea(tx TxRunner, repo domain.DiningRepository, defaultRestaurantI
 func (s *DeleteArea) Handle(ctx context.Context, areaID uuid.UUID) error {
 	restaurantID := s.defaultRestaurantID
 	return s.tx.Run(ctx, func(ctx context.Context) error {
+		count, err := s.repo.CountTablesInArea(ctx, restaurantID, areaID)
+		if err != nil {
+			return err
+		}
+		if count > 0 {
+			return apperr.New(apperr.CodeConflict, "move or delete all tables before deleting this area")
+		}
 		return s.repo.DeleteArea(ctx, restaurantID, areaID)
 	})
 }

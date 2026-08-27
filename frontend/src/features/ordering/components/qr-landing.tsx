@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FC, type ReactNode } from 'react'
-import { Loader2, QrCode, ScanLine, AlertCircle, Users } from 'lucide-react'
+import { AlertCircle, Armchair, Building2, Loader2, QrCode, ScanLine } from 'lucide-react'
 import { toast } from 'sonner'
 import QRCodeLib from 'qrcode'
 import { ApiError, errorMessage } from '@/lib/api'
@@ -12,6 +12,7 @@ import { buildQROrderURL } from '@/features/dining/api'
 import type { GuestTable } from '@/features/dining/types'
 import { cn } from '@/lib/utils'
 import { setGuestDeviceAccessToken } from '@/lib/realtime-auth'
+import '@/features/dining/table-catalogue.css'
 
 interface QRLandingProps {
   qrToken?: string
@@ -203,7 +204,10 @@ export const QRLanding: FC<QRLandingProps> = ({ qrToken }) => {
       list.push(table)
       groups.set(area, list)
     }
-    return Array.from(groups.entries())
+    return Array.from(groups.entries()).sort((left, right) => {
+      const order = (left[1][0]?.area_order ?? 0) - (right[1][0]?.area_order ?? 0)
+      return order || left[0].localeCompare(right[0])
+    })
   }, [tablesData])
 
   if (!qrToken) {
@@ -295,7 +299,7 @@ function NameForm({
       disabled={isPending || isDisabled}
       onClick={onSubmit}
       className={cn(
-        'flex cursor-pointer items-center justify-center rounded-2xl bg-[var(--text)] text-[var(--bg)] font-semibold shadow-lg transition-all active:scale-[0.98] disabled:opacity-50',
+        'flex cursor-pointer items-center justify-center whitespace-nowrap rounded-2xl bg-[var(--text)] font-semibold text-[var(--bg)] transition-[background-color,opacity,transform] duration-[var(--dur-micro)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--system-blue)] active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50',
         secondaryAction ? 'flex-1 h-12 text-sm' : 'mt-5 h-14 w-full text-base',
       )}
     >
@@ -365,18 +369,18 @@ function TablePicker({
   onCloseDialog: () => void
 }) {
   return (
-    <div className="min-h-dvh bg-[var(--bg)]">
+    <div className="dining-catalogue min-h-dvh bg-[var(--bg)]">
       <div className={pendingJoinToken ? 'pointer-events-none opacity-40' : ''}>
-        <div className="mx-auto max-w-3xl px-5 py-10">
+        <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
           {/* Header */}
           <div className="mb-10 text-center">
             <h1 className="text-2xl font-bold tracking-tight text-[var(--text)]">{t.restaurant}</h1>
-            <p className="mt-1.5 text-sm text-[var(--text-tertiary)]">{t.qr_desc}</p>
+            <p className="mt-1.5 text-sm text-[var(--text-secondary)]">{t.qr_desc}</p>
           </div>
 
           {/* Loading */}
           {tablesLoading && (
-            <div className="flex items-center justify-center gap-2 py-12 text-sm text-[var(--text-tertiary)]">
+            <div className="flex items-center justify-center gap-2 py-12 text-sm text-[var(--text-secondary)]">
               <ScanLine size={16} className="animate-pulse" />
               {t.qr_loading}
             </div>
@@ -401,7 +405,7 @@ function TablePicker({
 
           {/* Empty */}
           {!tablesLoading && !tablesError && !areaGroups.length && (
-            <div className="flex flex-col items-center py-16 text-[var(--text-tertiary)]">
+            <div className="flex flex-col items-center py-16 text-[var(--text-secondary)]">
               <QrCode size={40} className="mb-3 opacity-30" />
               <p className="text-sm">{t.qr_no_data}</p>
             </div>
@@ -409,16 +413,21 @@ function TablePicker({
 
           {/* Table groups */}
           {!tablesLoading && !!areaGroups.length && (
-            <div className="space-y-8">
+            <div className="space-y-3">
               {areaGroups.map(([areaName, areaTables]) => (
-                <section key={areaName}>
-                  <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-[var(--text-tertiary)]">
-                    {areaName}
-                    <span className="ml-2 font-normal normal-case opacity-50">
+                <section key={areaName} className="dining-area-section">
+                  <div className="dining-area-heading">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex size-10 shrink-0 items-center justify-center rounded-[12px] bg-[var(--surface-grouped)] text-[var(--text-secondary)]">
+                        <Building2 className="size-5" />
+                      </span>
+                      <h2 className="text-[17px] font-semibold text-[var(--text)]">{areaName}</h2>
+                    </div>
+                    <span className="text-sm tabular-nums text-[var(--text-secondary)]">
                       {areaTables.length} {t.qr_tables_word}
                     </span>
-                  </h2>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                  </div>
+                  <div className="dining-table-grid dining-table-grid--qr">
                     {areaTables.map((table) => (
                       <TableCard
                         key={table.table_id}
@@ -448,7 +457,7 @@ function TablePicker({
               className="mx-auto mb-4 size-16 rounded-[20px] object-cover shadow-lg"
             />
             <h2 className="mb-1 text-lg font-semibold text-[var(--text)]">{t.qr_name_label}</h2>
-            <p className="mb-5 text-xs text-[var(--text-tertiary)]">{t.session_hint}</p>
+            <p className="mb-5 text-xs text-[var(--text-secondary)]">{t.session_hint}</p>
             <NameForm
               guestName={guestName}
               nameError={nameError}
@@ -466,7 +475,7 @@ function TablePicker({
                 <button
                   type="button"
                   onClick={onCloseDialog}
-                  className="flex-1 flex h-12 cursor-pointer items-center justify-center rounded-2xl border border-[var(--separator)] bg-[var(--material-regular)] text-[var(--text-secondary)] font-semibold text-sm transition-all active:scale-[0.98]"
+                  className="flex h-12 flex-1 cursor-pointer items-center justify-center whitespace-nowrap rounded-2xl border border-[var(--separator)] bg-[var(--material-regular)] text-sm font-semibold text-[var(--text-secondary)] transition-[background-color,transform] duration-[var(--dur-micro)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--system-blue)] active:translate-y-px"
                 >
                   {t.close}
                 </button>
@@ -535,7 +544,7 @@ function JoinFlow({
               className="mx-auto mb-4 size-16 rounded-[20px] object-cover shadow-lg"
             />
             <h2 className="mb-1 text-lg font-semibold text-[var(--text)]">{t.qr_name_label}</h2>
-            <p className="mb-5 text-xs text-[var(--text-tertiary)]">{t.session_hint}</p>
+            <p className="mb-5 text-xs text-[var(--text-secondary)]">{t.session_hint}</p>
             <NameForm
               guestName={guestName}
               nameError={nameError}
@@ -552,7 +561,7 @@ function JoinFlow({
           <>
             <div
               className={cn(
-                'w-full rounded-2xl border p-8 text-center transition-all duration-500',
+                'w-full rounded-2xl border p-8 text-center transition-colors duration-[var(--dur-short)]',
                 joinState === 'error' || joinState === 'not_opened'
                   ? 'border-red-200 bg-red-50/60 dark:border-red-800/30 dark:bg-red-950/15'
                   : joinState === 'joining'
@@ -604,7 +613,7 @@ function JoinFlow({
 
               {joinState === 'pending_verification' && (
                 <>
-                  <p className="mt-2 text-xs text-[var(--text-tertiary)]">{t.qr_pending_hint}</p>
+                  <p className="mt-2 text-xs text-[var(--text-secondary)]">{t.qr_pending_hint}</p>
                   <div className="mt-3 flex justify-center gap-1.5">
                     {[0, 150, 300].map((delay) => (
                       <span
@@ -623,7 +632,7 @@ function JoinFlow({
               type="button"
               disabled={!canRetry || joinState === 'pending_verification'}
               onClick={onRetry}
-              className="flex h-14 w-full cursor-pointer items-center justify-center rounded-2xl bg-[var(--text)] text-[var(--bg)] font-semibold text-base shadow-lg transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex h-14 w-full cursor-pointer items-center justify-center whitespace-nowrap rounded-2xl bg-[var(--text)] text-base font-semibold text-[var(--bg)] transition-[background-color,opacity,transform] duration-[var(--dur-micro)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--system-blue)] active:translate-y-px disabled:cursor-not-allowed disabled:opacity-40"
             >
               {joinState === 'joining'
                 ? t.qr_joining
@@ -704,11 +713,11 @@ function TableCard({ table, onClick, t }: { table: GuestTable; onClick: () => vo
         disabled={isDisabled}
         onClick={hasQr ? onClick : undefined}
         className={cn(
-          'group relative flex flex-col items-center gap-2 rounded-xl border border-[var(--separator)] bg-[var(--material-thin)] p-4 transition-all',
+          'group relative flex flex-col items-center gap-2 rounded-[16px] border border-[var(--separator)] bg-[var(--material-thin)] p-3 transition-[background-color,border-color,opacity] duration-[var(--dur-short)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--system-blue)]',
           isOpened
-            ? 'cursor-pointer hover:border-blue-300 hover:shadow-sm active:scale-[0.97] dark:hover:border-blue-700'
+            ? 'cursor-pointer hover:border-[var(--system-blue)] hover:bg-[var(--surface-grouped)] active:bg-[var(--surface-grouped)]'
             : hasQr
-              ? 'cursor-pointer opacity-60 hover:opacity-80 active:scale-[0.98]'
+              ? 'cursor-pointer opacity-60 hover:opacity-80'
               : 'cursor-not-allowed opacity-40',
         )}
       >
@@ -723,9 +732,9 @@ function TableCard({ table, onClick, t }: { table: GuestTable; onClick: () => vo
           {qrDataUrl ? (
             <img
               src={qrDataUrl}
-              alt=""
+              alt={`${t.qr_scan_hint} — ${table.table_name}`}
               className={cn(
-                'size-full object-contain transition-all',
+                'size-full object-contain transition-[filter,opacity] duration-[var(--dur-short)]',
                 !isOpened && 'opacity-30 blur-[1px] grayscale-[60%]',
                 isOpened && 'cursor-zoom-in',
               )}
@@ -745,9 +754,11 @@ function TableCard({ table, onClick, t }: { table: GuestTable; onClick: () => vo
         </div>
         <div className={cn('text-center', !isOpened && 'opacity-60')}>
           <div className="text-sm font-semibold text-[var(--text)]">{table.table_name}</div>
-          <div className="mt-0.5 flex items-center justify-center gap-1 text-[11px] text-[var(--text-tertiary)]">
-            <Users size={11} />
-            <span>{table.capacity}</span>
+          <div className="mt-0.5 flex items-center justify-center gap-1 text-[11px] text-[var(--text-secondary)]">
+            <Armchair size={11} />
+            <span>
+              {table.capacity} {t.qr_seats_word}
+            </span>
             <span className="ml-1 font-mono opacity-50">{table.table_code}</span>
           </div>
         </div>
@@ -771,13 +782,17 @@ function TableCard({ table, onClick, t }: { table: GuestTable; onClick: () => vo
               <div className="mt-0.5 text-xs text-gray-500">{table.table_code}</div>
             </div>
             {bigQr ? (
-              <img src={bigQr} alt="" className="size-72 rounded-lg" />
+              <img
+                src={bigQr}
+                alt={`${t.qr_scan_hint} — ${table.table_name}`}
+                className="aspect-square w-full max-w-72 rounded-lg"
+              />
             ) : (
               <div className="flex size-72 items-center justify-center rounded-lg bg-gray-50">
                 <Loader2 className="size-8 animate-spin text-gray-300" />
               </div>
             )}
-            <p className="text-center text-xs text-gray-400">{t.qr_scan_hint}</p>
+            <p className="text-center text-xs text-gray-600">{t.qr_scan_hint}</p>
           </div>
         </div>
       )}

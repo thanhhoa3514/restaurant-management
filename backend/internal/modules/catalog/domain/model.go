@@ -56,6 +56,7 @@ type MenuItemSummary struct {
 	BasePriceVND       int64     `json:"base_price_vnd"`
 	AvailabilityStatus string    `json:"availability_status"`
 	IsAvailable        bool      `json:"is_available"`
+	IsFeatured         bool      `json:"is_featured"`
 	HasVariants        bool      `json:"has_variants"`
 	PriceFromVND       *int64    `json:"price_from_vnd"`
 	HasRequiredOptions bool     `json:"has_required_options"`
@@ -79,6 +80,14 @@ type AdminMenuItemSummary struct {
 	Station            string    `json:"station"`
 	DisplayOrder       int       `json:"display_order"`
 	Version            int       `json:"version"`
+}
+
+// AdminMenuStats are aggregate counts over the full filtered set (all pages),
+// used to render the catalog summary independently of the current page window.
+type AdminMenuStats struct {
+	Total       int
+	Visible     int
+	Unavailable int
 }
 
 type MenuItemDetail struct {
@@ -272,7 +281,7 @@ type MenuReadRepository interface {
 	ListCategories(ctx context.Context, restaurantID uuid.UUID) ([]CategoryRead, error)
 	ListItems(ctx context.Context, restaurantID uuid.UUID, categoryID *uuid.UUID) ([]MenuItemSummary, error)
 	GetItem(ctx context.Context, restaurantID uuid.UUID, itemID uuid.UUID) (*MenuItemDetail, error)
-	ListItemsAdmin(ctx context.Context, restaurantID uuid.UUID, categoryID *uuid.UUID) ([]AdminMenuItemSummary, error)
+	ListItemsAdmin(ctx context.Context, restaurantID uuid.UUID, categoryID *uuid.UUID, limit, offset int) ([]AdminMenuItemSummary, AdminMenuStats, error)
 	GetItemAdmin(ctx context.Context, restaurantID uuid.UUID, itemID uuid.UUID) (*AdminMenuItemDetail, error)
 }
 

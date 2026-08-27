@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -16,11 +17,13 @@ import (
 )
 
 type Repository struct {
-	pool      *pgxpool.Pool
+	pool       *pgxpool.Pool
 	defaultRID uuid.UUID
 }
 
-func NewRepository(pool *pgxpool.Pool, defaultRID uuid.UUID) *Repository { return &Repository{pool: pool, defaultRID: defaultRID} }
+func NewRepository(pool *pgxpool.Pool, defaultRID uuid.UUID) *Repository {
+	return &Repository{pool: pool, defaultRID: defaultRID}
+}
 
 func (r *Repository) q(ctx context.Context) pg.Querier { return pg.QuerierFromContext(ctx, r.pool) }
 
@@ -75,7 +78,7 @@ func (r *Repository) ListCategories(ctx context.Context, restaurantID uuid.UUID)
 func (r *Repository) ListItems(ctx context.Context, restaurantID uuid.UUID, categoryID *uuid.UUID) ([]domain.MenuItemSummary, error) {
 	query := `
 		SELECT mi.id, mi.category_id, mi.name, mi.slug, COALESCE(mi.short_description, ''), COALESCE(mi.image_url, ''),
-		       mi.base_price_vnd, mi.availability_status, mi.is_available,
+		       mi.base_price_vnd, mi.availability_status, mi.is_available, mi.is_featured,
 		       COALESCE(va.has_variants, FALSE), va.price_from_vnd,
 		       COALESCE(rog.has_required_options, FALSE)
 		FROM menu_items mi
@@ -116,7 +119,7 @@ func (r *Repository) ListItems(ctx context.Context, restaurantID uuid.UUID, cate
 	for rows.Next() {
 		var row domain.MenuItemSummary
 		var price pgtype.Int8
-		if err := rows.Scan(&row.ID, &row.CategoryID, &row.Name, &row.Slug, &row.ShortDescription, &row.ImageURL, &row.BasePriceVND, &row.AvailabilityStatus, &row.IsAvailable, &row.HasVariants, &price, &row.HasRequiredOptions); err != nil {
+		if err := rows.Scan(&row.ID, &row.CategoryID, &row.Name, &row.Slug, &row.ShortDescription, &row.ImageURL, &row.BasePriceVND, &row.AvailabilityStatus, &row.IsAvailable, &row.IsFeatured, &row.HasVariants, &price, &row.HasRequiredOptions); err != nil {
 			return nil, err
 		}
 		if price.Valid {
@@ -128,7 +131,23 @@ func (r *Repository) ListItems(ctx context.Context, restaurantID uuid.UUID, cate
 	return out, rows.Err()
 }
 
-func (r *Repository) ListItemsAdmin(ctx context.Context, restaurantID uuid.UUID, categoryID *uuid.UUID) ([]domain.AdminMenuItemSummary, error) {
+func (r *Repository) ListItemsAdmin(ctx context.Context, restaurantID uuid.UUID, categoryID *uuid.UUID, limit, offset int) ([]domain.AdminMenuItemSummary, domain.AdminMenuStats, error) {
+	countQuery := `
+		SELECT COUNT(*),
+		       COUNT(*) FILTER (WHERE mi.status = 'PUBLISHED' AND mi.availability_status <> 'HIDDEN'),
+		       COUNT(*) FILTER (WHERE NOT mi.is_available OR mi.availability_status <> 'AVAILABLE')
+		FROM menu_items mi
+		WHERE mi.restaurant_id = $1 AND mi.deleted_at IS NULL`
+	countArgs := []any{restaurantID}
+	if categoryID != nil {
+		countQuery += ` AND mi.category_id = $2`
+		countArgs = append(countArgs, *categoryID)
+	}
+	var stats domain.AdminMenuStats
+	if err := r.q(ctx).QueryRow(ctx, countQuery, countArgs...).Scan(&stats.Total, &stats.Visible, &stats.Unavailable); err != nil {
+		return nil, domain.AdminMenuStats{}, err
+	}
+
 	query := `
 		SELECT mi.id, mi.category_id, mi.name, mi.slug, COALESCE(mi.short_description, ''), COALESCE(mi.image_url, ''),
 		       mi.base_price_vnd, mi.availability_status, mi.is_available,
@@ -159,10 +178,12 @@ func (r *Repository) ListItemsAdmin(ctx context.Context, restaurantID uuid.UUID,
 		args = append(args, *categoryID)
 	}
 	query += ` ORDER BY mi.display_order, mi.name`
+	query += fmt.Sprintf(` LIMIT $%d OFFSET $%d`, len(args)+1, len(args)+2)
+	args = append(args, limit, offset)
 
 	rows, err := r.q(ctx).Query(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, domain.AdminMenuStats{}, err
 	}
 	defer rows.Close()
 
@@ -171,7 +192,7 @@ func (r *Repository) ListItemsAdmin(ctx context.Context, restaurantID uuid.UUID,
 		var row domain.AdminMenuItemSummary
 		var price pgtype.Int8
 		if err := rows.Scan(&row.ID, &row.CategoryID, &row.Name, &row.Slug, &row.ShortDescription, &row.ImageURL, &row.BasePriceVND, &row.AvailabilityStatus, &row.IsAvailable, &row.HasVariants, &price, &row.HasRequiredOptions, &row.Status, &row.IsFeatured, &row.Station, &row.DisplayOrder, &row.Version); err != nil {
-			return nil, err
+			return nil, domain.AdminMenuStats{}, err
 		}
 		if price.Valid {
 			v := price.Int64
@@ -179,7 +200,7 @@ func (r *Repository) ListItemsAdmin(ctx context.Context, restaurantID uuid.UUID,
 		}
 		out = append(out, row)
 	}
-	return out, rows.Err()
+	return out, stats, rows.Err()
 }
 
 func (r *Repository) GetItem(ctx context.Context, restaurantID uuid.UUID, itemID uuid.UUID) (*domain.MenuItemDetail, error) {

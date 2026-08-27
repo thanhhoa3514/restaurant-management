@@ -1,0 +1,961 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Zenith — Nhân viên</title>
+    <style>
+      /* Hallmark · genre: modern-minimal · macrostructure: workbench data-table + right edit sheet · tone: utilitarian Apple Glass · anchor hue: system purple · extraction: production AdminShell + StaffManagement */
+      :root {
+        color-scheme: light;
+        --font-display:
+          "SF Pro Display", "Helvetica Neue", ui-sans-serif, sans-serif;
+        --font-body: "SF Pro Text", "Helvetica Neue", ui-sans-serif, sans-serif;
+        --font-mono: "SF Mono", ui-monospace, monospace;
+        --bg: #ffffff;
+        --surface: #ffffff;
+        --surface-grouped: #f2f2f7;
+        --material: rgba(255, 255, 255, 0.82);
+        --material-thick: rgba(255, 255, 255, 0.98);
+        --separator: rgba(60, 60, 67, 0.18);
+        --separator-soft: rgba(60, 60, 67, 0.1);
+        --text: #1d1d1f;
+        --text-secondary: rgba(29, 29, 31, 0.78);
+        --text-tertiary: rgba(29, 29, 31, 0.55);
+        --purple: #af52de;
+        --purple-soft: rgba(175, 82, 222, 0.12);
+        --green: #248a3d;
+        --green-soft: rgba(52, 199, 89, 0.12);
+        --red: #d70015;
+        --red-soft: rgba(255, 59, 48, 0.1);
+        --blue: #007aff;
+        --blue-soft: rgba(0, 122, 255, 0.1);
+        --focus: #005ac8;
+        --overlay: rgba(29, 29, 31, 0.5);
+        --shadow-card: 0 1px 2px rgba(29, 29, 31, 0.06);
+        --shadow-sheet: -24px 0 80px rgba(29, 29, 31, 0.24);
+        --radius-sm: 10px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-xl: 20px;
+        --radius-2xl: 24px;
+        --space-2xs: 4px;
+        --space-xs: 8px;
+        --space-sm: 12px;
+        --space-md: 16px;
+        --space-lg: 24px;
+        --space-xl: 32px;
+        --dur-short: 220ms;
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+        --z-sticky: 200;
+        --z-sheet: 400;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        overflow-x: clip;
+        background: var(--surface-grouped);
+        color: var(--text);
+        font-family: var(--font-body);
+        font-size: 16px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+      button,
+      input,
+      select {
+        color: inherit;
+        font: inherit;
+      }
+      button {
+        white-space: nowrap;
+      }
+      button:active {
+        transform: translateY(1px);
+      }
+      button:focus-visible,
+      input:focus-visible,
+      select:focus-visible {
+        outline: 3px solid var(--focus);
+        outline-offset: 2px;
+      }
+      h1,
+      h2,
+      h3 {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+      svg {
+        display: block;
+        width: 20px;
+        height: 20px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.8;
+      }
+
+      .shell {
+        display: flex;
+        min-height: 100dvh;
+      }
+
+      /* Sidebar */
+      .sidebar {
+        display: none;
+        width: 264px;
+        flex: 0 0 264px;
+        border-inline-end: 1px solid var(--separator);
+        background: var(--material);
+        backdrop-filter: blur(24px);
+      }
+      .sidebar-inner {
+        position: sticky;
+        top: 0;
+        min-height: 100dvh;
+        padding: var(--space-md);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+        margin-block-end: var(--space-lg);
+        padding: var(--space-xs) var(--space-xs) 0;
+      }
+      .brand-mark {
+        display: grid;
+        width: 44px;
+        height: 44px;
+        flex: 0 0 44px;
+        place-items: center;
+        border-radius: var(--radius-lg);
+        background: var(--text);
+        color: var(--bg);
+        font-family: var(--font-display);
+        font-size: 13px;
+        font-weight: 800;
+      }
+      .brand-name {
+        overflow: hidden;
+        font-family: var(--font-display);
+        font-size: 17px;
+        font-weight: 650;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .brand-meta {
+        color: var(--purple);
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      .nav-group + .nav-group {
+        margin-block-start: var(--space-lg);
+      }
+      .nav-title {
+        padding: 0 var(--space-sm) var(--space-2xs);
+        color: var(--text-tertiary);
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+      .nav-item {
+        display: flex;
+        min-height: 48px;
+        width: 100%;
+        align-items: center;
+        gap: var(--space-sm);
+        border: 0;
+        border-radius: var(--radius-lg);
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 0 var(--space-sm);
+        text-align: start;
+        font-size: 15px;
+        font-weight: 650;
+        transition:
+          background-color var(--dur-short) var(--ease-out),
+          color var(--dur-short) var(--ease-out);
+      }
+      .nav-item.active {
+        background: var(--purple-soft);
+        color: var(--purple);
+      }
+
+      /* Workspace + topbar */
+      .workspace {
+        display: flex;
+        min-width: 0;
+        flex: 1;
+        flex-direction: column;
+      }
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: var(--z-sticky);
+        border-block-end: 1px solid var(--separator);
+        background: var(--material);
+        backdrop-filter: blur(24px);
+      }
+      .topbar-inner {
+        display: grid;
+        min-height: 68px;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: var(--space-sm);
+        padding: max(var(--space-xs), env(safe-area-inset-top))
+          max(var(--space-sm), env(safe-area-inset-right)) var(--space-xs)
+          max(var(--space-sm), env(safe-area-inset-left));
+      }
+      .round-button,
+      .avatar {
+        display: grid;
+        width: 44px;
+        height: 44px;
+        flex: 0 0 44px;
+        place-items: center;
+        border-radius: 999px;
+        cursor: pointer;
+      }
+      .round-button {
+        border: 1px solid var(--separator);
+        background: var(--surface-grouped);
+        color: var(--text-secondary);
+      }
+      .avatar {
+        border: 0;
+        background: var(--purple);
+        color: #fff;
+        font-weight: 750;
+      }
+      .page-title {
+        min-width: 0;
+      }
+      .page-title .eyebrow {
+        color: var(--text-tertiary);
+        font-size: 10px;
+        font-weight: 750;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+      .page-title h1 {
+        overflow: hidden;
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 17px;
+        font-weight: 750;
+        line-height: 1.2;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .page-title p {
+        display: none;
+        overflow: hidden;
+        margin: 2px 0 0;
+        color: var(--text-tertiary);
+        font-size: 12px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .header-center {
+        display: none;
+        justify-content: center;
+      }
+      .summary-pill {
+        border-radius: 999px;
+        background: rgba(242, 242, 247, 0.7);
+        padding: 8px 16px;
+        color: var(--text-secondary);
+        font-size: 13px;
+        font-weight: 650;
+        white-space: nowrap;
+      }
+      .header-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: var(--space-xs);
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid transparent;
+        border-radius: 999px;
+        cursor: pointer;
+        padding: 9px 16px;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .btn svg {
+        width: 16px;
+        height: 16px;
+      }
+      .btn-primary {
+        background: var(--purple);
+        color: #fff;
+      }
+      .lang {
+        display: none;
+        min-height: 36px;
+        align-items: center;
+        border: 1px solid var(--separator);
+        border-radius: 999px;
+        background: var(--surface);
+        padding-inline: 12px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      /* Content */
+      .content {
+        flex: 1;
+        padding: var(--space-md);
+      }
+      .content-inner {
+        margin-inline: auto;
+        max-width: 1120px;
+      }
+
+      /* Table */
+      .card {
+        overflow: hidden;
+        border: 1px solid var(--separator-soft);
+        border-radius: var(--radius-2xl);
+        background: var(--surface);
+        box-shadow: var(--shadow-card);
+      }
+      .table-scroll {
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        min-width: 720px;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      thead th {
+        background: var(--surface-grouped);
+        border-block-end: 1px solid var(--separator);
+        padding: 12px 20px;
+        color: var(--text-tertiary);
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: 0.06em;
+        text-align: start;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+      thead th.end {
+        text-align: end;
+      }
+      tbody tr {
+        border-block-start: 1px solid var(--separator-soft);
+      }
+      tbody tr:hover {
+        background: var(--surface-grouped);
+      }
+      tbody td {
+        padding: 14px 20px;
+        vertical-align: middle;
+      }
+      .u-name {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 750;
+      }
+      .u-self {
+        border-radius: 999px;
+        background: var(--blue-soft);
+        padding: 1px 8px;
+        color: var(--blue);
+        font-size: 11px;
+        font-weight: 550;
+      }
+      .u-user {
+        margin-block-start: 2px;
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+        font-size: 11px;
+      }
+      .u-role {
+        color: var(--text-secondary);
+        text-transform: capitalize;
+      }
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+      .status .d {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+      }
+      .status.active {
+        background: var(--green-soft);
+        color: var(--green);
+      }
+      .status.active .d {
+        background: var(--green);
+      }
+      .status.locked {
+        background: var(--red-soft);
+        color: var(--red);
+      }
+      .status.locked .d {
+        background: var(--red);
+      }
+      .status.inactive {
+        background: var(--surface-grouped);
+        color: var(--text-secondary);
+      }
+      .status.inactive .d {
+        background: var(--text-tertiary);
+      }
+      .col-login {
+        color: var(--text-secondary);
+      }
+      .row-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 4px;
+      }
+      .icon-btn {
+        display: inline-grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        border: 0;
+        border-radius: 10px;
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+      }
+      .icon-btn:hover {
+        background: var(--surface-grouped);
+      }
+      .icon-btn svg {
+        width: 16px;
+        height: 16px;
+      }
+      .icon-btn.red {
+        color: var(--red);
+      }
+      .icon-btn.green {
+        color: var(--green);
+      }
+
+      /* Edit sheet */
+      .scrim {
+        position: fixed;
+        inset: 0;
+        z-index: var(--z-sheet);
+        display: flex;
+        justify-content: flex-end;
+        background: var(--overlay);
+        backdrop-filter: blur(4px);
+      }
+      .sheet {
+        display: flex;
+        width: 100%;
+        max-width: 420px;
+        flex-direction: column;
+        background: var(--material-thick);
+        box-shadow: var(--shadow-sheet);
+        backdrop-filter: blur(28px);
+      }
+      .sheet-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--space-sm);
+        border-block-end: 1px solid var(--separator);
+        padding: var(--space-lg) var(--space-lg) var(--space-md);
+      }
+      .sheet-head h2 {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+      }
+      .sheet-head p {
+        margin: 2px 0 0;
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+        font-size: 12px;
+      }
+      .sheet-body {
+        display: grid;
+        gap: var(--space-md);
+        overflow-y: auto;
+        flex: 1;
+        padding: var(--space-lg);
+      }
+      .field {
+        display: grid;
+        gap: 6px;
+      }
+      .field label {
+        color: var(--text-tertiary);
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .field input,
+      .field select {
+        height: 40px;
+        width: 100%;
+        border: 1px solid transparent;
+        border-radius: 10px;
+        background: var(--surface-grouped);
+        padding-inline: 14px;
+        font-size: 14px;
+      }
+      .field select {
+        text-transform: capitalize;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        background-size: 16px;
+      }
+      .field .hint {
+        color: var(--text-tertiary);
+        font-size: 12px;
+      }
+      .sheet-foot {
+        border-block-start: 1px solid var(--separator);
+        padding: var(--space-lg);
+      }
+      .save-btn {
+        width: 100%;
+        border: 0;
+        border-radius: var(--radius-lg);
+        background: var(--purple);
+        color: #fff;
+        cursor: pointer;
+        padding: 12px;
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      @media (hover: hover) and (pointer: fine) {
+        .nav-item:hover {
+          background: var(--surface-grouped);
+          color: var(--text);
+        }
+      }
+      @media (min-width: 40rem) {
+        .page-title p,
+        .lang {
+          display: flex;
+        }
+        .topbar-inner,
+        .content {
+          padding-inline: 20px;
+        }
+      }
+      @media (min-width: 52rem) {
+        .topbar-inner {
+          grid-template-columns: minmax(190px, 1fr) auto minmax(190px, 1fr);
+        }
+        .header-center {
+          display: flex;
+        }
+      }
+      @media (min-width: 64rem) {
+        .sidebar {
+          display: block;
+        }
+        .menu-button {
+          display: none;
+        }
+        .content {
+          padding: var(--space-lg);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar" aria-label="Điều hướng quản trị">
+        <div class="sidebar-inner">
+          <div class="brand">
+            <div class="brand-mark">ZH</div>
+            <div>
+              <div class="brand-name">Zenith Lẩu Nướng</div>
+              <div class="brand-meta">Staff OS</div>
+            </div>
+          </div>
+
+          <div class="nav-group">
+            <div class="nav-title">Quản lý</div>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+              </svg>
+              Tổng quan
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+                <path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1" />
+              </svg>
+              Quản lý bàn
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7v5l3 2" />
+              </svg>
+              Nhật ký phiên ăn
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path
+                  d="M5 3h11l3 3v15l-2.5-1.5L14 21l-2.5-1.5L9 21l-2.5-1.5L4 21V4z"
+                />
+                <path d="M8 8h8M8 12h8M8 16h5" />
+              </svg>
+              Hóa đơn đã thu
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M9 2h6v4H9z" />
+                <rect x="5" y="4" width="14" height="18" rx="2" />
+                <path d="M8 10h8M8 14h8M8 18h5" />
+              </svg>
+              Danh mục món
+            </button>
+            <button class="nav-item active" aria-current="page">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M22 20v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              Nhân sự
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M4 19V9M10 19V5M16 19v-7M22 19H2" />
+              </svg>
+              Báo cáo
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="3" />
+                <path
+                  d="M19 12h3M2 12h3M12 2v3M12 19v3M17 7l2-2M5 19l2-2M17 17l2 2M5 5l2 2"
+                />
+              </svg>
+              Cài đặt
+            </button>
+          </div>
+
+          <div class="nav-group">
+            <div class="nav-title">Vận hành</div>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <rect x="2" y="5" width="20" height="14" rx="2" />
+                <path d="M2 10h20M6 15h2" />
+              </svg>
+              Thanh toán
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M4 9h16M6 9v11M18 9v11M8 4h8l2 5H6zM9 14h6" />
+              </svg>
+              Sơ đồ bàn
+            </button>
+            <button class="nav-item">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path
+                  d="M6 13a6 6 0 0 1 12 0v7H6zM9 13v-2M15 13v-2M4 20h16M12 4V2"
+                />
+              </svg>
+              Bếp KDS
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div class="topbar-inner">
+            <div style="display: flex; align-items: center; gap: 12px; min-width: 0">
+              <button class="round-button menu-button" aria-label="Mở điều hướng">
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="M4 7h16M4 12h16M4 17h16" />
+                </svg>
+              </button>
+              <div class="page-title">
+                <div class="eyebrow">Quản trị</div>
+                <h1>Nhân viên</h1>
+                <p>Quản lý tài khoản và vai trò nhân viên</p>
+              </div>
+            </div>
+
+            <div class="header-center">
+              <span class="summary-pill">8 nhân viên</span>
+            </div>
+
+            <div class="header-actions">
+              <button class="round-button" aria-label="Đổi giao diện sáng/tối">
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="4" />
+                  <path
+                    d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"
+                  />
+                </svg>
+              </button>
+              <button class="lang" aria-label="Đổi ngôn ngữ">VI</button>
+              <button class="btn btn-primary">
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                Thêm nhân viên
+              </button>
+              <button class="avatar" aria-label="Mở hồ sơ">Q</button>
+            </div>
+          </div>
+        </header>
+
+        <main class="content">
+          <div class="content-inner">
+            <div class="card">
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Nhân viên</th>
+                      <th>Vai trò</th>
+                      <th>Trạng thái</th>
+                      <th>Đăng nhập gần nhất</th>
+                      <th class="end">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>
+                        <div class="u-name">
+                          Nguyễn Văn Quản
+                          <span class="u-self">Bạn</span>
+                        </div>
+                        <div class="u-user">quan.nguyen</div>
+                      </td>
+                      <td class="u-role">manager</td>
+                      <td><span class="status active"><span class="d"></span>Đang hoạt động</span></td>
+                      <td class="col-login">04/08/2026, 17:42</td>
+                      <td>
+                        <div class="row-actions">
+                          <button class="icon-btn" title="Sửa" aria-label="Sửa">
+                            <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+                          </button>
+                          <button class="icon-btn" title="Đặt lại mật khẩu" aria-label="Đặt lại mật khẩu">
+                            <svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M10.85 12.15 19 4M18 5l2 2M15 8l2 2"/></svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td>
+                        <div class="u-name">Trần Thị Bình</div>
+                        <div class="u-user">binh.tran</div>
+                      </td>
+                      <td class="u-role">waiter</td>
+                      <td><span class="status active"><span class="d"></span>Đang hoạt động</span></td>
+                      <td class="col-login">04/08/2026, 18:05</td>
+                      <td>
+                        <div class="row-actions">
+                          <button class="icon-btn" title="Sửa" aria-label="Sửa">
+                            <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+                          </button>
+                          <button class="icon-btn" title="Đặt lại mật khẩu" aria-label="Đặt lại mật khẩu">
+                            <svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M10.85 12.15 19 4M18 5l2 2M15 8l2 2"/></svg>
+                          </button>
+                          <button class="icon-btn red" title="Vô hiệu hóa" aria-label="Vô hiệu hóa">
+                            <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM17 8l4 4M21 8l-4 4"/></svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td>
+                        <div class="u-name">Lê Văn Cường</div>
+                        <div class="u-user">cuong.le</div>
+                      </td>
+                      <td class="u-role">cashier</td>
+                      <td><span class="status active"><span class="d"></span>Đang hoạt động</span></td>
+                      <td class="col-login">04/08/2026, 16:20</td>
+                      <td>
+                        <div class="row-actions">
+                          <button class="icon-btn" title="Sửa" aria-label="Sửa">
+                            <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+                          </button>
+                          <button class="icon-btn" title="Đặt lại mật khẩu" aria-label="Đặt lại mật khẩu">
+                            <svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M10.85 12.15 19 4M18 5l2 2M15 8l2 2"/></svg>
+                          </button>
+                          <button class="icon-btn red" title="Vô hiệu hóa" aria-label="Vô hiệu hóa">
+                            <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM17 8l4 4M21 8l-4 4"/></svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td>
+                        <div class="u-name">Phạm Thị Dung</div>
+                        <div class="u-user">dung.pham</div>
+                      </td>
+                      <td class="u-role">kitchen</td>
+                      <td><span class="status active"><span class="d"></span>Đang hoạt động</span></td>
+                      <td class="col-login">04/08/2026, 15:58</td>
+                      <td>
+                        <div class="row-actions">
+                          <button class="icon-btn" title="Sửa" aria-label="Sửa">
+                            <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+                          </button>
+                          <button class="icon-btn" title="Đặt lại mật khẩu" aria-label="Đặt lại mật khẩu">
+                            <svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M10.85 12.15 19 4M18 5l2 2M15 8l2 2"/></svg>
+                          </button>
+                          <button class="icon-btn red" title="Vô hiệu hóa" aria-label="Vô hiệu hóa">
+                            <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM17 8l4 4M21 8l-4 4"/></svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td>
+                        <div class="u-name">Hoàng Văn Em</div>
+                        <div class="u-user">em.hoang</div>
+                      </td>
+                      <td class="u-role">waiter</td>
+                      <td><span class="status inactive"><span class="d"></span>Ngưng hoạt động</span></td>
+                      <td class="col-login" style="color: var(--text-tertiary)">Chưa đăng nhập</td>
+                      <td>
+                        <div class="row-actions">
+                          <button class="icon-btn" title="Sửa" aria-label="Sửa">
+                            <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+                          </button>
+                          <button class="icon-btn" title="Đặt lại mật khẩu" aria-label="Đặt lại mật khẩu">
+                            <svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M10.85 12.15 19 4M18 5l2 2M15 8l2 2"/></svg>
+                          </button>
+                          <button class="icon-btn green" title="Kích hoạt lại" aria-label="Kích hoạt lại">
+                            <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM16 11l2 2 4-4"/></svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td>
+                        <div class="u-name">Đỗ Thị Giang</div>
+                        <div class="u-user">giang.do</div>
+                      </td>
+                      <td class="u-role">cashier</td>
+                      <td><span class="status locked"><span class="d"></span>Bị khóa</span></td>
+                      <td class="col-login">02/08/2026, 21:14</td>
+                      <td>
+                        <div class="row-actions">
+                          <button class="icon-btn" title="Sửa" aria-label="Sửa">
+                            <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+                          </button>
+                          <button class="icon-btn" title="Đặt lại mật khẩu" aria-label="Đặt lại mật khẩu">
+                            <svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M10.85 12.15 19 4M18 5l2 2M15 8l2 2"/></svg>
+                          </button>
+                          <button class="icon-btn green" title="Kích hoạt lại" aria-label="Kích hoạt lại">
+                            <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM16 11l2 2 4-4"/></svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </main>
+      </section>
+    </div>
+
+    <!-- Edit sheet: Trần Thị Bình -->
+    <div class="scrim">
+      <aside class="sheet" role="dialog" aria-label="Sửa thông tin nhân viên">
+        <div class="sheet-head">
+          <div>
+            <h2>Sửa thông tin nhân viên</h2>
+            <p>binh.tran</p>
+          </div>
+          <button class="round-button" aria-label="Đóng">
+            <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+          </button>
+        </div>
+        <div class="sheet-body">
+          <div class="field">
+            <label>Họ tên</label>
+            <input type="text" value="Trần Thị Bình" />
+          </div>
+          <div class="field">
+            <label>Email (tùy chọn)</label>
+            <input type="email" value="binh.tran@zenith.vn" />
+          </div>
+          <div class="field">
+            <label>Số điện thoại (tùy chọn)</label>
+            <input type="text" value="0905 123 456" />
+          </div>
+          <div class="field">
+            <label>Vai trò</label>
+            <select>
+              <option>manager</option>
+              <option selected>waiter</option>
+              <option>cashier</option>
+              <option>kitchen</option>
+              <option>admin</option>
+            </select>
+          </div>
+        </div>
+        <div class="sheet-foot">
+          <button class="save-btn">Lưu thay đổi</button>
+        </div>
+      </aside>
+    </div>
+  </body>
+</html>

@@ -76,6 +76,70 @@ func (r *Repository) FindVariantForOrder(ctx context.Context, restaurantID, menu
 	return &variant, nil
 }
 
+// FindComboForOrder resolves the combo and all component snapshots in the same
+// transaction as order placement. The caller still validates the publication
+// window immediately before building order lines.
+func (r *Repository) FindComboForOrder(ctx context.Context, restaurantID, comboID uuid.UUID) (*domain.ComboForOrder, error) {
+	combo := &domain.ComboForOrder{}
+	var validFrom, validTo pgtype.Timestamptz
+	err := r.q(ctx).QueryRow(ctx, `
+		SELECT id, code, name, combo_price_vnd, status, availability_status, valid_from, valid_to
+		FROM combos
+		WHERE restaurant_id = $1 AND id = $2 AND deleted_at IS NULL
+	`, restaurantID, comboID).Scan(&combo.ID, &combo.Code, &combo.Name, &combo.ComboPriceVND, &combo.Status, &combo.AvailabilityStatus, &validFrom, &validTo)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperr.New(apperr.CodeNotFound, "combo not found")
+	}
+	if err != nil {
+		return nil, err
+	}
+	if validFrom.Valid {
+		t := validFrom.Time
+		combo.ValidFrom = &t
+	}
+	if validTo.Valid {
+		t := validTo.Time
+		combo.ValidTo = &t
+	}
+	rows, err := r.q(ctx).Query(ctx, `
+		SELECT ci.menu_item_id, ci.menu_item_variant_id, mi.name, mi.code,
+		       v.name, COALESCE(mi.station, 'GENERAL'), ci.quantity,
+		       COALESCE(v.price_vnd, mi.base_price_vnd),
+		       (mi.status = 'PUBLISHED' AND mi.is_available = TRUE AND mi.availability_status = 'AVAILABLE'
+		        AND (v.id IS NULL OR v.is_available = TRUE)) AS orderable
+		FROM combo_items ci
+		JOIN menu_items mi ON mi.id = ci.menu_item_id AND mi.restaurant_id = ci.restaurant_id AND mi.deleted_at IS NULL
+		LEFT JOIN menu_item_variants v ON v.id = ci.menu_item_variant_id
+		  AND v.menu_item_id = ci.menu_item_id AND v.restaurant_id = ci.restaurant_id AND v.deleted_at IS NULL
+		WHERE ci.restaurant_id = $1 AND ci.combo_id = $2
+		ORDER BY ci.display_order, ci.created_at, ci.id
+	`, restaurantID, comboID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	combo.Components = []domain.ComboComponentForOrder{}
+	for rows.Next() {
+		var component domain.ComboComponentForOrder
+		var variantID pgtype.UUID
+		var variantName pgtype.Text
+		if err := rows.Scan(&component.MenuItemID, &variantID, &component.Name, &component.Code, &variantName, &component.Station, &component.Quantity, &component.UnitPriceVND, &component.Orderable); err != nil {
+			return nil, err
+		}
+		if variantID.Valid {
+			id := uuid.UUID(variantID.Bytes)
+			component.VariantID = &id
+		}
+		if variantName.Valid {
+			name := variantName.String
+			component.VariantName = &name
+		}
+		combo.ReferencePriceVND += component.UnitPriceVND * int64(component.Quantity)
+		combo.Components = append(combo.Components, component)
+	}
+	return combo, rows.Err()
+}
+
 func (r *Repository) ListOptionGroupRules(ctx context.Context, restaurantID, menuItemID uuid.UUID) ([]domain.OptionGroupRule, error) {
 	rows, err := r.q(ctx).Query(ctx, `
 		SELECT og.id, og.name, og.selection_type, COALESCE(miog.is_required_override, og.is_required), og.min_selections, og.max_selections
@@ -166,14 +230,16 @@ func (r *Repository) CreateOrderGraph(ctx context.Context, order *domain.OrderCr
 	}
 	for i := range order.Lines {
 		line := &order.Lines[i]
-		err := r.q(ctx).QueryRow(ctx, `
-			INSERT INTO order_items (restaurant_id, order_id, dining_session_id, menu_item_id, menu_item_variant_id,
+		if line.ID == uuid.Nil {
+			line.ID = uuid.New()
+		}
+		_, err := r.q(ctx).Exec(ctx, `
+			INSERT INTO order_items (id, restaurant_id, order_id, dining_session_id, menu_item_id, menu_item_variant_id,
 			 item_name_snapshot, item_code_snapshot, variant_name_snapshot, unit_price_vnd, quantity,
 			 options_total_vnd, subtotal_vnd, discount_amount_vnd, total_amount_vnd, status, station, note,
-			 is_takeaway)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $18, $15, $16, $17)
-			RETURNING id
-		`, order.RestaurantID, order.ID, sessionID, line.MenuItemID, line.VariantID, line.ItemNameSnapshot, nullString(line.ItemCodeSnapshot), line.VariantNameSnapshot, line.UnitPriceVND, line.Quantity, line.OptionsTotalVND, line.SubtotalVND, line.DiscountAmountVND, line.TotalAmountVND, line.Station, nullString(line.Note), line.IsTakeaway, itemStatus).Scan(&line.ID)
+			 is_takeaway, combo_id, parent_order_item_id, reference_price_vnd)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+			`, line.ID, order.RestaurantID, order.ID, sessionID, nullableUUID(line.MenuItemID), line.VariantID, line.ItemNameSnapshot, nullString(line.ItemCodeSnapshot), line.VariantNameSnapshot, line.UnitPriceVND, line.Quantity, line.OptionsTotalVND, line.SubtotalVND, line.DiscountAmountVND, line.TotalAmountVND, itemStatus, nullString(line.Station), nullString(line.Note), line.IsTakeaway, line.ComboID, line.ParentOrderItemID, line.ReferencePriceVND)
 		if err != nil {
 			return err
 		}
@@ -299,8 +365,8 @@ func (r *Repository) fetchOrders(ctx context.Context, restaurantID, sessionID uu
 func (r *Repository) fetchItems(ctx context.Context, restaurantID, sessionID uuid.UUID, orderIDs []uuid.UUID) ([]domain.OrderItemRead, error) {
 	rows, err := r.q(ctx).Query(ctx, `
 		SELECT id, order_id, menu_item_id, item_name_snapshot, variant_name_snapshot, quantity, unit_price_vnd,
-		       options_total_vnd, subtotal_vnd, total_amount_vnd, status, COALESCE(station, 'GENERAL'), COALESCE(note, ''),
-		       is_takeaway, unavailable_reason
+		       options_total_vnd, subtotal_vnd, total_amount_vnd, status, station, COALESCE(note, ''),
+		       is_takeaway, unavailable_reason, combo_id, parent_order_item_id
 		FROM order_items
 		WHERE restaurant_id = $1 AND (dining_session_id = $2 OR order_id = $2) AND order_id = ANY($3) AND deleted_at IS NULL
 		ORDER BY created_at, id
@@ -312,10 +378,28 @@ func (r *Repository) fetchItems(ctx context.Context, restaurantID, sessionID uui
 	out := []domain.OrderItemRead{}
 	for rows.Next() {
 		var row domain.OrderItemRead
+		var menuItemID pgtype.UUID
 		var variant pgtype.Text
 		var reason pgtype.Text
-		if err := rows.Scan(&row.ID, &row.OrderID, &row.MenuItemID, &row.NameSnapshot, &variant, &row.Quantity, &row.UnitPriceVND, &row.OptionsTotalVND, &row.SubtotalVND, &row.TotalAmountVND, &row.Status, &row.Station, &row.Note, &row.IsTakeaway, &reason); err != nil {
+		var station pgtype.Text
+		var comboID, parentID pgtype.UUID
+		if err := rows.Scan(&row.ID, &row.OrderID, &menuItemID, &row.NameSnapshot, &variant, &row.Quantity, &row.UnitPriceVND, &row.OptionsTotalVND, &row.SubtotalVND, &row.TotalAmountVND, &row.Status, &station, &row.Note, &row.IsTakeaway, &reason, &comboID, &parentID); err != nil {
 			return nil, err
+		}
+		if menuItemID.Valid {
+			row.MenuItemID = uuid.UUID(menuItemID.Bytes)
+		}
+		if station.Valid {
+			row.Station = station.String
+		}
+		if comboID.Valid {
+			id := uuid.UUID(comboID.Bytes)
+			row.ComboID = &id
+			row.IsComboParent = true
+		}
+		if parentID.Valid {
+			id := uuid.UUID(parentID.Bytes)
+			row.ParentOrderItemID = &id
 		}
 		if variant.Valid {
 			v := variant.String
@@ -327,6 +411,44 @@ func (r *Repository) fetchItems(ctx context.Context, restaurantID, sessionID uui
 		}
 		row.Options = []domain.OrderOptionRead{}
 		out = append(out, row)
+	}
+	parents := map[uuid.UUID][]*domain.OrderItemRead{}
+	for i := range out {
+		if out[i].ParentOrderItemID != nil {
+			parents[*out[i].ParentOrderItemID] = append(parents[*out[i].ParentOrderItemID], &out[i])
+		}
+	}
+	for i := range out {
+		if !out[i].IsComboParent {
+			continue
+		}
+		children := parents[out[i].ID]
+		if len(children) == 0 {
+			continue
+		}
+		allCancelled, allServed := true, true
+		anyPending := false
+		for _, child := range children {
+			if child.Status != "CANCELLED" {
+				allCancelled = false
+			}
+			if child.Status != "SERVED" {
+				allServed = false
+			}
+			if child.Status == "PLACED" || child.Status == "PENDING" {
+				anyPending = true
+			}
+		}
+		switch {
+		case allCancelled:
+			out[i].Status = "CANCELLED"
+		case allServed:
+			out[i].Status = "SERVED"
+		case anyPending:
+			out[i].Status = "PENDING"
+		default:
+			out[i].Status = "PREPARING"
+		}
 	}
 	return out, rows.Err()
 }
@@ -376,7 +498,7 @@ func (r *Repository) LockOrderForGuest(ctx context.Context, restaurantID, sessio
 
 func (r *Repository) LoadOrderLinesForEdit(ctx context.Context, restaurantID, sessionID, orderID uuid.UUID) ([]domain.OrderLineForEdit, error) {
 	rows, err := r.q(ctx).Query(ctx, `
-		SELECT id, order_id, menu_item_id, menu_item_variant_id, status, quantity, unit_price_vnd, COALESCE(note, ''), variant_name_snapshot
+		SELECT id, order_id, menu_item_id, menu_item_variant_id, status, quantity, unit_price_vnd, COALESCE(note, ''), variant_name_snapshot, combo_id, parent_order_item_id
 		FROM order_items
 		WHERE restaurant_id = $1 AND dining_session_id = $2 AND order_id = $3 AND deleted_at IS NULL
 		ORDER BY created_at, id
@@ -388,10 +510,15 @@ func (r *Repository) LoadOrderLinesForEdit(ctx context.Context, restaurantID, se
 	out := []domain.OrderLineForEdit{}
 	for rows.Next() {
 		var row domain.OrderLineForEdit
+		var menuItemID pgtype.UUID
 		var variantID pgtype.UUID
 		var variantName pgtype.Text
-		if err := rows.Scan(&row.ID, &row.OrderID, &row.MenuItemID, &variantID, &row.Status, &row.Quantity, &row.UnitPriceVND, &row.Note, &variantName); err != nil {
+		var comboID, parentID pgtype.UUID
+		if err := rows.Scan(&row.ID, &row.OrderID, &menuItemID, &variantID, &row.Status, &row.Quantity, &row.UnitPriceVND, &row.Note, &variantName, &comboID, &parentID); err != nil {
 			return nil, err
+		}
+		if menuItemID.Valid {
+			row.MenuItemID = uuid.UUID(menuItemID.Bytes)
 		}
 		if variantID.Valid {
 			id := uuid.UUID(variantID.Bytes)
@@ -400,6 +527,14 @@ func (r *Repository) LoadOrderLinesForEdit(ctx context.Context, restaurantID, se
 		if variantName.Valid {
 			name := variantName.String
 			row.VariantNameSnapshot = &name
+		}
+		if comboID.Valid {
+			id := uuid.UUID(comboID.Bytes)
+			row.ComboID = &id
+		}
+		if parentID.Valid {
+			id := uuid.UUID(parentID.Bytes)
+			row.ParentOrderItemID = &id
 		}
 		out = append(out, row)
 	}
@@ -530,14 +665,16 @@ func (r *Repository) FinishOrderMutation(ctx context.Context, restaurantID, orde
 
 func (r *Repository) LockOrderLineForCancelRequest(ctx context.Context, restaurantID, sessionID, orderID, orderItemID uuid.UUID) (*domain.OrderLineForEdit, error) {
 	var row domain.OrderLineForEdit
+	var menuItemID pgtype.UUID
 	var variantID pgtype.UUID
 	var variantName pgtype.Text
+	var comboID, parentID pgtype.UUID
 	err := r.q(ctx).QueryRow(ctx, `
-		SELECT id, order_id, menu_item_id, menu_item_variant_id, status, quantity, unit_price_vnd, COALESCE(note, ''), variant_name_snapshot
+		SELECT id, order_id, menu_item_id, menu_item_variant_id, status, quantity, unit_price_vnd, COALESCE(note, ''), variant_name_snapshot, combo_id, parent_order_item_id
 		FROM order_items
 		WHERE restaurant_id = $1 AND dining_session_id = $2 AND order_id = $3 AND id = $4 AND deleted_at IS NULL
 		FOR UPDATE
-	`, restaurantID, sessionID, orderID, orderItemID).Scan(&row.ID, &row.OrderID, &row.MenuItemID, &variantID, &row.Status, &row.Quantity, &row.UnitPriceVND, &row.Note, &variantName)
+	`, restaurantID, sessionID, orderID, orderItemID).Scan(&row.ID, &row.OrderID, &menuItemID, &variantID, &row.Status, &row.Quantity, &row.UnitPriceVND, &row.Note, &variantName, &comboID, &parentID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, apperr.New(apperr.CodeNotFound, "order item not found")
 	}
@@ -547,6 +684,17 @@ func (r *Repository) LockOrderLineForCancelRequest(ctx context.Context, restaura
 	if variantID.Valid {
 		id := uuid.UUID(variantID.Bytes)
 		row.VariantID = &id
+	}
+	if menuItemID.Valid {
+		row.MenuItemID = uuid.UUID(menuItemID.Bytes)
+	}
+	if comboID.Valid {
+		id := uuid.UUID(comboID.Bytes)
+		row.ComboID = &id
+	}
+	if parentID.Valid {
+		id := uuid.UUID(parentID.Bytes)
+		row.ParentOrderItemID = &id
 	}
 	if variantName.Valid {
 		name := variantName.String
@@ -615,13 +763,14 @@ func (r *Repository) ReviewCancelRequest(ctx context.Context, restaurantID, canc
 	var out orderingapp.CancelRequestReviewResult
 	var orderItemID, sessionID uuid.UUID
 	var crStatus string
+	var comboID pgtype.UUID
 	err := r.q(ctx).QueryRow(ctx, `
-		SELECT cr.order_item_id, cr.status, oi.dining_session_id
+		SELECT cr.order_item_id, cr.status, oi.dining_session_id, oi.combo_id
 		FROM cancel_requests cr
 		JOIN order_items oi ON oi.id = cr.order_item_id AND oi.restaurant_id = cr.restaurant_id
 		WHERE cr.restaurant_id = $1 AND cr.id = $2 AND cr.deleted_at IS NULL
 		FOR UPDATE OF cr
-	`, restaurantID, cancelRequestID).Scan(&orderItemID, &crStatus, &sessionID)
+	`, restaurantID, cancelRequestID).Scan(&orderItemID, &crStatus, &sessionID, &comboID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return out, apperr.New(apperr.CodeNotFound, "cancel request not found")
 	}
@@ -651,25 +800,62 @@ func (r *Repository) ReviewCancelRequest(ctx context.Context, restaurantID, canc
 		if current == "READY" || current == "SERVED" || current == "CANCELLED" || current == "UNAVAILABLE" {
 			return out, apperr.New(apperr.CodeConflict, "item can no longer be cancelled: "+current)
 		}
-		if _, err := r.q(ctx).Exec(ctx, `
-			UPDATE order_items
-			SET status = 'CANCELLED', version = version + 1, updated_at = NOW()
-			WHERE restaurant_id = $1 AND id = $2
-		`, restaurantID, orderItemID); err != nil {
-			return out, err
-		}
-		if _, err := r.q(ctx).Exec(ctx, `
+		if comboID.Valid {
+			var blocked bool
+			if err := r.q(ctx).QueryRow(ctx, `
+				SELECT EXISTS (
+					SELECT 1 FROM order_items
+					WHERE restaurant_id = $1 AND (id = $2 OR parent_order_item_id = $2)
+					  AND status IN ('READY', 'SERVED', 'UNAVAILABLE') AND deleted_at IS NULL
+				)
+			`, restaurantID, orderItemID).Scan(&blocked); err != nil {
+				return out, err
+			}
+			if blocked {
+				return out, apperr.New(apperr.CodeConflict, "combo contains an item that can no longer be cancelled")
+			}
+			if _, err := r.q(ctx).Exec(ctx, `
+				INSERT INTO order_item_status_history (restaurant_id, order_item_id, from_status, to_status, changed_by, changed_by_role)
+				SELECT restaurant_id, id, status, 'CANCELLED', $3, 'kitchen'
+				FROM order_items
+				WHERE restaurant_id = $1 AND (id = $2 OR parent_order_item_id = $2) AND status <> 'CANCELLED'
+			`, restaurantID, orderItemID, reviewedBy); err != nil {
+				return out, err
+			}
+			if _, err := r.q(ctx).Exec(ctx, `
+				UPDATE order_items
+				SET status = 'CANCELLED', cancelled_at = NOW(), version = version + 1, updated_at = NOW()
+				WHERE restaurant_id = $1 AND (id = $2 OR parent_order_item_id = $2) AND status <> 'CANCELLED'
+			`, restaurantID, orderItemID); err != nil {
+				return out, err
+			}
+			if _, err := r.q(ctx).Exec(ctx, `
+				UPDATE kitchen_ticket_items SET status = 'CANCELLED', updated_at = NOW()
+				WHERE restaurant_id = $1 AND order_item_id IN (SELECT id FROM order_items WHERE restaurant_id = $1 AND (id = $2 OR parent_order_item_id = $2))
+			`, restaurantID, orderItemID); err != nil {
+				return out, err
+			}
+		} else {
+			if _, err := r.q(ctx).Exec(ctx, `
+				UPDATE order_items
+				SET status = 'CANCELLED', version = version + 1, updated_at = NOW()
+				WHERE restaurant_id = $1 AND id = $2
+			`, restaurantID, orderItemID); err != nil {
+				return out, err
+			}
+			if _, err := r.q(ctx).Exec(ctx, `
 			INSERT INTO order_item_status_history (restaurant_id, order_item_id, from_status, to_status, changed_by, changed_by_role)
 			VALUES ($1, $2, $3, 'CANCELLED', $4, 'kitchen')
-		`, restaurantID, orderItemID, current, reviewedBy); err != nil {
-			return out, err
-		}
-		if _, err := r.q(ctx).Exec(ctx, `
+			`, restaurantID, orderItemID, current, reviewedBy); err != nil {
+				return out, err
+			}
+			if _, err := r.q(ctx).Exec(ctx, `
 			UPDATE kitchen_ticket_items
 			SET status = 'CANCELLED', updated_at = NOW()
 			WHERE restaurant_id = $1 AND order_item_id = $2
-		`, restaurantID, orderItemID); err != nil {
-			return out, err
+			`, restaurantID, orderItemID); err != nil {
+				return out, err
+			}
 		}
 		itemStatus = "CANCELLED"
 	}
@@ -693,10 +879,10 @@ func (r *Repository) ReviewCancelRequest(ctx context.Context, restaurantID, canc
 
 func (r *Repository) ListStaffTables(ctx context.Context, restaurantID uuid.UUID) ([]orderingapp.StaffTableDTO, error) {
 	rows, err := r.q(ctx).Query(ctx, `
-		SELECT t.id, t.code, t.name, t.capacity, t.status, COALESCE(a.name, ''), t.position_x, t.position_y,
+		SELECT t.id, t.code, t.name, t.capacity, t.status, COALESCE(a.name, ''), COALESCE(a.display_order, 2147483647), t.position_x, t.position_y,
 		       ds.id, ds.session_code, ds.status, COALESCE(ds.customer_count, 0), COALESCE(ds.customer_name, ''), ds.opened_at, ds.updated_at, ds.waiter_called_at, COALESCE(ds.waiter_call_reason, ''), ds.merge_group_id
 		FROM tables t
-		LEFT JOIN areas a ON a.id = t.area_id AND a.restaurant_id = t.restaurant_id AND a.deleted_at IS NULL
+		JOIN areas a ON a.id = t.area_id AND a.restaurant_id = t.restaurant_id AND a.is_active = TRUE AND a.deleted_at IS NULL
 		LEFT JOIN dining_sessions ds
 		  ON ds.restaurant_id = t.restaurant_id
 		 AND ds.table_id = t.id
@@ -706,12 +892,12 @@ func (r *Repository) ListStaffTables(ctx context.Context, restaurantID uuid.UUID
 
 		UNION ALL
 
-		SELECT '00000000-0000-0000-0000-000000000001'::uuid, 'Mang về', 'Mang về', 0, 'AVAILABLE', '', NULL::int, NULL::int,
+		SELECT '00000000-0000-0000-0000-000000000001'::uuid, 'Mang về', 'Mang về', 0, 'AVAILABLE', '', 2147483647, NULL::int, NULL::int,
 		       o.id, o.order_number, o.status, 1, COALESCE(o.customer_name, ''), o.submitted_at, o.updated_at, NULL::timestamptz, '', NULL::uuid
 		FROM orders o
 		WHERE o.restaurant_id = $1 AND o.order_type = 'TAKEAWAY' AND o.status NOT IN ('PAID', 'CANCELLED') AND o.deleted_at IS NULL
 		
-		ORDER BY 2
+		ORDER BY 7, 2
 	`, restaurantID)
 	if err != nil {
 		return nil, err
@@ -727,7 +913,7 @@ func (r *Repository) ListStaffTables(ctx context.Context, restaurantID uuid.UUID
 		var customerName, waiterCallReason pgtype.Text
 		var posX, posY pgtype.Int4
 		var openedAt, updatedAt, waiterCalledAt pgtype.Timestamptz
-		if err := rows.Scan(&table.ID, &table.Code, &table.Name, &table.Capacity, &table.Status, &table.AreaName, &posX, &posY, &sessionID, &sessionCode, &sessionStatus, &customerCount, &customerName, &openedAt, &updatedAt, &waiterCalledAt, &waiterCallReason, &mergeGroupID); err != nil {
+		if err := rows.Scan(&table.ID, &table.Code, &table.Name, &table.Capacity, &table.Status, &table.AreaName, &table.AreaOrder, &posX, &posY, &sessionID, &sessionCode, &sessionStatus, &customerCount, &customerName, &openedAt, &updatedAt, &waiterCalledAt, &waiterCallReason, &mergeGroupID); err != nil {
 			return nil, err
 		}
 		if posX.Valid && posY.Valid {
@@ -1069,6 +1255,9 @@ func (r *Repository) MarkItemUnavailable(ctx context.Context, restaurantID, item
 	if err != nil {
 		return orderingapp.UpdateItemStatusResponse{}, err
 	}
+	if c.combo {
+		return orderingapp.UpdateItemStatusResponse{}, apperr.New(apperr.CodeConflict, "combo components cannot be marked unavailable individually")
+	}
 	if current != "PENDING" && current != "ACKNOWLEDGED" {
 		return orderingapp.UpdateItemStatusResponse{}, apperr.New(apperr.CodeConflict, "item cannot be marked unavailable in current status: "+current)
 	}
@@ -1203,6 +1392,7 @@ type itemCtx struct {
 	sessionID *uuid.UUID
 	itemName  string
 	tableCode string
+	combo     bool
 }
 
 func (c itemCtx) resp(itemID uuid.UUID, status string) orderingapp.UpdateItemStatusResponse {
@@ -1223,13 +1413,14 @@ func (r *Repository) lockItem(ctx context.Context, restaurantID, itemID uuid.UUI
 	var c itemCtx
 	var sess pgtype.UUID
 	err := r.q(ctx).QueryRow(ctx, `
-		SELECT oi.order_id, oi.status, oi.item_name_snapshot, oi.dining_session_id, COALESCE(t.code, '')
+		SELECT oi.order_id, oi.status, oi.item_name_snapshot, oi.dining_session_id, COALESCE(t.code, ''),
+		       (oi.combo_id IS NOT NULL OR oi.parent_order_item_id IS NOT NULL)
 		FROM order_items oi
 		LEFT JOIN dining_sessions ds ON ds.id = oi.dining_session_id AND ds.restaurant_id = oi.restaurant_id
 		LEFT JOIN tables t ON t.id = ds.table_id AND t.restaurant_id = oi.restaurant_id
 		WHERE oi.restaurant_id = $1 AND oi.id = $2 AND oi.deleted_at IS NULL
 		FOR UPDATE OF oi
-	`, restaurantID, itemID).Scan(&orderID, &current, &c.itemName, &sess, &c.tableCode)
+	`, restaurantID, itemID).Scan(&orderID, &current, &c.itemName, &sess, &c.tableCode, &c.combo)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uuid.Nil, "", itemCtx{}, apperr.New(apperr.CodeNotFound, "order item not found")
 	}
@@ -1335,6 +1526,13 @@ func (r *Repository) fetchStaffHistory(ctx context.Context, restaurantID uuid.UU
 
 func nullString(v string) any {
 	if v == "" {
+		return nil
+	}
+	return v
+}
+
+func nullableUUID(v uuid.UUID) any {
+	if v == uuid.Nil {
 		return nil
 	}
 	return v

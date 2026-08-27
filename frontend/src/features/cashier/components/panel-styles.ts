@@ -9,15 +9,14 @@ export const BAD_TEXT = 'text-red-600 dark:text-red-400'
 export const OK_CARD = 'border border-emerald-500/25 bg-emerald-500/8'
 export const WARN_CARD = 'border border-amber-500/25 bg-amber-500/8'
 
-
 export const STATUS_VARIANT: Record<
-   SessionStatus,
-   'ghost' | 'secondary' | 'success' | 'warning' | 'destructive' | 'outline'
+  SessionStatus,
+  'ghost' | 'secondary' | 'success' | 'warning' | 'destructive' | 'outline'
 > = {
-   dining: 'outline',
-   bill_requested: 'warning',
-   in_payment: 'secondary',
-   paid: 'success',
-   closed: 'ghost',
-   voided: 'destructive',
+  dining: 'outline',
+  bill_requested: 'warning',
+  in_payment: 'secondary',
+  paid: 'success',
+  closed: 'ghost',
+  voided: 'destructive',
 }

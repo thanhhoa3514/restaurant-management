@@ -186,8 +186,18 @@ export interface Area {
   is_active: boolean
 }
 
-export function listAreas(): Promise<{ areas: Area[] }> {
-  return apiRequest<{ areas: Area[] }>('/api/v1/restaurant/areas')
+export interface DiningLimits {
+  max_areas: number
+  max_tables_per_area: number
+}
+
+export interface AreaListResponse {
+  areas: Area[]
+  limits: DiningLimits
+}
+
+export function listAreas(): Promise<AreaListResponse> {
+  return apiRequest<AreaListResponse>('/api/v1/restaurant/areas')
 }
 
 export interface SaveAreaArgs {
@@ -236,13 +246,6 @@ export function saveTable({ tableId, areaId, code, name, capacity, status }: Sav
         body,
       })
     : apiRequest('/api/v1/restaurant/tables', { method: 'POST', body })
-}
-
-export function saveTablePositions(positions: Array<{ table_id: string; x: number; y: number }>) {
-  return apiRequest<{ saved: number }>('/api/v1/restaurant/tables/positions', {
-    method: 'PATCH',
-    body: { positions },
-  })
 }
 
 export function deleteTable(tableId: string) {

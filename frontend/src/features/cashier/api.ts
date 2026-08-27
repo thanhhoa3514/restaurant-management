@@ -1,4 +1,5 @@
 import { apiRequest } from '@/lib/api'
+import type { ApiCategory, ApiMenuItemDetail, ApiMenuItemSummary } from '@/features/ordering/types'
 
 export interface StaffTakeawayLineInput {
   menu_item_id: string
@@ -37,6 +38,20 @@ export interface StaffTakeawayResult {
   order_type: string
   items: StaffTakeawayItemDTO[]
   total_vnd: number
+  session_total_vnd?: number
+}
+
+export function listTakeawayCategories(): Promise<ApiCategory[]> {
+  return apiRequest<ApiCategory[]>('/api/v1/customer/menu/categories')
+}
+
+export function listTakeawayMenuItems(categoryId?: string): Promise<ApiMenuItemSummary[]> {
+  const query = categoryId ? `?category_id=${encodeURIComponent(categoryId)}` : ''
+  return apiRequest<ApiMenuItemSummary[]>(`/api/v1/customer/menu/items${query}`)
+}
+
+export function getTakeawayMenuItem(itemId: string): Promise<ApiMenuItemDetail> {
+  return apiRequest<ApiMenuItemDetail>(`/api/v1/customer/menu/items/${encodeURIComponent(itemId)}`)
 }
 
 export function reopenSession(sessionId: string): Promise<{ session_id: string; status: string }> {

@@ -1,0 +1,92 @@
+/* Hallmark · pre-emit critique: P5 H4 E4 S5 R5 V4
+ * Hallmark · genre: modern-minimal · macrostructure: Catalogue · theme: Quiet · anchor hue: system blue
+ * audience: restaurant manager · waiter · QR guest · tone: utilitarian
+ * enrichment: none · nav: existing shell · footer: none
+ * contrast: pass (46–50) · honest: pass (56) · chrome: pass (57) · tokens: pass (58)
+ * responsive: source-pass (36, 59, 61–69) · icons: pass (60)
+ */
+@import '../../../tokens.css';
+
+.dining-catalogue {
+  color: var(--dining-ink);
+  font-family: var(--dining-font-body);
+}
+
+.dining-catalogue :is(h1, h2, h3) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--dining-font-display);
+}
+
+.dining-area-section {
+  display: grid;
+  gap: var(--dining-space-4);
+  border-block-start: 1px solid var(--dining-rule);
+  padding-block: var(--dining-space-6) var(--dining-space-8);
+}
+
+.dining-area-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--dining-space-6);
+}
+
+.dining-table-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr));
+  gap: var(--dining-space-3);
+}
+
+.dining-table-grid--admin {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: var(--dining-space-4);
+}
+
+.dining-table-grid--qr {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr));
+}
+
+.dining-area-empty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--dining-space-3);
+  min-height: 5.5rem;
+  border-radius: var(--dining-radius-md);
+  background: var(--dining-surface-muted);
+  padding: var(--dining-space-4);
+  color: var(--dining-ink-muted);
+}
+
+.dining-catalogue :is(button, a):focus-visible {
+  outline: 2px solid var(--dining-focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 30rem) {
+  .dining-area-heading {
+    flex-direction: column;
+    gap: var(--dining-space-3);
+  }
+
+  .dining-area-heading > :last-child {
+    text-align: start;
+  }
+}
+
+@media (pointer: coarse) {
+  .dining-catalogue :is(button, a) {
+    min-height: 2.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dining-catalogue *,
+  .dining-catalogue *::before,
+  .dining-catalogue *::after {
+    animation-duration: 150ms !important;
+    transition-duration: 150ms !important;
+  }
+}

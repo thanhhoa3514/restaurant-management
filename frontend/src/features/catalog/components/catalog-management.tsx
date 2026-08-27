@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Loader2, Plus, Utensils } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, Plus, Utensils } from 'lucide-react'
 
 import { SecureActionDialog } from '@/components/SecureActionDialog'
 import { ShellHeaderActions, ShellHeaderCenter, useShellConfig } from '@/components/admin-shell'
@@ -16,11 +16,14 @@ import { ErrorCard } from './catalog-shared'
 import { CategoryFilter } from './category-filter'
 import { ItemCard } from './item-card'
 import { CatalogItemSheet } from './catalog-form'
+import { ComboManagement } from './combo-management'
 
 export function CatalogManagement() {
   const { lang } = useLang()
   const t = makeAdminT(lang)
   const [categoryId, setCategoryId] = useState<string | undefined>()
+  const [section, setSection] = useState<'items' | 'combos'>('items')
+  const [page, setPage] = useState(1)
   const [sheetState, setSheetState] = useState<
     { mode: 'create' } | { mode: 'edit'; id: string } | null
   >(null)
@@ -34,17 +37,24 @@ export function CatalogManagement() {
     error: categoriesError,
   } = useCategoriesQuery()
   const {
-    data: items = [],
+    data,
     refetch: refetchItems,
     isFetching: isItemsFetching,
     isError: isItemsError,
     error: itemsError,
     isLoading: isItemsLoading,
     isSuccess: isItemsSuccess,
-  } = useMenuItemsQuery(categoryId)
+  } = useMenuItemsQuery(categoryId, page)
+  const items = data?.items ?? []
+  const pagination = data?.pagination
   const selectedCategoryName = categoryId
     ? categories.find((category) => category.id === categoryId)?.name
     : t('catalog_all')
+
+  const selectCategory = (id: string | undefined) => {
+    setCategoryId(id)
+    setPage(1)
+  }
 
   useShellConfig({
     title: t('catalog_title'),
@@ -56,12 +66,11 @@ export function CatalogManagement() {
 
   const deleteMutation = useDeleteItemMutation()
 
-  const visible = items.filter(
-    (item) => item.status === 'PUBLISHED' && item.availability_status !== 'HIDDEN',
-  ).length
-  const unavailable = items.filter(
-    (item) => !item.is_available || item.availability_status !== 'AVAILABLE',
-  ).length
+  // Aggregates come from the backend over the whole filtered set (all pages),
+  // not the current page window — so the summary stays accurate while paging.
+  const totalItems = pagination?.total_items ?? items.length
+  const visible = pagination?.visible ?? items.length
+  const unavailable = pagination?.unavailable ?? 0
 
   return (
     <>
@@ -70,24 +79,49 @@ export function CatalogManagement() {
           {isItemsLoading || isItemsFetching ? (
             <span className="inline-block h-4 w-36 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700 font-normal align-middle" />
           ) : (
-            t('catalog_summary', items.length, visible, unavailable)
+            t('catalog_summary', totalItems, visible, unavailable)
           )}
         </div>
       </ShellHeaderCenter>
       <ShellHeaderActions>
-        <Button className="h-10 rounded-full" onClick={() => setSheetState({ mode: 'create' })}>
-          <Plus className="size-4" />
-          {t('catalog_new_item')}
-        </Button>
+        {section === 'items' && (
+          <Button className="h-10 rounded-full" onClick={() => setSheetState({ mode: 'create' })}>
+            <Plus className="size-4" />
+            {t('catalog_new_item')}
+          </Button>
+        )}
       </ShellHeaderActions>
 
-      <div className="mx-auto grid max-w-7xl gap-5 lg:grid-cols-[260px_minmax(0,1fr)]">
+      <div className="mx-auto mb-5 flex max-w-7xl gap-2 border-b border-[var(--separator)] pb-2">
+        <Button
+          variant={section === 'items' ? 'default' : 'ghost'}
+          className="rounded-full"
+          onClick={() => setSection('items')}
+        >
+          {t('catalog_items_heading')}
+        </Button>
+        <Button
+          variant={section === 'combos' ? 'default' : 'ghost'}
+          className="rounded-full"
+          onClick={() => setSection('combos')}
+        >
+          {lang === 'vi' ? 'Combo & set menu' : 'Combos & set menus'}
+        </Button>
+      </div>
+
+      <div
+        className={
+          section === 'items'
+            ? 'mx-auto grid max-w-7xl gap-5 lg:grid-cols-[260px_minmax(0,1fr)]'
+            : 'hidden'
+        }
+      >
         <CategoryFilter
           categories={categories}
           selectedId={categoryId}
           loading={isCategoriesLoading}
           t={t}
-          onSelect={setCategoryId}
+          onSelect={selectCategory}
         />
 
         <section className="min-w-0 space-y-4">
@@ -157,7 +191,42 @@ export function CatalogManagement() {
               />
             ))}
           </div>
+
+          {pagination && pagination.total_pages > 1 && (
+            <nav
+              className="flex items-center justify-center gap-4 pt-2"
+              aria-label={t('catalog_pagination_label')}
+            >
+              <Button
+                variant="secondary"
+                size="icon"
+                className="rounded-full"
+                aria-label={t('catalog_page_prev')}
+                disabled={page <= 1 || isItemsFetching}
+                onClick={() => setPage((current) => Math.max(1, current - 1))}
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <span className="text-sm text-[var(--text-secondary)]">
+                {t('catalog_page_of', pagination.page, pagination.total_pages)}
+              </span>
+              <Button
+                variant="secondary"
+                size="icon"
+                className="rounded-full"
+                aria-label={t('catalog_page_next')}
+                disabled={page >= pagination.total_pages || isItemsFetching}
+                onClick={() => setPage((current) => current + 1)}
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </nav>
+          )}
         </section>
+      </div>
+
+      <div className={section === 'combos' ? 'mx-auto max-w-7xl' : 'hidden'}>
+        <ComboManagement />
       </div>
 
       <CatalogItemSheet

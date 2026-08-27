@@ -1,0 +1,506 @@
+/* Hallmark · macrostructure: Split Studio */
+/* Hallmark · pre-emit critique: P5 H5 E5 S4 R5 V5 · genre: modern-minimal · theme: linen */
+
+:root {
+  --combo-admin-paper: oklch(97% 0.012 220);
+  --combo-admin-paper-deep: oklch(93% 0.02 220);
+  --combo-admin-paper-soft: oklch(99% 0.006 220);
+  --combo-admin-ink: oklch(25% 0.02 235);
+  --combo-admin-muted: oklch(47% 0.02 230);
+  --combo-admin-faint: oklch(61% 0.018 230);
+  --combo-admin-rule: oklch(48% 0.03 230 / 0.22);
+  --combo-admin-accent: oklch(48% 0.13 232);
+  --combo-admin-accent-ink: oklch(35% 0.1 232);
+  --combo-admin-danger: oklch(44% 0.15 25);
+  --combo-admin-display: 'Hanken Grotesk', 'Helvetica Neue', Arial, sans-serif;
+  --combo-admin-body: 'Hanken Grotesk', 'Helvetica Neue', Arial, sans-serif;
+  --combo-admin-text-xs: 0.6875rem;
+  --combo-admin-text-sm: 0.8125rem;
+  --combo-admin-text-md: 0.9375rem;
+  --combo-admin-text-lg: 1.25rem;
+  --combo-admin-text-xl: clamp(2rem, 4vw, 3.25rem);
+  --combo-admin-space-1: 0.5rem;
+  --combo-admin-space-2: 0.75rem;
+  --combo-admin-space-3: 1rem;
+  --combo-admin-space-4: 1.5rem;
+  --combo-admin-space-5: 2rem;
+  --combo-admin-space-6: 3rem;
+  --combo-admin-radius: 0.625rem;
+  --combo-admin-radius-sm: 0.375rem;
+  --combo-admin-shadow: 0 1.25rem 3rem oklch(24% 0.02 230 / 0.14);
+  --combo-admin-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --combo-admin-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --combo-admin-dur-micro: 120ms;
+  --combo-admin-dur-short: 220ms;
+  --combo-admin-dur-long: 420ms;
+  --combo-admin-rule-width: 1px;
+  --combo-admin-sheet-width: 34rem;
+}
+
+.combo-admin {
+  max-width: 72rem;
+  margin-inline: auto;
+  color: var(--combo-admin-ink);
+  font-family: var(--combo-admin-body);
+}
+
+.combo-admin :is(button, input, textarea, [role='combobox']):focus-visible {
+  outline: var(--combo-admin-rule-width) solid var(--combo-admin-accent);
+  outline-offset: var(--combo-admin-space-1);
+}
+
+.combo-admin__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--combo-admin-space-6);
+  border-block-end: var(--combo-admin-rule-width) solid var(--combo-admin-ink);
+  padding-block: var(--combo-admin-space-3) var(--combo-admin-space-5);
+}
+
+.combo-admin__kicker,
+.combo-admin__section-label,
+.combo-admin__stat-label {
+  color: var(--combo-admin-accent-ink);
+  font-size: var(--combo-admin-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.combo-admin__title {
+  max-width: 14ch;
+  margin: var(--combo-admin-space-2) 0 0;
+  color: var(--combo-admin-ink);
+  font-family: var(--combo-admin-display);
+  font-size: var(--combo-admin-text-xl);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 0.98;
+}
+
+.combo-admin__intro {
+  max-width: 34ch;
+  margin: var(--combo-admin-space-3) 0 0;
+  color: var(--combo-admin-muted);
+  font-size: var(--combo-admin-text-sm);
+  line-height: 1.55;
+}
+
+.combo-admin__new-button {
+  min-height: 2.75rem;
+  border-radius: var(--combo-admin-radius-sm);
+  background: var(--combo-admin-ink);
+  color: var(--combo-admin-paper-soft);
+}
+
+.combo-admin__new-button:hover {
+  background: var(--combo-admin-accent);
+}
+
+.combo-admin__stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--combo-admin-space-2);
+  padding-block: var(--combo-admin-space-4);
+}
+
+.combo-admin__stat {
+  border: var(--combo-admin-rule-width) solid var(--combo-admin-rule);
+  border-radius: var(--combo-admin-radius-sm);
+  background: var(--combo-admin-paper);
+  padding: var(--combo-admin-space-3);
+}
+
+.combo-admin__stat-value {
+  display: block;
+  margin-top: var(--combo-admin-space-1);
+  color: var(--combo-admin-ink);
+  font-family: var(--combo-admin-display);
+  font-size: var(--combo-admin-text-lg);
+  font-weight: 700;
+}
+
+.combo-admin__workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(14rem, 0.28fr);
+  gap: var(--combo-admin-space-5);
+  border-block-start: var(--combo-admin-rule-width) solid var(--combo-admin-rule);
+  padding-block: var(--combo-admin-space-5);
+}
+
+.combo-admin__list-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--combo-admin-space-3);
+  margin-bottom: var(--combo-admin-space-3);
+}
+
+.combo-admin__list-title {
+  margin: var(--combo-admin-space-1) 0 0;
+  color: var(--combo-admin-ink);
+  font-family: var(--combo-admin-display);
+  font-size: var(--combo-admin-text-lg);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.combo-admin__list-count {
+  color: var(--combo-admin-faint);
+  font-size: var(--combo-admin-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.combo-admin__rows {
+  overflow: hidden;
+  border-block: var(--combo-admin-rule-width) solid var(--combo-admin-rule);
+}
+
+.combo-admin__row {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr) minmax(6rem, auto) minmax(7rem, auto) 5rem;
+  gap: var(--combo-admin-space-3);
+  align-items: center;
+  border-block-end: var(--combo-admin-rule-width) solid var(--combo-admin-rule);
+  padding: var(--combo-admin-space-3) 0;
+  transition: background-color var(--combo-admin-dur-micro) var(--combo-admin-ease-in-out);
+}
+
+.combo-admin__row:last-child {
+  border-block-end: 0;
+}
+
+.combo-admin__row:hover {
+  background: var(--combo-admin-paper-deep);
+}
+
+.combo-admin__row-number {
+  align-self: start;
+  padding-top: var(--combo-admin-space-1);
+  color: var(--combo-admin-accent-ink);
+  font-size: var(--combo-admin-text-xs);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+}
+
+.combo-admin__identity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--combo-admin-space-2);
+}
+
+.combo-admin__image {
+  display: grid;
+  width: 3.5rem;
+  height: 3.5rem;
+  flex-shrink: 0;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--combo-admin-radius-sm);
+  background: var(--combo-admin-paper-deep);
+  color: var(--combo-admin-accent-ink);
+}
+
+.combo-admin__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.combo-admin__identity-copy {
+  display: grid;
+  min-width: 0;
+  gap: var(--combo-admin-space-1);
+}
+
+.combo-admin__name {
+  overflow: hidden;
+  color: var(--combo-admin-ink);
+  font-size: var(--combo-admin-text-md);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combo-admin__code {
+  overflow: hidden;
+  color: var(--combo-admin-faint);
+  font-size: var(--combo-admin-text-xs);
+  letter-spacing: 0.06em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.combo-admin__row-value {
+  display: grid;
+  gap: var(--combo-admin-space-1);
+  color: var(--combo-admin-ink);
+  font-size: var(--combo-admin-text-sm);
+  font-weight: 700;
+}
+
+.combo-admin__row-value small {
+  color: var(--combo-admin-faint);
+  font-size: var(--combo-admin-text-xs);
+  font-weight: 500;
+}
+
+.combo-admin__row-action {
+  color: var(--combo-admin-muted);
+}
+
+.combo-admin__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--combo-admin-space-1);
+}
+
+.combo-admin__row-action:hover {
+  color: var(--combo-admin-accent);
+}
+
+.combo-admin__side-note {
+  border-block-start: var(--combo-admin-rule-width) solid var(--combo-admin-ink);
+  padding-top: var(--combo-admin-space-3);
+}
+
+.combo-admin__side-note p {
+  margin: var(--combo-admin-space-2) 0 0;
+  color: var(--combo-admin-muted);
+  font-size: var(--combo-admin-text-sm);
+  line-height: 1.55;
+}
+
+.combo-admin__empty,
+.combo-admin__loading {
+  display: grid;
+  min-height: 12rem;
+  place-items: center;
+  border-block: var(--combo-admin-rule-width) solid var(--combo-admin-rule);
+  color: var(--combo-admin-muted);
+  font-size: var(--combo-admin-text-sm);
+}
+
+.combo-admin__sheet {
+  width: min(100%, var(--combo-admin-sheet-width));
+  max-width: none;
+  border-left: var(--combo-admin-rule-width) solid var(--combo-admin-rule);
+  background: var(--combo-admin-paper-soft);
+  color: var(--combo-admin-ink);
+}
+
+.combo-admin__sheet-header {
+  border-block-end: var(--combo-admin-rule-width) solid var(--combo-admin-rule);
+  padding: var(--combo-admin-space-5);
+}
+
+.combo-admin__sheet-title {
+  margin: 0;
+  color: var(--combo-admin-ink);
+  font-family: var(--combo-admin-display);
+  font-size: var(--combo-admin-text-lg);
+  font-weight: 700;
+}
+
+.combo-admin__sheet-description {
+  margin-top: var(--combo-admin-space-1);
+  color: var(--combo-admin-muted);
+}
+
+.combo-admin__sheet-body {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  gap: var(--combo-admin-space-5);
+  overflow-y: auto;
+  padding: var(--combo-admin-space-5);
+}
+
+.combo-admin__form-section {
+  display: grid;
+  gap: var(--combo-admin-space-3);
+  border-block-start: var(--combo-admin-rule-width) solid var(--combo-admin-rule);
+  padding-top: var(--combo-admin-space-3);
+}
+
+.combo-admin__field {
+  display: grid;
+  gap: var(--combo-admin-space-1);
+}
+
+.combo-admin__field-label {
+  color: var(--combo-admin-muted);
+  font-size: var(--combo-admin-text-sm);
+  font-weight: 700;
+}
+
+.combo-admin__field :is(input, textarea, [role='combobox']) {
+  border-color: var(--combo-admin-rule);
+  border-radius: var(--combo-admin-radius-sm);
+  background: var(--combo-admin-paper);
+}
+
+.combo-admin__field textarea {
+  min-height: 6rem;
+}
+
+.combo-admin__component-list {
+  display: grid;
+  gap: var(--combo-admin-space-1);
+}
+
+.combo-admin__component {
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: var(--combo-admin-space-2);
+  border-block-end: var(--combo-admin-rule-width) solid var(--combo-admin-rule);
+}
+
+.combo-admin__component:last-child {
+  border-block-end: 0;
+}
+
+.combo-admin__component-name {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: var(--combo-admin-ink);
+  font-size: var(--combo-admin-text-sm);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combo-admin__component-qty {
+  color: var(--combo-admin-muted);
+  font-size: var(--combo-admin-text-sm);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.combo-admin__component-remove {
+  color: var(--combo-admin-danger);
+}
+
+.combo-admin__component-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 4.5rem auto;
+  gap: var(--combo-admin-space-2);
+  align-items: center;
+}
+
+.combo-admin__component-add :is(input, [role='combobox']) {
+  border-color: var(--combo-admin-rule);
+  border-radius: var(--combo-admin-radius-sm);
+  background: var(--combo-admin-paper);
+}
+
+.combo-admin__money-preview {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--combo-admin-space-3);
+  border: var(--combo-admin-rule-width) solid var(--combo-admin-rule);
+  border-radius: var(--combo-admin-radius-sm);
+  background: var(--combo-admin-paper);
+  padding: var(--combo-admin-space-3);
+  color: var(--combo-admin-muted);
+  font-size: var(--combo-admin-text-sm);
+}
+
+.combo-admin__money-preview strong {
+  color: var(--combo-admin-accent-ink);
+}
+
+.combo-admin__sheet-footer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--combo-admin-space-2);
+  border-block-start: var(--combo-admin-rule-width) solid var(--combo-admin-rule);
+  padding: var(--combo-admin-space-4) var(--combo-admin-space-5);
+}
+
+.combo-admin__save-button {
+  background: var(--combo-admin-ink);
+  color: var(--combo-admin-paper-soft);
+}
+
+.combo-admin__save-button:hover {
+  background: var(--combo-admin-accent);
+}
+
+.combo-admin__error {
+  color: var(--combo-admin-danger);
+  font-size: var(--combo-admin-text-sm);
+}
+
+@media (max-width: 64rem) {
+  .combo-admin__workbench {
+    grid-template-columns: 1fr;
+  }
+
+  .combo-admin__side-note {
+    max-width: 44rem;
+  }
+}
+
+@media (max-width: 48rem) {
+  .combo-admin__header {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: var(--combo-admin-space-4);
+  }
+
+  .combo-admin__new-button {
+    width: 100%;
+  }
+
+  .combo-admin__stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .combo-admin__row {
+    grid-template-columns: 1.75rem minmax(0, 1fr) 5rem;
+    gap: var(--combo-admin-space-2);
+  }
+
+  .combo-admin__row-value,
+  .combo-admin__row [data-slot='badge'] {
+    display: none;
+  }
+
+  .combo-admin__component-add {
+    grid-template-columns: minmax(0, 1fr) 4rem;
+  }
+
+  .combo-admin__component-add > :last-child {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+
+@media (max-width: 30rem) {
+  .combo-admin__stats {
+    gap: var(--combo-admin-space-1);
+  }
+
+  .combo-admin__stat {
+    padding: var(--combo-admin-space-2);
+  }
+
+  .combo-admin__image {
+    width: 3rem;
+    height: 3rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .combo-admin * {
+    transition-duration: var(--combo-admin-dur-micro) !important;
+  }
+}

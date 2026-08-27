@@ -27,10 +27,7 @@ type Topic struct {
 	Role         string
 	TableID      uuid.UUID
 	SessionID    uuid.UUID
-	// SessionIDs is used only for event fan-out. Authenticated subscriptions use
-	// SessionID; keeping the audience list on the event topic lets staff receive
-	// one event while every guest session in a merged bill receives it too.
-	SessionIDs []uuid.UUID
+	SessionIDs   []uuid.UUID
 }
 type Event struct {
 	Type    string `json:"type"`

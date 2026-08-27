@@ -13,13 +13,6 @@ function parseTableNumber(code: string, name: string): number {
   return match ? Number(match[0]) : 0
 }
 
-// ponytail: bàn chưa có toạ độ thì xếp lưới theo thứ tự trả về, đủ để không chồng nhau
-// lưới phủ cả canvas (8 cột x 6 hàng = 48 bàn) — dồn xuống đáy thì hàng thứ 3 trở đi
-// rơi khỏi khung y>100, bị overflow-hidden cắt mất và không kéo được trong FloorBuilder
-function fallbackPosition(index: number) {
-  return { x_pct: 14 + (index % 8) * 11, y_pct: 16 + Math.floor(index / 8) * 13 }
-}
-
 function optionText(item: {
   variant_name_snapshot: string | null
   options: Array<{ name_snapshot: string; quantity: number }> | null
@@ -71,7 +64,7 @@ function statusHistory<T extends string>(
 }
 
 export function toWaiterTables(rows: StaffTableDTO[]): WFTable[] {
-  return rows.map((table, index) => {
+  return rows.map((table) => {
     const number = parseTableNumber(table.code, table.name)
     const session: WFSession | null = table.session
       ? {
@@ -96,10 +89,8 @@ export function toWaiterTables(rows: StaffTableDTO[]): WFTable[] {
       code: table.code || table.name,
       number,
       capacity: table.capacity || 4,
-      position:
-        table.position_x != null && table.position_y != null
-          ? { x_pct: table.position_x, y_pct: table.position_y }
-          : fallbackPosition(index),
+      area_name: table.area_name,
+      area_order: table.area_order,
       status: session ? 'occupied' : 'empty',
       session,
     }

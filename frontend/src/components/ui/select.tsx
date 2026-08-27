@@ -3,7 +3,47 @@ import { Select as SelectPrimitive } from '@base-ui/react/select'
 import { cn } from '@/lib/utils'
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from 'lucide-react'
 
-const Select = SelectPrimitive.Root
+/**
+ * Walks the JSX subtree of a <Select> and builds base-ui's `items` record
+ * ({ value: label }) from every <SelectItem>. base-ui's <Select.Value> renders
+ * the raw stored value (e.g. a UUID) unless it can resolve a label from `items`
+ * — and the popup (where the items live) is unmounted while closed, so the label
+ * MUST come from this static tree walk, not from the mounted items.
+ *
+ * Note: the walk cannot see through intermediate custom components that don't
+ * render their children synchronously. If a value ever renders raw again, pass
+ * `items` explicitly on <Select>.
+ */
+function collectItemLabels(children: React.ReactNode): Record<string, React.ReactNode> {
+  const map: Record<string, React.ReactNode> = {}
+  const visit = (nodes: React.ReactNode) => {
+    React.Children.toArray(nodes).forEach((node) => {
+      if (!React.isValidElement(node)) return
+      const props = node.props as { value?: unknown; children?: React.ReactNode }
+      if (node.type === SelectItem && typeof props.value === 'string') {
+        map[props.value] = props.children
+      } else if (props.children != null) {
+        visit(props.children)
+      }
+    })
+  }
+  visit(children)
+  return map
+}
+
+function Select<Value, Multiple extends boolean | undefined = false>(
+  props: SelectPrimitive.Root.Props<Value, Multiple>,
+) {
+  const { items, children } = props
+  // Explicit `items` always wins; derive from <SelectItem>s otherwise.
+  const derived = React.useMemo(() => collectItemLabels(children), [children])
+  const mergedItems = items ?? (Object.keys(derived).length > 0 ? derived : undefined)
+  return (
+    <SelectPrimitive.Root {...props} items={mergedItems}>
+      {children}
+    </SelectPrimitive.Root>
+  )
+}
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (
@@ -41,7 +81,7 @@ function SelectTrigger({
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        'flex h-10 w-full items-center justify-between gap-2 rounded-xl border border-[var(--separator)] bg-[var(--surface-grouped)] px-3 py-2 text-sm font-medium text-[var(--text)] shadow-xs transition-all duration-200 outline-none select-none hover:bg-[var(--surface-grouped)]/80 focus:border-[var(--system-blue)]/50 focus:ring-3 focus:ring-[var(--system-blue)]/15 disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:border-[var(--system-blue)] data-[state=open]:ring-3 data-[state=open]:ring-[var(--system-blue)]/15 cursor-pointer',
+        'flex h-10 w-full cursor-pointer select-none items-center justify-between gap-2 rounded-xl border border-[var(--separator)] bg-[var(--surface-grouped)] px-3 py-2 text-sm font-medium text-[var(--text)] shadow-xs outline-none transition-[background-color,border-color,opacity] duration-[var(--dur-short)] ease-[var(--ease-out)] hover:bg-[var(--surface-grouped)]/80 focus-visible:border-[var(--system-blue)]/50 focus-visible:ring-3 focus-visible:ring-[var(--system-blue)]/15 disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:border-[var(--system-blue)] data-[state=open]:ring-3 data-[state=open]:ring-[var(--system-blue)]/15',
         size === 'sm' && 'h-8 rounded-lg px-2.5 text-xs',
         className,
       )}

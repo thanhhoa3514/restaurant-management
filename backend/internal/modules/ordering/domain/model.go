@@ -87,8 +87,8 @@ type OrderCreate struct {
 	Note            string
 	PlacedBy        string // GUEST or STAFF
 	PlacedByUserID  *uuid.UUID
-	CustomerName    string  // takeaway: customer name
-	CustomerPhone   string  // takeaway: customer phone
+	CustomerName    string // takeaway: customer name
+	CustomerPhone   string // takeaway: customer phone
 	PickupTime      *time.Time
 	Lines           []OrderLineCreate
 	KitchenTickets  []KitchenTicketCreate
@@ -98,6 +98,10 @@ type OrderCreate struct {
 type OrderLineCreate struct {
 	ID                  uuid.UUID
 	MenuItemID          uuid.UUID
+	ComboID             *uuid.UUID
+	ParentOrderItemID   *uuid.UUID
+	ReferencePriceVND   *int64
+	IsComboParent       bool
 	VariantID           *uuid.UUID
 	ItemNameSnapshot    string
 	ItemCodeSnapshot    string
@@ -163,6 +167,9 @@ type OrderItemRead struct {
 	Note                string
 	IsTakeaway          bool
 	UnavailableReason   *string
+	ComboID             *uuid.UUID
+	ParentOrderItemID   *uuid.UUID
+	IsComboParent       bool
 	Options             []OrderOptionRead
 }
 
@@ -193,6 +200,33 @@ type OrderLineForEdit struct {
 	UnitPriceVND        int64
 	Note                string
 	VariantNameSnapshot *string
+	ComboID             *uuid.UUID
+	ParentOrderItemID   *uuid.UUID
+}
+
+type ComboComponentForOrder struct {
+	MenuItemID   uuid.UUID
+	VariantID    *uuid.UUID
+	Name         string
+	Code         string
+	VariantName  *string
+	Station      string
+	Quantity     int
+	UnitPriceVND int64
+	Orderable    bool
+}
+
+type ComboForOrder struct {
+	ID                 uuid.UUID
+	Code               string
+	Name               string
+	ComboPriceVND      int64
+	Status             string
+	AvailabilityStatus string
+	ValidFrom          *time.Time
+	ValidTo            *time.Time
+	ReferencePriceVND  int64
+	Components         []ComboComponentForOrder
 }
 
 type OrderLineOptionForEdit struct {

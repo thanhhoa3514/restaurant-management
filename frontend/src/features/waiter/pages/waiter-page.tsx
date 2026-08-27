@@ -1,26 +1,45 @@
-import { type FC, useState } from 'react'
-import { Link2, X } from 'lucide-react'
+import { type FC, useCallback, useMemo, useState } from 'react'
+import { Building2, Link2, X } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { LanguageLoader } from '@/components/ui/language-loader'
 import { useShellConfig, ShellHeaderCenter, ShellHeaderActions } from '@/components/admin-shell'
 import { LanguageSwitcher } from '@/components/ui/language-switcher'
 import { wfFmtClock } from '@/features/waiter/helpers'
 import { useWaiter } from '@/features/waiter/hooks/use-waiter'
-import type { WaiterView } from '@/features/waiter/types'
+import type { WFTable } from '@/features/waiter/types'
+import { buildQROrderURL } from '@/features/dining/api'
+import { useGuestTables } from '@/features/ordering/queries/useGuestTables'
 import { cn } from '@/lib/utils'
-import { FloorPlan } from '../components/floor-plan'
 import { GridView } from '../components/grid-view'
 import { TableSheet } from '../components/table-sheet'
 import { ActionCenterPanel } from '../components/action-center-panel'
 import { TakeawayPanel } from '@/features/cashier/components/takeaway-panel'
+import '@/features/dining/table-catalogue.css'
 
 export const WaiterLayout: FC = () => {
   const { state, actions, counts, selectedTable, t } = useWaiter()
   const [changingLang, setChangingLang] = useState<'vi' | 'en' | null>(null)
+  const { data: guestTables = [] } = useGuestTables(true)
+  const guestOrderUrls = useMemo(
+    () =>
+      new Map(
+        guestTables
+          .filter((table) => table.has_active_qr && table.qr_token)
+          .map((table) => [table.table_id, buildQROrderURL(table.qr_token!)]),
+      ),
+    [guestTables],
+  )
+  const openGuestSession = useCallback(
+    (tableId: string) => {
+      const url = guestOrderUrls.get(tableId)
+      if (!url) return
+      window.open(url, '_blank', 'noopener,noreferrer')
+    },
+    [guestOrderUrls],
+  )
 
   const groupId = selectedTable?.session?.merge_group_id
   const mergeSiblings = groupId
@@ -30,6 +49,23 @@ export const WaiterLayout: FC = () => {
         )
         .map((table) => table.code)
     : []
+  const areaGroups = useMemo(() => {
+    const groups = new Map<string, WFTable[]>()
+    for (const table of state.tables) {
+      if (!table.area_name) continue
+      const key = `${table.area_order}:${table.area_name}`
+      const group = groups.get(key) ?? []
+      group.push(table)
+      groups.set(key, group)
+    }
+    return Array.from(groups.values())
+      .map((tables) => ({
+        name: tables[0]?.area_name ?? t('area_unassigned'),
+        order: tables[0]?.area_order ?? Number.MAX_SAFE_INTEGER,
+        tables,
+      }))
+      .sort((left, right) => left.order - right.order || left.name.localeCompare(right.name))
+  }, [state.tables, t])
 
   useShellConfig({
     title: t('floor_view'),
@@ -45,7 +81,7 @@ export const WaiterLayout: FC = () => {
             {wfFmtClock(state.now)}
           </div>
           <Separator orientation="vertical" className="h-7" />
-          <div className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--text-tertiary)]">
+          <div className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--text-secondary)]">
             {t('shift')}
           </div>
         </div>
@@ -65,29 +101,17 @@ export const WaiterLayout: FC = () => {
           className="hidden sm:inline-flex"
         />
       </ShellHeaderActions>
-      <div className="sticky top-0 z-30 border-b border-[var(--separator)] bg-[var(--material-regular)] backdrop-blur-2xl">
+      <div className="border-b border-[var(--separator)] bg-[var(--material-regular)] backdrop-blur-2xl">
         <div className="mx-auto max-w-[1600px] px-4 py-2.5 sm:flex sm:h-16 sm:items-center sm:justify-between sm:gap-4 sm:px-5 sm:py-0 lg:px-8">
           <div className="flex items-center justify-between gap-3">
-            <Tabs
-              value={state.view}
-              onValueChange={(value) => actions.setView(value as WaiterView)}
-              className="min-w-0 flex-1 sm:flex-none"
-            >
-              <TabsList className="w-full rounded-[18px] sm:w-auto">
-                <TabsTrigger
-                  value="plan"
-                  className="flex-1 rounded-[15px] px-4 sm:flex-none sm:px-5"
-                >
-                  {t('view_plan')}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="grid"
-                  className="flex-1 rounded-[15px] px-4 sm:flex-none sm:px-5"
-                >
-                  {t('view_grid')}
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <div className="hidden items-center gap-2 text-sm font-semibold text-[var(--text-secondary)] sm:flex">
+              <Building2 className="size-4" />
+              {t(
+                'area_summary',
+                areaGroups.length,
+                state.tables.filter((table) => table.area_name).length,
+              )}
+            </div>
             <div className="hidden sm:block">
               <ActionCenterPanel />
             </div>
@@ -124,56 +148,75 @@ export const WaiterLayout: FC = () => {
         </div>
       </div>
 
-      <main className="mx-auto w-full max-w-[1600px] px-4 py-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-5 lg:px-8">
-        {state.view === 'plan' ? (
-          <>
-            <div className="mb-3 flex flex-wrap items-center gap-2">
+      <main className="dining-catalogue mx-auto w-full max-w-[1600px] px-4 py-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-5 lg:px-8">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            className={cn(
+              'rounded-full',
+              state.mergeMode && 'bg-[var(--text)] text-[var(--bg)] hover:bg-[var(--text)]/90',
+            )}
+            onClick={actions.toggleMergeMode}
+          >
+            {state.mergeMode ? <X className="size-4" /> : <Link2 className="size-4" />}
+            {state.mergeMode ? t('merge_cancel') : t('merge_start')}
+          </Button>
+          {state.mergeMode && (
+            <>
+              <span className="text-sm text-[var(--text-secondary)]">
+                {t('merge_hint', state.mergeSelectedIds.length)}
+              </span>
               <Button
-                variant={state.mergeMode ? 'default' : 'outline'}
                 size="sm"
-                className="rounded-full"
-                onClick={actions.toggleMergeMode}
+                className="rounded-full bg-[var(--text)] text-[var(--bg)] hover:bg-[var(--text)]/90"
+                disabled={state.mergeSelectedIds.length < 2}
+                onClick={actions.confirmMerge}
               >
-                {state.mergeMode ? <X className="size-4" /> : <Link2 className="size-4" />}
-                {state.mergeMode ? t('merge_cancel') : t('merge_start')}
+                {t('merge_confirm')}
               </Button>
-              {state.mergeMode && (
-                <>
-                  <span className="text-sm text-[var(--text-secondary)]">
-                    {t('merge_hint', state.mergeSelectedIds.length)}
-                  </span>
-                  <Button
-                    size="sm"
-                    className="rounded-full"
-                    disabled={state.mergeSelectedIds.length < 2}
-                    onClick={actions.confirmMerge}
-                  >
-                    {t('merge_confirm')}
-                  </Button>
-                </>
-              )}
+            </>
+          )}
+        </div>
+
+        {areaGroups.map((group) => (
+          <section key={`${group.order}:${group.name}`} className="dining-area-section">
+            <div className="dining-area-heading">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-[12px] bg-[var(--surface-grouped)] text-[var(--text-secondary)]">
+                  <Building2 className="size-5" />
+                </span>
+                <h2 className="text-[17px] font-semibold text-[var(--text)]">{group.name}</h2>
+              </div>
+              <p className="text-sm tabular-nums text-[var(--text-secondary)]">
+                {t(
+                  'area_occupied_summary',
+                  group.tables.filter((table) => table.status === 'occupied').length,
+                  group.tables.length,
+                )}
+              </p>
             </div>
-            <FloorPlan
-              tables={state.tables}
+            <GridView
+              tables={group.tables}
               now={state.now}
               lang={state.lang}
               t={t}
               onSelectTable={actions.selectTable}
+              onOpenGuestSession={openGuestSession}
+              guestOrderUrls={guestOrderUrls}
               justChangedIds={state.justChangedIds}
               mergeMode={state.mergeMode}
               mergeSelectedIds={state.mergeSelectedIds}
               onToggleMergeSelection={actions.toggleMergeSelection}
             />
-          </>
-        ) : (
-          <GridView
-            tables={state.tables}
-            now={state.now}
-            lang={state.lang}
-            t={t}
-            onSelectTable={actions.selectTable}
-            justChangedIds={state.justChangedIds}
-          />
+          </section>
+        ))}
+
+        {areaGroups.length === 0 && (
+          <div className="dining-area-empty min-h-44">
+            <Building2 className="size-8" />
+            <p>{t('area_empty')}</p>
+          </div>
         )}
       </main>
 

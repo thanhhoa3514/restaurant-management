@@ -12,6 +12,7 @@ type GuestTableDTO struct {
 	TableCode        string    `json:"table_code"`
 	TableName        string    `json:"table_name"`
 	AreaName         string    `json:"area_name"`
+	AreaOrder        int       `json:"area_order"`
 	Capacity         int       `json:"capacity"`
 	HasActiveQR      bool      `json:"has_active_qr"`
 	HasActiveSession bool      `json:"has_active_session"`
@@ -35,11 +36,15 @@ func (s *ListGuestTables) Handle(ctx context.Context) ([]GuestTableDTO, error) {
 	}
 	out := make([]GuestTableDTO, 0, len(rows))
 	for _, row := range rows {
+		if row.AreaID == nil || !row.AreaActive || row.Status == "INACTIVE" {
+			continue
+		}
 		out = append(out, GuestTableDTO{
 			TableID:          row.TableID,
 			TableCode:        row.TableCode,
 			TableName:        row.TableName,
 			AreaName:         row.AreaName,
+			AreaOrder:        row.AreaOrder,
 			Capacity:         row.Capacity,
 			HasActiveQR:      row.QRCodeID != nil,
 			HasActiveSession: row.HasActiveSession,

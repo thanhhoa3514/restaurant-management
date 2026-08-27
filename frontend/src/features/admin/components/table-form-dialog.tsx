@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { errorMessage } from '@/lib/api'
-import { listAreas, saveTable } from '@/features/dining/api'
+import { listAreas, listTableQRs, saveTable } from '@/features/dining/api'
 import type { AdminT } from '@/i18n'
 import type { TableQR } from '@/features/dining/types'
 import { AREAS_KEY, TABLE_QRS_KEY } from '@/features/dining/keys'
@@ -35,16 +35,16 @@ const STATUS_LABEL: Record<(typeof TABLE_STATUSES)[number], Parameters<AdminT>[0
   INACTIVE: 'tbl_status_inactive',
 }
 
-const NO_AREA = 'none'
-
 export function TableFormDialog({
   table,
+  initialAreaId,
   open,
   t,
   onOpenChange,
 }: {
   /** null creates a new table. */
   table: TableQR | null
+  initialAreaId?: string
   open: boolean
   t: AdminT
   onOpenChange: (open: boolean) => void
@@ -54,7 +54,13 @@ export function TableFormDialog({
       <DialogContent className="sm:max-w-md">
         {/* Remounting per table seeds the fields from useState initialisers,
             so no effect is needed to reset them between opens. */}
-        <TableForm key={table?.table_id ?? 'new'} table={table} t={t} onOpenChange={onOpenChange} />
+        <TableForm
+          key={`${table?.table_id ?? 'new'}:${initialAreaId ?? ''}`}
+          table={table}
+          initialAreaId={initialAreaId}
+          t={t}
+          onOpenChange={onOpenChange}
+        />
       </DialogContent>
     </Dialog>
   )
@@ -62,10 +68,12 @@ export function TableFormDialog({
 
 function TableForm({
   table,
+  initialAreaId,
   t,
   onOpenChange,
 }: {
   table: TableQR | null
+  initialAreaId?: string
   t: AdminT
   onOpenChange: (open: boolean) => void
 }) {
@@ -75,11 +83,16 @@ function TableForm({
     queryFn: listAreas,
   })
   const areas = areasData?.areas ?? []
+  const maxTablesPerArea = areasData?.limits.max_tables_per_area ?? 0
+  const { data: tableRows = [] } = useQuery({
+    queryKey: TABLE_QRS_KEY,
+    queryFn: listTableQRs,
+  })
 
   const [code, setCode] = useState(table?.table_code ?? '')
   const [name, setName] = useState(table?.table_name ?? '')
   const [capacity, setCapacity] = useState(String(table?.capacity ?? 4))
-  const [areaId, setAreaId] = useState<string>(table?.area_id ?? NO_AREA)
+  const [areaId, setAreaId] = useState<string>(table?.area_id ?? initialAreaId ?? '')
   const [status, setStatus] = useState<string>(table?.table_status ?? 'AVAILABLE')
 
   const mutation = useMutation({
@@ -91,13 +104,22 @@ function TableForm({
   })
 
   const parsedCapacity = Number(capacity)
-  const canSubmit = code.trim().length > 0 && Number.isInteger(parsedCapacity) && parsedCapacity > 0
+  const resolvedAreaId = areaId || areas.find((area) => area.is_active)?.id || ''
+  const targetAreaCount = tableRows.filter((row) => row.area_id === resolvedAreaId).length
+  const targetAreaIsFull =
+    maxTablesPerArea > 0 && targetAreaCount >= maxTablesPerArea && table?.area_id !== resolvedAreaId
+  const canSubmit =
+    code.trim().length > 0 &&
+    resolvedAreaId.length > 0 &&
+    Number.isInteger(parsedCapacity) &&
+    parsedCapacity > 0 &&
+    !targetAreaIsFull
 
   return (
     <>
       <DialogHeader>
         <DialogTitle>{table ? t('tbl_edit') : t('tbl_create_title')}</DialogTitle>
-        <DialogDescription>{t('qr_subtitle')}</DialogDescription>
+        <DialogDescription>{t('tbl_create_desc')}</DialogDescription>
       </DialogHeader>
 
       <div className="space-y-4">
@@ -136,19 +158,28 @@ function TableForm({
 
         <div className="space-y-1.5">
           <Label>{t('tbl_area')}</Label>
-          <Select value={areaId} onValueChange={(value) => setAreaId(value ?? NO_AREA)}>
+          <Select value={resolvedAreaId} onValueChange={(value) => setAreaId(value ?? '')}>
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={NO_AREA}>{t('tbl_area_none')}</SelectItem>
-              {areas.map((area) => (
-                <SelectItem key={area.id} value={area.id}>
-                  {area.name}
-                </SelectItem>
-              ))}
+              {areas.map((area) => {
+                const count = tableRows.filter((row) => row.area_id === area.id).length
+                const isFull =
+                  maxTablesPerArea > 0 && count >= maxTablesPerArea && table?.area_id !== area.id
+                return (
+                  <SelectItem key={area.id} value={area.id} disabled={!area.is_active || isFull}>
+                    {area.name} · {count}/{maxTablesPerArea}
+                  </SelectItem>
+                )
+              })}
             </SelectContent>
           </Select>
+          <p className="min-h-[1lh] text-xs text-[var(--text-secondary)]">
+            {targetAreaIsFull
+              ? t('tbl_area_full', maxTablesPerArea)
+              : t('tbl_area_limit_hint', maxTablesPerArea)}
+          </p>
         </div>
 
         <div className="space-y-1.5">
@@ -179,11 +210,12 @@ function TableForm({
           {t('qr_cancel')}
         </Button>
         <Button
+          className="bg-[var(--text)] text-[var(--bg)] hover:bg-[var(--text)]/90"
           disabled={!canSubmit || mutation.isPending}
           onClick={() =>
             mutation.mutate({
               tableId: table?.table_id,
-              areaId: areaId === NO_AREA ? null : areaId,
+              areaId: resolvedAreaId,
               code: code.trim(),
               name: name.trim() || code.trim(),
               capacity: parsedCapacity,

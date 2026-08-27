@@ -11,9 +11,9 @@ import (
 )
 
 type BuildInvoice struct {
-	tx                 TxRunner
-	repo               domain.InvoiceRepository
-	outbox             domain.OutboxWriter
+	tx                  TxRunner
+	repo                domain.InvoiceRepository
+	outbox              domain.OutboxWriter
 	defaultRestaurantID uuid.UUID
 }
 

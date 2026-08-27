@@ -44,6 +44,9 @@ export function toInvoiceItem(item: BillingInvoiceItemDTO): LineItem {
     unit_price_snapshot: item.unit_price_vnd,
     line_total: item.total_amount_vnd,
     is_takeaway: item.is_takeaway,
+    combo_id: item.combo_id,
+    parent_invoice_item_id: item.parent_invoice_item_id,
+    reference_price_vnd: item.reference_price_vnd,
   }
 }
 

@@ -34,6 +34,9 @@ type fakeRepo struct {
 	updatedTable   *domain.Table
 	deletedTableID uuid.UUID
 	savedPositions []domain.TablePosition
+	areas          []domain.Area
+	areaCount      int
+	areaTableCount int
 
 	devices []*domain.SessionDevice
 }
@@ -77,7 +80,11 @@ func (r *fakeRepo) ListTablesWithActiveQR(context.Context, uuid.UUID) ([]domain.
 	return r.tablesWithQR, nil
 }
 func (r *fakeRepo) ListAreas(context.Context, uuid.UUID) ([]domain.Area, error) {
-	return nil, nil
+	return r.areas, nil
+}
+func (r *fakeRepo) CountAreas(context.Context, uuid.UUID) (int, error) { return r.areaCount, nil }
+func (r *fakeRepo) CountTablesInArea(context.Context, uuid.UUID, uuid.UUID) (int, error) {
+	return r.areaTableCount, nil
 }
 func (r *fakeRepo) CreateArea(context.Context, *domain.Area) error         { return nil }
 func (r *fakeRepo) UpdateArea(context.Context, *domain.Area) error         { return nil }
@@ -88,8 +95,8 @@ func (r *fakeRepo) ListDailySessions(context.Context, uuid.UUID, domain.ListDail
 func (r *fakeRepo) GetSessionDetail(context.Context, uuid.UUID, uuid.UUID) (domain.SessionDetailDTO, error) {
 	return domain.SessionDetailDTO{}, nil
 }
-func (r *fakeRepo) FindArea(context.Context, uuid.UUID, uuid.UUID) (*domain.Area, error) {
-	return &domain.Area{}, nil
+func (r *fakeRepo) FindArea(_ context.Context, _ uuid.UUID, areaID uuid.UUID) (*domain.Area, error) {
+	return &domain.Area{ID: areaID, IsActive: true}, nil
 }
 func (r *fakeRepo) CreateTable(_ context.Context, t *domain.Table) error {
 	r.createdTable = t

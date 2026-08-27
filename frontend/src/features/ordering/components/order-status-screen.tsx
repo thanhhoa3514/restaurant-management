@@ -145,11 +145,10 @@ export const OrderStatusScreen: FC = () => {
         <div className="mx-auto w-full max-w-lg px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] flex gap-3">
           <Button
             size="lg"
-            variant="outline"
-            className="flex-1 rounded-2xl h-14 text-[14px] sm:text-base font-bold bg-[var(--surface-grouped)] text-[var(--text)] border-transparent hover:bg-[var(--separator)]/50 shadow-sm"
+            className="flex-1 rounded-2xl h-14 text-[14px] sm:text-base font-bold bg-[var(--system-orange)] text-white border-0 shadow-lg shadow-[var(--system-orange)]/30 hover:opacity-90 transition-all active:scale-[0.98]"
             onClick={() => dispatch({ type: 'SET_SCREEN', payload: 'menu' })}
           >
-            <Plus size={18} className="mr-1.5 text-[var(--text-secondary)]" strokeWidth={2.5} />
+            <Plus size={18} className="mr-1.5 text-white" strokeWidth={2.5} />
             {t.order_more}
           </Button>
           <Button

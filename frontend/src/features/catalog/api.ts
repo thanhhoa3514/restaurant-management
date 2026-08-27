@@ -2,17 +2,21 @@ import { apiRequest } from '@/lib/api'
 import type {
   AdminCategoryDTO,
   AdminMenuItemDetailDTO,
-  AdminMenuItemSummaryDTO,
+  AdminMenuItemListResponse,
   CreateMenuItemRequest,
   MenuItemAvailabilityStatus,
   MenuItemMutationResult,
   PresignResult,
   UpdateMenuItemRequest,
+  AdminComboDetailDTO,
+  AdminComboListResponse,
+  ComboWriteInput,
 } from '@/features/catalog/types'
 
 export const catalogQueryKeys = {
   categories: ['catalog', 'categories'] as const,
-  items: (categoryId?: string) => ['catalog', 'items', categoryId] as const,
+  items: (categoryId?: string, page?: number, pageSize?: number) =>
+    ['catalog', 'items', categoryId, page, pageSize] as const,
   detail: (id: string) => ['catalog', 'items', 'detail', id] as const,
 }
 
@@ -20,9 +24,17 @@ export function listAdminCategories(): Promise<AdminCategoryDTO[]> {
   return apiRequest<AdminCategoryDTO[]>('/api/v1/restaurant/menu/categories')
 }
 
-export function listAdminMenuItems(categoryId?: string): Promise<AdminMenuItemSummaryDTO[]> {
-  const query = categoryId ? `?category_id=${encodeURIComponent(categoryId)}` : ''
-  return apiRequest<AdminMenuItemSummaryDTO[]>(`/api/v1/restaurant/menu/items${query}`)
+export function listAdminMenuItems(
+  categoryId?: string,
+  page?: number,
+  pageSize?: number,
+): Promise<AdminMenuItemListResponse> {
+  const query = new URLSearchParams()
+  if (categoryId) query.set('category_id', categoryId)
+  if (page) query.set('page', String(page))
+  if (pageSize) query.set('page_size', String(pageSize))
+  const qs = query.toString()
+  return apiRequest<AdminMenuItemListResponse>(`/api/v1/restaurant/menu/items${qs ? `?${qs}` : ''}`)
 }
 
 export function getAdminMenuItem(id: string): Promise<AdminMenuItemDetailDTO> {
@@ -78,4 +90,30 @@ export function toggleAvailability(
       body: { is_available: isAvailable, version, availability_status: availabilityStatus },
     },
   )
+}
+
+export function listAdminCombos(): Promise<AdminComboListResponse> {
+  return apiRequest<AdminComboListResponse>('/api/v1/restaurant/combos?page_size=100')
+}
+
+export function getAdminCombo(id: string): Promise<AdminComboDetailDTO> {
+  return apiRequest<AdminComboDetailDTO>(`/api/v1/restaurant/combos/${encodeURIComponent(id)}`)
+}
+
+export function createCombo(body: ComboWriteInput): Promise<MenuItemMutationResult> {
+  return apiRequest<MenuItemMutationResult>('/api/v1/restaurant/combos', { method: 'POST', body })
+}
+
+export function updateCombo(id: string, body: ComboWriteInput): Promise<MenuItemMutationResult> {
+  return apiRequest<MenuItemMutationResult>(`/api/v1/restaurant/combos/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body,
+  })
+}
+
+export function deleteCombo(id: string, version: number): Promise<MenuItemMutationResult> {
+  return apiRequest<MenuItemMutationResult>(`/api/v1/restaurant/combos/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    body: { version },
+  })
 }

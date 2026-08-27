@@ -73,6 +73,9 @@ func (s *SaveTable) Handle(ctx context.Context, in SaveTableRequest) (SaveTableR
 	if !validTableStatus[status] {
 		return out, apperr.New(apperr.CodeInvalid, "invalid table status")
 	}
+	if in.AreaID == nil || *in.AreaID == uuid.Nil {
+		return out, apperr.New(apperr.CodeInvalid, "area_id is required")
+	}
 
 	table := &domain.Table{
 		RestaurantID: restaurantID,
@@ -83,17 +86,40 @@ func (s *SaveTable) Handle(ctx context.Context, in SaveTableRequest) (SaveTableR
 		PositionX:    clampPercent(in.PositionX),
 		PositionY:    clampPercent(in.PositionY),
 	}
-	if in.AreaID != nil {
-		table.AreaID = *in.AreaID
-	}
+	table.AreaID = *in.AreaID
 
 	err := s.tx.Run(ctx, func(ctx context.Context) error {
+		area, err := s.repo.FindArea(ctx, restaurantID, table.AreaID)
+		if err != nil {
+			return err
+		}
+		if !area.IsActive {
+			return apperr.New(apperr.CodeInvalid, "area is inactive")
+		}
+
 		if in.TableID == nil {
+			count, err := s.repo.CountTablesInArea(ctx, restaurantID, table.AreaID)
+			if err != nil {
+				return err
+			}
+			if count >= MaxTablesPerArea {
+				return apperr.New(apperr.CodeConflict, "area has reached the 24-table limit")
+			}
 			return s.repo.CreateTable(ctx, table)
 		}
 		table.ID = *in.TableID
-		if _, err := s.repo.FindTable(ctx, restaurantID, table.ID); err != nil {
+		existing, err := s.repo.FindTable(ctx, restaurantID, table.ID)
+		if err != nil {
 			return err
+		}
+		if existing.AreaID != table.AreaID {
+			count, err := s.repo.CountTablesInArea(ctx, restaurantID, table.AreaID)
+			if err != nil {
+				return err
+			}
+			if count >= MaxTablesPerArea {
+				return apperr.New(apperr.CodeConflict, "area has reached the 24-table limit")
+			}
 		}
 		return s.repo.UpdateTable(ctx, table)
 	})

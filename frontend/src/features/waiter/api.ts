@@ -63,8 +63,7 @@ export interface StaffTableDTO {
   capacity: number
   status: string
   area_name: string
-  position_x: number | null
-  position_y: number | null
+  area_order: number
   session: StaffSessionDTO | null
 }
 

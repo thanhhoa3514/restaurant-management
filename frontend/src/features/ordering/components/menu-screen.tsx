@@ -1,20 +1,32 @@
-import { useEffect, useMemo, useState, type FC } from 'react'
-import { Search, ShoppingBag, Plus, ChevronRight, Grid2x2, Receipt } from 'lucide-react'
+import { useEffect, useMemo, useState, type CSSProperties, type FC } from 'react'
+import {
+  Search,
+  ShoppingBag,
+  Plus,
+  ChevronRight,
+  Grid2x2,
+  Receipt,
+  Star,
+  ArrowUpRight,
+} from 'lucide-react'
 import { useOrdering } from '../hooks/use-ordering'
 import { DICT } from '@/i18n'
 import { formatVND, totalItems } from '../helpers'
-import type { ApiMenuItemSummary, CartLine, Lang } from '../types'
+import type { ApiComboSummary, ApiMenuItemSummary, CartLine, Lang } from '../types'
 import { useGuestCategories } from '../queries/useGuestCategories'
 import { useGuestItems } from '../queries/useGuestItems'
+import { useGuestCombos } from '../queries/useGuestCombos'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { LanguageLoader } from '@/components/ui/language-loader'
 
 import { ItemDetail } from './item-detail'
+import { ComboDetail } from './combo-detail'
 import { CartSheet } from './cart-sheet'
 import { ServicesSheet } from './services-sheet'
 import { cn } from '@/lib/utils'
+import '../../combo-menu.css'
 
 const SEARCH_DEBOUNCE_MS = 200
 
@@ -26,6 +38,7 @@ export const MenuScreen: FC = () => {
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
+  const [selectedCombo, setSelectedCombo] = useState<ApiComboSummary | null>(null)
   const [changingLang, setChangingLang] = useState<'vi' | 'en' | null>(null)
   const [servicesOpen, setServicesOpen] = useState(false)
 
@@ -43,6 +56,7 @@ export const MenuScreen: FC = () => {
     isError: isItemsError,
     refetch: refetchItems,
   } = useGuestItems(deviceAccessToken)
+  const { data: combosData } = useGuestCombos(deviceAccessToken)
 
   const filtered = useMemo(() => {
     const items = itemsData ?? []
@@ -55,13 +69,26 @@ export const MenuScreen: FC = () => {
     })
   }, [itemsData, activeCategory, debouncedSearch])
 
+  const filteredCombos = useMemo(() => {
+    if (activeCategory !== 'all') return []
+    return (combosData ?? []).filter(
+      (combo) =>
+        combo.is_available &&
+        (!debouncedSearch || combo.name.toLowerCase().includes(debouncedSearch.toLowerCase())),
+    )
+  }, [combosData, activeCategory, debouncedSearch])
+
   const cartCount = totalItems(state.cart)
+  const featuredCombo = filteredCombos.find((combo) => combo.is_featured) ?? filteredCombos[0]
+  const listedCombos = featuredCombo
+    ? filteredCombos.filter((combo) => combo.id !== featuredCombo.id)
+    : []
 
   // Map of menuItemId -> total quantity already in cart
   const cartQtyByItemId = useMemo(() => {
     const map = new Map<string, number>()
     for (const line of state.cart) {
-      map.set(line.menuItemId, (map.get(line.menuItemId) ?? 0) + line.quantity)
+      if (line.menuItemId) map.set(line.menuItemId, (map.get(line.menuItemId) ?? 0) + line.quantity)
     }
     return map
   }, [state.cart])
@@ -77,6 +104,22 @@ export const MenuScreen: FC = () => {
       options: [],
     }
     dispatch({ type: 'ADD_TO_CART', payload: line })
+  }
+
+  const handleQuickAddCombo = (combo: ApiComboSummary) => {
+    dispatch({
+      type: 'ADD_TO_CART',
+      payload: {
+        id: crypto.randomUUID(),
+        comboId: combo.id,
+        quantity: 1,
+        note: '',
+        nameSnapshot: combo.name,
+        imageUrl: combo.image_url,
+        estUnitPriceVnd: combo.combo_price_vnd,
+        options: [],
+      },
+    })
   }
 
   return (
@@ -189,7 +232,7 @@ export const MenuScreen: FC = () => {
         </div>
       </div>
 
-      {/* Menu Grid */}
+      {/* Menu */}
       <main className="flex-1 px-4 py-6">
         {isItemsLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -222,7 +265,7 @@ export const MenuScreen: FC = () => {
               {state.lang === 'vi' ? 'Thử lại' : 'Retry'}
             </Button>
           </div>
-        ) : filtered.length === 0 ? (
+        ) : filtered.length === 0 && filteredCombos.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
             <div className="size-20 rounded-full bg-[var(--surface-grouped)] flex items-center justify-center text-[var(--text-tertiary)]">
               <Search size={32} />
@@ -230,17 +273,82 @@ export const MenuScreen: FC = () => {
             <p className="text-sm font-medium text-[var(--text-tertiary)]">{t.no_results}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filtered.map((item) => (
-              <MenuItemCard
-                key={item.id}
-                item={item}
-                lang={state.lang}
-                cartQty={cartQtyByItemId.get(item.id) ?? 0}
-                onSelect={() => setSelectedItemId(item.id)}
-                onQuickAdd={() => handleQuickAdd(item)}
-              />
-            ))}
+          <div className="space-y-8">
+            {filteredCombos.length > 0 && (
+              <section className="combo-menu" aria-labelledby="combo-menu-title">
+                <div className="combo-menu__masthead">
+                  <div>
+                    <p className="combo-menu__kicker">
+                      {state.lang === 'vi' ? '01 / Thực đơn theo set' : '01 / Set menu index'}
+                    </p>
+                    <h2 id="combo-menu-title" className="combo-menu__title">
+                      {state.lang === 'vi'
+                        ? 'Dọn bàn theo cách của bạn.'
+                        : 'Set the table your way.'}
+                    </h2>
+                  </div>
+                  <div className="combo-menu__intro">
+                    <p>
+                      {state.lang === 'vi'
+                        ? 'Những phần ăn cố định để cả bàn gọi nhanh, đủ món và dễ chia sẻ.'
+                        : 'Fixed-price bundles for a full table: easy to order, made to share.'}
+                    </p>
+                    <span className="combo-menu__edition">
+                      {filteredCombos.length}{' '}
+                      {state.lang === 'vi' ? 'lựa chọn hôm nay' : 'available today'}
+                    </span>
+                  </div>
+                </div>
+
+                {featuredCombo && (
+                  <ComboFeatureRow
+                    combo={featuredCombo}
+                    lang={state.lang}
+                    style={revealStyle(0)}
+                    onSelect={() => setSelectedCombo(featuredCombo)}
+                    onQuickAdd={() => handleQuickAddCombo(featuredCombo)}
+                  />
+                )}
+
+                {listedCombos.length > 0 && (
+                  <div
+                    className="combo-menu__index"
+                    aria-label={state.lang === 'vi' ? 'Danh sách combo' : 'Combo index'}
+                  >
+                    {listedCombos.map((combo, index) => (
+                      <ComboIndexRow
+                        key={combo.id}
+                        combo={combo}
+                        lang={state.lang}
+                        index={index + 1}
+                        style={revealStyle(index + 1)}
+                        onSelect={() => setSelectedCombo(combo)}
+                        onQuickAdd={() => handleQuickAddCombo(combo)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+            {filtered.length > 0 && (
+              <section>
+                <h2 className="mb-3 text-xl font-extrabold tracking-tight text-[var(--text)]">
+                  {state.lang === 'vi' ? 'Món gọi thêm' : 'À la carte'}
+                </h2>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {filtered.map((item) => (
+                    <MenuItemCard
+                      key={item.id}
+                      item={item}
+                      lang={state.lang}
+                      cartQty={cartQtyByItemId.get(item.id) ?? 0}
+                      onSelect={() => setSelectedItemId(item.id)}
+                      onQuickAdd={() => handleQuickAdd(item)}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
         )}
       </main>
@@ -250,6 +358,14 @@ export const MenuScreen: FC = () => {
           itemId={selectedItemId}
           lang={state.lang}
           onClose={() => setSelectedItemId(null)}
+        />
+      )}
+
+      {selectedCombo && (
+        <ComboDetail
+          combo={selectedCombo}
+          lang={state.lang}
+          onClose={() => setSelectedCombo(null)}
         />
       )}
 
@@ -281,6 +397,111 @@ interface MenuItemCardProps {
   onQuickAdd: () => void
 }
 
+interface ComboCardProps {
+  combo: ApiComboSummary
+  lang: Lang
+  index?: number
+  style?: CSSProperties
+  onSelect: () => void
+  onQuickAdd: () => void
+}
+
+const revealStyle = (index: number): CSSProperties => ({ '--combo-index': index }) as CSSProperties
+
+const ComboFeatureRow: FC<ComboCardProps> = ({ combo, lang, style, onSelect, onQuickAdd }) => (
+  <article className="combo-menu__feature combo-menu__reveal" style={style}>
+    <button
+      type="button"
+      className="combo-menu__feature-image"
+      onClick={onSelect}
+      aria-label={lang === 'vi' ? `Xem ${combo.name}` : `View ${combo.name}`}
+    >
+      {combo.image_url ? (
+        <img src={combo.image_url} alt="" loading="eager" />
+      ) : (
+        <span className="combo-menu__image-note">{combo.code}</span>
+      )}
+    </button>
+    <div className="combo-menu__feature-copy">
+      <p className="combo-menu__feature-label">
+        {lang === 'vi' ? 'Lựa chọn nổi bật' : 'Featured set'}
+      </p>
+      <button type="button" className="combo-menu__feature-name" onClick={onSelect}>
+        {combo.name}
+        <ArrowUpRight aria-hidden="true" />
+      </button>
+      {combo.description && <p className="combo-menu__description">{combo.description}</p>}
+      <div className="combo-menu__price-line">
+        <span className="combo-menu__price">{formatVND(combo.combo_price_vnd)}</span>
+        {combo.reference_price_vnd > combo.combo_price_vnd && (
+          <span className="combo-menu__reference">{formatVND(combo.reference_price_vnd)}</span>
+        )}
+      </div>
+      <div className="combo-menu__feature-footer">
+        {combo.savings_vnd > 0 && (
+          <span className="combo-menu__savings">
+            {lang === 'vi' ? 'Tiết kiệm ' : 'Save '}
+            {formatVND(combo.savings_vnd)}
+          </span>
+        )}
+        <button type="button" className="combo-menu__action" onClick={onQuickAdd}>
+          <Plus aria-hidden="true" />
+          {lang === 'vi' ? 'Thêm vào giỏ' : 'Add to cart'}
+        </button>
+      </div>
+    </div>
+  </article>
+)
+
+const ComboIndexRow: FC<ComboCardProps> = ({
+  combo,
+  lang,
+  index = 1,
+  style,
+  onSelect,
+  onQuickAdd,
+}) => (
+  <article className="combo-menu__index-row combo-menu__reveal" style={style}>
+    <span className="combo-menu__index-number">{String(index).padStart(2, '0')}</span>
+    <button
+      type="button"
+      className="combo-menu__row-main"
+      onClick={onSelect}
+      aria-label={lang === 'vi' ? `Xem ${combo.name}` : `View ${combo.name}`}
+    >
+      <span className="combo-menu__row-image">
+        {combo.image_url ? (
+          <img src={combo.image_url} alt="" loading="lazy" />
+        ) : (
+          <span className="combo-menu__image-note">{combo.code}</span>
+        )}
+      </span>
+      <span className="combo-menu__row-copy">
+        <span className="combo-menu__row-name">{combo.name}</span>
+        {combo.description && (
+          <span className="combo-menu__row-description">{combo.description}</span>
+        )}
+      </span>
+    </button>
+    <span className="combo-menu__row-price">
+      <span>{formatVND(combo.combo_price_vnd)}</span>
+      {combo.savings_vnd > 0 && (
+        <span className="combo-menu__row-saving">
+          {lang === 'vi' ? '−' : 'save '} {formatVND(combo.savings_vnd)}
+        </span>
+      )}
+    </span>
+    <button
+      type="button"
+      className="combo-menu__row-action"
+      onClick={onQuickAdd}
+      aria-label={lang === 'vi' ? `Thêm ${combo.name} vào giỏ` : `Add ${combo.name} to cart`}
+    >
+      <Plus aria-hidden="true" />
+    </button>
+  </article>
+)
+
 const MenuItemCard: FC<MenuItemCardProps> = ({ item, lang, cartQty, onSelect, onQuickAdd }) => {
   const price =
     item.has_variants && item.price_from_vnd != null ? item.price_from_vnd : item.base_price_vnd
@@ -308,6 +529,12 @@ const MenuItemCard: FC<MenuItemCardProps> = ({ item, lang, cartQty, onSelect, on
         {cartQty > 0 && (
           <span className="absolute top-2 left-2 flex items-center justify-center rounded-full bg-[var(--system-blue)] px-2 py-0.5 text-[11px] font-bold text-white shadow-sm">
             x{cartQty}
+          </span>
+        )}
+        {item.is_featured && (
+          <span className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-[var(--system-orange,#f59e0b)] px-2 py-0.5 text-[11px] font-bold text-white shadow-sm">
+            <Star className="size-3 fill-current" />
+            {lang === 'vi' ? 'Đặc trưng' : 'Signature'}
           </span>
         )}
       </div>

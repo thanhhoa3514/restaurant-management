@@ -38,29 +38,16 @@ export interface WFSession {
   orders: WFOrder[]
 }
 
-export interface TablePosition {
-  x_pct: number
-  y_pct: number
-}
-
 export interface WFTable {
   id: string
   /** Mã bàn duy nhất (T01, V01…) — dùng để hiển thị, `number` chỉ để sắp xếp */
   code: string
   number: number
   capacity: number
-  position: TablePosition
+  area_name: string
+  area_order: number
   status: TableOccupancy
   session: WFSession | null
-}
-
-export interface Landmark {
-  key: string
-  x: number
-  y: number
-  w: number
-  h: number
-  tone: string
 }
 
 export interface MenuItemOption {
@@ -84,8 +71,6 @@ export interface WFCounts {
 import type { Lang } from '@/constants'
 export type { Lang } from '@/constants'
 
-export type WaiterView = 'plan' | 'grid'
-
 export interface WaiterState {
   tables: WFTable[]
   now: Date
@@ -93,7 +78,6 @@ export interface WaiterState {
   autoOn: boolean
   lang: Lang
   soundOn: boolean
-  view: WaiterView
   selectedTableId: string | null
   justChangedIds: Set<string>
   demoOpen: boolean
@@ -119,7 +103,6 @@ export interface WaiterActions {
   setTimeMultiplier: (value: number | ((prev: number) => number)) => void
   setLang: (lang: Lang) => void
   setSoundOn: (value: boolean | ((prev: boolean) => boolean)) => void
-  setView: (value: WaiterView | ((prev: WaiterView) => WaiterView)) => void
   setDemoOpen: (value: boolean | ((prev: boolean) => boolean)) => void
   toggleMergeMode: () => void
   toggleMergeSelection: (tableId: string) => void

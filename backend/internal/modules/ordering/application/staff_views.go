@@ -24,6 +24,7 @@ type StaffTableDTO struct {
 	Capacity  int              `json:"capacity"`
 	Status    string           `json:"status"`
 	AreaName  string           `json:"area_name"`
+	AreaOrder int              `json:"area_order"`
 	PositionX *int             `json:"position_x"`
 	PositionY *int             `json:"position_y"`
 	Session   *StaffSessionDTO `json:"session"`

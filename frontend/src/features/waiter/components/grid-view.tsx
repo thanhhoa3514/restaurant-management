@@ -1,8 +1,9 @@
 import { useMemo, type FC } from 'react'
-import { Bell, Check, Receipt, Users, Clock } from 'lucide-react'
+import { Bell, Check, Clock, ExternalLink, Link2, Receipt, Users } from 'lucide-react'
 
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   wfFmtHMS,
   wfPriorityOf,
@@ -19,15 +20,26 @@ interface GridViewProps {
   lang: Lang
   t: (key: string, ...args: Array<string | number>) => string
   onSelectTable: (tableId: string) => void
+  onOpenGuestSession: (tableId: string) => void
+  guestOrderUrls: Map<string, string>
   justChangedIds: Set<string>
+  mergeMode: boolean
+  mergeSelectedIds: string[]
+  onToggleMergeSelection: (tableId: string) => void
 }
 
 export const GridView: FC<GridViewProps> = ({
   tables,
   now,
   lang,
+  t,
   onSelectTable,
+  onOpenGuestSession,
+  guestOrderUrls,
   justChangedIds,
+  mergeMode,
+  mergeSelectedIds,
+  onToggleMergeSelection,
 }) => {
   const sortedTables = useMemo(() => {
     return tables
@@ -52,6 +64,7 @@ export const GridView: FC<GridViewProps> = ({
         const visual = tableVisuals(priority)
         const secondaries = secondarySignals(table, priority)
         const changed = justChangedIds.has(table.id)
+        const mergeSelected = mergeSelectedIds.includes(table.id)
 
         const icons = {
           empty: null,
@@ -64,25 +77,56 @@ export const GridView: FC<GridViewProps> = ({
           idle: <Clock className="size-3.5 text-amber-500" />,
         }
 
+        const isMergeDisabled = mergeMode && !table.session
+
         return (
-          <button
+          <div
             key={table.id}
-            type="button"
-            onClick={() => onSelectTable(table.id)}
-            className="w-full text-left outline-none cursor-pointer"
+            role={mergeMode ? 'checkbox' : 'button'}
+            tabIndex={isMergeDisabled ? -1 : 0}
+            aria-pressed={mergeMode ? mergeSelected : undefined}
+            aria-disabled={isMergeDisabled || undefined}
+            onClick={() => {
+              if (isMergeDisabled) return
+              if (mergeMode) {
+                onToggleMergeSelection(table.id)
+              } else {
+                onSelectTable(table.id)
+              }
+            }}
+            onKeyDown={(event) => {
+              if (event.target !== event.currentTarget || isMergeDisabled) return
+              if (event.key !== 'Enter' && event.key !== ' ') return
+              event.preventDefault()
+              if (mergeMode) {
+                onToggleMergeSelection(table.id)
+              } else {
+                onSelectTable(table.id)
+              }
+            }}
+            className="w-full cursor-pointer rounded-[20px] text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--system-blue)] aria-disabled:cursor-not-allowed"
           >
             <Card
               className={cn(
-                'relative flex min-h-[148px] flex-col overflow-hidden rounded-[24px] border-2 p-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg active:scale-[0.99]',
+                'relative flex min-h-[148px] flex-col overflow-hidden rounded-[20px] border-2 p-4 transition-colors duration-[220ms] hover:bg-[var(--surface-grouped)] focus-within:border-[var(--system-blue)] active:bg-[var(--surface-grouped)]',
                 priority === 'call' || priority === 'ready' ? 'ring-2' : '',
-                changed ? 'scale-[1.04]' : '',
+                changed ? 'ring-2 ring-[var(--system-blue)]' : '',
+                mergeSelected
+                  ? 'border-[var(--system-purple)] ring-2 ring-[var(--system-purple)]/25'
+                  : '',
+                mergeMode && !table.session ? 'cursor-not-allowed opacity-50' : '',
                 visual.shell,
               )}
             >
+              {(mergeSelected || table.session?.merge_group_id) && (
+                <span className="absolute right-3 top-3 flex size-7 items-center justify-center rounded-full bg-[var(--system-purple)] text-white">
+                  <Link2 className="size-3.5" />
+                </span>
+              )}
               {/* Header: Table Number & Status Icon */}
-              <div className="flex items-start justify-between w-full">
+              <div className="flex w-full items-start justify-between">
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
                     {lang === 'vi' ? 'BÀN' : 'TABLE'}
                   </span>
                   <div
@@ -96,7 +140,7 @@ export const GridView: FC<GridViewProps> = ({
                 </div>
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-xs border border-zinc-100 dark:bg-zinc-950 dark:border-zinc-800">
                   {icons[priority] || (
-                    <span className="text-xs text-zinc-400 dark:text-zinc-600">—</span>
+                    <span className="text-xs text-[var(--text-secondary)]">—</span>
                   )}
                 </div>
               </div>
@@ -123,8 +167,8 @@ export const GridView: FC<GridViewProps> = ({
 
               {/* Footer: Capacity and Waiting Time */}
               <div className="mt-auto pt-3 flex items-end justify-between w-full border-t border-zinc-100/50 dark:border-zinc-800/40">
-                <div className="flex items-center gap-1 text-[11px] font-bold text-zinc-500 dark:text-zinc-400">
-                  <Users className="size-3 text-zinc-400" />
+                <div className="flex items-center gap-1 text-[11px] font-bold text-[var(--text-secondary)]">
+                  <Users className="size-3 text-[var(--text-secondary)]" />
                   <span>
                     {priority === 'empty'
                       ? `${table.capacity} ${lang === 'vi' ? 'chỗ' : 'seats'}`
@@ -132,20 +176,34 @@ export const GridView: FC<GridViewProps> = ({
                   </span>
                 </div>
 
-                {priority !== 'empty' && (
+                {guestOrderUrls.has(table.id) && !mergeMode ? (
+                  <Button
+                    type="button"
+                    size="icon"
+                    aria-label={t('open_guest_screen')}
+                    title={t('open_guest_screen')}
+                    className="size-9 shrink-0 rounded-xl shadow-sm"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onOpenGuestSession(table.id)
+                    }}
+                  >
+                    <ExternalLink className="size-3.5" />
+                  </Button>
+                ) : priority !== 'empty' ? (
                   <span
                     className={cn(
                       'flex items-center gap-1 font-mono text-[10px] font-bold bg-white/80 px-2 py-0.5 rounded-full border border-zinc-100 shadow-3xs dark:bg-zinc-950 dark:border-zinc-800',
                       visual.sub,
                     )}
                   >
-                    <Clock className="size-2.5 text-zinc-400" />
+                    <Clock className="size-2.5 text-[var(--text-secondary)]" />
                     <span>{wfFmtHMS(waitSeconds)}</span>
                   </span>
-                )}
+                ) : null}
               </div>
             </Card>
-          </button>
+          </div>
         )
       })}
     </div>

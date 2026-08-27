@@ -54,15 +54,18 @@ type InvoiceDTO struct {
 }
 
 type InvoiceItemDTO struct {
-	ID                uuid.UUID  `json:"id"`
-	OrderItemID       *uuid.UUID `json:"order_item_id"`
-	NameSnapshot      string     `json:"name_snapshot"`
-	IsTakeaway        bool       `json:"is_takeaway"`
-	UnitPriceVND      int64      `json:"unit_price_vnd"`
-	Quantity          int        `json:"quantity"`
-	SubtotalVND       int64      `json:"subtotal_vnd"`
-	DiscountAmountVND int64      `json:"discount_amount_vnd"`
-	TotalAmountVND    int64      `json:"total_amount_vnd"`
+	ID                  uuid.UUID  `json:"id"`
+	OrderItemID         *uuid.UUID `json:"order_item_id"`
+	NameSnapshot        string     `json:"name_snapshot"`
+	IsTakeaway          bool       `json:"is_takeaway"`
+	UnitPriceVND        int64      `json:"unit_price_vnd"`
+	Quantity            int        `json:"quantity"`
+	SubtotalVND         int64      `json:"subtotal_vnd"`
+	DiscountAmountVND   int64      `json:"discount_amount_vnd"`
+	TotalAmountVND      int64      `json:"total_amount_vnd"`
+	ComboID             *uuid.UUID `json:"combo_id,omitempty"`
+	ParentInvoiceItemID *uuid.UUID `json:"parent_invoice_item_id,omitempty"`
+	ReferencePriceVND   *int64     `json:"reference_price_vnd,omitempty"`
 }
 
 type PaymentDTO struct {
@@ -85,15 +88,18 @@ func toResponse(inv *domain.Invoice) InvoiceResponse {
 	items := make([]InvoiceItemDTO, 0, len(inv.Items))
 	for _, item := range inv.Items {
 		items = append(items, InvoiceItemDTO{
-			ID:                item.ID,
-			OrderItemID:       item.OrderItemID,
-			NameSnapshot:      item.NameSnapshot,
-			IsTakeaway:        item.IsTakeaway,
-			UnitPriceVND:      item.UnitPriceVND,
-			Quantity:          item.Quantity,
-			SubtotalVND:       item.SubtotalVND,
-			DiscountAmountVND: item.DiscountAmountVND,
-			TotalAmountVND:    item.TotalAmountVND,
+			ID:                  item.ID,
+			OrderItemID:         item.OrderItemID,
+			NameSnapshot:        item.NameSnapshot,
+			IsTakeaway:          item.IsTakeaway,
+			UnitPriceVND:        item.UnitPriceVND,
+			Quantity:            item.Quantity,
+			SubtotalVND:         item.SubtotalVND,
+			DiscountAmountVND:   item.DiscountAmountVND,
+			TotalAmountVND:      item.TotalAmountVND,
+			ComboID:             item.ComboID,
+			ParentInvoiceItemID: item.ParentInvoiceItemID,
+			ReferencePriceVND:   item.ReferencePriceVND,
 		})
 	}
 	var payment *PaymentDTO

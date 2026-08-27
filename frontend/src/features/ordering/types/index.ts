@@ -36,7 +36,8 @@ export interface CartOption {
 // re-mapping is needed at submit time (variant is distinct from options).
 export interface CartLine {
   id?: string
-  menuItemId: string
+  menuItemId?: string
+  comboId?: string
   variantId?: string
   variantNameSnapshot?: string
   quantity: number
@@ -80,6 +81,7 @@ export interface ApiMenuItemSummary {
   base_price_vnd: number
   availability_status: string
   is_available: boolean
+  is_featured: boolean
   has_variants: boolean
   price_from_vnd: number | null
   has_required_options: boolean
@@ -133,13 +135,42 @@ export interface ApiMenuItemDetail {
   option_groups: ApiOptionGroup[]
 }
 
+export interface ApiComboSummary {
+  id: string
+  code: string
+  name: string
+  slug: string
+  description: string
+  image_url: string
+  combo_price_vnd: number
+  reference_price_vnd: number
+  savings_vnd: number
+  is_featured: boolean
+  availability_status: string
+  is_available: boolean
+}
+
+export interface ApiComboComponent {
+  menu_item_id: string
+  variant_id?: string
+  name: string
+  variant_name?: string
+  image_url: string
+  quantity: number
+}
+
+export interface ApiComboDetail extends ApiComboSummary {
+  components: ApiComboComponent[]
+}
+
 export interface PlaceOrderOptionInput {
   option_id: string
   quantity: number
 }
 
 export interface PlaceOrderLineInput {
-  menu_item_id: string
+  menu_item_id?: string
+  combo_id?: string
   variant_id?: string
   quantity: number
   note: string
@@ -174,6 +205,9 @@ export interface OrderItemDTO {
   is_takeaway: boolean
   options: OrderOptionDTO[]
   unavailable_reason?: string | null
+  combo_id?: string
+  parent_order_item_id?: string
+  is_combo_parent?: boolean
 }
 
 export interface PlaceOrderResult {

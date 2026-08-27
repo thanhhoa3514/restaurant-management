@@ -10,12 +10,28 @@ import {
   updateMenuItem,
 } from '@/features/catalog/api'
 import type {
+  AdminMenuItemListResponse,
   AdminMenuItemSummaryDTO,
   MenuItemFormBody,
   UpdateMenuItemRequest,
 } from '@/features/catalog/types'
 
 const CATALOG_KEY = ['catalog'] as const
+
+// The ['catalog','items',...] key space now holds paginated list responses
+// ({items, pagination}) as well as single-item detail objects. Only rewrite
+// entries that are actually list responses; leave everything else untouched.
+function patchListItem(
+  current: AdminMenuItemListResponse | undefined,
+  id: string,
+  patch: (candidate: AdminMenuItemSummaryDTO) => AdminMenuItemSummaryDTO,
+): AdminMenuItemListResponse | undefined {
+  if (!current || !Array.isArray(current.items)) return current
+  return {
+    ...current,
+    items: current.items.map((candidate) => (candidate.id === id ? patch(candidate) : candidate)),
+  }
+}
 
 export function useToggleItemMutation() {
   const queryClient = useQueryClient()
@@ -25,32 +41,29 @@ export function useToggleItemMutation() {
       toggleAvailability(item.id, !item.is_available, item.version, availabilityAfterToggle(item)),
     onMutate: async (item) => {
       await queryClient.cancelQueries({ queryKey: ['catalog', 'items'] })
-      const snapshots = queryClient.getQueriesData<AdminMenuItemSummaryDTO[]>({
+      const snapshots = queryClient.getQueriesData<AdminMenuItemListResponse>({
         queryKey: ['catalog', 'items'],
       })
-      queryClient.setQueriesData<AdminMenuItemSummaryDTO[]>(
+      queryClient.setQueriesData<AdminMenuItemListResponse>(
         { queryKey: ['catalog', 'items'] },
         (current) =>
-          current?.map((candidate) =>
-            candidate.id === item.id
-              ? {
-                  ...candidate,
-                  is_available: !item.is_available,
-                  availability_status: availabilityAfterToggle(item),
-                  version: item.version + 1,
-                }
-              : candidate,
-          ),
+          patchListItem(current, item.id, (candidate) => ({
+            ...candidate,
+            is_available: !item.is_available,
+            availability_status: availabilityAfterToggle(item),
+            version: item.version + 1,
+          })),
       )
       return { snapshots }
     },
     onSuccess: (result, item) => {
-      queryClient.setQueriesData<AdminMenuItemSummaryDTO[]>(
+      queryClient.setQueriesData<AdminMenuItemListResponse>(
         { queryKey: ['catalog', 'items'] },
         (current) =>
-          current?.map((candidate) =>
-            candidate.id === item.id ? { ...candidate, version: result.version } : candidate,
-          ),
+          patchListItem(current, item.id, (candidate) => ({
+            ...candidate,
+            version: result.version,
+          })),
       )
     },
     onError: async (_error, _item, context) => {

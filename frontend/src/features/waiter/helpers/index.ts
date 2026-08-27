@@ -117,57 +117,54 @@ export function tableVisuals(priority: WFPriority): WaiterVisuals {
   switch (priority) {
     case 'call':
       return {
-        shell:
-          'bg-red-50/95 border-red-300 ring-red-100/50 shadow-[0_8px_30px_rgba(239,68,68,0.12)] border-2 dark:bg-red-950/20 dark:border-red-800',
-        text: 'text-red-950 dark:text-red-200',
-        sub: 'text-red-600 dark:text-red-400',
-        dot: 'bg-red-500',
+        shell: 'bg-[var(--system-red)]/8 border-[var(--system-red)]/40 ring-[var(--system-red)]/20',
+        text: 'text-[var(--text)]',
+        sub: 'text-[var(--system-red)]',
+        dot: 'bg-[var(--system-red)]',
         badge: 'destructive',
       }
     case 'ready':
       return {
         shell:
-          'bg-emerald-50/95 border-emerald-300 ring-emerald-100/50 shadow-[0_8px_30px_rgba(16,185,129,0.12)] border-2 dark:bg-emerald-950/20 dark:border-emerald-800',
-        text: 'text-emerald-950 dark:text-emerald-200',
-        sub: 'text-emerald-600 dark:text-emerald-400',
-        dot: 'bg-emerald-500',
+          'bg-[var(--system-green)]/8 border-[var(--system-green)]/40 ring-[var(--system-green)]/20',
+        text: 'text-[var(--text)]',
+        sub: 'text-[var(--system-green)]',
+        dot: 'bg-[var(--system-green)]',
         badge: 'success',
       }
     case 'bill':
       return {
         shell:
-          'bg-blue-50/95 border-blue-300 ring-blue-100/50 shadow-[0_8px_30px_rgba(59,130,246,0.12)] border-2 dark:bg-blue-950/20 dark:border-blue-800',
-        text: 'text-blue-950 dark:text-blue-200',
-        sub: 'text-blue-600 dark:text-blue-400',
-        dot: 'bg-blue-500',
+          'bg-[var(--system-blue)]/8 border-[var(--system-blue)]/40 ring-[var(--system-blue)]/20',
+        text: 'text-[var(--text)]',
+        sub: 'text-[var(--system-blue)]',
+        dot: 'bg-[var(--system-blue)]',
         badge: 'default',
       }
     case 'idle':
       return {
         shell:
-          'bg-amber-50/60 border-amber-300 border-dashed ring-amber-100/30 shadow-[0_4px_15px_rgba(245,158,11,0.06)] dark:bg-amber-950/10 dark:border-amber-800/80',
-        text: 'text-amber-950 dark:text-amber-200',
-        sub: 'text-amber-600 dark:text-amber-400',
-        dot: 'bg-amber-400',
+          'border-dashed border-[var(--system-orange)]/45 bg-[var(--system-orange)]/8 ring-[var(--system-orange)]/20',
+        text: 'text-[var(--text)]',
+        sub: 'text-[var(--system-orange)]',
+        dot: 'bg-[var(--system-orange)]',
         badge: 'warning',
       }
     case 'occupied':
       return {
-        shell:
-          'bg-white border-zinc-200 shadow-[0_4px_20px_rgba(0,0,0,0.04)] ring-zinc-50 dark:bg-zinc-900 dark:border-zinc-800',
-        text: 'text-zinc-900 dark:text-zinc-100',
-        sub: 'text-zinc-500 dark:text-zinc-400',
-        dot: 'bg-zinc-400',
+        shell: 'border-[var(--separator)] bg-[var(--bg-elevated)] ring-transparent',
+        text: 'text-[var(--text)]',
+        sub: 'text-[var(--text-secondary)]',
+        dot: 'bg-[var(--text-secondary)]',
         badge: 'warning',
       }
     case 'empty':
     default:
       return {
-        shell:
-          'bg-zinc-50/80 border-zinc-200/80 ring-transparent shadow-none dark:bg-zinc-900/30 dark:border-zinc-800/60',
-        text: 'text-zinc-400 dark:text-zinc-600',
-        sub: 'text-zinc-400 dark:text-zinc-600',
-        dot: 'bg-zinc-300',
+        shell: 'border-[var(--separator)] bg-[var(--surface-grouped)]/55 ring-transparent',
+        text: 'text-[var(--text-secondary)]',
+        sub: 'text-[var(--text-secondary)]',
+        dot: 'bg-[var(--text-secondary)]',
         badge: 'secondary',
       }
   }
